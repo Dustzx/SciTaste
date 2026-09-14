@@ -5,6 +5,17 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a deterministic prospective atomic-decision calibration planner. It
+  freezes a source-balanced 24-item ARIES/F1000 sample before model execution,
+  excludes every record used by the retrospective pilot, and binds the exact
+  campaign, scientific-item, exclusion-sample, seed, and selection hashes; a
+  replay verifier rejects drift or overlap before normalization. The candidate
+  GLM-5.3-Flash protocol specifies an input firewall, temporal identity
+  window, request/token/cost ceilings, no-retry failure handling, overlap and
+  family thresholds, a maximum adjudication rate, and zero residual-risk
+  requirement. It remains explicitly awaiting a Git freeze receipt, performs no
+  provider call, and grants no scale, admission, or formal-evidence authority
+  until a bounded runner and authenticated receipts are separately accepted.
 - Added exact-span reconstruction for compound natural-source reviews. A model
   may propose multiple uniquely occurring verbatim decision spans, but every
   span is bound to the immutable scientific item, character offsets, one

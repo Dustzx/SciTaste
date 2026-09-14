@@ -50,13 +50,22 @@ class TasteSourceSegmentationSampleManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     sample_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     selection_timing: Literal["preregistered", "retrospective-pilot-binding"]
     selection_rationale: str = Field(min_length=1, max_length=4_000)
     sampling_algorithm: str = Field(min_length=1, max_length=500)
     random_seed: int | None = None
+    selection_algorithm_version: Literal["sha256-ranked-balanced-v1"] | None = None
+    source_campaign_locators: dict[str, str] | None = None
+    source_campaign_file_sha256s: dict[str, str] | None = None
+    source_campaign_sha256s: dict[str, str] | None = None
+    source_scientific_items_sha256s: dict[str, str] | None = None
+    excluded_sample_locators: dict[str, str] | None = None
+    excluded_sample_file_sha256s: dict[str, str] | None = None
+    excluded_sample_sha256s: dict[str, str] | None = None
+    per_campaign_item_counts: dict[str, int] | None = None
     items: tuple[TasteSourceSegmentationSampleItem, ...] = Field(min_length=1)
     item_count: int = Field(gt=0)
     authority: dict[str, bool]
@@ -78,12 +87,84 @@ class TasteSourceSegmentationSampleManifest(BaseModel):
             )
         ):
             raise ValueError("Segmentation calibration sample overclaims authority")
+        prospective_fields = (
+            self.selection_algorithm_version,
+            self.source_campaign_locators,
+            self.source_campaign_file_sha256s,
+            self.source_campaign_sha256s,
+            self.source_scientific_items_sha256s,
+            self.excluded_sample_locators,
+            self.excluded_sample_file_sha256s,
+            self.excluded_sample_sha256s,
+            self.per_campaign_item_counts,
+        )
+        if self.schema_version == "1.0":
+            if any(value is not None for value in prospective_fields):
+                raise ValueError("Schema 1.0 cannot carry prospective selection receipts")
+            return self
+        if not preregistered or self.random_seed is None or any(
+            value is None for value in prospective_fields
+        ):
+            raise ValueError("Schema 1.1 requires a complete preregistered selection receipt")
+        source_maps = (
+            self.source_campaign_locators,
+            self.source_campaign_file_sha256s,
+            self.source_campaign_sha256s,
+            self.source_scientific_items_sha256s,
+            self.per_campaign_item_counts,
+        )
+        assert all(value is not None for value in source_maps)
+        campaign_ids = set(self.source_campaign_locators or {})
+        if not campaign_ids or any(set(value or {}) != campaign_ids for value in source_maps):
+            raise ValueError("Prospective sample source bindings differ")
+        if set(item.campaign_id for item in self.items) != campaign_ids:
+            raise ValueError("Prospective sample items differ from bound campaigns")
+        observed_counts: dict[str, int] = {}
+        for item in self.items:
+            observed_counts[item.campaign_id] = observed_counts.get(item.campaign_id, 0) + 1
+        if dict(sorted(observed_counts.items())) != self.per_campaign_item_counts:
+            raise ValueError("Prospective sample campaign counts are inconsistent")
+        exclusion_maps = (
+            self.excluded_sample_locators,
+            self.excluded_sample_file_sha256s,
+            self.excluded_sample_sha256s,
+        )
+        assert all(value is not None for value in exclusion_maps)
+        exclusion_ids = set(self.excluded_sample_locators or {})
+        if not exclusion_ids or any(set(value or {}) != exclusion_ids for value in exclusion_maps):
+            raise ValueError("Prospective sample exclusion bindings differ")
+        bound_locators = (
+            *self.source_campaign_locators.values(),
+            *self.excluded_sample_locators.values(),
+        )
+        for locator in bound_locators:
+            candidate = PurePosixPath(locator)
+            if (
+                "\\" in locator
+                or candidate.is_absolute()
+                or any(part in {"", ".", ".."} for part in candidate.parts)
+            ):
+                raise ValueError("Prospective sample binding locator is unsafe")
         return self
 
     @computed_field
     @property
     def sample_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"sample_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"sample_sha256"})
+        if self.schema_version == "1.0":
+            for field in (
+                "selection_algorithm_version",
+                "source_campaign_locators",
+                "source_campaign_file_sha256s",
+                "source_campaign_sha256s",
+                "source_scientific_items_sha256s",
+                "excluded_sample_locators",
+                "excluded_sample_file_sha256s",
+                "excluded_sample_sha256s",
+                "per_campaign_item_counts",
+            ):
+                payload.pop(field, None)
+        return _canonical_sha256(payload)
 
 
 class TasteSourceSegmentationSampleInspection(BaseModel):
@@ -673,6 +754,248 @@ def load_taste_source_segmentation_sample_manifest(
     )
 
 
+def plan_taste_source_segmentation_sample(
+    *,
+    sample_id: str,
+    campaign_paths: tuple[str | Path, ...],
+    excluded_sample_paths: tuple[str | Path, ...],
+    per_campaign_item_count: int,
+    random_seed: int,
+    locator_root: str | Path,
+) -> TasteSourceSegmentationSampleManifest:
+    """Freeze an unseen balanced sample before any segmentation output exists."""
+
+    if not campaign_paths or not excluded_sample_paths:
+        raise ValueError("Prospective segmentation requires campaigns and exclusion samples")
+    if per_campaign_item_count < 1 or per_campaign_item_count > 10_000:
+        raise ValueError("Prospective per-campaign sample count is outside its bound")
+    root = Path(locator_root).resolve(strict=True)
+    exclusions = tuple(
+        load_taste_source_segmentation_sample_manifest(path)
+        for path in excluded_sample_paths
+    )
+    excluded_keys = {
+        (item.campaign_id, item.review_item_id)
+        for inspection in exclusions
+        for item in inspection.sample.items
+    }
+    excluded_ids = [inspection.sample.sample_id for inspection in exclusions]
+    if len(excluded_ids) != len(set(excluded_ids)):
+        raise ValueError("Prospective segmentation exclusion sample IDs must be distinct")
+
+    source_campaign_locators: dict[str, str] = {}
+    source_campaign_file_sha256s: dict[str, str] = {}
+    source_campaign_sha256s: dict[str, str] = {}
+    source_scientific_items_sha256s: dict[str, str] = {}
+    project_ids: set[str] = set()
+    selected: list[TasteSourceSegmentationSampleItem] = []
+    per_campaign_counts: dict[str, int] = {}
+    for campaign_path in campaign_paths:
+        path = _bounded_file(Path(campaign_path), _MAX_ARTIFACT_BYTES)
+        campaign = load_taste_source_review_campaign(path)
+        if campaign.campaign_id in source_campaign_locators:
+            raise ValueError("Prospective segmentation campaign IDs must be distinct")
+        loaded = load_taste_source_review_items(path, TasteSourceReviewRole.SCIENTIFIC)
+        scientific_items = tuple(
+            item for item in loaded if isinstance(item, ScientificTasteSourceReviewItem)
+        )
+        available = tuple(
+            item
+            for item in scientific_items
+            if (campaign.campaign_id, item.review_item_id) not in excluded_keys
+        )
+        if len(available) < per_campaign_item_count:
+            raise ValueError("Prospective segmentation campaign has too few unseen items")
+        ranked = sorted(
+            available,
+            key=lambda item: (
+                _canonical_sha256(
+                    {
+                        "algorithm": "sha256-ranked-balanced-v1",
+                        "random_seed": random_seed,
+                        "campaign_id": campaign.campaign_id,
+                        "campaign_sha256": campaign.campaign_sha256,
+                        "review_item_id": item.review_item_id,
+                        "review_item_sha256": _canonical_sha256(item.model_dump(mode="json")),
+                    }
+                ),
+                item.review_item_id,
+            ),
+        )
+        selected.extend(
+            TasteSourceSegmentationSampleItem(
+                campaign_id=campaign.campaign_id,
+                review_item_id=item.review_item_id,
+            )
+            for item in ranked[:per_campaign_item_count]
+        )
+        source_campaign_locators[campaign.campaign_id] = _relative(path, root)
+        source_campaign_file_sha256s[campaign.campaign_id] = _sha256_file(path)
+        source_campaign_sha256s[campaign.campaign_id] = campaign.campaign_sha256
+        source_scientific_items_sha256s[campaign.campaign_id] = campaign.scientific_items.sha256
+        per_campaign_counts[campaign.campaign_id] = per_campaign_item_count
+        project_ids.add(campaign.project_id)
+    if len(project_ids) != 1:
+        raise ValueError("Prospective segmentation campaigns target different projects")
+
+    return TasteSourceSegmentationSampleManifest(
+        schema_version="1.1",
+        sample_id=sample_id,
+        project_id=project_ids.pop(),
+        selection_timing="preregistered",
+        selection_rationale=(
+            "Freeze an outcome-blind, source-balanced unseen calibration sample before "
+            "either segmenter receives item text; all earlier calibration items are excluded."
+        ),
+        sampling_algorithm=(
+            "sha256-ranked-balanced-v1: rank each unseen item by the canonical SHA-256 of "
+            "algorithm, seed, campaign identity, campaign hash, item ID, and item hash; "
+            "take the lowest ranks independently per campaign."
+        ),
+        random_seed=random_seed,
+        selection_algorithm_version="sha256-ranked-balanced-v1",
+        source_campaign_locators=dict(sorted(source_campaign_locators.items())),
+        source_campaign_file_sha256s=dict(sorted(source_campaign_file_sha256s.items())),
+        source_campaign_sha256s=dict(sorted(source_campaign_sha256s.items())),
+        source_scientific_items_sha256s=dict(
+            sorted(source_scientific_items_sha256s.items())
+        ),
+        excluded_sample_locators={
+            inspection.sample.sample_id: _relative(inspection.path, root)
+            for inspection in sorted(exclusions, key=lambda value: value.sample.sample_id)
+        },
+        excluded_sample_file_sha256s={
+            inspection.sample.sample_id: inspection.file_sha256
+            for inspection in sorted(exclusions, key=lambda value: value.sample.sample_id)
+        },
+        excluded_sample_sha256s={
+            inspection.sample.sample_id: inspection.sample.sample_sha256
+            for inspection in sorted(exclusions, key=lambda value: value.sample.sample_id)
+        },
+        per_campaign_item_counts=dict(sorted(per_campaign_counts.items())),
+        items=tuple(sorted(selected, key=lambda item: (item.campaign_id, item.review_item_id))),
+        item_count=len(selected),
+        authority={
+            "preregistered": True,
+            "confirmatory_calibration_authorized": False,
+            "scaled_execution_authorized": False,
+            "formal_evidence_eligible": False,
+        },
+    )
+
+
+def verify_taste_source_segmentation_sample_bindings(
+    path: str | Path,
+    *,
+    locator_root: str | Path,
+) -> TasteSourceSegmentationSampleInspection:
+    """Replay every schema-1.1 source, exclusion, and deterministic rank binding."""
+
+    inspection = load_taste_source_segmentation_sample_manifest(path)
+    sample = inspection.sample
+    if sample.schema_version != "1.1":
+        raise ValueError("Only schema-1.1 prospective samples have replayable bindings")
+    root = Path(locator_root).resolve(strict=True)
+    source_locators = sample.source_campaign_locators or {}
+    source_file_sha256s = sample.source_campaign_file_sha256s or {}
+    source_sha256s = sample.source_campaign_sha256s or {}
+    scientific_sha256s = sample.source_scientific_items_sha256s or {}
+    source_paths: list[Path] = []
+    for campaign_id, locator in sorted(source_locators.items()):
+        campaign_path = _bounded_file(root / locator, _MAX_ARTIFACT_BYTES)
+        if _relative(campaign_path, root) != locator:
+            raise ValueError("Prospective sample campaign locator drifted")
+        if _sha256_file(campaign_path) != source_file_sha256s[campaign_id]:
+            raise ValueError("Prospective sample campaign file hash drifted")
+        campaign = load_taste_source_review_campaign(campaign_path)
+        if (
+            campaign.campaign_id != campaign_id
+            or campaign.campaign_sha256 != source_sha256s[campaign_id]
+            or campaign.scientific_items.sha256 != scientific_sha256s[campaign_id]
+        ):
+            raise ValueError("Prospective sample campaign semantic binding drifted")
+        scientific_path = _bounded_file(
+            campaign_path.parent / campaign.scientific_items.locator,
+            _MAX_ARTIFACT_BYTES,
+        )
+        if _sha256_file(scientific_path) != scientific_sha256s[campaign_id]:
+            raise ValueError("Prospective sample scientific-item file hash drifted")
+        source_paths.append(campaign_path)
+
+    exclusion_locators = sample.excluded_sample_locators or {}
+    exclusion_file_sha256s = sample.excluded_sample_file_sha256s or {}
+    exclusion_sha256s = sample.excluded_sample_sha256s or {}
+    exclusion_paths: list[Path] = []
+    excluded_keys: set[tuple[str, str]] = set()
+    for sample_id, locator in sorted(exclusion_locators.items()):
+        exclusion_path = _bounded_file(root / locator, _MAX_INPUT_BYTES)
+        if _relative(exclusion_path, root) != locator:
+            raise ValueError("Prospective exclusion sample locator drifted")
+        excluded = load_taste_source_segmentation_sample_manifest(exclusion_path)
+        if (
+            excluded.sample.sample_id != sample_id
+            or excluded.file_sha256 != exclusion_file_sha256s[sample_id]
+            or excluded.sample.sample_sha256 != exclusion_sha256s[sample_id]
+        ):
+            raise ValueError("Prospective exclusion sample binding drifted")
+        excluded_keys.update(
+            (item.campaign_id, item.review_item_id) for item in excluded.sample.items
+        )
+        exclusion_paths.append(exclusion_path)
+    selected_keys = {(item.campaign_id, item.review_item_id) for item in sample.items}
+    if selected_keys & excluded_keys:
+        raise ValueError("Prospective sample overlaps an excluded calibration sample")
+
+    counts = set((sample.per_campaign_item_counts or {}).values())
+    if len(counts) != 1:
+        raise ValueError("Balanced prospective replay requires one per-campaign count")
+    replayed = plan_taste_source_segmentation_sample(
+        sample_id=sample.sample_id,
+        campaign_paths=tuple(source_paths),
+        excluded_sample_paths=tuple(exclusion_paths),
+        per_campaign_item_count=counts.pop(),
+        random_seed=sample.random_seed if sample.random_seed is not None else -1,
+        locator_root=root,
+    )
+    if replayed.sample_sha256 != sample.sample_sha256:
+        raise ValueError("Prospective segmentation sample does not replay exactly")
+    return inspection
+
+
+def save_taste_source_segmentation_sample_manifest(
+    sample: TasteSourceSegmentationSampleManifest,
+    path: str | Path,
+) -> Path:
+    """Write a new immutable YAML sample manifest atomically."""
+
+    target = Path(path)
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                sample.model_dump(
+                    mode="json",
+                    exclude={"sample_sha256"},
+                    exclude_none=True,
+                ),
+                handle,
+                allow_unicode=True,
+                sort_keys=False,
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.rename(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return target
+
+
 def normalize_taste_source_decision_segmentation(
     *,
     raw_segmentation_path: str | Path,
@@ -697,6 +1020,11 @@ def normalize_taste_source_decision_segmentation(
     raw_path = _bounded_file(Path(raw_segmentation_path), _MAX_INPUT_BYTES)
     rubric = _bounded_file(Path(rubric_path), _MAX_INPUT_BYTES)
     sample_inspection = load_taste_source_segmentation_sample_manifest(sample_manifest_path)
+    if sample_inspection.sample.schema_version == "1.1":
+        sample_inspection = verify_taste_source_segmentation_sample_bindings(
+            sample_manifest_path,
+            locator_root=root,
+        )
     sample = sample_inspection.sample
     rubric_file_sha256 = _sha256_file(rubric)
     raw = json.loads(raw_path.read_bytes())
@@ -733,6 +1061,19 @@ def normalize_taste_source_decision_segmentation(
         }
         campaigns[campaign.campaign_id] = (path, campaign, scientific_items)
         projects.add(campaign.project_id)
+    if sample.schema_version == "1.1":
+        expected_campaigns = set(sample.source_campaign_locators or {})
+        if set(campaigns) != expected_campaigns:
+            raise ValueError("Segmentation campaigns differ from the prospective sample")
+        for campaign_id, (path, campaign, _) in campaigns.items():
+            if (
+                _relative(path, root) != (sample.source_campaign_locators or {})[campaign_id]
+                or _sha256_file(path)
+                != (sample.source_campaign_file_sha256s or {})[campaign_id]
+                or campaign.campaign_sha256
+                != (sample.source_campaign_sha256s or {})[campaign_id]
+            ):
+                raise ValueError("Segmentation campaign differs from the prospective binding")
     if len(projects) != 1:
         raise ValueError("Taste source segmentation campaigns target different projects")
     if sample.project_id != next(iter(projects)):
@@ -1504,7 +1845,10 @@ __all__ = [
     "load_taste_source_segmentation_sample_manifest",
     "normalize_taste_source_decision_segmentation",
     "normalize_taste_source_segmentation_resolution",
+    "plan_taste_source_segmentation_sample",
     "save_taste_source_decision_segmentation_run",
     "save_taste_source_segmentation_agreement_report",
     "save_taste_source_segmentation_resolution_run",
+    "save_taste_source_segmentation_sample_manifest",
+    "verify_taste_source_segmentation_sample_bindings",
 ]

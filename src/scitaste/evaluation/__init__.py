@@ -1008,9 +1008,12 @@ from scitaste.evaluation.taste_source_segmentation import (
     load_taste_source_segmentation_sample_manifest,
     normalize_taste_source_decision_segmentation,
     normalize_taste_source_segmentation_resolution,
+    plan_taste_source_segmentation_sample,
     save_taste_source_decision_segmentation_run,
     save_taste_source_segmentation_agreement_report,
     save_taste_source_segmentation_resolution_run,
+    save_taste_source_segmentation_sample_manifest,
+    verify_taste_source_segmentation_sample_bindings,
 )
 
 __all__ = [
@@ -1802,6 +1805,7 @@ __all__ = [
     "plan_reference_selection_comparison_from_files",
     "plan_structured_metadata_audit",
     "plan_taste_source_review_assignments",
+    "plan_taste_source_segmentation_sample",
     "prepare_agent_laboratory_adapter",
     "prepare_benchmark_workspace",
     "prepare_human_outcome_study",
@@ -1880,6 +1884,7 @@ __all__ = [
     "save_taste_source_review_assignment_plan",
     "save_taste_source_segmentation_agreement_report",
     "save_taste_source_segmentation_resolution_run",
+    "save_taste_source_segmentation_sample_manifest",
     "screen_benchmark_metadata_population",
     "snapshot_benchmark_editable_files",
     "source_projection_forbidden_exact_strings",
@@ -1888,4 +1893,5 @@ __all__ = [
     "validate_evaluation_campaign_activation",
     "verify_benchmark_execution_resources",
     "verify_locked_human_review_set",
+    "verify_taste_source_segmentation_sample_bindings",
 ]

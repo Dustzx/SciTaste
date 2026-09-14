@@ -67,6 +67,12 @@ artifacts:
   - artifact_id: scitastebench-atomic-decision-calibration-v1
     path: docs/research/data/scitastebench_atomic_decision_calibration_v1.yaml
     sha256: 32ba6a822a74958f487118edb6e035a608d1341afcea6f97f7215b469ee8d261
+  - artifact_id: scitastebench-segmentation-prospective-sample-v1
+    path: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v1.yaml
+    sha256: 77d6a74690ee11200c6f2099e2eb078e919216bc82af1cf3a57246870f161a41
+  - artifact_id: scitastebench-segmentation-prospective-protocol-v1
+    path: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v1.yaml
+    sha256: 9b7f3bdee8d822fcb3771a3a5aa5e82ebdcd39aa438f060ecccf3adf4e6d2b17
   - artifact_id: objective-task-resource-qualification-v2
     path: docs/research/data/objective_task_resource_qualification_v2.yaml
     sha256: abb4fe2dd36431cada47e23cc8a1ed1bdf623d12bac11440663ad64e70076c34
@@ -149,6 +155,8 @@ tracks:
       - scitastebench-decision-segmentation-adjudication-v1
       - scitastebench-segmentation-calibration-sample-v1
       - scitastebench-atomic-decision-calibration-v1
+      - scitastebench-segmentation-prospective-sample-v1
+      - scitastebench-segmentation-prospective-protocol-v1
     blocker_codes:
       - admitted-benchmark-population-below-formal-120-case-floor
       - raw-candidate-population-not-yet-scitastebench

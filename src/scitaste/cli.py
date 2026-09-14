@@ -197,6 +197,7 @@ from scitaste.evaluation import (
     plan_clustered_power,
     plan_structured_metadata_audit,
     plan_taste_source_review_assignments,
+    plan_taste_source_segmentation_sample,
     prepare_agent_laboratory_adapter,
     prepare_human_outcome_study,
     prepare_human_reviewer_session,
@@ -254,6 +255,7 @@ from scitaste.evaluation import (
     save_taste_source_review_assignment_plan,
     save_taste_source_segmentation_agreement_report,
     save_taste_source_segmentation_resolution_run,
+    save_taste_source_segmentation_sample_manifest,
     screen_benchmark_metadata_population,
     source_projection_forbidden_exact_strings,
     source_projection_protocol_sha256,
@@ -2093,6 +2095,29 @@ def build_parser() -> argparse.ArgumentParser:
     taste_source_ai_calibration.add_argument("--output", type=Path, required=True)
     _add_log_level_option(taste_source_ai_calibration)
     taste_source_ai_calibration.set_defaults(handler=_handle_evaluation_taste_source_ai_calibration)
+    taste_source_segmentation_sample = evaluation_commands.add_parser(
+        "taste-source-segmentation-sample-plan",
+        help="Freeze a source-balanced unseen atomic-decision calibration sample",
+    )
+    taste_source_segmentation_sample.add_argument("--sample-id", required=True)
+    taste_source_segmentation_sample.add_argument(
+        "--campaign", type=Path, action="append", required=True
+    )
+    taste_source_segmentation_sample.add_argument(
+        "--exclude-sample", type=Path, action="append", required=True
+    )
+    taste_source_segmentation_sample.add_argument(
+        "--per-campaign-items", type=int, required=True
+    )
+    taste_source_segmentation_sample.add_argument("--seed", type=int, required=True)
+    taste_source_segmentation_sample.add_argument(
+        "--locator-root", type=Path, default=Path(".")
+    )
+    taste_source_segmentation_sample.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_source_segmentation_sample)
+    taste_source_segmentation_sample.set_defaults(
+        handler=_handle_evaluation_taste_source_segmentation_sample_plan
+    )
     taste_source_segmentation = evaluation_commands.add_parser(
         "taste-source-decision-segmentation-normalize",
         help="Bind AI-proposed atomic decision spans to exact source-review text",
@@ -6698,6 +6723,39 @@ def _handle_evaluation_taste_source_ai_calibration(args: argparse.Namespace) -> 
         )
     )
     return 0 if report.ready_for_scaled_ai_screening else 1
+
+
+def _handle_evaluation_taste_source_segmentation_sample_plan(
+    args: argparse.Namespace,
+) -> int:
+    sample = plan_taste_source_segmentation_sample(
+        sample_id=args.sample_id,
+        campaign_paths=tuple(args.campaign),
+        excluded_sample_paths=tuple(args.exclude_sample),
+        per_campaign_item_count=args.per_campaign_items,
+        random_seed=args.seed,
+        locator_root=args.locator_root,
+    )
+    saved = save_taste_source_segmentation_sample_manifest(sample, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "prospective-segmentation-sample-frozen-no-run",
+                "output": str(saved),
+                "sample_sha256": sample.sample_sha256,
+                "item_count": sample.item_count,
+                "per_campaign_item_counts": sample.per_campaign_item_counts,
+                "excluded_sample_ids": sorted(sample.excluded_sample_sha256s or {}),
+                "scaled_execution_authorized": sample.authority[
+                    "scaled_execution_authorized"
+                ],
+                "formal_evidence_eligible": sample.authority["formal_evidence_eligible"],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
 
 
 def _handle_evaluation_taste_source_decision_segmentation_normalize(

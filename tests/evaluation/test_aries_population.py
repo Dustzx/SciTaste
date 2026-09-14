@@ -31,6 +31,7 @@ from scitaste.evaluation import (
     normalize_taste_source_decision_segmentation,
     normalize_taste_source_segmentation_resolution,
     plan_taste_source_review_assignments,
+    plan_taste_source_segmentation_sample,
     prepare_taste_source_review_campaign,
     prepare_taste_source_review_session,
     publish_aries_taste_population_run,
@@ -42,6 +43,8 @@ from scitaste.evaluation import (
     save_taste_source_review_assignment_plan,
     save_taste_source_segmentation_agreement_report,
     save_taste_source_segmentation_resolution_run,
+    save_taste_source_segmentation_sample_manifest,
+    verify_taste_source_segmentation_sample_bindings,
 )
 from scitaste.generative_ui.intent import WorkspaceIntentResolver
 from scitaste.generative_ui.workspace import ProjectProgressQuery, WorkspaceSurfaceFactory
@@ -405,6 +408,89 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         ),
         encoding="utf-8",
     )
+    exclusion_sample = tmp_path / "prospective-exclusion-sample.yaml"
+    exclusion_sample.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "1.0",
+                "sample_id": "prior-unseen-exclusion-v1",
+                "project_id": campaign.project_id,
+                "selection_timing": "retrospective-pilot-binding",
+                "selection_rationale": "Bind a prior item outside this test campaign.",
+                "sampling_algorithm": "fixed-prior-item",
+                "random_seed": None,
+                "items": [
+                    {
+                        "campaign_id": "prior-campaign",
+                        "review_item_id": "item-prior",
+                    }
+                ],
+                "item_count": 1,
+                "authority": {
+                    "preregistered": False,
+                    "confirmatory_calibration_authorized": False,
+                    "scaled_execution_authorized": False,
+                    "formal_evidence_eligible": False,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    prospective_sample = plan_taste_source_segmentation_sample(
+        sample_id="aries-prospective-segmentation-v1",
+        campaign_paths=(campaign_root / "CAMPAIGN.json",),
+        excluded_sample_paths=(exclusion_sample,),
+        per_campaign_item_count=1,
+        random_seed=20260915,
+        locator_root=tmp_path,
+    )
+    assert prospective_sample.schema_version == "1.1"
+    assert prospective_sample.selection_timing == "preregistered"
+    assert prospective_sample.items[0].review_item_id == item_id
+    assert prospective_sample.per_campaign_item_counts == {campaign.campaign_id: 1}
+    assert prospective_sample.authority["scaled_execution_authorized"] is False
+    prospective_sample_path = tmp_path / "prospective-sample.yaml"
+    save_taste_source_segmentation_sample_manifest(
+        prospective_sample,
+        prospective_sample_path,
+    )
+    assert (
+        load_taste_source_segmentation_sample_manifest(
+            prospective_sample_path
+        ).sample.sample_sha256
+        == prospective_sample.sample_sha256
+    )
+    assert (
+        verify_taste_source_segmentation_sample_bindings(
+            prospective_sample_path,
+            locator_root=tmp_path,
+        ).sample.sample_sha256
+        == prospective_sample.sample_sha256
+    )
+    tampered_sample_payload = yaml.safe_load(
+        prospective_sample_path.read_text(encoding="utf-8")
+    )
+    tampered_sample_payload["source_campaign_file_sha256s"][campaign.campaign_id] = "0" * 64
+    tampered_sample_path = tmp_path / "prospective-sample-tampered.yaml"
+    tampered_sample_path.write_text(
+        yaml.safe_dump(tampered_sample_payload, sort_keys=False),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="campaign file hash drifted"):
+        verify_taste_source_segmentation_sample_bindings(
+            tampered_sample_path,
+            locator_root=tmp_path,
+        )
+    with pytest.raises(ValueError, match="too few unseen items"):
+        plan_taste_source_segmentation_sample(
+            sample_id="aries-overlapping-prospective-segmentation-v1",
+            campaign_paths=(campaign_root / "CAMPAIGN.json",),
+            excluded_sample_paths=(segmentation_sample,),
+            per_campaign_item_count=1,
+            random_seed=20260915,
+            locator_root=tmp_path,
+        )
     raw_segmentation_payload = json.loads(raw_segmentation.read_text(encoding="utf-8"))
     raw_segmentation_payload.update(
         {
