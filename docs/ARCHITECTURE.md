@@ -3682,8 +3682,8 @@ the model a shell, patch command, or unrestricted repository would merge
 scientific choice with execution authority. The `benchmark-research-patch` node
 therefore receives only an exact caller-selected snapshot of editable UTF-8
 files, objective metric and development scores, remaining experiment count,
-hard constraints, and four separate evidence channels: experiment feedback,
-Knowledge guidance, Taste guidance, and critic guidance. That separation lets
+hard constraints, and separate experiment-feedback, utility-policy, Knowledge,
+Taste, and critic channels. That separation lets
 the registered native conditions vary the intended mechanism without changing
 the executor.
 
@@ -3736,3 +3736,42 @@ but do not repeat full dataset hashing before and after every experiment. This i
 the Tool Intelligence cost rule applied to verification: repeat a check only
 when its expected failure cost exceeds the repeated verification cost or the
 underlying authority boundary has changed.
+
+### ADR-121: Development search retains the best candidate under compiled conditions
+
+Status: controller accepted; campaign adapter and real resource activation remain
+pending.
+
+The source proposal, mutation, and development runner previously existed as
+separate authorities, so a human still had to decide which result became the next
+model context and restore a worse candidate. The benchmark research controller now
+executes one development-only sequence: measure the untouched baseline, ask the
+durable `benchmark-research-patch` node to propose or stop, admit and atomically
+apply an exact replacement, execute the objective-only development command, and
+retain the candidate only when its directed improvement exceeds the registered
+threshold. Failed or non-improving candidates are restored to their exact
+predecessor bytes before another decision. Output directories are moved into the
+iteration evidence tree and recreated empty, so later trials cannot consume stale
+artifacts.
+
+The model-node runtime supplies request/response hashes, token and cost telemetry,
+cumulative budgets, interrupted-call recovery, and a proposal-only authority
+boundary. The controller independently checks the returned execution receipt and
+the real source surfaces. A self-hashed cell binding is derived from the selected
+authorized campaign and fixes project, evaluation, campaign, plan, cell, system,
+task, resource, seed, and author-approved evaluation-bundle identities before the
+loop starts. It writes a complete iteration record before proceeding, counts
+unverifiable executor attempts separately, and never invokes or materializes
+held-out evaluation. The final result identifies the best development surface;
+freezing that surface and performing the one-way scorer-owned held-out transition
+remain later campaign responsibilities.
+
+Condition assignment is no longer a collection of caller-authored prompt strings.
+One content-bound guidance set registers utility policy, raw Knowledge, matched
+Taste, source-disjoint mismatched Taste, and critics together with their derivation
+evidence and the exact six-arm condition matrix. A deterministic compiler projects
+only the components permitted by Base, Knowledge, Taste, Critics, Full, or the
+mismatched placebo. Missing channels are explicitly disabled and the model is told
+not to reconstruct them. This closes the software isolation needed for a causal
+prepilot, but does not claim that current guidance assets are reviewed, paired, or
+ready, and it authorizes no API, GPU, dataset, or held-out use.

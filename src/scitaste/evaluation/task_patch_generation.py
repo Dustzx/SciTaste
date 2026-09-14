@@ -41,6 +41,7 @@ class BenchmarkPatchGenerationInput(BaseModel):
     patch_context: BenchmarkPatchContext
     patch_policy: BenchmarkPatchPolicy
     experiment_feedback: tuple[str, ...] = Field(default=(), max_length=32)
+    utility_guidance: tuple[str, ...] = Field(default=(), max_length=32)
     knowledge_guidance: tuple[str, ...] = Field(default=(), max_length=32)
     taste_guidance: tuple[str, ...] = Field(default=(), max_length=32)
     critic_guidance: tuple[str, ...] = Field(default=(), max_length=32)
@@ -48,6 +49,7 @@ class BenchmarkPatchGenerationInput(BaseModel):
 
     @field_validator(
         "experiment_feedback",
+        "utility_guidance",
         "knowledge_guidance",
         "taste_guidance",
         "critic_guidance",
@@ -118,6 +120,8 @@ class BenchmarkPatchGenerationNode(
         "already present in patch_context, or stop when the evidence does not justify spending "
         "another experiment. Do not invent results, claim access to held-out data, propose shell "
         "commands, add dependencies, change evaluation code, widen policy, or claim execution. "
+        "A missing guidance channel is disabled by the registered condition; do not reconstruct "
+        "or simulate it from general knowledge. "
         "A proposal remains untrusted until deterministic admission and isolated development "
         "execution. Preserve a substantive scientific hypothesis rather than making cosmetic edits."
     )

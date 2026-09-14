@@ -1839,3 +1839,23 @@ zero-network reversible repair and performed no standalone preflight; paid live
 repair remains tied to explicit workflow configuration plus caller opt-in. This
 is engineering closure of an autonomous failure path, not scientific evidence
 for the ICLR claim, and it consumed no formal GPU or API campaign budget.
+
+## Closing development-score selection in formal task cells (2026-09-14)
+
+The next recursive pass accepted the owner's diagnosis that interface work was
+masking the central gap: SciTaste could execute a generated experiment, but could
+not yet autonomously use its objective result to select the next research action.
+Generation as Content was therefore frozen for a later branch. Core now owns a
+development-only baseline → propose/stop → exact patch → isolated score →
+adopt/rollback loop. A deterministic local scenario retained an improving 0.20
+candidate over its 0.10 baseline and restored a later 0.15 regression to the exact
+best source bytes. This is an engineering acceptance scenario, not paper evidence.
+
+The same pass exposed a more consequential experimental-design risk: arbitrary
+caller strings could have made nominal Base, Full, and mismatched conditions differ
+in unregistered ways. A content-bound guidance set and the existing immutable
+six-arm condition matrix now compile the utility, Knowledge, matched/mismatched
+Taste, and critic channels for each condition. The future project interface needs
+only two stable seams: read the immutable loop/iteration records and submit a typed
+program revision before launch. It does not need to sit inside experiment execution.
+No real corpus, model, API, GPU, development dataset, or held-out scorer was used.

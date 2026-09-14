@@ -5,6 +5,17 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a development-only autonomous benchmark research controller. It runs a
+  measured baseline, obtains a durable model-node propose/stop decision, admits
+  and applies exact multi-file replacements, executes the isolated objective,
+  adopts only directed improvements, and restores failed or regressing candidates.
+  Every iteration, artifact, source transition, token/cost counter, and unverified
+  executor attempt is retained while held-out execution remains false. The loop
+  derives its project/plan/cell/system/task/resource/seed and owner-approval
+  identity from an authorized campaign cell rather than caller labels. Native
+  Base/Knowledge/Taste/Critics/Full/mismatched contexts are now compiled from one
+  content-bound five-channel guidance set through the immutable six-arm matrix, so
+  callers cannot casually vary extra prompt components between conditions.
 - Added a bounded Bubblewrap development runner and objective-only MLRC-Bench
   entrypoint for real task cells. It uses pinned task-local runtimes, read-only
   source/data mounts, declared writable artifacts, no network or API secrets,

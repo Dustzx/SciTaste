@@ -147,6 +147,11 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
             raise ValueError("held-out paths cannot be editable")
         if set(self.dataset_directories) & set(self.writable_output_directories):
             raise ValueError("dataset and writable output directories must be distinct")
+        controlled_directories = (*self.dataset_directories, *self.writable_output_directories)
+        for index, left in enumerate(controlled_directories):
+            for right in controlled_directories[index + 1 :]:
+                if _is_at_or_under(left, right) or _is_at_or_under(right, left):
+                    raise ValueError("dataset and output directories cannot be nested")
         return self
 
     @computed_field

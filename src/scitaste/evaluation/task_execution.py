@@ -173,6 +173,7 @@ class BenchmarkDevelopmentExecutionReceipt(BaseModel):
     stdout_bytes: int = Field(ge=0)
     stderr_bytes: int = Field(ge=0)
     artifact_bytes: int = Field(ge=0)
+    artifact_root_locator: Literal["artifacts"] = "artifacts"
     artifact_sha256: dict[str, str] = Field(max_length=10_000)
     network_access: Literal[False] = False
     api_credentials_exposed: Literal[False] = False
@@ -318,6 +319,11 @@ class BenchmarkDevelopmentRunner:
                 self.spec,
                 self.workspace,
                 maximum_bytes=request.limits.maximum_artifact_bytes,
+            )
+            _archive_output_directories(
+                self.spec,
+                self.workspace,
+                destination=target / "artifacts",
             )
         except (OSError, ValueError):
             protected_after = protected_before
@@ -670,6 +676,29 @@ def _hash_output_directories(
             if len(hashes) > 10_000:
                 raise ValueError("benchmark output exceeds its artifact file limit")
     return hashes, total
+
+
+def _archive_output_directories(
+    spec: BenchmarkTaskRuntimeSpec,
+    workspace: Path,
+    *,
+    destination: Path,
+) -> None:
+    if destination.exists() or destination.is_symlink():
+        raise FileExistsError(destination)
+    for locator in spec.writable_output_directories:
+        source = workspace.joinpath(*PurePosixPath(locator).parts)
+        target = destination.joinpath(*PurePosixPath(locator).parts)
+        if target.exists() or target.is_symlink():
+            raise FileExistsError(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+    for locator in spec.writable_output_directories:
+        source = workspace.joinpath(*PurePosixPath(locator).parts)
+        target = destination.joinpath(*PurePosixPath(locator).parts)
+        mode = stat.S_IMODE(source.stat().st_mode)
+        os.replace(source, target)
+        source.mkdir(parents=True, exist_ok=False)
+        source.chmod(mode)
 
 
 def _bounded_read(path: Path, maximum_bytes: int) -> bytes:

@@ -4,13 +4,24 @@ import hashlib
 import json
 import stat
 import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from scitaste.backends.base import Usage
 from scitaste.evaluation.prelaunch import ReadinessStatus
-from scitaste.evaluation.task_execution import parse_benchmark_objective
+from scitaste.evaluation.task_condition import (
+    BenchmarkGuidanceArtifact,
+    BenchmarkResearchConditionGuidance,
+    BenchmarkResearchGuidanceSet,
+    compile_benchmark_condition_guidance,
+)
+from scitaste.evaluation.task_execution import (
+    BenchmarkDevelopmentExecutionReceipt,
+    BenchmarkObjectivePayload,
+    parse_benchmark_objective,
+)
 from scitaste.evaluation.task_patch import (
     BenchmarkPatchEdit,
     BenchmarkPatchPolicy,
@@ -18,17 +29,27 @@ from scitaste.evaluation.task_patch import (
     BenchmarkPatchProposal,
     apply_benchmark_patch,
     inspect_benchmark_patch,
+    rollback_benchmark_patch,
     snapshot_benchmark_editable_files,
 )
 from scitaste.evaluation.task_patch_generation import (
+    BenchmarkPatchGenerationEdit,
     BenchmarkPatchGenerationInput,
     BenchmarkPatchGenerationNode,
+    BenchmarkPatchGenerationOutput,
     materialize_benchmark_patch_proposal,
+)
+from scitaste.evaluation.task_research_loop import (
+    BenchmarkPatchDecision,
+    BenchmarkResearchCellBinding,
+    BenchmarkResearchLoop,
+    BenchmarkResearchLoopConfig,
 )
 from scitaste.evaluation.task_runtime import (
     BenchmarkTaskRuntimeSpec,
     RuntimeEvidenceBinding,
     hash_benchmark_tree,
+    hash_protected_surface,
     inspect_benchmark_task_runtime,
     prepare_benchmark_workspace,
 )
@@ -40,6 +61,7 @@ from scitaste.model_nodes import (
     ScriptedStructuredReply,
 )
 from scitaste.model_nodes.registry import first_party_node_types
+from scitaste.taste.conditions import load_native_condition_matrix
 
 
 def _sha256(path: Path) -> str:
@@ -284,6 +306,17 @@ def test_benchmark_patch_replaces_exact_context_without_running_task(tmp_path: P
     assert json.loads((root / "cells" / "patch-1.json").read_text())["receipt_sha256"] == (
         receipt.receipt_sha256
     )
+    rollback = rollback_benchmark_patch(
+        proposal,
+        context,
+        receipt,
+        spec,
+        workspace=workspace,
+        receipt_path=root / "cells" / "rollback-1.json",
+        allow_mutation=True,
+    )
+    assert rollback.editable_surface_after_sha256 == context.editable_surface_sha256
+    assert (workspace / "methods" / "MyMethod.py").read_text() == "VALUE = 1\n"
 
 
 def test_benchmark_patch_rejects_invalid_or_stale_source(tmp_path: Path) -> None:
@@ -500,3 +533,218 @@ def test_benchmark_objective_parser_requires_one_development_measurement() -> No
             marker + payload + b"\n" + marker + payload,
             task_id="fixture-task",
         )
+
+
+def test_research_loop_adopts_improvement_and_rolls_back_regression(tmp_path: Path) -> None:
+    root, spec = _fixture(tmp_path)
+    inspection = inspect_benchmark_task_runtime(
+        spec,
+        workspace_root=root,
+        spec_sha256="d" * 64,
+    )
+    prepared = prepare_benchmark_workspace(
+        spec,
+        inspection,
+        workspace_root=root,
+        destination=root / "cells" / "cell-1",
+        allow_materialization=True,
+    )
+    workspace = root / "cells" / "cell-1"
+
+    class Decisions:
+        def decide(self, input_data, *, loop_id: str, iteration: int):
+            del loop_id
+            expected = "VALUE = 1\n" if iteration == 1 else "VALUE = 2\n"
+            assert input_data.patch_context.files[0].content == expected
+            output = BenchmarkPatchGenerationOutput(
+                decision="propose",
+                hypothesis=f"Use the deterministic candidate for iteration {iteration}.",
+                expected_effect="The fixture development score should change.",
+                edits=(
+                    BenchmarkPatchGenerationEdit(
+                        path="methods/MyMethod.py",
+                        replacement=f"VALUE = {iteration + 1}\n",
+                    ),
+                ),
+            )
+            return BenchmarkPatchDecision.create(
+                output=output,
+                producer=BenchmarkPatchProducer(
+                    mode="registered",
+                    producer_id="fixture-decisions",
+                ),
+                invocation_receipt_sha256=None,
+                input_tokens=iteration,
+                output_tokens=iteration + 1,
+                cost_usd=0,
+            )
+
+    class Development:
+        def __init__(self) -> None:
+            self.scores = iter((0.1, 0.2, 0.15))
+
+        def run(self, request, *, result_directory, allow_execution=False):
+            assert allow_execution
+            Path(result_directory).mkdir(parents=True)
+            score = next(self.scores)
+            timestamp = datetime.now(UTC)
+            objective = BenchmarkObjectivePayload(
+                task_id=spec.task_id,
+                phase="dev",
+                method="fixture",
+                score=score,
+                elapsed_seconds=0,
+            )
+            return BenchmarkDevelopmentExecutionReceipt.create(
+                request_sha256=request.fingerprint,
+                spec_fingerprint=spec.fingerprint,
+                workspace_receipt_sha256=prepared.receipt_sha256,
+                execution_profile_fingerprint=request.execution_profile_fingerprint,
+                resource_verification_receipt_sha256=(
+                    request.resource_verification_receipt_sha256
+                ),
+                entrypoint_sha256=spec.objective_entrypoint.file_sha256,
+                status="succeeded",
+                error_code=None,
+                returncode=0,
+                timed_out=False,
+                started_at=timestamp,
+                finished_at=timestamp,
+                wall_seconds=0,
+                gpu_device_count=0,
+                gpu_hours=0,
+                editable_surface_sha256=request.editable_surface_sha256,
+                protected_surface_sha256=hash_protected_surface(spec, workspace),
+                objective=objective,
+                baseline_development_score=spec.baseline_development_score,
+                objective_delta_from_baseline=score - spec.baseline_development_score,
+                stdout_sha256=hashlib.sha256(b"").hexdigest(),
+                stderr_sha256=hashlib.sha256(b"").hexdigest(),
+                stdout_bytes=0,
+                stderr_bytes=0,
+                artifact_bytes=0,
+                artifact_sha256={},
+            )
+
+    loop = BenchmarkResearchLoop(
+        spec,
+        prepared,
+        Decisions(),
+        Development(),
+        source_root=root,
+        workspace=workspace,
+    )
+    result = loop.run(
+        BenchmarkResearchLoopConfig(
+            loop_id="fixture-loop",
+            cell=BenchmarkResearchCellBinding.create(
+                project_id=spec.project_id,
+                evaluation_id="fixture-evaluation",
+                campaign_run_id="fixture-campaign",
+                campaign_manifest_sha256="1" * 64,
+                evaluation_bundle_sha256="2" * 64,
+                plan_sha256="a" * 64,
+                cell_id="fixture-cell",
+                cell_sha256="b" * 64,
+                system_id="native-base",
+                task_id=spec.task_id,
+                resource_sha256="c" * 64,
+                seed=0,
+            ),
+            condition=BenchmarkResearchConditionGuidance(
+                condition_id="native-base",
+                condition_matrix_fingerprint="5" * 64,
+                guidance_set_sha256="6" * 64,
+                artifact_sha256={},
+            ),
+            execution_profile_fingerprint="3" * 64,
+            resource_verification_receipt_sha256="4" * 64,
+            selected_context_paths=("methods/MyMethod.py",),
+            maximum_patch_iterations=2,
+            maximum_failed_experiments=1,
+            constraints=("Use only the visible editable source and development objective.",),
+        ),
+        output_directory=root / "loop-result",
+        allow_model_decisions=True,
+        allow_source_mutation=True,
+        allow_development_execution=True,
+    )
+
+    assert result.status == "completed"
+    assert result.best_development_score == 0.2
+    assert result.best_iteration == 1
+    assert result.development_experiment_count == 3
+    assert result.adopted_patch_count == 1
+    assert result.reverted_patch_count == 1
+    assert result.heldout_executed is False
+    assert (workspace / "methods" / "MyMethod.py").read_text() == "VALUE = 2\n"
+    assert (root / "loop-result" / "iterations" / "002" / "PATCH_ROLLBACK.json").is_file()
+    assert json.loads((root / "loop-result" / "RESULT.json").read_text())["result_sha256"] == (
+        result.result_sha256
+    )
+
+
+def test_benchmark_condition_guidance_is_compiled_from_the_six_arm_matrix() -> None:
+    matrix = load_native_condition_matrix(
+        Path("configs/evaluation/native_taste_condition_matrix_v1.yaml")
+    )
+
+    def artifact(
+        guidance_id: str,
+        channel: str,
+        relation: str,
+        entry: str,
+    ) -> BenchmarkGuidanceArtifact:
+        return BenchmarkGuidanceArtifact(
+            guidance_id=guidance_id,
+            channel=channel,
+            taste_relation=relation,
+            source_locator=f"evidence/{guidance_id}.json",
+            source_sha256=hashlib.sha256(guidance_id.encode()).hexdigest(),
+            derivation_receipt_locator=f"evidence/{guidance_id}-receipt.json",
+            derivation_receipt_sha256=hashlib.sha256(
+                f"{guidance_id}-receipt".encode()
+            ).hexdigest(),
+            entries=(entry,),
+        )
+
+    guidance = BenchmarkResearchGuidanceSet(
+        guidance_set_id="fixture-guidance",
+        condition_matrix_sha256=matrix.file_sha256,
+        condition_matrix_fingerprint=matrix.matrix.fingerprint,
+        corpus_pair_report_sha256="9" * 64,
+        utility=artifact("utility", "utility", "not-applicable", "Prefer informative trials."),
+        knowledge=artifact(
+            "knowledge", "knowledge", "not-applicable", "The task uses a temporal model."
+        ),
+        matched_taste=artifact(
+            "taste-matched", "taste", "matched", "Reject changes without a mechanism."
+        ),
+        mismatched_taste=artifact(
+            "taste-mismatched", "taste", "mismatched", "Prefer a larger language model."
+        ),
+        critic=artifact("critic", "critic", "not-applicable", "Check leakage risk."),
+    )
+
+    base = compile_benchmark_condition_guidance(matrix, guidance, "native-base")
+    full = compile_benchmark_condition_guidance(matrix, guidance, "full-scitaste")
+    placebo = compile_benchmark_condition_guidance(
+        matrix,
+        guidance,
+        "mismatched-taste-placebo",
+    )
+
+    assert base.artifact_sha256 == {}
+    assert not any(
+        (
+            base.utility_guidance,
+            base.knowledge_guidance,
+            base.taste_guidance,
+            base.critic_guidance,
+        )
+    )
+    assert set(full.artifact_sha256) == {"utility", "knowledge", "taste", "critic"}
+    assert full.utility_guidance == placebo.utility_guidance
+    assert full.knowledge_guidance == placebo.knowledge_guidance
+    assert full.critic_guidance == placebo.critic_guidance
+    assert full.taste_guidance != placebo.taste_guidance

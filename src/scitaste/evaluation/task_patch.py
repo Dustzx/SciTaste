@@ -308,6 +308,44 @@ class BenchmarkPatchApplicationReceipt(BaseModel):
         return cls(**payload, receipt_sha256=digest)
 
 
+class BenchmarkPatchRollbackReceipt(BaseModel):
+    """Evidence that a non-best candidate was restored to its exact predecessor."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    proposal_sha256: str = Field(pattern=_SHA256)
+    application_receipt_sha256: str = Field(pattern=_SHA256)
+    context_sha256: str = Field(pattern=_SHA256)
+    spec_fingerprint: str = Field(pattern=_SHA256)
+    workspace_locator: str
+    editable_surface_before_sha256: str = Field(pattern=_SHA256)
+    editable_surface_after_sha256: str = Field(pattern=_SHA256)
+    protected_surface_sha256: str = Field(pattern=_SHA256)
+    restored_paths: tuple[str, ...] = Field(min_length=1, max_length=50)
+    model_invocation_performed_by_rollback: Literal[False] = False
+    benchmark_execution_performed_by_rollback: Literal[False] = False
+    receipt_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def receipt_is_self_hashed(self) -> BenchmarkPatchRollbackReceipt:
+        _relative_locator(self.workspace_locator, label="workspace locator")
+        if len(self.restored_paths) != len(set(self.restored_paths)):
+            raise ValueError("benchmark rollback paths must be unique")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+        if self.receipt_sha256 != expected:
+            raise ValueError("benchmark patch rollback receipt hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> BenchmarkPatchRollbackReceipt:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("receipt_sha256", None)
+        unsigned = cls.model_construct(receipt_sha256="0" * 64, **payload)
+        digest = content_sha256(unsigned.model_dump(mode="json", exclude={"receipt_sha256"}))
+        return cls(**payload, receipt_sha256=digest)
+
+
 def snapshot_benchmark_editable_files(
     spec: BenchmarkTaskRuntimeSpec,
     prepared: PreparedBenchmarkWorkspace,
@@ -542,6 +580,99 @@ def apply_benchmark_patch(
         shutil.rmtree(transaction, ignore_errors=True)
 
 
+def rollback_benchmark_patch(
+    proposal: BenchmarkPatchProposal,
+    context: BenchmarkPatchContext,
+    application: BenchmarkPatchApplicationReceipt,
+    spec: BenchmarkTaskRuntimeSpec,
+    *,
+    workspace: str | Path,
+    receipt_path: str | Path,
+    allow_mutation: bool = False,
+) -> BenchmarkPatchRollbackReceipt:
+    """Restore exact predecessor bytes after a failed or non-improving development run."""
+
+    if not allow_mutation:
+        raise ValueError("benchmark patch rollback requires explicit authorization")
+    if application.proposal_sha256 != proposal.fingerprint:
+        raise ValueError("benchmark rollback application belongs to another proposal")
+    if application.spec_fingerprint != spec.fingerprint:
+        raise ValueError("benchmark rollback application belongs to another task spec")
+    if proposal.context_sha256 != context.context_sha256:
+        raise ValueError("benchmark rollback proposal belongs to another source context")
+    root = _workspace_root(workspace)
+    before, _ = hash_editable_surface(spec, root)
+    protected = hash_protected_surface(spec, root)
+    if before != application.editable_surface_after_sha256:
+        raise ValueError("editable benchmark surface changed after patch application")
+    if protected != application.protected_surface_sha256:
+        raise ValueError("protected benchmark surface changed after patch application")
+    snapshots = {item.path: item for item in context.files}
+    records = {item.path: item for item in application.edits}
+    if set(records) != {item.path for item in proposal.edits}:
+        raise ValueError("benchmark application receipt does not cover the proposal")
+    record = Path(receipt_path)
+    if record.exists() or record.is_symlink():
+        raise FileExistsError(record)
+    try:
+        record.resolve().relative_to(root)
+    except ValueError:
+        pass
+    else:
+        raise ValueError("benchmark rollback receipt must be outside the mutable workspace")
+    record.parent.mkdir(parents=True, exist_ok=True)
+    transaction = Path(tempfile.mkdtemp(prefix=".benchmark-rollback.", dir=root.parent))
+    staged: list[tuple[Path, Path, Path, int]] = []
+    changed: list[Path] = []
+    try:
+        for index, edit in enumerate(proposal.edits):
+            snapshot = snapshots.get(edit.path)
+            if snapshot is None or snapshot.sha256 != edit.expected_sha256:
+                raise ValueError("benchmark rollback context lacks exact predecessor bytes")
+            target = root.joinpath(*PurePosixPath(edit.path).parts)
+            current = target.read_bytes()
+            if hashlib.sha256(current).hexdigest() != records[edit.path].after_sha256:
+                raise ValueError(f"benchmark rollback target changed: {edit.path}")
+            mode = stat.S_IMODE(target.stat().st_mode)
+            backup = transaction / f"{index}.patched"
+            predecessor = transaction / f"{index}.predecessor"
+            backup.write_bytes(current)
+            predecessor.write_bytes(snapshot.content.encode("utf-8"))
+            backup.chmod(mode)
+            predecessor.chmod(mode)
+            staged.append((target, backup, predecessor, mode))
+        for target, _, predecessor, _ in staged:
+            os.replace(predecessor, target)
+            changed.append(target)
+        after, _ = hash_editable_surface(spec, root)
+        if after != application.editable_surface_before_sha256:
+            raise ValueError("benchmark rollback did not restore the predecessor surface")
+        if hash_protected_surface(spec, root) != protected:
+            raise ValueError("benchmark rollback changed protected task source")
+        receipt = BenchmarkPatchRollbackReceipt.create(
+            proposal_sha256=proposal.fingerprint,
+            application_receipt_sha256=application.receipt_sha256,
+            context_sha256=context.context_sha256,
+            spec_fingerprint=spec.fingerprint,
+            workspace_locator=root.name,
+            editable_surface_before_sha256=before,
+            editable_surface_after_sha256=after,
+            protected_surface_sha256=protected,
+            restored_paths=tuple(edit.path for edit in proposal.edits),
+        )
+        _atomic_json_write(record, receipt.model_dump(mode="json"))
+        return receipt
+    except BaseException:
+        for target, backup, _, mode in reversed(staged):
+            if target in changed and backup.exists():
+                os.replace(backup, target)
+                target.chmod(mode)
+        record.unlink(missing_ok=True)
+        raise
+    finally:
+        shutil.rmtree(transaction, ignore_errors=True)
+
+
 def hash_editable_surface(
     spec: BenchmarkTaskRuntimeSpec,
     workspace: str | Path,
@@ -645,9 +776,11 @@ __all__ = [
     "BenchmarkPatchPolicy",
     "BenchmarkPatchProducer",
     "BenchmarkPatchProposal",
+    "BenchmarkPatchRollbackReceipt",
     "BenchmarkPatchViolation",
     "apply_benchmark_patch",
     "hash_editable_surface",
     "inspect_benchmark_patch",
+    "rollback_benchmark_patch",
     "snapshot_benchmark_editable_files",
 ]
