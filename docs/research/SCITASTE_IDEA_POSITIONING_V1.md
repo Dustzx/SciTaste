@@ -1,6 +1,6 @@
 # SciTaste idea and positioning memo v1
 
-Date: 2026-09-14
+Date: 2026-09-15
 
 Status: candidate research-positioning memo. It does not yet authorize a
 manuscript claim or experiment and does not report an effectiveness result.
@@ -27,14 +27,14 @@ evaluate that one policy.
 
 The precise answer is: **SciTaste has an explicit Taste substrate, but it does
 not yet have a demonstrated, continually acquired scientific-taste capability.**
-Four claims that are easy to conflate must be separated:
+Five claims that are easy to conflate must be separated:
 
 | Maturity level | Meaning | Current status |
 |---|---|---|
 | Taste prior | The underlying LLM already contains implicit research preferences from pretraining | Present but uncontrolled, unmeasured, and not a SciTaste contribution |
 | Taste substrate | Typed `TasteCase`, library, retrieval, transfer deliberation, critics, controller, and outcome-gated admission contracts exist | Implemented |
 | Operational Taste | A sufficiently broad, source-grounded set of precedents actually changes decisions across the research lifecycle | Only small curated/fixture evidence; not established for the self-development project |
-| Learned Taste | GAC corrections and real tool, experiment, and review outcomes automatically form reviewed reusable precedents | Not yet closed |
+| Learned Taste | Reviewed decision--outcome episodes estimate a reusable, abstaining lifecycle preference policy | Estimator, attribution review, admission, split, and inference contracts are implemented on authored fixtures; no natural self-project episode has completed the path |
 | Generalised model Taste | A trained model or adapter improves held-out action judgment beyond raw RAG and in-context cases | Not implemented or evidenced |
 
 The available offline acceptance assets include a small seed library of curated
@@ -48,8 +48,9 @@ a research policy, but it is not evidence that the system has acquired Taste.
 Accordingly, repository completeness and scientific capability must use
 different language:
 
-> The Taste machinery exists. The initial Taste content is narrow. The
-> experience-learning loop is open. The improvement claim remains unverified.
+> The Taste machinery and a first estimated-policy path exist. The initial
+> training content is authored fixture data, not natural longitudinal evidence.
+> The live experience-learning loop and the improvement claim remain unverified.
 
 For the project, “overall scientific taste” should mean the conjunction of:
 
@@ -190,7 +191,7 @@ This interpretation is already partially present in the implementation:
 | Assess whether precedents transfer to the live decision | `TasteDeliberationNode` | Implemented as proposal-only `ModelNode` |
 | Concretise protected candidate templates | `CandidateGenerationBackend` in `TasteController` | Implemented, but uses a controller-specific backend path |
 | Select among fixed budget-feasible actions | `PreferenceBackend` in `TasteController` | Implemented, but not unified with the durable `ModelNodeRuntime` |
-| Diagnose an outcome and distil process Taste | Outcome-grounded Process Taste Miner | Not implemented |
+| Diagnose an outcome and distil process Taste | `compile_process_taste_episode_candidate` plus reviewed outcome attribution | Deterministic quarantined-candidate compiler implemented; autonomous diagnosis and a natural live episode are not demonstrated |
 | Admit a precedent or mutate canonical research state | No model node may own this authority | Deterministic/human boundary intentionally retained |
 
 The named Tool Intelligence package is currently narrower than this conceptual
@@ -502,15 +503,24 @@ improving scientific judgment while preserving their distinct authority.
 
 ### Current implementation boundary
 
-The loop is only partially closed today.
+The minimum loop is structurally closed on authored fixtures but empirically
+open on natural project trajectories.
 
 - External-source qualification, grounded abstraction, deliberative selection,
   and outcome-gated `TasteMemory` contracts exist, but no natural source or
   project reflection has yet completed the formal admission path.
 - Native execution writes the selected `ResearchDecision` and its actual
-  executor outcome. Turning that episode into a quarantined memory is still an
-  explicit `taste memory-reflect` operation followed by independent review and
-  admission; it is not an automatic runtime transition.
+  executor outcome. Project-aware trajectory reconstruction now verifies the
+  exact pre-decision state, alternatives, execution binding, source group, and
+  dataset partition without manufacturing a scientific outcome label.
+  Retrospective self-project logs remain audit-only, and prospective records
+  still require delayed outcome collection.
+- Deterministic process-candidate compilation, two independent attribution
+  reviews with conditional adjudication, immutable admission, source-group-
+  weighted policy estimation, held-out partition exclusion, exact-scope
+  transfer checks, and uncertainty abstention are implemented. Their current
+  positive examples are authored fixtures; the self-project has no naturally
+  observed, independently reviewed training episode or held-out policy effect.
 - Generation as Content can collect source-review returns, publish planning
   directives, alter the effective project program, and prepare grounded Taste
   abstraction inputs. Ordinary conversational feedback is not yet compiled into
@@ -519,11 +529,14 @@ The loop is only partially closed today.
   routes and retain their observations, but its own contract correctly states
   that observations do not automatically become evidence, state, or Taste.
 - `TasteMemoryAdmission` explicitly sets `authorizes_model_training=false`.
-  Consequently SciTaste currently augments **system-level behavioural taste** at
-  inference time; it does not yet improve the base model's parameters.
+  The implemented lifecycle estimator updates a separate **system-level
+  behavioural Taste policy** from admitted episodes; it does not update the base
+  model's parameters.
 
-These are scientific-method gaps, not merely UI glue. Closing them would turn
-the current collection of mechanisms into a genuine continual taste learner.
+The remaining gaps are scientific evidence and live-loop integration, not a
+missing estimator: collect natural prospective episodes, obtain genuinely
+independent attribution, execute held-out decisions, measure downstream
+progress, and connect authorized runtime/GAC events to candidate preparation.
 
 ### Parametric Taste learning extension
 
@@ -629,11 +642,13 @@ learnable research-action policy.
 
 ### Novelty verdict
 
-The conceptual direction is promising but the current implementation and
-evidence are **not yet ICLR-safe as a method claim**. Without the missing learner
-and controlled results, a reviewer can reasonably describe the system as a
-careful combination of RAG, structured reflection, agent memory, model-node
-guardrails, and human intervention.
+The conceptual direction and minimum estimator are implemented, but the current
+evidence is **not yet ICLR-safe for an effectiveness claim**. Without natural
+training episodes, independently reviewed attribution, and controlled held-out
+results, a reviewer can still reasonably describe the system as a careful
+combination of RAG, structured reflection, agent memory, model-node guardrails,
+and human intervention whose new learned object has only been exercised on
+fixtures.
 
 | Candidate claim | Closest prior overlap | Verdict |
 |---|---|---|
@@ -642,7 +657,7 @@ guardrails, and human intervention.
 | Failures should change later behavior or the harness | Sibyl-AutoResearch, AutoResearchClaw, reflective agent memory | Not novel alone |
 | A user can inject research Taste | kkanbu and HITL systems | Not novel alone |
 | Models should be invoked only at bounded semantic hotspots | General tool/model-node and agent-safety design | Valuable engineering, not the primary scientific claim |
-| Learn one Scientific Taste policy over consequential decisions across the full research trajectory | Explicit-Taste work focuses on idea/pitch judgment or selected user-taste handoffs; AutoResearch work has broader loops but does not make a unified Taste policy the learned object | Candidate central novelty; requires exhaustive challenge and an implemented learner |
+| Learn one Scientific Taste policy over consequential decisions across the full research trajectory | Explicit-Taste work focuses on idea/pitch judgment or selected user-taste handoffs; AutoResearch work has broader loops but does not make a unified Taste policy the learned object | Candidate central novelty; estimator implemented, but requires independent novelty challenge and controlled natural-data evidence |
 | Reconstruct grounded decision episodes and assign delayed trajectory outcomes back to earlier decisions | Overlaps experience memory, reflection, and trial-to-behavior conversion | Supporting learning mechanism, not an independent headline |
 | Show a causal effect beyond the same-source raw evidence, same model, same tools and same budget | Existing systems mostly report package or benchmark performance | Strong evaluation contribution if actually completed |
 
@@ -665,6 +680,11 @@ have three supporting operators:
    cases; and
 3. **outcome-attributed update** separates hypothesis, design, execution,
    adaptation and claim outcomes before changing the reusable policy.
+
+All three operators now have deterministic repository implementations. That
+establishes method availability, not scientific utility: current demonstrations
+use authored fixtures, while the decisive prospective, source-disjoint and
+downstream-effect evaluations remain unrun.
 
 A parametric adapter is not logically mandatory for a systems paper, but some
 learned or estimated policy is strongly preferable for ICLR. If the submission
@@ -779,8 +799,9 @@ The intended result-dependent title remains:
 
 “Improving” becomes defensible only after the grounded representation,
 contextual selection, and held-out objective-progress claims are complete and
-positive. “Learning” should not appear in the title unless a submitted method
-actually estimates or updates a policy rather than only retrieving cases.
+positive. The repository now estimates a policy rather than only retrieving
+cases, but “Learning” should appear in a submitted title only when that estimator
+is trained and evaluated on non-fixture episodes.
 
 ## Three-minute report
 

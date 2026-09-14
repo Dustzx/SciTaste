@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="figure-title figure-description">
-  <title id="figure-title">SciTaste turns research experience into scientific decision control</title>
-  <desc id="figure-description">High-quality papers, reviews, revisions, and outcomes are abstracted into verified Taste Cases. At each step, the Taste Controller combines current research state, factual knowledge, decision precedent, and budget to rank a closed action set. Bounded workers return typed results, while deterministic admission alone can commit the next research state.</desc>
+  <title id="figure-title">SciTaste learns a lifecycle policy from reviewed research decisions</title>
+  <desc id="figure-description">External records, tool and experiment outcomes, and human interventions are reconstructed into grounded decision episodes. Independent attribution review admits source-group-bound episodes to an uncertainty-aware pairwise policy. The policy adjusts a closed action set only inside its support and otherwise abstains, while deterministic admission owns project state.</desc>
   <defs>
     <marker id="arrow-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#34312c" />
@@ -26,20 +26,20 @@
   </defs>
 
   <rect width="1200" height="630" rx="20" fill="#fbfaf7" />
-  <text x="40" y="35" class="sans label" fill="#a65d2e">SCITASTE · SCIENTIFIC TASTE AS A RESEARCH CONTROL POLICY</text>
+  <text x="40" y="35" class="sans label" fill="#a65d2e">SCITASTE · LEARN SCIENTIFIC TASTE FROM REVIEWED TRAJECTORIES</text>
   <line x1="40" y1="51" x2="1160" y2="51" stroke="#ded8ce" />
 
   <g id="taste-formation" data-kind="panel">
-    <text x="40" y="78" class="sans label" fill="#8a847a">A · FORM TRANSFERABLE TASTE</text>
+    <text x="40" y="78" class="sans label" fill="#8a847a">A · GROUND EXPERIENCE INTO A POLICY</text>
 
     <g id="high-quality-research" data-kind="entity" data-role="source-evidence">
       <rect x="40" y="92" width="212" height="104" rx="10" fill="#fffdf9" stroke="#cfc7bb" />
-      <text x="58" y="119" class="serif heading ink">High-quality research</text>
+      <text x="58" y="119" class="serif heading ink">Supervision channels</text>
       <g class="sans micro soft">
         <rect x="58" y="135" width="71" height="24" rx="12" fill="#f0ece5" /><text x="93.5" y="151" text-anchor="middle">papers</text>
         <rect x="136" y="135" width="82" height="24" rx="12" fill="#f0ece5" /><text x="177" y="151" text-anchor="middle">reviews</text>
-        <rect x="58" y="165" width="83" height="24" rx="12" fill="#f0ece5" /><text x="99.5" y="181" text-anchor="middle">revisions</text>
-        <rect x="148" y="165" width="70" height="24" rx="12" fill="#f0ece5" /><text x="183" y="181" text-anchor="middle">outcomes</text>
+        <rect x="58" y="165" width="83" height="24" rx="12" fill="#f0ece5" /><text x="99.5" y="181" text-anchor="middle">tool traces</text>
+        <rect x="148" y="165" width="70" height="24" rx="12" fill="#f0ece5" /><text x="183" y="181" text-anchor="middle">human</text>
       </g>
     </g>
 
@@ -47,45 +47,47 @@
 
     <g id="taste-abstraction" data-kind="entity" data-role="abstraction">
       <rect x="300" y="92" width="214" height="104" rx="10" fill="#fffdf9" stroke="#cfc7bb" />
-      <text x="318" y="119" class="serif heading ink">Abstract decisions</text>
-      <text x="318" y="143" class="sans small soft">decision · context · alternatives</text>
-      <text x="318" y="162" class="sans small soft">evidence · cost · observed outcome</text>
-      <text x="318" y="183" class="sans micro" fill="#a65d2e">not passage imitation</text>
+      <text x="318" y="119" class="serif heading ink">Reconstruct episodes</text>
+      <text x="318" y="143" class="sans small soft">state · alternatives · evidence</text>
+      <text x="318" y="162" class="sans small soft">action · outcomes · confounders</text>
+      <text x="318" y="183" class="sans micro" fill="#a65d2e">no hindsight reward</text>
     </g>
 
     <path d="M514 144 H554" fill="none" stroke="#34312c" stroke-width="1.7" marker-end="url(#arrow-ink)" />
 
     <g id="taste-library" data-kind="entity" data-role="decision-precedent">
       <rect x="562" y="92" width="238" height="104" rx="10" fill="#2b2925" stroke="#2b2925" />
-      <text x="582" y="119" class="sans micro" fill="#d9c7b7">PROVENANCE + TRANSFER GATES</text>
-      <text x="582" y="148" class="serif heading" fill="#ffffff">Verified Taste Cases</text>
-      <text x="582" y="171" class="sans small" fill="#d7d2ca">decision precedents, not facts</text>
+      <text x="582" y="119" class="sans micro" fill="#d9c7b7">DUAL ATTRIBUTION REVIEW</text>
+      <text x="582" y="148" class="serif heading" fill="#ffffff">Admitted episodes</text>
+      <text x="582" y="171" class="sans small" fill="#d7d2ca">source-group + split bound</text>
       <circle cx="771" cy="116" r="8" fill="#a65d2e" />
       <path d="M767 116 L770 119 L776 111" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
     </g>
 
+    <path d="M800 144 H840" fill="none" stroke="#34312c" stroke-width="1.7" marker-end="url(#arrow-ink)" />
+
     <g id="knowledge-taste-distinction" data-kind="annotation">
       <rect x="848" y="92" width="312" height="104" rx="10" fill="#f3efe7" stroke="#ded8ce" />
-      <text x="868" y="119" class="sans label" fill="#68715e">KNOWLEDGE ≠ TASTE</text>
-      <text x="868" y="144" class="sans body ink">Knowledge supplies factual context.</text>
-      <text x="868" y="166" class="sans body ink">Taste supplies decision precedent.</text>
-      <text x="868" y="185" class="sans micro soft">Retrieval transports both; it is not the judgment.</text>
+      <text x="868" y="119" class="sans label" fill="#68715e">LEARNED LIFECYCLE POLICY</text>
+      <text x="868" y="144" class="sans body ink">Pairwise posteriors from reviewed credit.</text>
+      <text x="868" y="166" class="sans body ink">Transfer gates + uncertainty abstention.</text>
+      <text x="868" y="185" class="sans micro soft">Raw retrieval is a control, not the judgment.</text>
     </g>
   </g>
 
   <line x1="40" y1="222" x2="1160" y2="222" stroke="#ded8ce" />
-  <text x="40" y="250" class="sans label" fill="#8a847a">B · CONTROL THE NEXT RESEARCH STEP</text>
+  <text x="40" y="250" class="sans label" fill="#8a847a">B · APPLY OR ABSTAIN AT THE NEXT DECISION</text>
 
   <g id="research-state" data-kind="entity" data-role="canonical-state">
     <rect x="40" y="271" width="250" height="221" rx="12" fill="#fffdf9" stroke="#9ea6aa" stroke-width="1.4" />
     <rect x="40" y="271" width="250" height="48" rx="12" fill="#edf1f2" />
     <path d="M40 307 H290 V319 H40 Z" fill="#edf1f2" />
-    <text x="58" y="301" class="serif heading ink">ResearchState S_t</text>
+    <text x="58" y="301" class="serif heading ink">ResearchState Sₜ</text>
     <text x="58" y="342" class="sans small soft">problem · hypothesis · observations</text>
     <text x="58" y="363" class="sans small soft">claims · evidence · review obligations</text>
     <text x="58" y="384" class="sans small soft">resource ledger · decision history</text>
     <line x1="58" y1="402" x2="272" y2="402" stroke="#ded8ce" />
-    <text x="58" y="425" class="sans micro" fill="#68715e">CLOSED, FEASIBLE ACTION SET A(S_t)</text>
+    <text x="58" y="425" class="sans micro" fill="#68715e">CLOSED, FEASIBLE ACTION SET A(Sₜ)</text>
     <g class="sans micro ink">
       <rect x="58" y="438" width="48" height="24" rx="12" fill="#f0ece5" /><text x="82" y="454" text-anchor="middle">probe</text>
       <rect x="112" y="438" width="78" height="24" rx="12" fill="#f0ece5" /><text x="151" y="454" text-anchor="middle">reformulate</text>
@@ -102,32 +104,29 @@
     <rect x="358" y="271" width="348" height="221" rx="12" fill="#fffdf9" stroke="#a65d2e" stroke-width="2" />
     <rect x="358" y="271" width="348" height="50" rx="12" fill="#a65d2e" />
     <path d="M358 307 H706 V321 H358 Z" fill="#a65d2e" />
-    <text x="380" y="302" class="serif heading" fill="#ffffff">Taste Controller</text>
-    <text x="680" y="300" text-anchor="end" class="sans micro" fill="#f6e8dc">DECISION OWNER</text>
+    <text x="380" y="302" class="serif heading" fill="#ffffff">Taste Controller + π</text>
+    <text x="680" y="300" text-anchor="end" class="sans micro" fill="#f6e8dc">BOUNDED POLICY</text>
 
     <g class="sans micro">
       <rect x="380" y="338" width="142" height="27" rx="13.5" fill="#edf1f2" />
-      <text x="451" y="356" text-anchor="middle" fill="#465158">Knowledge K_t · facts</text>
+      <text x="451" y="356" text-anchor="middle" fill="#465158">Base U₀ · facts + budget</text>
       <rect x="532" y="338" width="152" height="27" rx="13.5" fill="#f4e5d7" />
-      <text x="608" y="356" text-anchor="middle" fill="#8b4d27">Taste T_t · precedents</text>
+      <text x="608" y="356" text-anchor="middle" fill="#8b4d27">Learned Δπ · episodes</text>
     </g>
 
-    <text x="380" y="392" class="sans small soft">Rank actions by</text>
+    <text x="380" y="392" class="sans small soft">Apply only with</text>
     <g class="sans micro ink">
-      <text x="380" y="416">scientific value</text><circle cx="477" cy="412" r="2.5" fill="#a65d2e" />
-      <text x="490" y="416">information gain</text><circle cx="584" cy="412" r="2.5" fill="#a65d2e" />
-      <text x="597" y="416">evidence fit</text>
-      <text x="380" y="437">uncertainty</text><circle cx="450" cy="433" r="2.5" fill="#a65d2e" />
-      <text x="463" y="437">risk</text><circle cx="491" cy="433" r="2.5" fill="#a65d2e" />
-      <text x="504" y="437">cost</text><circle cx="533" cy="433" r="2.5" fill="#a65d2e" />
-      <text x="546" y="437">remaining budget B_t</text>
+      <text x="380" y="416">Idea + domain + stage support</text><circle cx="557" cy="412" r="2.5" fill="#a65d2e" />
+      <text x="570" y="416">source weight</text>
+      <text x="380" y="437">pairwise probability</text><circle cx="502" cy="433" r="2.5" fill="#a65d2e" />
+      <text x="515" y="437">positive credible margin</text>
     </g>
     <rect x="380" y="451" width="304" height="26" rx="5" fill="#f7f3ed" />
-    <text x="532" y="469" text-anchor="middle" class="serif body ink">a_t = arg max U(a | S_t, K_t, T_t, B_t)</text>
+    <text x="532" y="469" text-anchor="middle" class="serif body ink">a_t = arg max [ U₀(a) + Δπ(a | S_t) ] · else Δπ = 0</text>
   </g>
 
   <path d="M681 196 V258 H622 V271" fill="none" stroke="#a65d2e" stroke-width="1.8" stroke-dasharray="5 5" marker-end="url(#arrow-accent)" />
-  <text x="696" y="245" class="sans micro" fill="#a65d2e">stage-aware precedent</text>
+  <text x="696" y="245" class="sans micro" fill="#a65d2e">policy + transfer scope</text>
 
   <path d="M706 337 H774" fill="none" stroke="#a65d2e" stroke-width="2" marker-end="url(#arrow-accent)" />
   <text x="740" y="325" text-anchor="middle" class="sans micro" fill="#a65d2e">select one</text>
@@ -162,7 +161,7 @@
 
   <path d="M1090 335 V228 H681 V196" fill="none" stroke="#68715e" stroke-width="1.5" stroke-dasharray="5 5" marker-end="url(#arrow-sage)" />
   <rect x="812" y="216" width="216" height="20" rx="10" fill="#fbfaf7" />
-  <text x="920" y="230" text-anchor="middle" class="sans micro" fill="#68715e">verified outcomes may become new cases</text>
+  <text x="920" y="230" text-anchor="middle" class="sans micro" fill="#68715e">outcomes await reviewed causal credit</text>
 
   <g id="rejected-result" data-kind="annotation">
     <path d="M1125 449 V479" fill="none" stroke="#9a948a" stroke-width="1.4" marker-end="url(#arrow-ink)" />
@@ -177,7 +176,7 @@
 
   <line x1="40" y1="585" x2="1160" y2="585" stroke="#ded8ce" />
   <g id="authority-legend" data-kind="legend" class="sans small">
-    <circle cx="48" cy="607" r="5" fill="#a65d2e" /><text x="62" y="611" class="ink">Taste selects what is worth doing next</text>
+    <circle cx="48" cy="607" r="5" fill="#a65d2e" /><text x="62" y="611" class="ink">Reviewed credit learns action preference</text>
     <circle cx="385" cy="607" r="5" fill="#cfc7bb" /><text x="399" y="611" class="ink">Models and executors propose or perform bounded work</text>
     <circle cx="836" cy="607" r="5" fill="#68715e" /><text x="850" y="611" class="ink">Deterministic gates own state transitions</text>
   </g>

@@ -4,28 +4,31 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="panel-taste" value="&lt;b&gt;A · FORM TRANSFERABLE TASTE&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=8;fontSize=12;fillColor=#fbfaf7;strokeColor=#ded8ce;connectable=0;" vertex="1" connectable="0" parent="1">
+        <mxCell id="panel-taste" value="&lt;b&gt;A · GROUND EXPERIENCE INTO A POLICY&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=8;fontSize=12;fillColor=#fbfaf7;strokeColor=#ded8ce;connectable=0;" vertex="1" connectable="0" parent="1">
           <mxGeometry x="20" y="20" width="1160" height="190" as="geometry" />
         </mxCell>
-        <mxCell id="high-quality-research" value="&lt;b&gt;High-quality research&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;papers · reviews · revisions · outcomes&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fffdf9;strokeColor=#cfc7bb;" vertex="1" parent="1">
+        <mxCell id="high-quality-research" value="&lt;b&gt;Supervision channels&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;papers · reviews · tool traces · human interventions&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fffdf9;strokeColor=#cfc7bb;" vertex="1" parent="1">
           <mxGeometry x="40" y="75" width="210" height="95" as="geometry" />
         </mxCell>
-        <mxCell id="taste-abstraction" value="&lt;b&gt;Abstract decisions&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;decision · context · alternatives&lt;br&gt;evidence · cost · outcome&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fffdf9;strokeColor=#cfc7bb;" vertex="1" parent="1">
+        <mxCell id="taste-abstraction" value="&lt;b&gt;Reconstruct episodes&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;state · alternatives · evidence&lt;br&gt;action · outcomes · confounders&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fffdf9;strokeColor=#cfc7bb;" vertex="1" parent="1">
           <mxGeometry x="300" y="75" width="215" height="95" as="geometry" />
         </mxCell>
-        <mxCell id="taste-library" value="&lt;font color=&quot;#d9c7b7&quot;&gt;PROVENANCE + TRANSFER GATES&lt;/font&gt;&lt;br&gt;&lt;b&gt;&lt;font color=&quot;#ffffff&quot;&gt;Verified Taste Cases&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#d7d2ca&quot;&gt;decision precedents, not facts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#2b2925;strokeColor=#2b2925;" vertex="1" parent="1">
+        <mxCell id="taste-library" value="&lt;font color=&quot;#d9c7b7&quot;&gt;DUAL ATTRIBUTION REVIEW&lt;/font&gt;&lt;br&gt;&lt;b&gt;&lt;font color=&quot;#ffffff&quot;&gt;Admitted episodes&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#d7d2ca&quot;&gt;source-group + split bound&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#2b2925;strokeColor=#2b2925;" vertex="1" parent="1">
           <mxGeometry x="565" y="75" width="235" height="95" as="geometry" />
         </mxCell>
-        <mxCell id="knowledge-taste-distinction" value="&lt;b&gt;&lt;font color=&quot;#68715e&quot;&gt;KNOWLEDGE ≠ TASTE&lt;/font&gt;&lt;/b&gt;&lt;br&gt;Knowledge supplies factual context.&lt;br&gt;Taste supplies decision precedent.&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;Retrieval transports both; it is not the judgment.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#f3efe7;strokeColor=#ded8ce;" vertex="1" parent="1">
+        <mxCell id="knowledge-taste-distinction" value="&lt;b&gt;&lt;font color=&quot;#68715e&quot;&gt;LEARNED LIFECYCLE POLICY&lt;/font&gt;&lt;/b&gt;&lt;br&gt;Pairwise posteriors from reviewed credit.&lt;br&gt;Transfer gates + uncertainty abstention.&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;Raw retrieval is a control, not judgment.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#f3efe7;strokeColor=#ded8ce;" vertex="1" parent="1">
           <mxGeometry x="850" y="75" width="310" height="95" as="geometry" />
         </mxCell>
-        <mxCell id="panel-control" value="&lt;b&gt;B · CONTROL THE NEXT RESEARCH STEP&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=8;fontSize=12;fillColor=#fbfaf7;strokeColor=#ded8ce;connectable=0;" vertex="1" connectable="0" parent="1">
+        <mxCell id="edge-library-policy" value="" edge="1" parent="1" source="taste-library" target="knowledge-taste-distinction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;html=1;strokeColor=#34312c;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="panel-control" value="&lt;b&gt;B · APPLY OR ABSTAIN AT THE NEXT DECISION&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;spacingTop=8;fontSize=12;fillColor=#fbfaf7;strokeColor=#ded8ce;connectable=0;" vertex="1" connectable="0" parent="1">
           <mxGeometry x="20" y="225" width="1160" height="360" as="geometry" />
         </mxCell>
         <mxCell id="research-state" value="&lt;b&gt;ResearchState S&lt;sub&gt;t&lt;/sub&gt;&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;problem · hypothesis · observations&lt;br&gt;claims · evidence · review obligations&lt;br&gt;budget · decision history&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;CLOSED ACTION SET A(S&lt;sub&gt;t&lt;/sub&gt;)&lt;/b&gt;&lt;br&gt;probe · reformulate · experiment&lt;br&gt;write · review · pivot · stop" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#edf1f2;strokeColor=#9ea6aa;" vertex="1" parent="1">
           <mxGeometry x="40" y="285" width="250" height="205" as="geometry" />
         </mxCell>
-        <mxCell id="taste-controller" value="&lt;font color=&quot;#ffffff&quot;&gt;&lt;b&gt;Taste Controller&lt;/b&gt;&lt;br&gt;DECISION OWNER&lt;/font&gt;&lt;br&gt;&lt;br&gt;Knowledge K&lt;sub&gt;t&lt;/sub&gt; · facts   |   Taste T&lt;sub&gt;t&lt;/sub&gt; · precedents&lt;br&gt;&lt;br&gt;scientific value · information gain · evidence fit&lt;br&gt;uncertainty · risk · cost · remaining budget B&lt;sub&gt;t&lt;/sub&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;a&lt;sub&gt;t&lt;/sub&gt; = arg max U(a | S&lt;sub&gt;t&lt;/sub&gt;, K&lt;sub&gt;t&lt;/sub&gt;, T&lt;sub&gt;t&lt;/sub&gt;, B&lt;sub&gt;t&lt;/sub&gt;)&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#a65d2e;strokeColor=#a65d2e;fontColor=#ffffff;" vertex="1" parent="1">
+        <mxCell id="taste-controller" value="&lt;font color=&quot;#ffffff&quot;&gt;&lt;b&gt;Taste Controller + π&lt;/b&gt;&lt;br&gt;BOUNDED POLICY&lt;/font&gt;&lt;br&gt;&lt;br&gt;Base U&lt;sub&gt;0&lt;/sub&gt; · facts + budget   |   Learned Δπ · episodes&lt;br&gt;&lt;br&gt;Idea · domain · stage · support&lt;br&gt;pairwise probability · positive credible margin&lt;br&gt;&lt;br&gt;&lt;b&gt;a&lt;sub&gt;t&lt;/sub&gt; = arg max [U&lt;sub&gt;0&lt;/sub&gt;(a) + Δπ(a | S&lt;sub&gt;t&lt;/sub&gt;)] · else Δπ = 0&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#a65d2e;strokeColor=#a65d2e;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="360" y="285" width="345" height="205" as="geometry" />
         </mxCell>
         <mxCell id="bounded-work" value="&lt;b&gt;BOUNDED WORK&lt;/b&gt;&lt;br&gt;Worker / model&lt;br&gt;&lt;font color=&quot;#666158&quot;&gt;native · API · external adapter&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#fffdf9;strokeColor=#cfc7bb;" vertex="1" parent="1">
@@ -49,7 +52,7 @@
         <mxCell id="edge-state-controller" value="candidate actions" edge="1" parent="1" source="research-state" target="taste-controller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;html=1;strokeColor=#34312c;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-library-controller" value="stage-aware precedent" edge="1" parent="1" source="taste-library" target="taste-controller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;endArrow=block;html=1;strokeColor=#a65d2e;">
+        <mxCell id="edge-library-controller" value="policy + transfer scope" edge="1" parent="1" source="taste-library" target="taste-controller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;endArrow=block;html=1;strokeColor=#a65d2e;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="edge-controller-worker" value="select one action" edge="1" parent="1" source="taste-controller" target="bounded-work" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;html=1;strokeColor=#a65d2e;">
@@ -67,7 +70,7 @@
         <mxCell id="edge-admission-reject" value="" edge="1" parent="1" source="admission-gate" target="rejected-result" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;html=1;strokeColor=#8a847a;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-outcome-library" value="verified outcomes may become cases" edge="1" parent="1" source="admission-gate" target="taste-library" style="edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;endArrow=block;html=1;strokeColor=#68715e;">
+        <mxCell id="edge-outcome-library" value="outcomes await reviewed causal credit" edge="1" parent="1" source="admission-gate" target="taste-library" style="edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;endArrow=block;html=1;strokeColor=#68715e;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
