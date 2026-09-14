@@ -1757,3 +1757,28 @@ the authoritative state machine. Their interaction is a narrow user-mediated
 transition. Project-bound API/GPU/checkpoint choices are configured through the
 same pattern—model proposal, explicit user application, then a later execution
 gate—rather than being embedded as credentials or implicit model tools.
+
+## Compiling admitted natural evidence into a grounded Taste campaign (2026-09-14)
+
+The next recursive iteration closed the format gap immediately after the blind
+source review. A locked, adjudication-free result now compiles one exact grounded
+Taste node input for every eligible F1000 episode. Each input retains the reviewed
+problem, reviewer criticism, revision, optional response, and explicit semantic
+roles, while hiding observed recommendation, experimental relation, and held-out
+task content. The same projection is mandated for the Raw RAG control. The plan
+also freezes one call per source and two independent abstraction reviews per
+source; it does not promote model output directly into the corpus or benchmark.
+
+Generation as Content makes the distinction between planning and evidence
+visible. The real self-project has no reviewer returns, so its project home shows
+only the 77-candidate ceiling, the two registered GLM/DeepSeek proposal options,
+20 calls of current single-profile capacity, and a worst-case gap of 57. A
+synthetic ten-item campaign exercised the complete 3/3-return-to-input-plan path
+and replaced the ceiling basis with ten exact eligible inputs. Neither case ran a
+model, contacted a human, used a GPU, or performed a scientific experiment.
+
+Tool Intelligence sent the reversible local compiler directly through its inline
+object guards. It retained owner approval for both paid generation and human
+verification. This is the desired removal of ritual checks: less ceremony on a
+low-cost deterministic transformation, no weakening of the scientific or
+authority boundaries where an error would be expensive.

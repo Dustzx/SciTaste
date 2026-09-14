@@ -13,6 +13,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from scitaste.evaluation.natural_taste_abstraction import (
+    NaturalTasteAbstractionPlan,
+    load_natural_taste_abstraction_plan,
+    prepare_natural_taste_abstraction_plan,
+)
 from scitaste.evaluation.natural_taste_review import (
     TasteSourceReviewActivation,
     TasteSourceReviewCampaign,
@@ -26,6 +31,7 @@ from scitaste.evaluation.natural_taste_review import (
     prepare_taste_source_review_session,
 )
 from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, SafeLocator, Sha256
+from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.verification_policy import (
     ActionEffect,
     ActionReversibility,
@@ -35,6 +41,7 @@ from scitaste.model_nodes.verification_policy import (
 )
 from scitaste.project import ProjectRun, ProjectRuntime, ProjectSnapshot
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
+from scitaste.taste.semantic_models import GROUNDED_TASTE_ABSTRACTION_NODE
 
 _CONFIG = ConfigDict(
     extra="forbid",
@@ -47,6 +54,8 @@ _STAGE_PATH = "taste_source_review_campaign"
 _CONTROL_DIRECTORY = "review-control"
 _CONTROL_FILE = "CONTROL.json"
 _RESULT_FILE = "RESULT.json"
+_ABSTRACTION_PLAN_DIRECTORY = "abstraction-plan"
+_ABSTRACTION_PLAN_FILE = "PLAN.json"
 _MAX_CONTROL_BYTES = 4 * 1024 * 1024
 
 
@@ -251,6 +260,19 @@ class TasteSourceReviewControlView(BaseModel):
     adjudication_required_count: int | None = Field(default=None, ge=0)
     ready_for_taste_abstraction_review: bool = False
     ready_for_benchmark_admission: Literal[False] = False
+    abstraction_plan_locator: SafeLocator | None = None
+    abstraction_plan_file_sha256: Sha256 | None = None
+    abstraction_plan_sha256: Sha256 | None = None
+    abstraction_input_count: int = Field(default=0, ge=0)
+    abstraction_candidate_ceiling: int = Field(gt=0)
+    abstraction_capacity_basis: Literal["campaign-ceiling", "locked-eligible-inputs"]
+    abstraction_profile_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=12)
+    abstraction_profile_capacity: int = Field(gt=0)
+    abstraction_profile_capacity_gap: int = Field(default=0, ge=0)
+    ready_for_abstraction_model_authorization: bool = False
+    abstraction_preparation_route: Literal[VerificationRoute.DIRECT_PATH] | None = None
+    abstraction_model_execution_route: Literal[VerificationRoute.OWNER_APPROVAL] | None = None
+    abstraction_human_review_route: Literal[VerificationRoute.OWNER_APPROVAL] | None = None
     submission_verification_route: Literal[VerificationRoute.DIRECT_PATH]
     submission_verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
     standalone_preflight_performed: Literal[False] = False
@@ -259,7 +281,10 @@ class TasteSourceReviewControlView(BaseModel):
         "record_owner_decision",
         "distribute_sessions_outside_scitaste_and_collect_blind_reviews",
         "collect_remaining_blind_reviews",
-        "resolve_adjudication_or_prepare_taste_abstraction",
+        "resolve_source_review_adjudication_or_coverage",
+        "prepare_taste_abstraction_inputs",
+        "revise_abstraction_resource_envelope",
+        "authorize_grounded_taste_abstraction",
     ]
     authorizes_experiment: Literal[False] = False
 
@@ -301,6 +326,7 @@ class TasteSourceReviewControlView(BaseModel):
         )
         if self.status != expected_status:
             raise ValueError("Taste review collection status is inconsistent")
+        planned = self.abstraction_plan_sha256 is not None
         expected_action = (
             "record_owner_decision"
             if not ready
@@ -308,12 +334,48 @@ class TasteSourceReviewControlView(BaseModel):
             if self.reviewer_submissions_collected == 0
             else "collect_remaining_blind_reviews"
             if self.reviewer_submissions_collected < 3
-            else "resolve_adjudication_or_prepare_taste_abstraction"
+            else "resolve_source_review_adjudication_or_coverage"
+            if not self.ready_for_taste_abstraction_review
+            else "prepare_taste_abstraction_inputs"
+            if not planned
+            else "revise_abstraction_resource_envelope"
+            if self.abstraction_profile_capacity_gap
+            else "authorize_grounded_taste_abstraction"
         )
         if self.next_action != expected_action:
             raise ValueError("Taste review next action differs from its control state")
         if self.ready_for_taste_abstraction_review and not locked:
             raise ValueError("Taste abstraction readiness requires a locked review result")
+        plan_fields = (
+            self.abstraction_plan_locator,
+            self.abstraction_plan_file_sha256,
+            self.abstraction_plan_sha256,
+            self.abstraction_preparation_route,
+            self.abstraction_model_execution_route,
+            self.abstraction_human_review_route,
+        )
+        if planned != all(value is not None for value in plan_fields):
+            raise ValueError("Taste abstraction plan lineage is incomplete")
+        if planned != bool(self.abstraction_input_count):
+            raise ValueError("Taste abstraction plan input count is inconsistent")
+        if self.abstraction_candidate_ceiling < self.abstraction_input_count:
+            raise ValueError("Taste abstraction inputs exceed the source-review ceiling")
+        expected_basis = "locked-eligible-inputs" if planned else "campaign-ceiling"
+        if self.abstraction_capacity_basis != expected_basis:
+            raise ValueError("Taste abstraction capacity basis differs from plan state")
+        capacity_demand = (
+            self.abstraction_input_count if planned else self.abstraction_candidate_ceiling
+        )
+        if self.abstraction_profile_capacity_gap != max(
+            0, capacity_demand - self.abstraction_profile_capacity
+        ):
+            raise ValueError("Taste abstraction profile capacity gap is inconsistent")
+        if not planned and self.ready_for_abstraction_model_authorization:
+            raise ValueError("unplanned Taste abstraction cannot be authorized")
+        if planned and self.ready_for_abstraction_model_authorization != (
+            self.abstraction_profile_capacity_gap == 0
+        ):
+            raise ValueError("Taste abstraction model readiness differs from profile capacity")
         return self
 
     @computed_field
@@ -335,7 +397,8 @@ class ProjectTasteSourceReviewControlService:
         record = self._load_control(campaign_path, run, campaign)
         collected = self._load_collected_submissions(campaign_path, record)
         result = self._load_result(campaign_path, campaign, record, collected)
-        return self._view(snapshot, run, campaign, record, collected, result)
+        plan = self._load_abstraction_plan(campaign_path, campaign, result)
+        return self._view(snapshot, run, campaign, record, collected, result, plan)
 
     def authorize(
         self,
@@ -358,7 +421,8 @@ class ProjectTasteSourceReviewControlService:
                 raise ValueError("Taste review campaign already has another owner authorization")
             collected = self._load_collected_submissions(campaign_path, existing)
             result = self._load_result(campaign_path, campaign, existing, collected)
-            return self._view(snapshot, run, campaign, existing, collected, result)
+            plan = self._load_abstraction_plan(campaign_path, campaign, result)
+            return self._view(snapshot, run, campaign, existing, collected, result, plan)
         if (
             snapshot.revision != parsed.expected_project_revision
             or snapshot.snapshot_sha256 != parsed.expected_snapshot_sha256
@@ -422,7 +486,7 @@ class ProjectTasteSourceReviewControlService:
             no_gpu_work_performed=True,
             no_experiment_performed=True,
         )
-        return self._view(completed, run, campaign, record, (), None)
+        return self._view(completed, run, campaign, record, (), None, None)
 
     def collect_submission(
         self,
@@ -483,6 +547,20 @@ class ProjectTasteSourceReviewControlService:
                 privacy_submission_path=submission_paths[2],
                 output_path=root / _CONTROL_DIRECTORY / _RESULT_FILE,
             )
+        plan = self._load_abstraction_plan(campaign_path, campaign, result)
+        if (
+            result is not None
+            and result.ready_for_taste_abstraction_review
+            and plan is None
+        ):
+            plan = prepare_natural_taste_abstraction_plan(
+                campaign_path=campaign_path,
+                review_result_path=root / _CONTROL_DIRECTORY / _RESULT_FILE,
+                profile_set_path=_grounded_abstraction_profile_set(),
+                output_dir=(
+                    root / _CONTROL_DIRECTORY / _ABSTRACTION_PLAN_DIRECTORY
+                ),
+            )
 
         result_sha256 = result.result_sha256 if result is not None else None
         run_state = run.model_extra or {}
@@ -490,6 +568,8 @@ class ProjectTasteSourceReviewControlService:
             (
                 run_state.get("reviewer_submissions_collected") != len(collected),
                 run_state.get("review_result_sha256") != result_sha256,
+                run_state.get("abstraction_plan_sha256")
+                != (plan.plan_sha256 if plan is not None else None),
             )
         )
         if state_changed:
@@ -514,13 +594,27 @@ class ProjectTasteSourceReviewControlService:
                     result.ready_for_taste_abstraction_review if result is not None else False
                 ),
                 ready_for_benchmark_admission=False,
+                abstraction_plan_sha256=(
+                    plan.plan_sha256 if plan is not None else None
+                ),
+                abstraction_input_count=(
+                    plan.eligible_source_count if plan is not None else 0
+                ),
+                abstraction_profile_capacity_gap=(
+                    plan.profile_capacity_gap if plan is not None else 0
+                ),
+                ready_for_abstraction_model_authorization=(
+                    plan.ready_for_model_execution_authorization
+                    if plan is not None
+                    else False
+                ),
                 submission_verification_route=VerificationRoute.DIRECT_PATH.value,
                 standalone_preflight_performed=False,
                 no_model_call_performed=True,
                 no_gpu_work_performed=True,
                 no_experiment_performed=True,
             )
-        return self._view(snapshot, run, campaign, record, collected, result)
+        return self._view(snapshot, run, campaign, record, collected, result, plan)
 
     def _prepare_control(
         self,
@@ -773,6 +867,34 @@ class ProjectTasteSourceReviewControlService:
             raise ValueError("Taste review result differs from collected submission bytes")
         return result
 
+    def _load_abstraction_plan(
+        self,
+        campaign_path: Path,
+        campaign: TasteSourceReviewCampaign,
+        result: TasteSourceReviewResult | None,
+    ) -> NaturalTasteAbstractionPlan | None:
+        root = campaign_path.parent.resolve(strict=True)
+        plan_path = (
+            root
+            / _CONTROL_DIRECTORY
+            / _ABSTRACTION_PLAN_DIRECTORY
+            / _ABSTRACTION_PLAN_FILE
+        )
+        if not plan_path.exists() and not plan_path.is_symlink():
+            return None
+        if result is None:
+            raise ValueError("natural Taste abstraction plan lacks its review result")
+        inspection = load_natural_taste_abstraction_plan(plan_path)
+        plan = inspection.plan
+        if (
+            plan.project_id != campaign.project_id
+            or plan.campaign_id != campaign.campaign_id
+            or plan.campaign_sha256 != campaign.campaign_sha256
+            or plan.source_review_result_sha256 != result.result_sha256
+        ):
+            raise ValueError("natural Taste abstraction plan differs from review result")
+        return plan
+
     def _submission_session(
         self,
         campaign_path: Path,
@@ -823,6 +945,7 @@ class ProjectTasteSourceReviewControlService:
         record: TasteSourceReviewControlRecord | None,
         collected: tuple[TasteSourceReviewCollectedSubmission, ...],
         result: TasteSourceReviewResult | None,
+        plan: NaturalTasteAbstractionPlan | None,
     ) -> TasteSourceReviewControlView:
         ready = record is not None
         verification = decide_verification_route(
@@ -843,6 +966,22 @@ class ProjectTasteSourceReviewControlService:
         if verification.route is not VerificationRoute.DIRECT_PATH:
             raise ValueError("local review submission collection unexpectedly requires preflight")
         count = len(collected)
+        loaded_profiles = load_model_node_profile_set(_grounded_abstraction_profile_set())
+        forecast_profiles = tuple(
+            profile
+            for profile in loaded_profiles.profiles.values()
+            if GROUNDED_TASTE_ABSTRACTION_NODE in profile.allowed_node_names
+            and profile.live_execution_permitted
+        )
+        if not forecast_profiles:
+            raise ValueError("no live grounded Taste abstraction profile is registered")
+        profile_ids = tuple(profile.profile_id for profile in forecast_profiles)
+        profile_capacity = max(
+            profile.cumulative_project.max_invocations for profile in forecast_profiles
+        )
+        capacity_demand = (
+            plan.eligible_source_count if plan is not None else campaign.candidate_count
+        )
         return TasteSourceReviewControlView(
             project_id=campaign.project_id,
             project_revision=snapshot.revision,
@@ -885,6 +1024,50 @@ class ProjectTasteSourceReviewControlService:
             ready_for_taste_abstraction_review=(
                 result.ready_for_taste_abstraction_review if result is not None else False
             ),
+            abstraction_plan_locator=(
+                f"{_CONTROL_DIRECTORY}/{_ABSTRACTION_PLAN_DIRECTORY}/{_ABSTRACTION_PLAN_FILE}"
+                if plan is not None
+                else None
+            ),
+            abstraction_plan_file_sha256=(
+                hashlib.sha256(
+                    _canonical_json(
+                        plan.model_dump(mode="json", exclude_computed_fields=True)
+                    )
+                    + b"\n"
+                ).hexdigest()
+                if plan is not None
+                else None
+            ),
+            abstraction_plan_sha256=plan.plan_sha256 if plan is not None else None,
+            abstraction_input_count=plan.eligible_source_count if plan is not None else 0,
+            abstraction_candidate_ceiling=campaign.candidate_count,
+            abstraction_capacity_basis=(
+                "locked-eligible-inputs" if plan is not None else "campaign-ceiling"
+            ),
+            abstraction_profile_ids=profile_ids,
+            abstraction_profile_capacity=(
+                plan.maximum_single_profile_invocations
+                if plan is not None
+                else profile_capacity
+            ),
+            abstraction_profile_capacity_gap=(
+                plan.profile_capacity_gap
+                if plan is not None
+                else max(0, capacity_demand - profile_capacity)
+            ),
+            ready_for_abstraction_model_authorization=(
+                plan.ready_for_model_execution_authorization if plan is not None else False
+            ),
+            abstraction_preparation_route=(
+                plan.preparation_verification.route if plan is not None else None
+            ),
+            abstraction_model_execution_route=(
+                plan.model_execution_verification.route if plan is not None else None
+            ),
+            abstraction_human_review_route=(
+                plan.human_review_verification.route if plan is not None else None
+            ),
             submission_verification_route=verification.route,
             submission_verification_reason_codes=verification.reason_codes,
             next_action=(
@@ -894,7 +1077,13 @@ class ProjectTasteSourceReviewControlService:
                 if count == 0
                 else "collect_remaining_blind_reviews"
                 if result is None
-                else "resolve_adjudication_or_prepare_taste_abstraction"
+                else "resolve_source_review_adjudication_or_coverage"
+                if not result.ready_for_taste_abstraction_review
+                else "prepare_taste_abstraction_inputs"
+                if plan is None
+                else "revise_abstraction_resource_envelope"
+                if plan.profile_capacity_gap
+                else "authorize_grounded_taste_abstraction"
             ),
         )
 
@@ -917,6 +1106,15 @@ def _bound_locator(root: Path, locator: str) -> Path:
     ):
         raise ValueError("Taste review control locator must be normalized and relative")
     return _bounded_file(root, root.joinpath(*parsed.parts))
+
+
+def _grounded_abstraction_profile_set() -> Path:
+    relative = Path("configs/model_nodes/runtime_profiles.grounded_taste_abstraction_v2.yaml")
+    candidates = (Path(__file__).resolve().parents[3] / relative, Path.cwd() / relative)
+    for candidate in candidates:
+        if candidate.is_file() and not candidate.is_symlink():
+            return candidate.resolve(strict=True)
+    raise FileNotFoundError(relative)
 
 
 def _bounded_file(root: Path, path: Path) -> Path:

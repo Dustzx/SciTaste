@@ -108,3 +108,24 @@ is useful. H1 still requires blinded expert preference for decisions produced by
 grounded Taste versus same-source raw RAG; H2 requires matched versus
 source-disjoint mismatched grounded Taste; H3 requires objective progress on
 held-out tasks.
+
+## Natural-source campaign handoff
+
+The F1000 source-review path now reaches this contract without a manual format
+translation. Only a locked result with zero unresolved adjudications may produce
+an abstraction plan. For every admitted episode the compiler creates one exact
+`TasteAbstractionInput`: reviewed abstract, blind review comment, revised
+abstract, optional author response, and article title are assigned explicit
+semantic roles; observed recommendation and held-out task content are omitted.
+The resulting source projection is also the only projection allowed for the H1
+Raw RAG arm. Relation labels remain hidden.
+
+The plan binds source/result/profile hashes, one model call per admitted source,
+two independent primary abstraction reviews per source, and adjudication only on
+a split. Local compilation follows Tool Intelligence's `direct_path`; paid model
+generation and human recruitment both require owner approval. Before the human
+source result exists, the UI reports a worst-case demand based on the campaign
+ceiling. After lock, it replaces that forecast with the exact eligible-input
+count. The current self-project therefore honestly shows a 77-source ceiling
+against 20 calls in one registered profile, a worst-case gap of 57—not a claim
+that 77 sources will pass review or that any calls have run.

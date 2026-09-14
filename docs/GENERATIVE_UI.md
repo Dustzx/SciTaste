@@ -1812,3 +1812,29 @@ The resource portfolio remains a sibling project surface: project membership
 and priority revisions are model-proposable and user-applicable, while shared
 definitions, credentials, probes, reservations, spend, and execution remain
 Core-owned transitions.
+
+### Generated planning after independent source admission (2026-09-14)
+
+The source-review card now carries the downstream grounded-abstraction resource
+state before and after review. Before a result exists it shows a clearly labelled
+campaign-ceiling forecast; after a valid 3/3 lock it atomically exposes the exact
+eligible-input plan, current proposal profiles, capacity gap, same-source Raw RAG
+constraint, and the direct/owner-gated routes for compilation, model generation,
+and human verification. A result requiring adjudication does not compile inputs.
+
+This is deliberately split across the two product planes. The fixed progress
+component is a project-owned cached evidence seed. Clicking “generate and edit”
+starts or continues a model-authored conversation that can condense, reorder,
+compare, and feedback-edit the plan and its visual canvas. Only explicit user
+actions may cross back into Core to record a review result, publish an admitted
+planning revision, change project resource membership or priority, or authorize
+a later execution. Credentials and execution authority are never model-visible.
+Thus the page remains useful without a model call, but fixed labels do not become
+the product's primary interaction language.
+
+Tool Intelligence does not schedule a standalone preflight for the compiler.
+Campaign/result identity, source binding, relation hiding, source-projection
+parity, bounded files, and atomic publication are inline validity conditions of
+the object being written. Local compilation is cheap and reversible, so further
+advance inspection has negative value. Paid provider calls and human review are
+materially different actions and remain at explicit owner boundaries.

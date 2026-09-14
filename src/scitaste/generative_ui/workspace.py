@@ -1006,6 +1006,46 @@ class WorkspaceSurfaceFactory:
                     "result_sha256": control.result_sha256,
                     "eligible_candidate_count": control.eligible_candidate_count,
                     "adjudication_required_count": control.adjudication_required_count,
+                    "abstraction_plan_locator": (
+                        f"{PurePosixPath(run.artifact).parent.as_posix()}/"
+                        f"{control.abstraction_plan_locator}"
+                        if control.abstraction_plan_locator is not None
+                        else None
+                    ),
+                    "abstraction_plan_file_sha256": (
+                        control.abstraction_plan_file_sha256
+                    ),
+                    "abstraction_plan_sha256": control.abstraction_plan_sha256,
+                    "abstraction_input_count": control.abstraction_input_count,
+                    "abstraction_candidate_ceiling": (
+                        control.abstraction_candidate_ceiling
+                    ),
+                    "abstraction_capacity_basis": control.abstraction_capacity_basis,
+                    "abstraction_profile_ids": list(control.abstraction_profile_ids),
+                    "abstraction_profile_capacity": (
+                        control.abstraction_profile_capacity
+                    ),
+                    "abstraction_profile_capacity_gap": (
+                        control.abstraction_profile_capacity_gap
+                    ),
+                    "ready_for_abstraction_model_authorization": (
+                        control.ready_for_abstraction_model_authorization
+                    ),
+                    "abstraction_preparation_route": (
+                        control.abstraction_preparation_route.value
+                        if control.abstraction_preparation_route is not None
+                        else None
+                    ),
+                    "abstraction_model_execution_route": (
+                        control.abstraction_model_execution_route.value
+                        if control.abstraction_model_execution_route is not None
+                        else None
+                    ),
+                    "abstraction_human_review_route": (
+                        control.abstraction_human_review_route.value
+                        if control.abstraction_human_review_route is not None
+                        else None
+                    ),
                     "next_action": control.next_action,
                     "preparation_verification_route": (
                         campaign.preparation_verification.route.value

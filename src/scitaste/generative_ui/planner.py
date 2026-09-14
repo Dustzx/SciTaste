@@ -803,7 +803,11 @@ class StructuredWorkspacePlanner:
                     "observed completion. In taste_source_review_campaigns, "
                     "scientific_assessment_count and privacy_assessment_count are likewise "
                     "required workload; only reviewer_sessions_prepared and "
-                    "reviewer_submissions_collected describe observed completion. Do not infer "
+                    "reviewer_submissions_collected describe observed completion. Before an "
+                    "abstraction plan exists, abstraction_candidate_ceiling and the "
+                    "campaign-ceiling capacity basis are only a worst-case forecast; after the "
+                    "locked-eligible-inputs basis appears, abstraction_input_count is exact. "
+                    "Do not infer "
                     "a dependency, block, use, or resource "
                     "requirement merely because two entities are both visible; create a canvas "
                     "edge only when the supplied facts or current user prompt state that exact "
@@ -1675,6 +1679,16 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
                     "submission_verification_route",
                     "eligible_candidate_count",
                     "adjudication_required_count",
+                    "abstraction_input_count",
+                    "abstraction_candidate_ceiling",
+                    "abstraction_capacity_basis",
+                    "abstraction_profile_ids",
+                    "abstraction_profile_capacity",
+                    "abstraction_profile_capacity_gap",
+                    "ready_for_abstraction_model_authorization",
+                    "abstraction_preparation_route",
+                    "abstraction_model_execution_route",
+                    "abstraction_human_review_route",
                     "ready_for_taste_abstraction_review",
                     "ready_for_benchmark_admission",
                     "standalone_preflight_performed",

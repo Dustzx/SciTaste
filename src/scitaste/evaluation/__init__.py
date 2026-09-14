@@ -516,6 +516,14 @@ from scitaste.evaluation.native_condition_preflight import (
     load_native_condition_preflight_manifest,
     save_native_condition_implementation_attestation,
 )
+from scitaste.evaluation.natural_taste_abstraction import (
+    NaturalTasteAbstractionInputRecord,
+    NaturalTasteAbstractionPlan,
+    NaturalTasteAbstractionPlanInspection,
+    NaturalTasteAbstractionProfileOption,
+    load_natural_taste_abstraction_plan,
+    prepare_natural_taste_abstraction_plan,
+)
 from scitaste.evaluation.natural_taste_review import (
     PrivacyTasteSourceResponse,
     ScientificTasteSourceResponse,
@@ -1155,6 +1163,10 @@ __all__ = [
     "NativePathRequirement",
     "NativeRequirementEvidence",
     "NativeTasteRoutingProbe",
+    "NaturalTasteAbstractionInputRecord",
+    "NaturalTasteAbstractionPlan",
+    "NaturalTasteAbstractionPlanInspection",
+    "NaturalTasteAbstractionProfileOption",
     "ObjectiveAnalysisMaterialization",
     "ObjectiveAnalysisReport",
     "ObjectiveCellMeasurement",
@@ -1437,6 +1449,7 @@ __all__ = [
     "load_json_content_audit_approval",
     "load_locked_human_reviews",
     "load_native_condition_preflight_manifest",
+    "load_natural_taste_abstraction_plan",
     "load_objective_measurement_set",
     "load_objective_outcome_contract",
     "load_prelaunch_manifest",
@@ -1482,6 +1495,7 @@ __all__ = [
     "prepare_agent_laboratory_adapter",
     "prepare_human_outcome_study",
     "prepare_human_reviewer_session",
+    "prepare_natural_taste_abstraction_plan",
     "prepare_project_evaluation",
     "prepare_project_evaluation_result",
     "prepare_taste_source_review_campaign",

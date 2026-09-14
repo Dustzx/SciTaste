@@ -3743,6 +3743,21 @@ function renderTasteSourceReviewCampaigns(items) {
     const boundary = document.createElement("p");
     boundary.className = "acquisition-boundary";
     appendText(boundary, t("progress.taste_review.boundary"));
+    const abstractionCapacity = document.createElement("p");
+    abstractionCapacity.className = "acquisition-boundary";
+    appendText(abstractionCapacity, t(
+      item.abstraction_plan_sha256
+        ? item.ready_for_abstraction_model_authorization
+          ? "progress.taste_review.abstraction.ready"
+          : "progress.taste_review.abstraction.capacity_gap"
+        : "progress.taste_review.abstraction.forecast",
+      {
+        ceiling: item.abstraction_candidate_ceiling,
+        inputs: item.abstraction_input_count,
+        capacity: item.abstraction_profile_capacity,
+        gap: item.abstraction_profile_capacity_gap,
+      },
+    ));
     const next = document.createElement("p");
     next.className = "acquisition-purpose";
     appendText(next, t(`progress.taste_review.next.${reviewState}`));
@@ -3753,12 +3768,30 @@ function renderTasteSourceReviewCampaigns(items) {
     generate.className = "primary-button";
     appendText(generate, t("progress.taste_review.generate"));
     generate.addEventListener("click", () => prepareAuthoredBriefFollowup(
-      t("progress.taste_review.followup", {
-        candidates: item.candidate_count,
-        scientific: item.scientific_reviewer_count,
-        privacy: item.privacy_reviewer_count,
-        assessments: item.scientific_assessment_count + item.privacy_assessment_count,
-      }),
+      reviewState === "review_locked" && item.abstraction_plan_sha256
+        ? t("progress.taste_review.abstraction_followup", {
+          inputs: item.abstraction_input_count,
+          capacity: item.abstraction_profile_capacity,
+          gap: item.abstraction_profile_capacity_gap,
+          eligible: item.eligible_candidate_count,
+          adjudication: item.adjudication_required_count,
+        })
+        : reviewState === "review_locked"
+          ? t("progress.taste_review.result_followup", {
+            eligible: item.eligible_candidate_count,
+            adjudication: item.adjudication_required_count,
+            ceiling: item.abstraction_candidate_ceiling,
+            capacity: item.abstraction_profile_capacity,
+            gap: item.abstraction_profile_capacity_gap,
+          })
+        : t("progress.taste_review.followup", {
+          candidates: item.candidate_count,
+          scientific: item.scientific_reviewer_count,
+          privacy: item.privacy_reviewer_count,
+          assessments: item.scientific_assessment_count + item.privacy_assessment_count,
+          capacity: item.abstraction_profile_capacity,
+          gap: item.abstraction_profile_capacity_gap,
+        }),
     ));
     const inspect = document.createElement("button");
     inspect.type = "button";
@@ -3778,6 +3811,7 @@ function renderTasteSourceReviewCampaigns(items) {
       facts,
       routes,
       boundary,
+      abstractionCapacity,
       next,
       controls,
       authorization,
@@ -3803,6 +3837,20 @@ function renderTasteSourceReviewCampaigns(items) {
           result_sha256: item.result_sha256,
           eligible_candidate_count: item.eligible_candidate_count,
           adjudication_required_count: item.adjudication_required_count,
+          abstraction_plan_locator: item.abstraction_plan_locator,
+          abstraction_plan_file_sha256: item.abstraction_plan_file_sha256,
+          abstraction_plan_sha256: item.abstraction_plan_sha256,
+          abstraction_input_count: item.abstraction_input_count,
+          abstraction_candidate_ceiling: item.abstraction_candidate_ceiling,
+          abstraction_capacity_basis: item.abstraction_capacity_basis,
+          abstraction_profile_ids: item.abstraction_profile_ids,
+          abstraction_profile_capacity: item.abstraction_profile_capacity,
+          abstraction_profile_capacity_gap: item.abstraction_profile_capacity_gap,
+          ready_for_abstraction_model_authorization:
+            item.ready_for_abstraction_model_authorization,
+          abstraction_preparation_route: item.abstraction_preparation_route,
+          abstraction_model_execution_route: item.abstraction_model_execution_route,
+          abstraction_human_review_route: item.abstraction_human_review_route,
           next_action: item.next_action,
           preparation_reason_codes: item.preparation_reason_codes,
           recruitment_reason_codes: item.recruitment_reason_codes,
@@ -3840,6 +3888,19 @@ function renderTasteSourceReviewCampaigns(items) {
           "result_sha256",
           "eligible_candidate_count",
           "adjudication_required_count",
+          "abstraction_plan_locator",
+          "abstraction_plan_file_sha256",
+          "abstraction_plan_sha256",
+          "abstraction_input_count",
+          "abstraction_candidate_ceiling",
+          "abstraction_capacity_basis",
+          "abstraction_profile_ids",
+          "abstraction_profile_capacity",
+          "abstraction_profile_capacity_gap",
+          "ready_for_abstraction_model_authorization",
+          "abstraction_preparation_route",
+          "abstraction_model_execution_route",
+          "abstraction_human_review_route",
           "next_action",
           "preparation_reason_codes",
           "recruitment_reason_codes",
@@ -4017,6 +4078,34 @@ function renderTasteSourceReviewAuthorizationReceipt(item) {
       adjudication: item.adjudication_required_count,
     }));
     receipt.appendChild(result);
+    if (item.abstraction_plan_sha256) {
+      const plan = document.createElement("p");
+      plan.className = "acquisition-boundary";
+      appendText(plan, t(
+        item.ready_for_abstraction_model_authorization
+          ? "progress.taste_review.abstraction.ready"
+          : "progress.taste_review.abstraction.capacity_gap",
+        {
+          inputs: item.abstraction_input_count,
+          capacity: item.abstraction_profile_capacity,
+          gap: item.abstraction_profile_capacity_gap,
+        },
+      ));
+      const routes = document.createElement("div");
+      routes.className = "component-actions";
+      routes.append(
+        progressPill("completed", t("progress.taste_review.abstraction.prepare_route", {
+          route: localizedCode(item.abstraction_preparation_route),
+        })),
+        progressPill("blocked", t("progress.taste_review.abstraction.model_route", {
+          route: localizedCode(item.abstraction_model_execution_route),
+        })),
+        progressPill("blocked", t("progress.taste_review.abstraction.human_route", {
+          route: localizedCode(item.abstraction_human_review_route),
+        })),
+      );
+      receipt.append(plan, routes);
+    }
     return receipt;
   }
 

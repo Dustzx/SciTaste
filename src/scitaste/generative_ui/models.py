@@ -1225,6 +1225,19 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
     result_sha256: Sha256 | None = None
     eligible_candidate_count: int | None = Field(default=None, ge=0)
     adjudication_required_count: int | None = Field(default=None, ge=0)
+    abstraction_plan_locator: SafeLocator | None = None
+    abstraction_plan_file_sha256: Sha256 | None = None
+    abstraction_plan_sha256: Sha256 | None = None
+    abstraction_input_count: int = Field(default=0, ge=0)
+    abstraction_candidate_ceiling: int = Field(gt=0)
+    abstraction_capacity_basis: Literal["campaign-ceiling", "locked-eligible-inputs"]
+    abstraction_profile_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=12)
+    abstraction_profile_capacity: int = Field(gt=0)
+    abstraction_profile_capacity_gap: int = Field(default=0, ge=0)
+    ready_for_abstraction_model_authorization: bool = False
+    abstraction_preparation_route: Literal["direct_path"] | None = None
+    abstraction_model_execution_route: Literal["owner_approval"] | None = None
+    abstraction_human_review_route: Literal["owner_approval"] | None = None
     next_action: SafeIdentifier
     preparation_verification_route: Literal["direct_path"]
     recruitment_verification_route: Literal["owner_approval"]
@@ -1301,6 +1314,37 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
             raise ValueError("Taste source-review locked result requires three submissions")
         if self.ready_for_taste_abstraction_review and not locked:
             raise ValueError("Taste source-review abstraction readiness requires a result")
+        planned = self.abstraction_plan_sha256 is not None
+        plan_fields = (
+            self.abstraction_plan_locator,
+            self.abstraction_plan_file_sha256,
+            self.abstraction_plan_sha256,
+            self.abstraction_preparation_route,
+            self.abstraction_model_execution_route,
+            self.abstraction_human_review_route,
+        )
+        if planned != all(value is not None for value in plan_fields):
+            raise ValueError("Taste abstraction plan lineage is inconsistent")
+        if planned != bool(self.abstraction_input_count):
+            raise ValueError("Taste abstraction input count is inconsistent")
+        if self.abstraction_candidate_ceiling < self.abstraction_input_count:
+            raise ValueError("Taste abstraction inputs exceed the campaign ceiling")
+        expected_basis = "locked-eligible-inputs" if planned else "campaign-ceiling"
+        if self.abstraction_capacity_basis != expected_basis:
+            raise ValueError("Taste abstraction capacity basis differs from plan state")
+        capacity_demand = (
+            self.abstraction_input_count if planned else self.abstraction_candidate_ceiling
+        )
+        if self.abstraction_profile_capacity_gap != max(
+            0, capacity_demand - self.abstraction_profile_capacity
+        ):
+            raise ValueError("Taste abstraction profile capacity gap is inconsistent")
+        if not planned and self.ready_for_abstraction_model_authorization:
+            raise ValueError("unplanned Taste abstraction cannot be authorized")
+        if planned and self.ready_for_abstraction_model_authorization != (
+            self.abstraction_profile_capacity_gap == 0
+        ):
+            raise ValueError("Taste abstraction readiness differs from profile capacity")
         if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
             raise ValueError("Taste source-review campaign lacks registered evidence")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):

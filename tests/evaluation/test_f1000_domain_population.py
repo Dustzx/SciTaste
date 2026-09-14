@@ -17,6 +17,9 @@ from scitaste.evaluation.f1000_domain_population import (
     materialize_f1000_taste_population,
     publish_f1000_taste_population_run,
 )
+from scitaste.evaluation.natural_taste_abstraction import (
+    load_natural_taste_abstraction_plan,
+)
 from scitaste.evaluation.natural_taste_review import (
     TasteSourceReviewSession,
     load_taste_source_review_policy,
@@ -302,6 +305,11 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     )
     assert pending.status == "awaiting_owner_approval"
     assert pending.owner_approval_required is True
+    assert pending.abstraction_candidate_ceiling == 10
+    assert pending.abstraction_capacity_basis == "campaign-ceiling"
+    assert pending.abstraction_profile_capacity == 20
+    assert pending.abstraction_profile_capacity_gap == 0
+    assert pending.ready_for_abstraction_model_authorization is False
     authorization_request = {
         "schema_version": "1.0",
         "project_id": "f1000-test-project",
@@ -449,6 +457,38 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert collected.ready_for_taste_abstraction_review is True
     assert collected.ready_for_benchmark_admission is False
     assert collected.result_locator == "review-control/RESULT.json"
+    assert collected.abstraction_plan_locator == (
+        "review-control/abstraction-plan/PLAN.json"
+    )
+    assert collected.abstraction_input_count == 10
+    assert collected.abstraction_candidate_ceiling == 10
+    assert collected.abstraction_capacity_basis == "locked-eligible-inputs"
+    assert collected.abstraction_profile_capacity == 20
+    assert collected.abstraction_profile_capacity_gap == 0
+    assert collected.ready_for_abstraction_model_authorization is True
+    assert collected.abstraction_preparation_route.value == "direct_path"
+    assert collected.abstraction_model_execution_route.value == "owner_approval"
+    abstraction_plan = load_natural_taste_abstraction_plan(
+        control_root.parent / collected.abstraction_plan_locator
+    ).plan
+    assert abstraction_plan.required_model_invocations == 10
+    assert abstraction_plan.required_primary_abstraction_reviews == 20
+    assert abstraction_plan.same_source_projection_required_for_raw_rag is True
+    first_input = json.loads(
+        (
+            control_root
+            / "abstraction-plan"
+            / abstraction_plan.inputs[0].input_file.locator
+        ).read_text()
+    )
+    source_projection = json.loads(first_input["source_projection"])
+    assert set(source_projection["fields"]) >= {
+        "article_title",
+        "reviewed_abstract",
+        "review_comment",
+        "revised_abstract",
+    }
+    assert "observed_recommendation" not in first_input["source_projection"]
 
     locked_board = next(
         component
@@ -462,6 +502,9 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert locked_review["reviewer_submissions_collected"] == 3
     assert locked_review["eligible_candidate_count"] == 10
     assert locked_review["ready_for_taste_abstraction_review"] is True
+    assert locked_review["abstraction_input_count"] == 10
+    assert locked_review["abstraction_capacity_basis"] == "locked-eligible-inputs"
+    assert locked_review["abstraction_model_execution_route"] == "owner_approval"
     locked_catalog = WorkspaceIntentResolver(runtime).quick_catalog("f1000-test-project")
     assert any(
         item.quick_intent_id == "plan-reviewed-taste-abstraction"

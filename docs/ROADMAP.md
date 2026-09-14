@@ -47,6 +47,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.11 — owner-gated natural Taste review sessions | done | the project home records an exact ethics/compensation/consent/conflict decision and prepares two scientific plus one privacy blind session without contacting reviewers or authorizing model/API/GPU/experiment work |
 | Phase 9.12 — cost-routed AWA license coverage | done | a targeted local read binds the exact acquired ZIP, proves 2,000 image/label identities but zero embedded per-image license records, blocks ingestion, and exposes acquire-manifest versus exclude-AWA as an explicit protocol decision without a standalone preflight |
 | Phase 9.13 — blind-review return and planning feedback | done | the project UI admits each exact authorized reviewer JSON through inline guards, locks the existing independent result after 3/3, projects eligibility/adjudication into model-visible evidence, and changes the generated next-step entry to Taste abstraction; the real campaign remains unreviewed |
+| Phase 9.14 — natural-source grounded abstraction handoff | done | an eligible locked review result atomically compiles one relation-blind grounded-node input per admitted source, binds same-source Raw RAG parity and two-person abstraction review, and exposes campaign-ceiling versus exact capacity to generated planning; model execution and human review remain owner-gated |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen
