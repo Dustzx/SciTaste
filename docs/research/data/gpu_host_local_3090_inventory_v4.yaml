@@ -1,0 +1,36 @@
+schema_version: "1.0"
+inventory_id: gpu-host-local-3090-20260913-v4
+host_alias: local-3090
+hostname: good-System-Product-Name
+observed_at: 2026-09-13T17:15:35+08:00
+observation_method: read-only-local
+devices:
+  - index: 0
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-b9e9ad0c-cdfe-4137-7875-733ac195c786
+    memory_total_mb: 24576
+    memory_free_mb: 22510
+    driver_version: 535.183.01
+root_storage:
+  filesystem: /dev/sda
+  mount: /media/good/dxhismyson
+  total_bytes: 3936820731904
+  used_bytes: 3580791713792
+  available_bytes: 155972890624
+  percent_used: 96
+runtime:
+  python_version: 3.12.14
+  docker_path: null
+  bubblewrap_path: /usr/bin/bwrap
+checkpoint:
+  checkpoint_id: qwen3-vl-2b-instruct
+  expected_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+  expected_bytes: 4266648961
+  destination_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  destination_present: true
+  observed_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+remote_state_mutation_performed: false
+gpu_work_performed: false
+model_transfer_performed: false
+dataset_download_performed: false
+credentials_recorded: false

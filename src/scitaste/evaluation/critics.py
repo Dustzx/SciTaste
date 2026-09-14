@@ -206,7 +206,10 @@ class EvaluationCriticSuite:
                         problems.append(f"{lane.lane_id}:missing_direct_control")
                     if counts[SystemRole.METHOD_COMPARATOR] < 2:
                         problems.append(f"{lane.lane_id}:fewer_than_two_method_comparators")
-                elif lane_claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL:
+                elif lane_claim.estimand_kind in {
+                    ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
+                    ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                }:
                     if not any(item.role is SystemRole.ABLATION for item in selected):
                         problems.append(f"{lane.lane_id}:missing_native_ablation")
                 elif counts[SystemRole.METHOD_COMPARATOR] < 2:
@@ -224,7 +227,11 @@ class EvaluationCriticSuite:
                 } or (
                     manifest.schema_version == "1.4"
                     and lane_claim is not None
-                    and lane_claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+                    and lane_claim.estimand_kind
+                    in {
+                        ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
+                        ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                    }
                 )
                 if requires_preflight and (
                     system.adapter_preflight_ref is None or system.adapter_preflight_sha256 is None

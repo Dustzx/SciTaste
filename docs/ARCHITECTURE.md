@@ -3900,3 +3900,9 @@ the new estimand removes the upstream schema confound without introducing a
 second analysis path. A one-task five-cell run remains feasibility evidence
 only; it can resume the exact cells and measure runtime/failure behavior, but it
 cannot satisfy the preregistered multi-task claim.
+
+The first executable proposal using this contract is the unapproved
+`native-taste-mechanism-prepilot-v12` design. It fixes five first-party systems,
+two candidate tasks, the local Qwen3-VL-2B checkpoint, and an executable
+objective-score contract. Authoring these bindings did not materialize task
+data, prepare a runtime, load the model, occupy a GPU, or execute an outcome.

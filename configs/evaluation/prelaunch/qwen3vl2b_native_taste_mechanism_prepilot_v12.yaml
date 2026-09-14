@@ -1,0 +1,209 @@
+schema_version: "1.4"
+manifest_id: qwen3vl2b-native-taste-mechanism-prepilot-v12
+protocol_id: native-taste-mechanism-prepilot-v12
+protocol_version: "12.0"
+study_scope: pilot
+scientific_question: >-
+  With task bytes, agent checkpoint, editable surface, objective scorer, tools,
+  repair policy, starting state, seed, and resource ceilings fixed, does Scientific
+  Taste improve autonomous research through (i) abstraction of the same qualified
+  sources, (ii) task-domain matching of equally represented Taste, and (iii) the
+  complete SciTaste bundle?
+claim_allowed: >-
+  A Perception-only five-cell execution may establish end-to-end feasibility,
+  intervention isolation, scorer closure, failure behavior, and observed resource
+  demand. A complete two-task prepilot may estimate task-level dispersion and
+  inform a separately frozen formal power analysis.
+claim_forbidden: >-
+  This prepilot cannot establish the paper title, a formal causal effect,
+  cross-task or cross-model generality, external-system superiority, or ICLR
+  readiness. The Perception-only first block is not an independent-task effect
+  estimate and must not determine a favorable formal sample size.
+primary_endpoint: objective_progress
+automated_judge_role: secondary_diagnostic
+source_commit: fce1d9cf6904359b6bd43b1f5cbf88ccf0238cb7
+require_clean_tree: true
+resource_corpus_sha256: 5d590fa7b502cfc67ae03fc0afc0ce4d084bfaeeca4ed2f1cfb297de5d63462f
+systems:
+  - system_id: full-scitaste
+    role: scitaste
+    implementation_ref: scitaste@fce1d9cf6904359b6bd43b1f5cbf88ccf0238cb7:native-benchmark-adapter?condition=full-scitaste
+    availability: pending
+    real_implementation: true
+  - system_id: native-base
+    role: ablation
+    implementation_ref: scitaste@fce1d9cf6904359b6bd43b1f5cbf88ccf0238cb7:native-benchmark-adapter?condition=native-base
+    availability: pending
+    real_implementation: true
+  - system_id: raw-source-rag
+    role: ablation
+    implementation_ref: scitaste@fce1d9cf6904359b6bd43b1f5cbf88ccf0238cb7:native-benchmark-adapter?condition=raw-source-rag
+    availability: pending
+    real_implementation: true
+  - system_id: matched-abstracted-taste
+    role: ablation
+    implementation_ref: scitaste@fce1d9cf6904359b6bd43b1f5cbf88ccf0238cb7:native-benchmark-adapter?condition=matched-abstracted-taste
+    availability: pending
+    real_implementation: true
+  - system_id: mismatched-taste
+    role: ablation
+    implementation_ref: scitaste@fce1d9cf6904359b6bd43b1f5cbf88ccf0238cb7:native-benchmark-adapter?condition=mismatched-taste
+    availability: pending
+    real_implementation: true
+tasks:
+  - task_id: perception-temporal-action-loc
+    benchmark_resource_id: mlrc-bench-code
+    split: development-six-archives-heldout-three-archives
+    selected_asset_manifest: configs/evaluation/materialization/mlrc_perception_temporal_action_loc_v1.yaml
+    asset_manifest_sha256: 4af83f201f0c9c5da6266921af336258dd6c23b5d62f8b089ff1e2764c4baf42
+    license_status: verified
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+    signal_kind: objective_score
+  - task_id: meta-learning
+    benchmark_resource_id: mlrc-bench-code
+    split: contingent-second-independent-task
+    selected_asset_manifest: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+    asset_manifest_sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+    license_status: blocked
+    asset_status: blocked
+    held_out: true
+    source_group_disjoint: true
+    signal_kind: objective_score
+lanes:
+  - lane_id: qwen3vl2b-native-mechanisms-local-gpu
+    kind: gpu
+    scientific_role: matched_backbone
+    comparison_regime: matched_backbone
+    model_effects_confounded: false
+    comparison_claim_boundary: >-
+      Full versus Base measures the complete bundle. Matched abstracted Taste
+      versus same-source Raw RAG changes only representation. Matched versus
+      source-disjoint mismatched Taste changes only domain relation. The first
+      Perception-only five-cell subset establishes feasibility, not effectiveness.
+    system_ids:
+      - full-scitaste
+      - native-base
+      - raw-source-rag
+      - matched-abstracted-taste
+      - mismatched-taste
+    task_ids:
+      - perception-temporal-action-loc
+      - meta-learning
+    seeds: [7]
+    repetitions: 1
+    planned_cells: 10
+    api_model: null
+    system_api_models: null
+    gpu_resource:
+      host_alias: local-3090
+      device_count: 1
+      device_name: NVIDIA GeForce RTX 3090
+      minimum_memory_mb_per_device: 24000
+      checkpoint_id: qwen3-vl-2b-instruct
+      checkpoint_source_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+      checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+      checkpoint_bytes: 4266648961
+      license_identifier: Apache-2.0
+      local_preflight_status: verified
+      remote_inventory_status: verified
+      remote_inventory_ref: docs/research/data/gpu_host_local_3090_inventory_v4.yaml
+      remote_inventory_sha256: 411d5f55b1364865fc488ba1f8cd1e7f8e57def403761fd5254d942ec9c29bc5
+      remote_checkpoint_status: verified
+      remote_checkpoint_attestation_ref: docs/research/data/gpu_host_local_3090_inventory_v4.yaml
+      remote_checkpoint_attestation_sha256: 411d5f55b1364865fc488ba1f8cd1e7f8e57def403761fd5254d942ec9c29bc5
+      max_gpu_hours: 4.0
+      max_storage_bytes: 21474836480
+      network_access: false
+human_review:
+  required: false
+  minimum_reviewers_per_artifact: 0
+  condition_blinded: false
+  conflict_check_required: false
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 0.0
+retention:
+  output_root: outputs/projects/scitaste-self-development/evaluations/native-taste-mechanism-prepilot-v12
+  archive_root: archives/scitaste-self-development/evaluations/native-taste-mechanism-prepilot-v12
+  maximum_output_bytes: 107374182400
+  retain_raw_provider_responses: false
+  retain_failed_runs: true
+  secrets_forbidden: true
+analysis:
+  primary_outcome: >-
+    Task-normalized held-out objective progress, assigning every valid failed
+    intention-to-run cell the preregistered task floor.
+  estimand: >-
+    Three paired differences under one fixed Qwen3-VL-2B execution envelope:
+    Full minus Base, matched abstracted Taste minus identical-source Raw RAG, and
+    matched minus source-disjoint mismatched Taste.
+  analysis_unit: >-
+    One independent held-out task after averaging paired seed/repetition blocks.
+  aggregation_method: >-
+    Normalize only by frozen task constants, retain valid failures at the task
+    floor, average within task, give tasks equal weight, and apply Holm correction
+    to the three confirmatory contrasts without favorable-result selection.
+  uncertainty_method: >-
+    This prepilot reports descriptive task effects only. A new formal protocol
+    must freeze task count and replication from a task-clustered power simulation
+    without inspecting formal outcomes.
+  power_analysis_ref: null
+  power_analysis_sha256: null
+  objective_outcome_contract_ref: configs/evaluation/analysis/native_taste_mechanism_objective_v1.json
+  objective_outcome_contract_sha256: 85d5615d0f11f154a6b739c30f42b1b15c2266785d89d6d0cf451062a1ff66c2
+  claim_admission:
+    estimand_kind: native_taste_mechanisms
+    lane_id: qwen3vl2b-native-mechanisms-local-gpu
+    candidate_system_id: full-scitaste
+    contrasts:
+      - contrast_id: full-vs-native-base
+        candidate_system_id: full-scitaste
+        comparator_system_id: native-base
+        role: no_taste_control
+        inference_role: confirmatory
+        favorable_direction: higher
+        minimum_effect: 0.0
+      - contrast_id: matched-taste-vs-raw-source-rag
+        candidate_system_id: matched-abstracted-taste
+        comparator_system_id: raw-source-rag
+        role: reference_representation_control
+        inference_role: confirmatory
+        favorable_direction: higher
+        minimum_effect: 0.0
+      - contrast_id: matched-vs-mismatched-taste
+        candidate_system_id: matched-abstracted-taste
+        comparator_system_id: mismatched-taste
+        role: mismatched_taste_placebo
+        inference_role: confirmatory
+        favorable_direction: higher
+        minimum_effect: 0.0
+    minimum_distinct_tasks: 2
+    requires_all_planned_units: true
+    failure_handling: include-as-outcome
+integrity:
+  preregistration_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  preregistration_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  task_freeze_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  task_freeze_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  failure_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  failure_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  repair_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  repair_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  leakage_audit_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  leakage_audit_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  judge_protocol_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  judge_protocol_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+launch_order: [qwen3vl2b-native-mechanisms-local-gpu]
+stop_rules:
+  - Stop before extraction, environment installation, model loading, GPU work, or benchmark execution until the exact transaction and resource budget are disclosed and approved.
+  - Stop unless Raw RAG and matched Taste use identical ordered source identities and all reference arms match observed tokens, source count, tokenizer, query, template, truncation, provenance, curation, and outcome-information policy.
+  - Stop the first activation after exactly the five Perception cells; inspect closure, failures, and resource use before activating any second task or repetition.
+  - Retain every valid intention-to-run failure at the preregistered task floor; never silently rerun or exclude it.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null

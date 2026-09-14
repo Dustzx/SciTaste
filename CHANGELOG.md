@@ -20,6 +20,11 @@ semantic versioning.
   match source count, tokenizer, query, template, observed tokens, truncation,
   provenance, curation, and outcome policy. The original six-arm matrix remains
   available only for compatibility and optional component diagnostics.
+- Added an unapproved Qwen3-VL-2B v12 native-mechanism prepilot proposal and a
+  content-addressed objective-outcome contract. They freeze the intended
+  two-task analysis while limiting the first future activation to the complete
+  five-condition Perception feasibility block; no data, model, GPU, or
+  experiment was activated.
 - Added an approval-gated dataset materialization transaction between safe
   archive acquisition and native experiment execution. It rebinds receipt,
   archive-safety, ingestion-license, task-spec, asset, member-count, and byte
