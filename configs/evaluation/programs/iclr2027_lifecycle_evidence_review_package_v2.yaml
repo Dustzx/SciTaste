@@ -3,8 +3,8 @@ package_id: scitaste-iclr2027-lifecycle-evidence-review-package-v2
 project_id: scitaste-self-development
 evidence_program:
   path: configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml
-  file_sha256: 10461f83d60736f9f9a14e07eb485e97e509d937b873cb04efbbd1d4b6c78266
-evidence_program_sha256: ee2fa358eb2eec96ac93c945cc857b0ec6f9c9d6a200de4ed413d22a700accac
+  file_sha256: c4006afd722319436cf2d2d5e339bec189fa27ac3bda9001609c6f247e528e9f
+evidence_program_sha256: a5c7ab955103c7ae0075938be6782b94964e716f038f53f635fb3298e6318174
 resource_corpus:
   path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
   file_sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
@@ -15,11 +15,11 @@ source_proposals:
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     file_sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
     proposal_sha256: null
-  - source_id: innovatorbench-objective-tasks
-    kind: acquisition_request
-    path: configs/evaluation/acquisition/innovatorbench_task_metadata_v1.yaml
-    file_sha256: dd954010fbe07f3302fcf5caf63fd22e56607f84f9b841f8bb0a928505b3f6c3
-    proposal_sha256: c544025a4b0866fdc14c66cc4bd42083b3b551a7ae009b8eb3b829d1b11c213f
+  - source_id: mlrc-objective-tasks
+    kind: acquired_metadata_inventory
+    path: docs/research/data/objective_task_resource_qualification_v2.yaml
+    file_sha256: abb4fe2dd36431cada47e23cc8a1ed1bdf623d12bac11440663ad64e70076c34
+    proposal_sha256: null
   - source_id: mlrbench-full-lifecycle
     kind: acquired_metadata_inventory
     path: docs/research/data/mlr_bench_ten_brief_acquisition_inventory_v1.yaml
@@ -35,10 +35,6 @@ method_proposals:
     path: configs/evaluation/adapters/agent_laboratory_best_native_contract_v1.yaml
     file_sha256: 13f3e4a968b1cb8fd7bafd0e95cde34d7405c80277f1c5f803aff76518eabaff
     proposal_sha256: acd3e23b72ce7c35299941abf1e7c42187a92425e8fce11ae7b3c73588763c51
-  - system_id: ai-researcher
-    path: configs/evaluation/adapters/ai_researcher_best_native_contract_v1.yaml
-    file_sha256: 0967749fcc2d01023b1d187e0726c28da89bceece0522c8d18c074699fb5e60d
-    proposal_sha256: 65aeba591c518a357d2d50a6417cb542651d6affdadc559291ad7b35fcbb3371
   - system_id: deep-scientist
     path: configs/evaluation/adapters/deep_scientist_best_native_contract_v1.yaml
     file_sha256: e556de0d9ec8db8d5d9b7d62c932d199ef8b11b848c54dc439fbb0e61063bdb2

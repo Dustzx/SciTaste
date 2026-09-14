@@ -19,10 +19,10 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 06302df5315c5e48e05efbbc87b96bdad58223b5bd048c3fe5b04e03807a9a4b
+    sha256: 4aaf60a2224b1c5953a5550713116ada60c544f8986923d4f05a1985c50b0fe2
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 6cc09c31b98dd11cec1108c1412811e03bd033bf90bc1692ec8d9a776f186b89
+    sha256: 97c9c42b567878a7ec5eff4514891bcc2374b1f959cb07770a811f26d55d0746
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -37,7 +37,7 @@ artifacts:
     sha256: b025c576a599bfa4eea623ab779c7eb102ed0230cd34e40b58d91fa06e712876
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: eed6b98a9eae316589058a3c42680ff12f18e556010b9df5d95c12beb75acb1f
+    sha256: 1bc24328c7d6dd570abc3128451c7a8c11081a65735fdb86a1badf6e1b2a6b21
   - artifact_id: scientific-reference-quality
     path: docs/SCIENTIFIC_REFERENCE_QUALITY.md
     sha256: 1b6d01a3e76ad79ee3a0773379ea683cdf73274fcba025f3c033c608e5df1a54

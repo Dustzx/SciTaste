@@ -1,0 +1,117 @@
+schema_version: "1.0"
+qualification_id: objective-task-resource-qualification-2026-09-15-v2
+project_id: scitaste-self-development
+observed_at: 2026-09-15T01:24:00+08:00
+purpose: >-
+  Select the first feasible objective-progress task source for the lifecycle
+  Scientific Taste H4 study from exact locally observed assets rather than from
+  benchmark prestige or a hypothetical resource envelope.
+
+primary_source:
+  source_id: mlrc-objective-tasks
+  resource_id: mlrc-bench-code
+  accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+  official_repository: https://github.com/yunx-z/MLRC-Bench
+  repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+  selection_basis: scientific_fit_and_observed_executability
+  candidate_manifest:
+    path: configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml
+    file_sha256: ac7595a6f66bde172f59a04cea9d4e173802d46b05e30d05ecbf233b0a2f8379
+  acquisition_record:
+    path: docs/research/data/mlrc_first_preflight_acquisition_v1.yaml
+    file_sha256: 9e761677a981a6e81cc102c6042b235d6ec46f68bf58bd875a1093d4043d9e5e
+    acquired_asset_count: 39
+    acquired_bytes: 3761168137
+  archive_qualification:
+    path: docs/research/data/mlrc_archive_qualification_v1.yaml
+    file_sha256: 980e72fd1759e652dc04f4dddda2f7ce29baabba5dfb69e96827d1d71fab92d0
+    archive_safety_qualified: true
+  first_materialized_task:
+    task_id: perception_temporal_action_loc
+    request_path: configs/evaluation/materialization/mlrc_perception_temporal_action_loc_v1.yaml
+    request_file_sha256: 4af83f201f0c9c5da6266921af336258dd6c23b5d62f8b089ff1e2764c4baf42
+    receipt_path: >-
+      outputs/projects/scitaste-self-development/evaluations/materializations/mlrc-perception-temporal-action-loc-materialization-v1/RECEIPT.json
+    receipt_file_sha256: d2421ffde7c71c91f7083db256942d21f894e8489b3c201bda72ca8d3537063d
+    receipt_sha256: af15d35ccb98709de3f16c1a17308246a56c6f301df4bc0b324b6c5ad5c919c1
+    archive_bytes_reverified: 698506926
+    materialized_bytes: 1067288026
+    file_count: 15006
+    development:
+      file_count: 4286
+      bytes: 305450877
+      content_sha256: 58a538560c797ddddcc9319b64c06a107071251565301249c4a4326f9c40c339
+    heldout:
+      file_count: 10719
+      bytes: 761837149
+      content_sha256: 7c21017f97416e4cd56e5917b4391f581acf1eca9ef3844c7560722af65abf10
+    split_isolation_verified: true
+    source_archives_unchanged: true
+    environment_installed: false
+    objective_scorer_reproduced: false
+    benchmark_executed: false
+  current_disposition: primary-development-source-formal-population-pending
+  rationale: >-
+    The accepted benchmark exposes objective competition metrics, four paper-
+    reported 16 GB task candidates fit one registered RTX 3090, and one exact
+    task now has separately hashed development and scorer-held-out views. This
+    is the strongest observed route to a matched learned-policy on/off H4 pilot.
+
+deferred_source:
+  source_id: innovatorbench-objective-tasks
+  resource_id: innovator-bench
+  accepted_venue: ICLR 2026
+  metadata_request:
+    path: configs/evaluation/acquisition/innovatorbench_task_metadata_v1.yaml
+    file_sha256: dd954010fbe07f3302fcf5caf63fd22e56607f84f9b841f8bb0a928505b3f6c3
+    request_sha256: c544025a4b0866fdc14c66cc4bd42083b3b551a7ae009b8eb3b829d1b11c213f
+  metadata_receipt:
+    path: >-
+      outputs/projects/scitaste-self-development/evaluations/acquisitions/innovatorbench-task-metadata-v1/RECEIPT.json
+    file_sha256: 279b5372f7463ee2eb7c5a1a64aaa6fbb9aaa301ff268be8c7be99944d4b7d80
+    receipt_sha256: 4c22b6da6c78af324b00bac579f61b1ebbd921d41a893c642e1ad6123e08955a
+    item_count: 20
+    total_bytes: 46638
+  observed_requirements:
+    one_eight_by_eighty_gb_gpu_server_task_count: 16
+    two_eight_by_eighty_gb_gpu_server_task_count: 1
+    cpu_only_task_count: 3
+    declared_runtime_hours_range: [6, 48]
+    full_archive_bytes: 69700021672
+  upstream_identity_defect:
+    requested_item_id: task_20
+    declared_task_name: task_19
+  current_disposition: contingent-not-primary-under-registered-resources
+  rationale: >-
+    Metadata confirms that the headline GPU population is incompatible with the
+    registered 8x RTX 3090 host, while the three CPU-only tasks depend on
+    external services and one carries a duplicate task identity. The official
+    dataset license and task assets also remain unresolved. Selecting this as
+    the current primary source would optimize for venue prestige over feasible
+    causal evidence.
+
+formal_boundary:
+  exact_primary_task_count: 1
+  population_inference_allowed: false
+  prepilot_allowed_by_this_record: false
+  formal_run_allowed_by_this_record: false
+  next_required_evidence:
+    - Reproduce the pinned MLRC environment and scorer without reading held-out outcomes into the agent.
+    - Materialize and qualify additional source-group-disjoint objective tasks.
+    - Freeze the primary model through a task-excluded conformance pilot.
+    - Estimate task-level variance before selecting a formal sample size.
+  no_model_calls: true
+  no_api_calls: true
+  no_gpu_work: true
+  no_benchmark_execution: true
+  authorizes_download: false
+  authorizes_environment_installation: false
+  authorizes_api_calls: false
+  authorizes_gpu_work: false
+  authorizes_execution: false
+
+claim_boundary: >-
+  This qualification changes the feasible H4 task-source priority and proves
+  exact local materialization and split isolation for one MLRC task. It does not
+  prove environment reproducibility, objective progress, a task-population
+  effect, Scientific Taste effectiveness, or ICLR-level empirical sufficiency.

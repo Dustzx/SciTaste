@@ -55,9 +55,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.19 — model-authored multi-file benchmark patches | done | a first-party model node can use condition-specific Knowledge, Taste, critic, and development feedback to propose bounded replacements for exact visible source or stop spending experiments; the controller binds predecessor bytes, rejects stale/out-of-surface/invalid edits, applies accepted replacements atomically, and retains a self-hashed transition without granting experiment authority |
 | Phase 9.20 — isolated development feedback loop | done | the durable model node drives a bounded propose/stop → admit → isolated development score → adopt/rollback loop; output artifacts and every transition are retained, and the six native conditions compile only from one content-bound five-channel guidance set |
 | Phase 9.21 — frozen-candidate held-out campaign closure | done | the first-party adapter binds an authorized campaign cell to separate development/test resource profiles, freezes the selected source and required artifacts before hidden data opens, executes one scorer-owned held-out command with no later model call, and publishes raw objective/usage/evidence artifacts to the campaign runner |
-| Phase 9.22 — first real native prepilot activation | in progress | the Perception nine-archive mapping passes license, receipt, ZIP-safety, and exact development/held-out isolation gates; a five-arm matrix and multi-candidate claim contract now encode Full-vs-Base, matched-Taste-vs-same-source-Raw-RAG, and matched-vs-mismatched-Taste without a policy confound; an unapproved 10-cell v12 proposal and executable two-task objective contract now freeze the intended closure, while only the complete five-arm Perception block may be activated first; after materialization, pin its task environment, reproduce the scorer, curate the formal contexts, bind the adapter launcher, disclose the full model/data/GPU budget, and request block execution authority |
+| Phase 9.22 — first real native prepilot activation | in progress | the Perception nine-archive mapping passes license, receipt, ZIP-safety, materialization, and exact development/held-out isolation gates; a five-arm matrix and multi-candidate claim contract encode Full-vs-Base, matched-Taste-vs-same-source-Raw-RAG, and matched-vs-mismatched-Taste without a policy confound; before activating even the complete five-arm Perception block, reproduce its environment/scorer, curate the formal contexts, bind the adapter launcher, disclose the full model/data/GPU budget, and request exact execution authority |
 | Phase 9.23 — lifecycle Taste policy and self-revising Idea contract | in progress | the project verifies one current content-bound Idea revision and all of its inputs; external precedents, Tool Intelligence outcomes, and Generation as Content corrections converge on one quarantined, revision-bound episode schema; independent attribution review, source-group/split-aware estimation, scientific-outcome filtering, uncertainty abstention, and controller traces are implemented; a project-aware reconstruction path now freezes prospective sampling and verifies exact decisions plus pre-decision states without manufacturing outcome labels, while retrospective self logs remain audit-only; next collect prospective longitudinal episodes and run held-out lifecycle evaluation before any old prepilot is treated as the title-level experiment |
-| Phase 9.24 — venue deadline and submission-pressure control | done | one content-bound schedule separates official venue guidance from calendar indexes, computes the next hard milestone and urgency from an explicit observation time, exposes a noncritical-work deferral signal, and advances only after owner-attested project evidence; the ICLR 2027 schedule is ready for assignment to the self-development project and generated-interface consumption |
+| Phase 9.24 — venue deadline and submission-pressure control | done | one content-bound schedule separates official venue guidance from calendar indexes, computes the next hard milestone and urgency from an explicit observation time, exposes a noncritical-work deferral signal, and advances only after owner-attested project evidence; the ICLR 2027 schedule is assigned to the self-development project and available to generated-interface consumption |
+| Phase 9.25 — lifecycle evidence resource realignment | done | SciTasteBench is explicitly the H1--H3 decision instrument with 273 raw natural candidates but zero formal admissions; one exact materialized MLRC task is the H4 objective source, InnovatorBench is deferred on resource/upstream defects, and Agent Laboratory plus DeepScientist are the active accepted-method pair without authorizing execution |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -90,15 +91,23 @@ source. A current status can tell orchestration and Generation as Content to def
 noncritical work, but it cannot mark an external submission complete or infer that
 required scientific evidence exists.
 
+Phase 9.25 prevents three evaluation roles from collapsing into one benchmark.
+SciTasteBench measures grounded decision quality and lifecycle Taste learning;
+MLRC-Bench supplies scorer-owned objective progress; MLR-Bench hosts the
+best-native system comparison. ARIES and F1000 currently provide 273 raw
+SciTasteBench candidates from 81 source groups, but none is admitted until the
+independent human gates finish. The materialized MLRC Perception task proves a
+real data boundary, not environment, model, scorer, or experiment readiness.
+
 Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a
 305,450,877-byte train/validation view and a disjoint 761,837,149-byte test view.
-Its proposal and gate hashes are now stable and owner-review-ready. Meta-learning
-does not share this status because AWA still lacks the required per-image license
-records. No extraction, environment install, model call, GPU job, scorer run, or
-experiment has occurred. The next environment transaction must resolve and record
-the upstream CUDA 11.8/12.4 dependency mixture and compile `nms_1d_cpu`; a mere
-import probe cannot mark the scorer verified.
+Its 1,067,288,026 materialized bytes and development/held-out content hashes are
+receipt-bound. Meta-learning does not share this status because AWA still lacks
+the required per-image license records. No environment install, model call, GPU
+job, scorer run, or experiment has occurred. The next environment transaction
+must resolve and record the upstream CUDA 11.8/12.4 dependency mixture and
+compile `nms_1d_cpu`; a mere import probe cannot mark the scorer verified.
 
 The executor no longer requires the second blocked task merely to test the first
 one, and it no longer accepts an arbitrary hand-picked cell subset. A separately

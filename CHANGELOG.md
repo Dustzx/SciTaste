@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Realigned the ICLR lifecycle evidence program around three non-substitutable
+  roles. SciTasteBench is the H1--H3 Scientific Taste instrument and now records
+  its complete raw ARIES/F1000 pool of 273 candidates from 81 source groups while
+  preserving zero formal admissions. MLRC-Bench is the primary H4 objective-task
+  source with one exactly materialized development/held-out task; InnovatorBench
+  is deferred on resource and upstream-identity defects. Agent Laboratory and
+  DeepScientist remain the active accepted-method candidates, while
+  AI-Researcher is reference-only under its unresolved code-license boundary.
+  No API, GPU, scorer, environment, human-review, or experiment authority was
+  opened by this design update.
 - Added project-owned venue schedules and deadline-pressure inspection. An
   immutable schedule distinguishes authoritative venue guidance from calendar
   indexes, binds exact timezone-aware milestones, and computes the next required

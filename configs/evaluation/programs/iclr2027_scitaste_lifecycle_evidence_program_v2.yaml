@@ -139,16 +139,30 @@ task_sources:
     rationale: >-
       Natural source-group-disjoint decisions are required for representation,
       transfer, selection, delayed-credit, abstention, and reversal tests.
-  - source_id: innovatorbench-objective-tasks
+  - source_id: mlrc-objective-tasks
     role: objective_progress
     formal_role: primary
-    resource_id: innovator-bench
-    accepted_venue: ICLR 2026
+    resource_id: mlrc-bench-code
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
     selection_basis: scientific_fit
     selected_for_acquisition_proposal: true
     rationale: >-
-      Held-out executable tasks with scorer-owned objective progress can test the
-      within-native policy intervention after asset and adapter qualification.
+      Objective competition metrics and 3090-compatible tasks can test the
+      within-native policy intervention. One task has exact development and
+      scorer-held-out materializations; environment reproduction and a formal
+      multi-task population remain gates.
+  - source_id: innovatorbench-objective-tasks
+    role: objective_progress
+    formal_role: contingent
+    resource_id: innovator-bench
+    accepted_venue: ICLR 2026
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: false
+    rationale: >-
+      Retained as a future high-resource benchmark, but not selected for the
+      current H4 path: 17 of 20 official task configurations require at least
+      one 8x80GB server, the CPU-only slice depends on external services, and
+      one upstream configuration carries a duplicate task identity.
   - source_id: mlrbench-full-lifecycle
     role: full_lifecycle
     formal_role: primary
@@ -190,8 +204,11 @@ system_candidates:
     accepted_venue: NeurIPS 2025 Main Conference Spotlight
     accepted_archival_method: true
     selection_basis: scientific_relevance
-    selected_for_adapter_proposal: true
-    rationale: Accepted end-to-end method; license and runnable-system equivalence remain gates.
+    selected_for_adapter_proposal: false
+    rationale: >-
+      Accepted end-to-end reference retained in the comparison census, but its
+      repository lacks applicable code-license evidence and cannot enter the
+      current unchanged-core adapter program or be replaced by a mock.
   - system_id: deep-scientist
     resource_id: deep-scientist
     accepted_venue: ICLR 2026
@@ -284,7 +301,7 @@ study_layers:
     inference_role: confirmatory
     claim_ids: [learned-taste-improves-objective-progress]
     condition_ids: [full-scitaste-learned-policy, native-base-without-learned-taste]
-    task_source_ids: [innovatorbench-objective-tasks]
+    task_source_ids: [mlrc-objective-tasks]
     primary_endpoint: Paired held-out objective progress with every failure retained.
     estimand: Effect of the learned lifecycle policy under an otherwise identical SciTaste Native system.
     experimental_unit: held-out source-group-disjoint executable research task
@@ -300,7 +317,7 @@ study_layers:
     claim_ids: []
     condition_ids: [full-scitaste-learned-policy, direct-tool-agent]
     task_source_ids: [mlrbench-full-lifecycle]
-    system_candidate_ids: [agent-laboratory, ai-researcher, deep-scientist]
+    system_candidate_ids: [agent-laboratory, deep-scientist]
     primary_endpoint: Blinded expert preference over complete evidence-bearing research packages.
     estimand: Separately reported system difference on common tasks with model and adapter confounding disclosed.
     experimental_unit: complete held-out task-system trajectory

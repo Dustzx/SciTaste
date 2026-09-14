@@ -337,11 +337,14 @@ Primary endpoint: task-normalized objective progress. Secondary endpoints:
 valid completion, unsupported-claim rate, evidence sufficiency, resource use,
 and condition-blinded expert preference over the complete research package.
 
-The first task-source acquisition candidate is InnovatorBench because its
-long-horizon tasks expose executable objective scores. InnoGym is a contingent
+MLRC-Bench is the current primary objective-task source because an official
+repository revision and one development/held-out task have exact local receipts
+within the available resource envelope. InnovatorBench is deferred: its official
+archive is 69.7 GB, most declared tasks require at least one 8x80-GB server, and
+one upstream task repeats another task identity. InnoGym remains a contingent
 alternative once an exact public implementation and task assets can be pinned.
-This source order is based on endpoint fit, not on whether its models or data
-already exist on either available machine.
+This order reflects executable endpoint and resource qualification, not expected
+outcome or whichever checkpoint is already installed.
 
 The executable native claim contract uses the
 `native_taste_mechanisms` estimand. It does not force a Full-SciTaste-centered
@@ -375,7 +378,9 @@ Scientist-v2 may appear as sensitivity systems but do not replace the accepted-
 method minimum.
 
 MLR-Bench is the primary full-lifecycle task scaffold for this layer, while
-Agent Laboratory, AI-Researcher, and DeepScientist are method candidates. A
+Agent Laboratory and DeepScientist are active method candidates. AI-Researcher
+is an accepted-paper reference but is not selected for implementation while its
+repository has no code license. A
 benchmark cannot satisfy the two-method requirement, and a method that fails
 license, unchanged-core, task-mapping, sandbox, telemetry, artifact, or resume
 admission cannot be replaced by a mock implementation.
@@ -487,36 +492,38 @@ population drift. Cell-plan schema 1.3 propagates both hashes into result
 admission. Thus a formal H3 result cannot enter the paper from a convenient
 subset that differs from the outcome-blind powered allocation.
 
-That decision still does not include the 69.7-GB InnovatorBench archive, task
-workspaces, repository checkout, API calls, checkpoint loading, GPUs, or human
-recruitment. Separately, the two-task MLRC preflight package has now acquired
-and independently rehashed all 39 registered assets (3,761,168,137 bytes), but
-its ZIP central directories remain unopened. An exact receipt-bound owner
-approval and explicit local switch are now required for no-extraction archive
-qualification; extraction, AWA license-record coverage, task-layout validation,
-baseline reproduction, and held-out certification remain later gates. The ten
-MLR-Bench starting briefs also retain their immutable local inventory and are
-not requested again. SciTasteBench remains a construction-and-review track
-rather than a public-file download.
+The 69.7-GB InnovatorBench archive, task workspaces, repository checkout, API
+calls, checkpoint loading, GPUs, and human recruitment remain unauthorized.
+Separately, the MLRC package has acquired and independently rehashed all 39
+registered assets (3,761,168,137 bytes). The Perception Temporal Action
+Localisation task is now safely materialized into a 305,450,877-byte development
+view and a disjoint 761,837,149-byte scorer-held-out view; split isolation is
+verified. No environment, scorer, baseline, model, GPU job, or experiment has
+run, and AWA license coverage remains unresolved. The ten MLR-Bench starting
+briefs retain their immutable local inventory and are not requested again.
+SciTasteBench remains a natural construction-and-review track rather than a
+public-file download.
 
 The method source bytes have advanced one bounded step beyond proposal. Under
 the standing sub-10-GB policy, the exact Agent Laboratory and DeepScientist
 commit archives were streamed into one atomic transaction: 83,023,421 bytes
 total, with receipt SHA-256
 `7a119c3bec53de52c8cd928472f64090098c89e5c3f3bfe2ad408e14d09b7009`.
-They remain unextracted and unread, so unchanged-core equivalence and task,
-sandbox, telemetry, artifact, model, and failure/resume mappings are still
-unresolved. AI-Researcher remains a valid accepted-paper reference and
-ecological comparator candidate, but its missing repository code license blocks
-code acquisition/adaptation. It cannot be replaced with a mock.
+Agent Laboratory has crossed the source qualification boundary and has a bounded
+no-run adapter compiler; its isolated environment, provider gateway, and exact
+best-native model identity remain unresolved. DeepScientist remains a selected
+active candidate but still requires equivalent unchanged-core and runtime
+qualification. AI-Researcher remains a valid accepted-paper reference, but its
+missing repository code license blocks code acquisition/adaptation and excludes
+it from the active two-method proposal. It cannot be replaced with a mock.
 
-The exact archive-to-tree qualification plan is now executable without opening
-the member streams. It replays the acquisition chain and all outer archive byte
-identities, then stops at an independent owner read decision. If approved, a
-second command may hash bounded tar members without extraction while rejecting
-unsafe paths/types, expansion, root, and license drift. The real archives have
-not crossed that read gate, so no unchanged-core evidence has been promoted and
-no method experiment is yet runnable.
+The bounded archive read is complete: a 128,923,245-byte no-extraction tree
+manifest replays outer identities and member hashes while excluding four exact
+dangling UI package-manager links. That qualification grants no extraction,
+dependency installation, import, API call, or execution authority. Agent
+Laboratory's separately materialized pinned checkout and no-run compiler advance
+only that method's static mapping; DeepScientist has not reached an equivalent
+adapter boundary. No external-method experiment is yet runnable.
 
 Inspect the combined decision without network, API, model, GPU, or repository
 access:

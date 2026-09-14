@@ -15,13 +15,28 @@ claim_boundary: >-
 artifacts:
   - artifact_id: lifecycle-evidence-program-v2
     path: configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml
-    sha256: 10461f83d60736f9f9a14e07eb485e97e509d937b873cb04efbbd1d4b6c78266
+    sha256: c4006afd722319436cf2d2d5e339bec189fa27ac3bda9001609c6f247e528e9f
   - artifact_id: lifecycle-evidence-review-v2
     path: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
-    sha256: 64f028e0c65471dc59557471bfd9a876c8970f2b76db7dcdafa2178bd65cad0b
+    sha256: 6f0f0322e259beef1b6825ea591a99485cff9b080ad5ddbe20b410dfdc2496c5
   - artifact_id: accepted-resource-corpus-v9
     path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
     sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+  - artifact_id: aries-natural-candidate-population-v1
+    path: docs/research/data/aries_review_edit_population_result_v1.yaml
+    sha256: 4ad3949c51f6fe3ca6279abca21bef2722a6280d579e00a5bcb6a91004e1924b
+  - artifact_id: f1000-natural-candidate-population-v1
+    path: docs/research/data/f1000_multidomain_taste_pilot_result_v1.yaml
+    sha256: a7578e65243324d5d0b6ace69ec715a8be73598e61583e7342839bb8e136e06e
+  - artifact_id: f1000-independent-source-review-v1
+    path: docs/research/data/f1000_multidomain_taste_source_review_campaign_v1.yaml
+    sha256: 7cf0059b0490f9907a5f68cf9f997601b0cea4737109f0e47e6c7346f57dfe1e
+  - artifact_id: f1000-review-policy-v1
+    path: configs/evaluation/human_review/f1000_multidomain_taste_source_review_v1.yaml
+    sha256: 84f647b407f13ba17dda1717b2e0dfcffa2b6532e0a9274a639f8781f5dd4b49
+  - artifact_id: objective-task-resource-qualification-v2
+    path: docs/research/data/objective_task_resource_qualification_v2.yaml
+    sha256: abb4fe2dd36431cada47e23cc8a1ed1bdf623d12bac11440663ad64e70076c34
 
 tracks:
   - track_id: lifecycle-decision-mechanism
@@ -44,13 +59,16 @@ tracks:
     data:
       dataset_id: scitastebench-natural-lifecycle-v1
       role: >-
-        Natural decisions with pre-action evidence, closed alternatives, delayed
-        outcomes, attribution review, source groups, and held-out partitions.
+        SciTasteBench construction pool. ARIES and F1000 provide 273 natural
+        review-to-revision candidates across 81 source groups and three observed
+        domain or publisher-subject strata. No item is formally admitted before
+        independent domain, quality, privacy, decision-family, abstraction, and
+        causal-attribution review.
       item_ids: []
       population_floor: 120
-      exact_bytes_available: false
+      exact_bytes_available: true
       held_out_verified: false
-      acquisition_approved: false
+      acquisition_approved: true
     matrix:
       system_ids:
         - matched-abstracted-taste
@@ -83,8 +101,15 @@ tracks:
     evidence_artifact_ids:
       - lifecycle-evidence-program-v2
       - lifecycle-evidence-review-v2
+      - aries-natural-candidate-population-v1
+      - f1000-natural-candidate-population-v1
+      - f1000-independent-source-review-v1
+      - f1000-review-policy-v1
     blocker_codes:
-      - natural-episodes-not-admitted
+      - admitted-benchmark-population-below-formal-120-case-floor
+      - raw-candidate-population-not-yet-scitastebench
+      - independent-source-quality-and-privacy-review-not-complete
+      - decision-family-and-taste-abstraction-not-complete
       - independent-attribution-not-complete
       - formal-split-not-frozen
       - primary-model-not-selected
@@ -105,16 +130,19 @@ tracks:
       kind: unselected
       usage_scope: One exact capable model is frozen after task-excluded conformance.
     data:
-      dataset_id: innovatorbench-heldout-objective-v1
-      role: Independently qualified executable tasks with scorer-owned hidden outcomes.
-      item_ids: []
+      dataset_id: mlrc-bench-objective-v1
+      role: >-
+        MLRC-Bench objective tasks. Temporal Action Localisation has exact
+        development and scorer-held-out materializations; it is one development
+        task, not yet a formal task population.
+      item_ids: [perception_temporal_action_loc]
       population_floor: 1
-      exact_bytes_available: false
-      held_out_verified: false
-      acquisition_approved: false
+      exact_bytes_available: true
+      held_out_verified: true
+      acquisition_approved: true
     matrix:
       system_ids: [full-scitaste-learned-policy, native-base-without-learned-taste]
-      task_ids: []
+      task_ids: [perception_temporal_action_loc]
       seeds: []
       repetitions: 1
       order_arms: 1
@@ -133,8 +161,10 @@ tracks:
     evidence_artifact_ids:
       - lifecycle-evidence-program-v2
       - accepted-resource-corpus-v9
+      - objective-task-resource-qualification-v2
     blocker_codes:
-      - objective-task-assets-not-qualified
+      - mlrc-environment-and-objective-scorer-not-reproduced
+      - additional-source-group-disjoint-objective-tasks-not-qualified
       - native-policy-toggle-not-preflighted
       - primary-model-not-selected
       - power-analysis-not-complete
@@ -161,7 +191,7 @@ tracks:
       held_out_verified: false
       acquisition_approved: false
     matrix:
-      system_ids: [scitaste-native, agent-laboratory, ai-researcher, deep-scientist]
+      system_ids: [scitaste-native, agent-laboratory, deep-scientist]
       task_ids: []
       seeds: []
       repetitions: 1
@@ -203,11 +233,17 @@ stages:
     state: blocked
     track_ids: [lifecycle-decision-mechanism]
     depends_on: [freeze-lifecycle-science]
-    external_actions: [download_data, recruit_humans]
+    external_actions: [recruit_humans]
     owner_approval_required: true
-    blocker_codes: [source-rights-not-closed, reviewer-roster-not-bound, formal-sampling-frame-not-frozen]
+    blocker_codes:
+      - reviewer-roster-not-bound
+      - quality-privacy-abstraction-and-attribution-review-not-complete
+      - formal-120-case-sampling-frame-not-frozen
     completion_artifact_ids: []
-    next_decision: Review exact source rights, sampling frame, and independent attribution campaign.
+    next_decision: >-
+      Approve and staff the existing outcome-blind F1000 review campaign, create
+      an equivalent independent ARIES admission packet, and admit only reviewed
+      source-group-disjoint cases until the formal SciTasteBench floor is met.
   - stage_id: qualify-objective-and-external-assets
     kind: asset_acquisition
     state: blocked
@@ -215,9 +251,15 @@ stages:
     depends_on: [freeze-lifecycle-science]
     external_actions: [download_data]
     owner_approval_required: true
-    blocker_codes: [objective-task-assets-not-qualified, accepted-system-adapters-not-qualified]
+    blocker_codes:
+      - mlrc-environment-and-scorer-not-reproduced
+      - objective-task-population-incomplete
+      - accepted-system-adapters-not-qualified
     completion_artifact_ids: []
-    next_decision: Bind exact tasks, licenses, commits, environments, and adapter equivalence.
+    next_decision: >-
+      Reproduce the already materialized MLRC task environment and scorer before
+      requesting additional task assets; qualify Agent Laboratory and
+      DeepScientist without changing their research cores.
   - stage_id: freeze-independent-review
     kind: independent_review
     state: blocked

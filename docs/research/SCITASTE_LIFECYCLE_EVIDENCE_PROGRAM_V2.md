@@ -7,7 +7,7 @@ The machine-readable contract is
 It supersedes evidence-program v1 for the current lifecycle-Taste paper idea but
 does not edit, reinterpret, or authorize any historical provider-specific
 `formal-v1` or `formal-v2` run. Its semantic proposal hash is
-`ee2fa358eb2eec96ac93c945cc857b0ec6f9c9d6a200de4ed413d22a700accac`.
+`a5c7ab955103c7ae0075938be6782b94964e716f038f53f635fb3298e6318174`.
 The exact source- and accepted-method proposal bindings are carried by the
 separate no-action
 [`lifecycle evidence review package v2`](../../configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml);
@@ -86,9 +86,18 @@ exact manifest hash. All four execution flags in the v2 program are `false`.
 
 The contract is scientifically coherent against the v9 resource corpus, but it
 is not experiment-ready. Its exact existing proposal bindings are ready for
-owner scope review, while external actions remain closed. The remaining
-scientific critical path is to acquire
-and independently label natural decision episodes, freeze task/source groups,
-qualify the objective-task adapter, select a primary model by a task-excluded
-conformance pilot, complete power analysis, and secure blinded reviewers. These
-are evidence-production gaps, not reasons to add more product features.
+owner scope review, while external actions remain closed. SciTasteBench has a
+real 273-candidate construction pool across 81 source groups and three observed
+domain or publisher-subject strata, but zero formally admitted cases: independent
+domain, quality, privacy, grounded-abstraction, and attribution review is still
+open. One MLRC-Bench task has exact development and scorer-held-out bytes, but its
+environment/scorer and a source-group-disjoint task population are not qualified.
+InnovatorBench is deferred because its official archive exceeds the current
+resource envelope and one upstream task identity is defective. Agent Laboratory
+and DeepScientist remain the two active accepted-method candidates; AI-Researcher
+is reference-only while its repository lacks a code license. The remaining
+scientific critical path is therefore to admit natural SciTasteBench cases,
+reproduce the MLRC environment/scorer, qualify the external adapters, freeze
+task/source groups, select a primary model by a task-excluded conformance pilot,
+complete power analysis, and secure blinded reviewers. These are
+evidence-production gaps, not reasons to add more product features.

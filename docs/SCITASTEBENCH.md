@@ -4,6 +4,30 @@ SciTasteBench is an evaluation subsystem, not the SciTaste control framework. It
 depends only on the fixed-candidate backend contract and can fail independently
 without blocking research-state execution.
 
+## Publication role and current status
+
+SciTasteBench is the paper's internal measurement instrument for Scientific
+Taste. It tests whether grounded decision experience improves scientific choices;
+external suites such as MLRC-Bench separately test whether those choices produce
+objective research progress. Neither role can substitute for the other.
+
+The current natural construction pool contains 273 candidate review-to-revision
+episodes from 81 source groups: 196 ARIES candidates from 42 groups and 77 F1000
+candidates from 39 groups. Together they expose three observed domain or
+publisher-subject strata, but those strata are not yet independently confirmed.
+The candidates are not benchmark items or gold outcomes. The formally admitted
+population is currently zero because independent domain, quality, privacy,
+decision-family, grounded-abstraction, and attribution review has not completed.
+
+Version 3 already specifies the title-critical H1/H2 conditions: same-source raw
+evidence, same-source abstracted Taste, and source-disjoint mismatched Taste under
+token and source-identity controls, with blinded human preference as the primary
+endpoint. The lifecycle evidence program extends this instrument with H2b
+autonomous precedent selection and H3 reviewed delayed-credit learning. Their
+software and evidence contracts do not authorize a paper claim until real
+source-group-disjoint cases, labels, treatments, splits, model identity, power,
+and reviewer assignments are frozen.
+
 Version 1 remains a synthetic engineering acceptance suite. It is useful for
 testing metrics and condition isolation but is not publication-effectiveness
 evidence. Version 2 has a separate human-labelled curation boundary: natural
