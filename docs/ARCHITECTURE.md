@@ -3739,8 +3739,7 @@ underlying authority boundary has changed.
 
 ### ADR-121: Development search retains the best candidate under compiled conditions
 
-Status: controller accepted; campaign adapter and real resource activation remain
-pending.
+Status: accepted and integrated; real resource activation remains pending.
 
 The source proposal, mutation, and development runner previously existed as
 separate authorities, so a human still had to decide which result became the next
@@ -3762,9 +3761,8 @@ authorized campaign and fixes project, evaluation, campaign, plan, cell, system,
 task, resource, seed, and author-approved evaluation-bundle identities before the
 loop starts. It writes a complete iteration record before proceeding, counts
 unverifiable executor attempts separately, and never invokes or materializes
-held-out evaluation. The final result identifies the best development surface;
-freezing that surface and performing the one-way scorer-owned held-out transition
-remain later campaign responsibilities.
+held-out evaluation. The final result identifies the best development surface and
+the campaign adapter now owns the later freeze and one-way scorer transition.
 
 Condition assignment is no longer a collection of caller-authored prompt strings.
 One content-bound guidance set registers utility policy, raw Knowledge, matched
@@ -3775,3 +3773,40 @@ mismatched placebo. Missing channels are explicitly disabled and the model is to
 not to reconstruct them. This closes the software isolation needed for a causal
 prepilot, but does not claim that current guidance assets are reviewed, paired, or
 ready, and it authorizes no API, GPU, dataset, or held-out use.
+
+### ADR-122: Hidden-test scoring begins only after an immutable candidate freeze
+
+Status: accepted and integrated; no real cell has been authorized or executed.
+
+An evaluation cell is not successful merely because its development loop found a
+better candidate. The first-party native benchmark adapter now binds the exact
+campaign manifest, plan, cell, system, task, model profile, condition matrix,
+five-channel guidance set, and separate development and held-out execution
+profiles. Development resources must omit every declared hidden path. After the
+loop stops, a self-hashed candidate record binds the winning source surface, its
+development receipt, and only the winning output artifacts explicitly required
+by the scorer. The held-out resource profile is materialized after this record
+exists and must contain every declared hidden path.
+
+Held-out execution has a separate request whose authority is test-only: source
+mutation and model invocation are both false. It restores any frozen scorer input
+such as the Perception checkpoint, runs the fixed objective entrypoint once in the
+same no-network Bubblewrap boundary, rejects source drift, and archives its logs
+and outputs. The Meta-learning scorer changes validation cardinality only in a
+temporary scorer-local method copy; it no longer edits and restores the frozen
+workspace. No adapter code path invokes the research model after candidate
+freeze. A raw task measurement records the original held-out score, baseline,
+metric direction, and directed progress; the legacy count-oriented `StudyOutcome`
+is retained only for campaign compatibility and is not the scientific endpoint.
+
+Large task/runtime/model resources are fully hashed when first materialized for a
+campaign. Later read-only cells reopen the small profile record and bind the
+campaign verification receipt instead of rehashing multi-gigabyte trees at every
+iteration. This optimization does not bypass the initial content check, task
+source checks, cell identity, or source postconditions.
+
+Generation as Content remains outside this executor. Its stable read seam is the
+campaign/loop/freeze/measurement evidence chain, and its write seam is the
+existing typed project-program revision submitted before launch. It may explain
+or propose a plan change, but it cannot enter the hidden-test process, mutate a
+candidate, or grant model/data/GPU/API authority.

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Literal
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from scitaste.project.models import (
@@ -19,6 +22,7 @@ from scitaste.taste.conditions import (
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _SHA256 = r"^[0-9a-f]{64}$"
+_MAX_GUIDANCE_BYTES = 1_048_576
 
 
 class BenchmarkGuidanceArtifact(BaseModel):
@@ -204,6 +208,23 @@ def compile_benchmark_condition_guidance(
     )
 
 
+def load_benchmark_research_guidance_set(
+    path: str | Path,
+) -> BenchmarkResearchGuidanceSet:
+    """Load one bounded JSON/YAML guidance set without reading referenced source bodies."""
+
+    source = Path(path)
+    if source.is_symlink() or not source.is_file() or source.stat().st_size > _MAX_GUIDANCE_BYTES:
+        raise ValueError("benchmark research guidance set must be a bounded regular file")
+    raw = source.read_bytes()
+    try:
+        payload = yaml.safe_load(raw.decode("utf-8"))
+        rendered = json.dumps(payload, ensure_ascii=False, allow_nan=False)
+    except (UnicodeDecodeError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError("benchmark research guidance set is invalid") from exc
+    return BenchmarkResearchGuidanceSet.model_validate_json(rendered, strict=True)
+
+
 def _entries(
     selected: dict[str, BenchmarkGuidanceArtifact],
     channel: str,
@@ -221,4 +242,5 @@ __all__ = [
     "BenchmarkResearchConditionGuidance",
     "BenchmarkResearchGuidanceSet",
     "compile_benchmark_condition_guidance",
+    "load_benchmark_research_guidance_set",
 ]

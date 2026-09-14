@@ -916,9 +916,9 @@ class ProjectEvaluationCampaignRunner:
                 experiment_count=usage.experiment_count,
             )
         return EvaluationCellUsage(
-            request_count=None,
-            input_tokens=None,
-            output_tokens=None,
+            request_count=usage.request_count,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
             api_cost=None,
             gpu_hours=elapsed * launcher.gpu_count / 3600,
             wall_time_hours=elapsed / 3600,
@@ -1243,18 +1243,19 @@ def _budget_error(
         if reported.api_cost > float(resource.max_cost or 0):
             return "cost-budget-exceeded"
     else:
-        if any(
-            value is not None
-            for value in (
-                reported.request_count,
-                reported.input_tokens,
-                reported.output_tokens,
-                reported.max_input_tokens_observed,
-                reported.max_output_tokens_observed,
-                reported.api_cost,
-            )
-        ):
+        local_model_telemetry = (
+            reported.request_count,
+            reported.input_tokens,
+            reported.output_tokens,
+            reported.max_input_tokens_observed,
+            reported.max_output_tokens_observed,
+        )
+        if reported.api_cost is not None:
             return "gpu-telemetry-kind-mismatch"
+        if any(value is not None for value in local_model_telemetry) and any(
+            value is None for value in local_model_telemetry
+        ):
+            return "local-model-telemetry-incomplete"
         if (usage.gpu_hours or 0) > float(resource.max_gpu_hours or 0):
             return "gpu-budget-exceeded"
         if sum(item.size_bytes for item in artifacts) > int(resource.max_storage_bytes or 0):

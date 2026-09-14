@@ -372,6 +372,8 @@ class BenchmarkResearchLoopResult(BaseModel):
     failed_experiment_count: int = Field(ge=0, le=20)
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
+    max_input_tokens_observed: int = Field(default=0, ge=0)
+    max_output_tokens_observed: int = Field(default=0, ge=0)
     model_cost_usd: float = Field(ge=0, allow_inf_nan=False)
     gpu_hours: float = Field(ge=0, allow_inf_nan=False)
     iterations: tuple[BenchmarkResearchIteration, ...] = Field(min_length=1, max_length=21)
@@ -509,6 +511,8 @@ class BenchmarkResearchLoop:
                 failed_count=failed_count,
                 input_tokens=0,
                 output_tokens=0,
+                max_input_tokens_observed=0,
+                max_output_tokens_observed=0,
                 model_cost=0,
                 gpu_hours=gpu_hours,
                 records=records,
@@ -530,6 +534,8 @@ class BenchmarkResearchLoop:
         reverted_count = 0
         input_tokens = 0
         output_tokens = 0
+        max_input_tokens_observed = 0
+        max_output_tokens_observed = 0
         model_cost = 0.0
         status: Literal["completed", "stopped", "failed"] = "completed"
         stop_reason = "patch-iteration-budget-exhausted"
@@ -572,6 +578,14 @@ class BenchmarkResearchLoop:
             _write_json(iteration_root / "PATCH_DECISION.json", decision.model_dump(mode="json"))
             input_tokens += decision.input_tokens
             output_tokens += decision.output_tokens
+            max_input_tokens_observed = max(
+                max_input_tokens_observed,
+                decision.input_tokens,
+            )
+            max_output_tokens_observed = max(
+                max_output_tokens_observed,
+                decision.output_tokens,
+            )
             model_cost += decision.cost_usd
             self._verify_model_did_not_mutate(context.editable_surface_sha256)
             if decision.output.decision == "stop":
@@ -752,6 +766,8 @@ class BenchmarkResearchLoop:
             failed_count=failed_count,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            max_input_tokens_observed=max_input_tokens_observed,
+            max_output_tokens_observed=max_output_tokens_observed,
             model_cost=model_cost,
             gpu_hours=gpu_hours,
             records=records,
@@ -890,6 +906,8 @@ class BenchmarkResearchLoop:
             raise ValueError("benchmark development executor mutated protected source")
         if receipt.objective is not None and receipt.objective.task_id != self.spec.task_id:
             raise ValueError("benchmark development objective belongs to another task")
+        if receipt.objective is not None and receipt.objective.phase != "dev":
+            raise ValueError("benchmark development objective belongs to another phase")
 
     def _finish(
         self,
@@ -908,6 +926,8 @@ class BenchmarkResearchLoop:
         failed_count: int,
         input_tokens: int,
         output_tokens: int,
+        max_input_tokens_observed: int,
+        max_output_tokens_observed: int,
         model_cost: float,
         gpu_hours: float,
         records: list[BenchmarkResearchIteration],
@@ -937,6 +957,8 @@ class BenchmarkResearchLoop:
             failed_experiment_count=failed_count,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            max_input_tokens_observed=max_input_tokens_observed,
+            max_output_tokens_observed=max_output_tokens_observed,
             model_cost_usd=model_cost,
             gpu_hours=gpu_hours,
             iterations=tuple(records),

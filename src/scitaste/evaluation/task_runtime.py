@@ -62,7 +62,7 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     spec_id: str
     project_id: str
     benchmark_id: str
@@ -85,6 +85,7 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
     development_command: tuple[str, ...] = Field(min_length=1, max_length=50)
     heldout_command: tuple[str, ...] = Field(min_length=1, max_length=50)
     heldout_materialization_paths: tuple[str, ...] = Field(min_length=1, max_length=20)
+    heldout_input_artifact_directories: tuple[str, ...] = Field(default=(), max_length=20)
     primary_metric: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
     metric_direction: Literal["higher", "lower"]
     baseline_development_score: float
@@ -123,6 +124,7 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
         "dataset_directories",
         "writable_output_directories",
         "heldout_materialization_paths",
+        "heldout_input_artifact_directories",
     )
     @classmethod
     def workspace_paths_are_safe(cls, values: tuple[str, ...], info: object) -> tuple[str, ...]:
@@ -147,6 +149,12 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
             raise ValueError("held-out paths cannot be editable")
         if set(self.dataset_directories) & set(self.writable_output_directories):
             raise ValueError("dataset and writable output directories must be distinct")
+        if not set(self.heldout_input_artifact_directories).issubset(
+            self.writable_output_directories
+        ):
+            raise ValueError("held-out input artifacts must be declared writable outputs")
+        if self.schema_version == "1.0" and self.heldout_input_artifact_directories:
+            raise ValueError("held-out input artifacts require task runtime schema 1.1")
         controlled_directories = (*self.dataset_directories, *self.writable_output_directories)
         for index, left in enumerate(controlled_directories):
             for right in controlled_directories[index + 1 :]:
@@ -157,7 +165,10 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
     @computed_field
     @property
     def fingerprint(self) -> str:
-        return content_sha256(self.model_dump(mode="json", exclude={"fingerprint"}))
+        payload = self.model_dump(mode="json", exclude={"fingerprint"})
+        if self.schema_version == "1.0":
+            payload.pop("heldout_input_artifact_directories")
+        return content_sha256(payload)
 
 
 class BenchmarkTaskRuntimeInspection(BaseModel):

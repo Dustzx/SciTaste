@@ -5,6 +5,17 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the first-party native benchmark campaign adapter and one-way held-out
+  scorer. One authorized cell now binds its exact campaign, task, condition,
+  guidance, model profile, development/held-out resource profiles, and owner
+  approval; runs the autonomous development search; freezes the winning source
+  and required checkpoint artifacts; opens hidden data only afterward; performs
+  one scorer-owned test command with zero post-freeze model calls; and emits the
+  raw held-out measurement, receipts, usage, and evidence index to the existing
+  campaign runner. Perception carries only the winning development checkpoint,
+  while Meta-learning modifies a scorer-local temporary method copy rather than
+  the frozen source. This closes the engineering path but does not activate any
+  currently blocked data, environment, GPU, API, or formal experiment authority.
 - Added a development-only autonomous benchmark research controller. It runs a
   measured baseline, obtains a durable model-node propose/stop decision, admits
   and applies exact multi-file replacements, executes the isolated objective,

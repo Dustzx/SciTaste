@@ -796,6 +796,7 @@ from scitaste.evaluation.task_condition import (
     BenchmarkResearchConditionGuidance,
     BenchmarkResearchGuidanceSet,
     compile_benchmark_condition_guidance,
+    load_benchmark_research_guidance_set,
 )
 from scitaste.evaluation.task_execution import (
     BenchmarkDevelopmentExecutionReceipt,
@@ -804,6 +805,7 @@ from scitaste.evaluation.task_execution import (
     BenchmarkDevelopmentRunRequest,
     BenchmarkObjectivePayload,
     BenchmarkResourceVerificationReceipt,
+    load_benchmark_resource_verification_receipt,
     parse_benchmark_objective,
     verify_benchmark_execution_resources,
 )
@@ -860,6 +862,15 @@ from scitaste.evaluation.task_runtime import (
     inspect_benchmark_task_runtime,
     load_benchmark_task_runtime_spec,
     prepare_benchmark_workspace,
+)
+from scitaste.evaluation.task_scoring import (
+    BenchmarkFrozenCandidate,
+    BenchmarkHeldoutExecutionReceipt,
+    BenchmarkHeldoutRunner,
+    BenchmarkHeldoutRunRequest,
+    freeze_benchmark_candidate,
+    load_benchmark_development_execution_receipt,
+    load_benchmark_frozen_candidate,
 )
 from scitaste.evaluation.task_selection import (
     BenchmarkTaskSelectionManifest,
@@ -972,7 +983,11 @@ __all__ = [
     "BenchmarkDevelopmentRunRequest",
     "BenchmarkDevelopmentRunner",
     "BenchmarkEditableFileSnapshot",
+    "BenchmarkFrozenCandidate",
     "BenchmarkGuidanceArtifact",
+    "BenchmarkHeldoutExecutionReceipt",
+    "BenchmarkHeldoutRunRequest",
+    "BenchmarkHeldoutRunner",
     "BenchmarkMetadataAllocationApproval",
     "BenchmarkMetadataAllocationApprovalInspection",
     "BenchmarkMetadataAllocationChainInspection",
@@ -1484,6 +1499,7 @@ __all__ = [
     "complete_objective_result_set",
     "evaluate_resource_feasibility",
     "execute_direct_agent",
+    "freeze_benchmark_candidate",
     "freeze_reference_selection_comparison",
     "hash_benchmark_tree",
     "hash_editable_surface",
@@ -1528,6 +1544,8 @@ __all__ = [
     "load_agent_laboratory_preparation",
     "load_api_identity_protocol",
     "load_aries_taste_population_report",
+    "load_benchmark_development_execution_receipt",
+    "load_benchmark_frozen_candidate",
     "load_benchmark_metadata_allocation_approval",
     "load_benchmark_metadata_allocation_plan",
     "load_benchmark_metadata_allocation_report",
@@ -1538,6 +1556,8 @@ __all__ = [
     "load_benchmark_metadata_screen_decisions",
     "load_benchmark_metadata_screen_rulebook",
     "load_benchmark_metadata_screening_report",
+    "load_benchmark_research_guidance_set",
+    "load_benchmark_resource_verification_receipt",
     "load_benchmark_task_runtime_spec",
     "load_clustered_power_report",
     "load_clustered_power_request",

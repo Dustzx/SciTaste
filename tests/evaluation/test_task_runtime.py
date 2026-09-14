@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import stat
 import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -20,6 +22,7 @@ from scitaste.evaluation.task_condition import (
 from scitaste.evaluation.task_execution import (
     BenchmarkDevelopmentExecutionReceipt,
     BenchmarkObjectivePayload,
+    BenchmarkResourceVerificationReceipt,
     parse_benchmark_objective,
 )
 from scitaste.evaluation.task_patch import (
@@ -42,8 +45,10 @@ from scitaste.evaluation.task_patch_generation import (
 from scitaste.evaluation.task_research_loop import (
     BenchmarkPatchDecision,
     BenchmarkResearchCellBinding,
+    BenchmarkResearchIteration,
     BenchmarkResearchLoop,
     BenchmarkResearchLoopConfig,
+    BenchmarkResearchLoopResult,
 )
 from scitaste.evaluation.task_runtime import (
     BenchmarkTaskRuntimeSpec,
@@ -52,6 +57,17 @@ from scitaste.evaluation.task_runtime import (
     hash_protected_surface,
     inspect_benchmark_task_runtime,
     prepare_benchmark_workspace,
+)
+from scitaste.evaluation.task_scoring import (
+    BenchmarkFrozenCandidate,
+    BenchmarkHeldoutRunner,
+    BenchmarkHeldoutRunRequest,
+    freeze_benchmark_candidate,
+)
+from scitaste.executor.native_profile import (
+    NativeExecutionProfile,
+    NativeResourceAvailability,
+    PreparedNativeExecutionProfile,
 )
 from scitaste.model_nodes import (
     NodeContext,
@@ -533,6 +549,286 @@ def test_benchmark_objective_parser_requires_one_development_measurement() -> No
             marker + payload + b"\n" + marker + payload,
             task_id="fixture-task",
         )
+    test_payload = payload.replace(b'"phase":"dev"', b'"phase":"test"')
+    test_objective = parse_benchmark_objective(
+        marker + test_payload,
+        task_id="fixture-task",
+        expected_phase="test",
+    )
+    assert test_objective.phase == "test"
+    with pytest.raises(ValueError, match="phase mismatch"):
+        parse_benchmark_objective(marker + test_payload, task_id="fixture-task")
+
+
+def test_candidate_freeze_binds_only_winning_development_artifacts(tmp_path: Path) -> None:
+    root, original = _fixture(tmp_path)
+    spec = original.model_copy(
+        update={
+            "schema_version": "1.1",
+            "heldout_input_artifact_directories": ("outputs",),
+        }
+    )
+    inspection = inspect_benchmark_task_runtime(
+        spec,
+        workspace_root=root,
+        spec_sha256="d" * 64,
+    )
+    prepared = prepare_benchmark_workspace(
+        spec,
+        inspection,
+        workspace_root=root,
+        destination=root / "cells" / "cell-1",
+        allow_materialization=True,
+    )
+    workspace = root / "cells" / "cell-1"
+    editable = snapshot_benchmark_editable_files(
+        spec,
+        prepared,
+        workspace,
+        selected_paths=("methods/MyMethod.py",),
+    ).editable_surface_sha256
+    artifact = (
+        root
+        / "loop"
+        / "iterations"
+        / "000-baseline"
+        / "development"
+        / "artifacts"
+        / "outputs"
+        / "model.bin"
+    )
+    artifact.parent.mkdir(parents=True)
+    artifact.write_bytes(b"winning checkpoint\n")
+    timestamp = datetime.now(UTC)
+    development = BenchmarkDevelopmentExecutionReceipt.create(
+        request_sha256="1" * 64,
+        spec_fingerprint=spec.fingerprint,
+        workspace_receipt_sha256=prepared.receipt_sha256,
+        execution_profile_fingerprint="2" * 64,
+        resource_verification_receipt_sha256="3" * 64,
+        entrypoint_sha256=spec.objective_entrypoint.file_sha256,
+        status="succeeded",
+        error_code=None,
+        returncode=0,
+        timed_out=False,
+        started_at=timestamp,
+        finished_at=timestamp,
+        wall_seconds=0,
+        gpu_device_count=0,
+        gpu_hours=0,
+        editable_surface_sha256=editable,
+        protected_surface_sha256=prepared.protected_surface_sha256,
+        objective=BenchmarkObjectivePayload(
+            task_id=spec.task_id,
+            phase="dev",
+            method="fixture",
+            score=0.2,
+            elapsed_seconds=0,
+        ),
+        baseline_development_score=spec.baseline_development_score,
+        objective_delta_from_baseline=0.1,
+        stdout_sha256=hashlib.sha256(b"").hexdigest(),
+        stderr_sha256=hashlib.sha256(b"").hexdigest(),
+        stdout_bytes=0,
+        stderr_bytes=0,
+        artifact_bytes=artifact.stat().st_size,
+        artifact_sha256={"outputs/model.bin": _sha256(artifact)},
+    )
+    cell_binding = BenchmarkResearchCellBinding.create(
+        project_id=spec.project_id,
+        evaluation_id="fixture-evaluation",
+        campaign_run_id="fixture-campaign",
+        campaign_manifest_sha256="1" * 64,
+        evaluation_bundle_sha256="2" * 64,
+        plan_sha256="3" * 64,
+        cell_id="fixture-cell",
+        cell_sha256="4" * 64,
+        system_id="native-base",
+        task_id=spec.task_id,
+        resource_sha256="5" * 64,
+        seed=0,
+    )
+    loop = BenchmarkResearchLoopResult.create(
+        loop_id="fixture-loop",
+        config_sha256="4" * 64,
+        task_spec_fingerprint=spec.fingerprint,
+        cell_binding_sha256=cell_binding.binding_sha256,
+        condition_guidance_sha256="6" * 64,
+        status="completed",
+        stop_reason="fixture-complete",
+        baseline_score=0.2,
+        best_development_score=0.2,
+        best_iteration=0,
+        best_editable_surface_sha256=editable,
+        development_experiment_count=1,
+        unverified_development_attempt_count=0,
+        patch_proposal_count=0,
+        adopted_patch_count=0,
+        reverted_patch_count=0,
+        failed_experiment_count=0,
+        input_tokens=0,
+        output_tokens=0,
+        model_cost_usd=0,
+        gpu_hours=0,
+        iterations=(
+            BenchmarkResearchIteration(
+                iteration=0,
+                disposition="baseline",
+                development_receipt_sha256=development.receipt_sha256,
+                score=0.2,
+                best_score_after=0.2,
+            ),
+        ),
+    )
+
+    frozen = freeze_benchmark_candidate(
+        spec,
+        prepared,
+        cell_binding,
+        loop,
+        development,
+        loop_directory=root / "loop",
+        workspace=workspace,
+        output_path=root / "loop" / "FROZEN.json",
+    )
+
+    assert frozen.best_development_receipt_sha256 == development.receipt_sha256
+    assert frozen.input_artifact_sha256 == {"outputs/model.bin": _sha256(artifact)}
+    assert frozen.heldout_materialized is False
+
+
+def test_heldout_runner_scores_frozen_source_without_model_callback(tmp_path: Path) -> None:
+    root, spec = _fixture(tmp_path)
+    inspection = inspect_benchmark_task_runtime(
+        spec,
+        workspace_root=root,
+        spec_sha256="d" * 64,
+    )
+    prepared = prepare_benchmark_workspace(
+        spec,
+        inspection,
+        workspace_root=root,
+        destination=root / "cells" / "cell-1",
+        allow_materialization=True,
+    )
+    workspace = root / "cells" / "cell-1"
+    editable = snapshot_benchmark_editable_files(
+        spec,
+        prepared,
+        workspace,
+        selected_paths=("methods/MyMethod.py",),
+    ).editable_surface_sha256
+    loop_directory = root / "loop"
+    (loop_directory / "artifacts").mkdir(parents=True)
+    candidate = BenchmarkFrozenCandidate.create(
+        candidate_id="fixture-candidate",
+        cell_id="fixture-cell",
+        campaign_manifest_sha256="1" * 64,
+        owner_approval_sha256="2" * 64,
+        task_spec_fingerprint=spec.fingerprint,
+        workspace_receipt_sha256=prepared.receipt_sha256,
+        loop_result_sha256="3" * 64,
+        cell_binding_sha256="4" * 64,
+        best_iteration=0,
+        best_development_receipt_sha256="5" * 64,
+        editable_surface_sha256=editable,
+        protected_surface_sha256=prepared.protected_surface_sha256,
+        artifact_root_locator="artifacts",
+        input_artifact_sha256={},
+        frozen_at=datetime.now(UTC),
+    )
+    profile = NativeExecutionProfile(
+        schema_version="1.2",
+        profile_id="heldout-fixture",
+        writable_workspace=True,
+    )
+    execution_profile = PreparedNativeExecutionProfile(
+        profile=profile,
+        fingerprint="6" * 64,
+        manifest_path=root / "PROFILE.json",
+        datasets=(),
+        record_sha256="7" * 64,
+    )
+    resource_receipt = BenchmarkResourceVerificationReceipt.create(
+        execution_profile_fingerprint=execution_profile.fingerprint,
+        profile_record_sha256=execution_profile.record_sha256,
+        verified_at=datetime.now(UTC),
+        resource_sha256={"profile-record": execution_profile.record_sha256},
+    )
+    scorer = root / "scorer.py"
+    scorer.write_text(
+        "import json,sys\n"
+        "from pathlib import Path\n"
+        "root=Path(sys.argv[1])\n"
+        "(root/'outputs'/'score.json').write_text('{\\\"score\\\":0.3}\\n')\n"
+        "payload={'schema_version':'1.0','task_id':'fixture-task','phase':'test',"
+        "'method':'fixture','score':0.3,'elapsed_seconds':0.01,"
+        "'secondary_llm_judge_invoked':False}\n"
+        "print('SCITASTE_BENCHMARK_OBJECTIVE_JSON='+json.dumps(payload,separators=(',',':')))\n",
+        encoding="utf-8",
+    )
+
+    class FixtureHeldoutRunner(BenchmarkHeldoutRunner):
+        def _validate_heldout(self, request):
+            del request
+            return (
+                NativeResourceAvailability(
+                    available=True,
+                    profile_id=profile.profile_id,
+                    dataset_mounts=(),
+                ),
+                root / "evidence" / "objective.py",
+                editable,
+                prepared.protected_surface_sha256,
+            )
+
+        def _stage_frozen_inputs(self):
+            return None
+
+        def _command_for(self, command, entrypoint, gpu_devices):
+            del command, entrypoint, gpu_devices
+            return [sys.executable, str(scorer), str(workspace)]
+
+        def _environment(self, seed, gpu_devices):
+            del seed, gpu_devices
+            return dict(os.environ)
+
+    request = BenchmarkHeldoutRunRequest(
+        request_id="fixture-heldout",
+        cell_id=candidate.cell_id,
+        campaign_manifest_sha256=candidate.campaign_manifest_sha256,
+        owner_approval_sha256=candidate.owner_approval_sha256,
+        cell_binding_sha256=candidate.cell_binding_sha256,
+        spec_id=spec.spec_id,
+        spec_fingerprint=spec.fingerprint,
+        prepared_workspace_receipt_sha256=prepared.receipt_sha256,
+        frozen_candidate_sha256=candidate.candidate_sha256,
+        execution_profile_fingerprint=execution_profile.fingerprint,
+        resource_verification_receipt_sha256=resource_receipt.receipt_sha256,
+        seed=0,
+    )
+    receipt = FixtureHeldoutRunner(
+        spec,
+        prepared,
+        execution_profile,
+        resource_receipt,
+        candidate,
+        source_root=root,
+        workspace=workspace,
+        loop_directory=loop_directory,
+        bubblewrap="/bin/true",
+    ).run(
+        request,
+        result_directory=root / "heldout",
+        allow_heldout_execution=True,
+    )
+
+    assert receipt.status == "succeeded"
+    assert receipt.objective is not None and receipt.objective.phase == "test"
+    assert receipt.model_invocations_after_freeze == 0
+    assert receipt.heldout_materialized is True
+    assert (root / "heldout" / "artifacts" / "outputs" / "score.json").is_file()
+    assert (workspace / "methods" / "MyMethod.py").read_text() == "VALUE = 1\n"
 
 
 def test_research_loop_adopts_improvement_and_rolls_back_regression(tmp_path: Path) -> None:

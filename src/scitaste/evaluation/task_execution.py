@@ -102,7 +102,7 @@ class BenchmarkObjectivePayload(BaseModel):
 
     schema_version: Literal["1.0"] = "1.0"
     task_id: str
-    phase: Literal["dev"]
+    phase: Literal["dev", "test"]
     method: str
     score: float = Field(allow_inf_nan=False)
     elapsed_seconds: float = Field(ge=0, allow_inf_nan=False)
@@ -118,6 +118,7 @@ class BenchmarkResourceVerificationReceipt(BaseModel):
     execution_profile_fingerprint: str = Field(pattern=_SHA256)
     profile_record_sha256: str = Field(pattern=_SHA256)
     verified_at: datetime
+    verification_basis: Literal["full-rehash", "verified-materialization"] = "full-rehash"
     resource_sha256: dict[str, str] = Field(min_length=1, max_length=64)
     reusable_for_read_only_cells: Literal[True] = True
     receipt_sha256: str = Field(pattern=_SHA256)
@@ -188,6 +189,8 @@ class BenchmarkDevelopmentExecutionReceipt(BaseModel):
         if self.status == "succeeded":
             if self.objective is None or self.objective_delta_from_baseline is None:
                 raise ValueError("successful benchmark development execution requires an objective")
+            if self.objective.phase != "dev":
+                raise ValueError("development execution requires a development objective")
             if self.error_code is not None or self.returncode != 0 or self.timed_out:
                 raise ValueError("successful benchmark development execution has failure state")
         elif self.objective is not None or self.objective_delta_from_baseline is not None:
@@ -304,7 +307,11 @@ class BenchmarkDevelopmentRunner:
             error_code = "nonzero-exit"
         else:
             try:
-                objective = parse_benchmark_objective(stdout, task_id=self.spec.task_id)
+                objective = parse_benchmark_objective(
+                    stdout,
+                    task_id=self.spec.task_id,
+                    expected_phase="dev",
+                )
             except ValueError:
                 error_code = "objective-contract"
 
@@ -418,6 +425,11 @@ class BenchmarkDevelopmentRunner:
             raise ValueError("benchmark development requires a pinned Python runtime")
         if len(self.execution_profile.datasets) != len(self.spec.dataset_directories):
             raise ValueError("prepared datasets do not match declared task dataset directories")
+        if any(
+            _prepared_dataset_contains(self.spec, self.execution_profile, locator)
+            for locator in self.spec.heldout_materialization_paths
+        ):
+            raise ValueError("development resources contain held-out benchmark material")
         availability = preflight_native_resources(
             profile,
             prepared=self.execution_profile,
@@ -450,6 +462,18 @@ class BenchmarkDevelopmentRunner:
 
     def _command(
         self,
+        entrypoint: Path,
+        gpu_devices: tuple[NativeGPUInventory, ...],
+    ) -> list[str]:
+        return self._command_for(
+            self.spec.development_command,
+            entrypoint,
+            gpu_devices,
+        )
+
+    def _command_for(
+        self,
+        command: tuple[str, ...],
         entrypoint: Path,
         gpu_devices: tuple[NativeGPUInventory, ...],
     ) -> list[str]:
@@ -527,7 +551,7 @@ class BenchmarkDevelopmentRunner:
                 "--chdir",
                 "/workspace",
                 profile.python_runtime.executable,
-                *self.spec.development_command[1:],
+                *command[1:],
             ]
         )
         return arguments
@@ -581,10 +605,12 @@ def verify_benchmark_execution_resources(
     prepared: PreparedNativeExecutionProfile,
     *,
     receipt_path: str | Path,
+    verified_during_materialization: bool = False,
 ) -> BenchmarkResourceVerificationReceipt:
     """Perform one full hash verification for reuse by read-only campaign cells."""
 
-    verify_prepared_native_execution_profile(prepared)
+    if not verified_during_materialization:
+        verify_prepared_native_execution_profile(prepared)
     hashes = {
         **{f"dataset:{item.dataset_id}": item.content_sha256 for item in prepared.datasets},
         **{
@@ -597,6 +623,9 @@ def verify_benchmark_execution_resources(
         execution_profile_fingerprint=prepared.fingerprint,
         profile_record_sha256=prepared.record_sha256,
         verified_at=datetime.now(UTC),
+        verification_basis=(
+            "verified-materialization" if verified_during_materialization else "full-rehash"
+        ),
         resource_sha256=hashes,
     )
     path = Path(receipt_path)
@@ -604,6 +633,34 @@ def verify_benchmark_execution_resources(
         raise FileExistsError(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     _write_json(path, receipt.model_dump(mode="json"))
+    return receipt
+
+
+def load_benchmark_resource_verification_receipt(
+    path: str | Path,
+    prepared: PreparedNativeExecutionProfile,
+) -> BenchmarkResourceVerificationReceipt:
+    """Load a campaign receipt and bind it to the prepared resource identities."""
+
+    source = Path(path)
+    if source.is_symlink() or not source.is_file() or source.stat().st_size > 1_048_576:
+        raise ValueError("benchmark resource verification receipt is invalid")
+    receipt = BenchmarkResourceVerificationReceipt.model_validate_json(source.read_bytes())
+    if (
+        receipt.execution_profile_fingerprint != prepared.fingerprint
+        or receipt.profile_record_sha256 != prepared.record_sha256
+    ):
+        raise ValueError("benchmark resource receipt belongs to another prepared profile")
+    expected = {
+        **{f"dataset:{item.dataset_id}": item.content_sha256 for item in prepared.datasets},
+        **{
+            f"external:{item.resource_id}": item.content_sha256
+            for item in prepared.external_resources
+        },
+        "profile-record": prepared.record_sha256,
+    }
+    if receipt.resource_sha256 != expected:
+        raise ValueError("benchmark resource receipt content identities differ")
     return receipt
 
 
@@ -625,6 +682,29 @@ def _external_mount_arguments(prepared: PreparedNativeExecutionProfile) -> list[
     return arguments
 
 
+def _prepared_dataset_contains(
+    spec: BenchmarkTaskRuntimeSpec,
+    prepared: PreparedNativeExecutionProfile,
+    locator: str,
+) -> bool:
+    candidate = PurePosixPath(locator)
+    for root_locator, dataset in zip(
+        spec.dataset_directories,
+        prepared.datasets,
+        strict=True,
+    ):
+        root = PurePosixPath(root_locator)
+        try:
+            relative = candidate.relative_to(root)
+        except ValueError:
+            continue
+        target = dataset.materialized_path.joinpath(*relative.parts)
+        if target.is_symlink():
+            raise ValueError("prepared dataset held-out path is a symbolic link")
+        return target.exists()
+    raise ValueError("held-out benchmark path is outside the declared dataset directories")
+
+
 def _gpu_mount_arguments(gpu_devices: tuple[NativeGPUInventory, ...]) -> list[str]:
     arguments: list[str] = []
     mounted: set[str] = set()
@@ -636,7 +716,12 @@ def _gpu_mount_arguments(gpu_devices: tuple[NativeGPUInventory, ...]) -> list[st
     return arguments
 
 
-def parse_benchmark_objective(stdout: bytes, *, task_id: str) -> BenchmarkObjectivePayload:
+def parse_benchmark_objective(
+    stdout: bytes,
+    *,
+    task_id: str,
+    expected_phase: Literal["dev", "test"] = "dev",
+) -> BenchmarkObjectivePayload:
     payloads = [
         line[len(_OBJECTIVE_MARKER) :]
         for line in stdout.splitlines()
@@ -647,6 +732,8 @@ def parse_benchmark_objective(stdout: bytes, *, task_id: str) -> BenchmarkObject
     objective = BenchmarkObjectivePayload.model_validate_json(payloads[0], strict=True)
     if objective.task_id != task_id:
         raise ValueError("benchmark objective task identity mismatch")
+    if objective.phase != expected_phase:
+        raise ValueError("benchmark objective phase mismatch")
     return objective
 
 
@@ -757,6 +844,7 @@ __all__ = [
     "BenchmarkDevelopmentRunner",
     "BenchmarkObjectivePayload",
     "BenchmarkResourceVerificationReceipt",
+    "load_benchmark_resource_verification_receipt",
     "parse_benchmark_objective",
     "verify_benchmark_execution_resources",
 ]

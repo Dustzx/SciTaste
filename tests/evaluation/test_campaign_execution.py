@@ -259,7 +259,9 @@ def _launch_config() -> EvaluationCampaignLaunchConfig:
         "artifact=root/'paper.md';artifact.write_text('measured output\\n');"
         f"outcome={outcome};"
         "payload={'schema_version':'1.0','status':'succeeded','evidence_class':'real',"
-        "'usage':{'experiment_count':1},'outcome':outcome,'artifact_paths':['paper.md']};"
+        "'usage':{'request_count':1,'input_tokens':12,'output_tokens':3,"
+        "'max_input_tokens_observed':12,'max_output_tokens_observed':3,"
+        "'experiment_count':1},'outcome':outcome,'artifact_paths':['paper.md']};"
         "pathlib.Path(os.environ['SCITASTE_EVALUATION_CELL_RESULT']).write_text("
         "json.dumps(payload))"
     )
@@ -346,6 +348,9 @@ def test_campaign_executes_real_subprocesses_and_resumes_exact_successes(tmp_pat
     result = json.loads(result_path.read_text(encoding="utf-8"))
     assert len(result["cell_results"]) == 2
     assert {item["status"] for item in result["cell_results"]} == {"succeeded"}
+    assert {item["usage"]["request_count"] for item in result["cell_results"]} == {1}
+    assert {item["usage"]["input_tokens"] for item in result["cell_results"]} == {12}
+    assert {item["usage"]["output_tokens"] for item in result["cell_results"]} == {3}
     assert completed.next_required_stage == "objective_analysis_or_blind_review"
     assert completed.handoff_locator is not None
     handoff = json.loads(

@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 spec_id: mlrc-perception-temporal-action-loc-v1
 project_id: scitaste-self-development
 benchmark_id: mlrc-bench
@@ -22,7 +22,7 @@ environment_manifest:
   file_sha256: c1891d2ece598de6a57ecf3c2d36721f1628228f465f6ef50d721a6c8c4c4639
 objective_entrypoint:
   locator: src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py
-  file_sha256: d5fe66efc3bb944601c4f3840d7ac54d7edc0a7acb958ccfd17481a4e5e204ac
+  file_sha256: 253876d3bed83a72ebaee7d684db9b24f2d659b3ef90f462a7a2c3731115ca41
 editable_globs:
   - configs/core_configs.yaml
   - libs/modeling/*.py
@@ -64,6 +64,8 @@ heldout_materialization_paths:
   - data/pt/action_localisation_test_video_features
   - data/pt/sound_localisation_test_audio_features
   - data/pt/challenge_action_localisation_test.json
+heldout_input_artifact_directories:
+  - ckpt
 primary_metric: mean_average_precision
 metric_direction: higher
 baseline_development_score: 0.2370039379

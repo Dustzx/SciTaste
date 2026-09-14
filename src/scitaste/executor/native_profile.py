@@ -224,6 +224,16 @@ class NativeExecutionProfileInspection(BaseModel):
     fingerprint: str = Field(pattern=_SHA256)
 
 
+class NativeExecutionProfileRequest(BaseModel):
+    """Resolved profile configuration without reading or hashing its large resources."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    config_path: Path
+    config_sha256: str = Field(pattern=_SHA256)
+    profile: NativeExecutionProfile
+
+
 class NativePreparedDataset(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -306,8 +316,8 @@ def inspect_native_execution_profile(path: str | Path) -> NativeExecutionProfile
     raw = config_path.read_bytes()
     try:
         payload = yaml.safe_load(raw.decode("utf-8"))
-    except UnicodeDecodeError as exc:
-        raise ValueError("native execution profile must be UTF-8") from exc
+    except (UnicodeDecodeError, yaml.YAMLError) as exc:
+        raise ValueError("native execution profile is not valid UTF-8 YAML") from exc
     if not isinstance(payload, dict):
         raise ValueError("native execution profile must contain a mapping")
     raw_datasets = payload.get("datasets", [])
@@ -367,6 +377,49 @@ def inspect_native_execution_profile(path: str | Path) -> NativeExecutionProfile
         datasets=snapshots,
         external_resources=external_snapshots,
         fingerprint=content_sha256(semantic),
+    )
+
+
+def load_native_execution_profile_request(
+    path: str | Path,
+) -> NativeExecutionProfileRequest:
+    """Load expected resource identities without traversing the resource trees."""
+
+    requested = Path(path)
+    if requested.is_symlink():
+        raise ValueError("native execution profile must be a regular non-symlink file")
+    config_path = requested.resolve(strict=True)
+    if not config_path.is_file() or config_path.stat().st_size > _MAX_PROFILE_BYTES:
+        raise ValueError("native execution profile must be a bounded regular file")
+    raw = config_path.read_bytes()
+    try:
+        payload = yaml.safe_load(raw.decode("utf-8"))
+    except (UnicodeDecodeError, yaml.YAMLError) as exc:
+        raise ValueError("native execution profile is not valid UTF-8 YAML") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("native execution profile must contain a mapping")
+    for field in ("datasets", "external_resources"):
+        items = payload.get(field, [])
+        if not isinstance(items, list):
+            raise ValueError(f"native execution profile {field} must be a list")
+        resolved_items: list[dict[str, object]] = []
+        for raw_item in items:
+            if not isinstance(raw_item, dict):
+                raise ValueError(f"native execution profile {field} entries must be mappings")
+            source = raw_item.get("source_path")
+            if not isinstance(source, str):
+                raise ValueError("native execution resource source_path must be a string")
+            candidate = Path(os.path.expandvars(source))
+            if not candidate.is_absolute():
+                candidate = config_path.parent / candidate
+            if candidate.is_symlink():
+                raise ValueError("native execution resource sources cannot be symlinks")
+            resolved_items.append({**raw_item, "source_path": candidate.resolve(strict=True)})
+        payload[field] = resolved_items
+    return NativeExecutionProfileRequest(
+        config_path=config_path,
+        config_sha256=hashlib.sha256(raw).hexdigest(),
+        profile=NativeExecutionProfile.model_validate(payload),
     )
 
 
@@ -444,6 +497,101 @@ def prepare_native_execution_profile(
         manifest_path=manifest_path,
         datasets=tuple(prepared),
         external_resources=external_resources,
+        record_sha256=record_sha256,
+    )
+
+
+def load_prepared_native_execution_profile(
+    inspection: NativeExecutionProfileInspection,
+    *,
+    run_root: str | Path,
+    verify_integrity: bool = True,
+) -> PreparedNativeExecutionProfile:
+    """Load a prepared profile, optionally relying on a campaign verification receipt."""
+
+    owned_root = Path(run_root).resolve(strict=True)
+    manifest_path = owned_root / "native_execution" / "context" / "resources" / "PROFILE.json"
+    if not manifest_path.is_file() or manifest_path.is_symlink():
+        raise ValueError("prepared native execution profile record is unavailable")
+    return _load_prepared_profile(
+        inspection,
+        owned_root,
+        manifest_path,
+        verify_integrity=verify_integrity,
+    )
+
+
+def load_prepared_native_execution_profile_record(
+    request: NativeExecutionProfileRequest,
+    *,
+    run_root: str | Path,
+) -> PreparedNativeExecutionProfile:
+    """Reopen a prepared profile from its small record before receipt validation."""
+
+    owned_root = Path(run_root).resolve(strict=True)
+    manifest_path = owned_root / "native_execution" / "context" / "resources" / "PROFILE.json"
+    manifest = _read_json_mapping(manifest_path)
+    record_sha256 = manifest.pop("record_sha256", None)
+    if not isinstance(record_sha256, str) or record_sha256 != content_sha256(manifest):
+        raise ValueError("native execution profile record hash mismatch")
+    if manifest.get("source_config_sha256") != request.config_sha256:
+        raise ValueError("native execution profile source changed since materialization")
+    if manifest.get("profile") != _profile_record_payload(request.profile):
+        raise ValueError("native execution profile record differs from its request")
+    fingerprint = manifest.get("profile_fingerprint")
+    if not isinstance(fingerprint, str) or not re.fullmatch(_SHA256, fingerprint):
+        raise ValueError("native execution profile fingerprint is invalid")
+    raw_datasets = manifest.get("datasets")
+    if not isinstance(raw_datasets, list) or len(raw_datasets) != len(request.profile.datasets):
+        raise ValueError("native execution profile dataset record is incomplete")
+    datasets: list[NativePreparedDataset] = []
+    for raw_item, declared in zip(raw_datasets, request.profile.datasets, strict=True):
+        if not isinstance(raw_item, dict):
+            raise ValueError("native execution profile dataset record is invalid")
+        item = dict(raw_item)
+        locator = item.pop("materialized_locator", None)
+        if not isinstance(locator, str):
+            raise ValueError("native execution profile dataset locator is missing")
+        prepared = NativePreparedDataset.model_validate(
+            {
+                **item,
+                "materialized_path": _owned_regular_tree(owned_root, locator),
+            }
+        )
+        if (
+            prepared.dataset_id != declared.dataset_id
+            or prepared.content_sha256 != declared.expected_sha256
+        ):
+            raise ValueError("prepared dataset identity differs from its profile request")
+        datasets.append(prepared)
+    raw_external = manifest.get("external_resources", [])
+    if not isinstance(raw_external, list) or len(raw_external) != len(
+        request.profile.external_resources
+    ):
+        raise ValueError("native execution profile external resource record is incomplete")
+    external: list[NativePreparedExternalResource] = []
+    for raw_item, declared in zip(
+        raw_external,
+        request.profile.external_resources,
+        strict=True,
+    ):
+        if not isinstance(raw_item, dict):
+            raise ValueError("native execution profile external resource record is invalid")
+        prepared = NativePreparedExternalResource.model_validate(
+            {**raw_item, "source_path": declared.source_path}
+        )
+        if (
+            prepared.resource_id != declared.resource_id
+            or prepared.content_sha256 != declared.expected_sha256
+        ):
+            raise ValueError("prepared external identity differs from its profile request")
+        external.append(prepared)
+    return PreparedNativeExecutionProfile(
+        profile=request.profile,
+        fingerprint=fingerprint,
+        manifest_path=manifest_path,
+        datasets=tuple(datasets),
+        external_resources=tuple(external),
         record_sha256=record_sha256,
     )
 
@@ -597,6 +745,8 @@ def _load_prepared_profile(
     inspection: NativeExecutionProfileInspection,
     owned_root: Path,
     manifest_path: Path,
+    *,
+    verify_integrity: bool = True,
 ) -> PreparedNativeExecutionProfile:
     manifest = _read_json_mapping(manifest_path)
     record_sha256 = manifest.pop("record_sha256", None)
@@ -644,7 +794,8 @@ def _load_prepared_profile(
         external_resources=tuple(prepared_external),
         record_sha256=record_sha256,
     )
-    verify_prepared_native_execution_profile(result)
+    if verify_integrity:
+        verify_prepared_native_execution_profile(result)
     return result
 
 
@@ -988,6 +1139,7 @@ __all__ = [
     "NativeDatasetSnapshot",
     "NativeExecutionProfile",
     "NativeExecutionProfileInspection",
+    "NativeExecutionProfileRequest",
     "NativeExternalResourceInput",
     "NativeExternalResourceSnapshot",
     "NativeGPUDeviceRequest",
@@ -999,6 +1151,9 @@ __all__ = [
     "NativeResourceAvailability",
     "PreparedNativeExecutionProfile",
     "inspect_native_execution_profile",
+    "load_native_execution_profile_request",
+    "load_prepared_native_execution_profile",
+    "load_prepared_native_execution_profile_record",
     "native_external_tree_sha256",
     "preflight_native_resources",
     "prepare_native_execution_profile",

@@ -6,6 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from scitaste.evaluation.task_execution import (
+    load_benchmark_resource_verification_receipt,
+    verify_benchmark_execution_resources,
+)
 from scitaste.executor import (
     ExecutionStatus,
     MetricDirection,
@@ -21,6 +25,8 @@ from scitaste.executor import (
     NativePythonRuntimeRequest,
     SciTasteNativeExecutor,
     inspect_native_execution_profile,
+    load_native_execution_profile_request,
+    load_prepared_native_execution_profile_record,
     native_external_tree_sha256,
     preflight_native_resources,
     prepare_native_execution_profile,
@@ -166,6 +172,30 @@ def test_profile_rejects_hash_drift_symlinks_and_declared_bounds(tmp_path: Path)
     with pytest.raises(ValueError, match="declared bounds"):
         inspect_native_execution_profile(profile_path)
 
+
+def test_campaign_reopens_verified_resource_record_without_rehashing(tmp_path: Path) -> None:
+    dataset = tmp_path / "scores.json"
+    dataset.write_text('{"values":[0.2,0.4]}\n', encoding="utf-8")
+    profile_path = tmp_path / "profile.yaml"
+    _write_profile(profile_path, dataset, _sha256(dataset))
+    inspection = inspect_native_execution_profile(profile_path)
+    run_root = tmp_path / "run"
+    run_root.mkdir()
+    prepared = prepare_native_execution_profile(inspection, run_root=run_root)
+    receipt_path = run_root / "RESOURCE_VERIFICATION.json"
+    expected = verify_benchmark_execution_resources(
+        prepared,
+        receipt_path=receipt_path,
+        verified_during_materialization=True,
+    )
+
+    requested = load_native_execution_profile_request(profile_path)
+    reopened = load_prepared_native_execution_profile_record(requested, run_root=run_root)
+    receipt = load_benchmark_resource_verification_receipt(receipt_path, reopened)
+
+    assert reopened.record_sha256 == prepared.record_sha256
+    assert receipt.receipt_sha256 == expected.receipt_sha256
+    assert receipt.verification_basis == "verified-materialization"
 
 def test_schema_1_profile_fingerprint_remains_backward_compatible() -> None:
     inspection = inspect_native_execution_profile(

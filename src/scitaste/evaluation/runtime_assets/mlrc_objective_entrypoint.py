@@ -85,11 +85,16 @@ def _meta_learning_score(workspace: Path, method_name: str, phase: str) -> float
     scoring = workspace / "scoring_output"
     _clear_directory(ingestion)
     _clear_directory(scoring)
-    config = method_directory / "config.json"
-    original_config: bytes | None = None
+    scoring_method_directory = method_directory
+    temporary_method_root: Path | None = None
     if phase == "test":
-        original_config = config.read_bytes()
-        payload = json.loads(original_config)
+        temporary_method_root = Path("/tmp") / "scitaste-heldout-method"
+        if temporary_method_root.exists():
+            shutil.rmtree(temporary_method_root)
+        shutil.copytree(method_directory, temporary_method_root)
+        scoring_method_directory = temporary_method_root
+        config = scoring_method_directory / "config.json"
+        payload = json.loads(config.read_bytes())
         validation = payload.get("validation_datasets")
         if isinstance(validation, bool) or not isinstance(validation, int):
             raise ValueError("meta-learning validation_datasets must be an integer")
@@ -103,7 +108,7 @@ def _meta_learning_score(workspace: Path, method_name: str, phase: str) -> float
                 "-m",
                 "cdmetadl.run_eval",
                 f"--input_data_dir={workspace / 'data'}",
-                f"--submission_dir={method_directory}",
+                f"--submission_dir={scoring_method_directory}",
                 f"--output_dir_ingestion={ingestion}",
                 "--verbose=False",
                 "--overwrite_previous_results=True",
@@ -124,8 +129,8 @@ def _meta_learning_score(workspace: Path, method_name: str, phase: str) -> float
             )
         )
     finally:
-        if original_config is not None:
-            config.write_bytes(original_config)
+        if temporary_method_root is not None:
+            shutil.rmtree(temporary_method_root, ignore_errors=True)
     score_path = scoring / "scores.txt"
     first_line = score_path.read_text(encoding="utf-8").splitlines()[0]
     _, separator, raw_score = first_line.partition(":")

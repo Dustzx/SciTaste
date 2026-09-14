@@ -231,6 +231,25 @@ class TransformersTextRuntime:
             raise RuntimeError("local checkpoint content hash mismatch")
         self._checkpoint_verified = True
 
+    def accept_campaign_checkpoint_verification(
+        self,
+        *,
+        model_path: str | Path,
+        checkpoint_sha256: str,
+    ) -> None:
+        """Reuse a controller-verified immutable checkpoint identity without rehashing it."""
+
+        expected_path = self.config.model_path.expanduser().resolve(strict=True)
+        observed_path = Path(model_path).expanduser().resolve(strict=True)
+        if observed_path != expected_path:
+            raise ValueError("campaign checkpoint verification belongs to another model path")
+        if (
+            self.config.checkpoint_sha256 is None
+            or checkpoint_sha256 != self.config.checkpoint_sha256
+        ):
+            raise ValueError("campaign checkpoint verification has another content identity")
+        self._checkpoint_verified = True
+
 
 class LocalTransformersBackend:
     """Rank fixed candidates with one explicitly selected local checkpoint."""

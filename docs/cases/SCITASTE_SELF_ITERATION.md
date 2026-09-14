@@ -1859,3 +1859,31 @@ Taste, and critic channels for each condition. The future project interface need
 only two stable seams: read the immutable loop/iteration records and submit a typed
 program revision before launch. It does not need to sit inside experiment execution.
 No real corpus, model, API, GPU, development dataset, or held-out scorer was used.
+
+## Closing the campaign-to-hidden-test loop (2026-09-14)
+
+The next mainline iteration kept Generation as Content frozen and removed the
+remaining manual seam in formal task execution. An authorized native cell now
+drives the existing development search, freezes its winning source and any
+scorer-required checkpoint, then opens a separate held-out data profile and runs
+the fixed scorer exactly once. The retained objective artifact contains the raw
+held-out score and directed progress; it is not inferred from generic run counts.
+The adapter publishes those records through the existing project campaign rather
+than creating another output hierarchy.
+
+This iteration also corrected two leakage/identity hazards before resource use.
+The Meta-learning test command now edits only a temporary scorer-local method
+copy, and Perception test evaluation carries only the checkpoint archived from
+the winning development iteration. Development profiles are rejected if any
+declared hidden material is present, while held-out profiles are rejected if any
+required hidden path is absent. Model telemetry remains available for both API
+and local-model lanes, and a campaign-level verification receipt prevents the
+same multi-gigabyte checkpoint from being rehashed for every cell.
+
+A focused deterministic acceptance scenario verified development/test marker
+separation, winner-only artifact freezing, a real scorer subprocess, unchanged
+source, archived test output, and an explicit zero-model-after-freeze receipt.
+It also verified receipt-based resource reopening. This is engineering evidence,
+not an ICLR result: no MLRC dataset, task environment, local checkpoint, API, GPU,
+or formal cell was activated. The remaining next step is therefore concrete
+resource preparation and owner-approved prepilot execution, not more project UI.

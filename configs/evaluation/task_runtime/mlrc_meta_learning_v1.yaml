@@ -22,7 +22,7 @@ environment_manifest:
   file_sha256: c898e44c3e20cf708e8521ddf8c9f51baeac574918a795eadbfccd91012ce146
 objective_entrypoint:
   locator: src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py
-  file_sha256: d5fe66efc3bb944601c4f3840d7ac54d7edc0a7acb958ccfd17481a4e5e204ac
+  file_sha256: 253876d3bed83a72ebaee7d684db9b24f2d659b3ef90f462a7a2c3731115ca41
 editable_globs:
   - methods/MyMethod/*.json
   - methods/MyMethod/*.py

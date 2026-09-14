@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from pathlib import Path
 from typing import Protocol
 
 from scitaste.backends.base import Usage
@@ -55,6 +56,22 @@ class StructuredLocalTransformersBackend:
         self.runtime = runtime or TransformersTextRuntime(self.config)
         self.name = self.config.provider
         self.model = self.config.model_identity
+
+    def accept_campaign_checkpoint_verification(
+        self,
+        *,
+        model_path: str | Path,
+        checkpoint_sha256: str,
+    ) -> None:
+        """Delegate reuse of a campaign-scoped checkpoint verification receipt."""
+
+        runtime = self.runtime
+        if not isinstance(runtime, TransformersTextRuntime):
+            raise ValueError("injected local runtimes cannot reuse campaign verification")
+        runtime.accept_campaign_checkpoint_verification(
+            model_path=model_path,
+            checkpoint_sha256=checkpoint_sha256,
+        )
 
     def complete(self, request: StructuredModelRequest) -> StructuredModelResponse:
         if not self.config.execution_enabled:
