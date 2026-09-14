@@ -56,8 +56,24 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.20 — isolated development feedback loop | done | the durable model node drives a bounded propose/stop → admit → isolated development score → adopt/rollback loop; output artifacts and every transition are retained, and the six native conditions compile only from one content-bound five-channel guidance set |
 | Phase 9.21 — frozen-candidate held-out campaign closure | done | the first-party adapter binds an authorized campaign cell to separate development/test resource profiles, freezes the selected source and required artifacts before hidden data opens, executes one scorer-owned held-out command with no later model call, and publishes raw objective/usage/evidence artifacts to the campaign runner |
 | Phase 9.22 — first real native prepilot activation | in progress | the Perception nine-archive mapping passes license, receipt, ZIP-safety, and exact development/held-out isolation gates; a five-arm matrix and multi-candidate claim contract now encode Full-vs-Base, matched-Taste-vs-same-source-Raw-RAG, and matched-vs-mismatched-Taste without a policy confound; an unapproved 10-cell v12 proposal and executable two-task objective contract now freeze the intended closure, while only the complete five-arm Perception block may be activated first; after materialization, pin its task environment, reproduce the scorer, curate the formal contexts, bind the adapter launcher, disclose the full model/data/GPU budget, and request block execution authority |
+| Phase 9.23 — lifecycle Taste policy and self-revising Idea contract | in progress | the project verifies one current content-bound Idea revision and all of its inputs; external precedents, Tool Intelligence outcomes, and Generation as Content corrections converge on one quarantined, revision-bound episode schema; next implement reviewed trajectory attribution, policy estimation/update, abstention, and held-out lifecycle evaluation before any old prepilot is treated as the title-level experiment |
 
-Phase 9.22 is deliberately advancing one real task before widening the task set.
+Phase 9.23 changes the scientific dependency order without discarding the Phase
+9.22 executor. The current self-development Idea revision is structurally
+verified but remains a candidate, has not completed its novelty challenge, and
+therefore cannot freeze the title-level experiment. The five-arm Perception
+design remains a useful H2 representation/specificity mechanism slice and its
+automatic campaign closure remains reusable infrastructure; it is no longer a
+sufficient test of the newly central lifecycle-policy and outcome-credit claim.
+Tool Intelligence and Generation as Content now have one stable, proposal-only
+handoff into Taste Core. The former can provide observed execution outcomes and
+credit hypotheses; the latter can provide scoped human corrections that wait for
+later outcomes. Neither may certify its own lesson, admit retrieval memory,
+update the policy, or authorize an experiment. The next mainline operator is the
+reviewed outcome-attribution and policy-update path, followed by a revised H1--H4
+program bound to an accepted Idea revision.
+
+Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a
 305,450,877-byte train/validation view and a disjoint 761,837,149-byte test view.
 Its proposal and gate hashes are now stable and owner-review-ready. Meta-learning

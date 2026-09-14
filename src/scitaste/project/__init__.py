@@ -1,5 +1,19 @@
 """Typed, project-centric ownership and artifact navigation."""
 
+from scitaste.project.idea_revision import (
+    IdeaRevisionEvidenceInput,
+    IdeaRevisionFinding,
+    IdeaRevisionPredecessor,
+    ProjectIdeaRevisionArtifact,
+    ProjectIdeaRevisionBinding,
+    ProjectIdeaRevisionEntry,
+    ProjectIdeaRevisionReport,
+    idea_binding_matches_current,
+    inspect_current_idea_revision,
+    read_project_idea_ledger,
+    register_project_idea_revision,
+    select_project_idea_revision,
+)
 from scitaste.project.models import (
     PaperManifest,
     PaperScientificEvidenceBinding,
@@ -18,6 +32,9 @@ from scitaste.project.models import (
 from scitaste.project.runtime import ProjectRevisionConflictError, ProjectRuntime
 
 __all__ = [
+    "IdeaRevisionEvidenceInput",
+    "IdeaRevisionFinding",
+    "IdeaRevisionPredecessor",
     "PaperManifest",
     "PaperScientificEvidenceBinding",
     "ProjectEvaluation",
@@ -26,6 +43,10 @@ __all__ = [
     "ProjectEvaluationResult",
     "ProjectEvaluationResultBundle",
     "ProjectEvaluationResultEvidence",
+    "ProjectIdeaRevisionArtifact",
+    "ProjectIdeaRevisionBinding",
+    "ProjectIdeaRevisionEntry",
+    "ProjectIdeaRevisionReport",
     "ProjectManifest",
     "ProjectPaperEntry",
     "ProjectReview",
@@ -33,4 +54,9 @@ __all__ = [
     "ProjectRun",
     "ProjectRuntime",
     "ProjectSnapshot",
+    "idea_binding_matches_current",
+    "inspect_current_idea_revision",
+    "read_project_idea_ledger",
+    "register_project_idea_revision",
+    "select_project_idea_revision",
 ]

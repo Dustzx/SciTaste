@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a first-class, content-bound project Idea-revision ledger reader and
+  registration path. A current revision now verifies its narrative and every
+  declared input byte, exposes a stable method-development binding, and keeps
+  experiment freeze and paper authority false while the Idea remains a candidate
+  or lacks an independent novelty challenge. Added one shared quarantined
+  `TasteEpisodeCandidate` contract for external precedents, internal Tool
+  Intelligence outcomes, and Generation as Content interventions. Producer,
+  evidence, delayed-outcome, credit, confounder, scope, transfer, and reversal
+  identities are explicit; a changed Idea revision invalidates the candidate,
+  and no producer may make it retrieval-eligible or update the policy.
 - Added a native Scientific Taste mechanism estimand whose confirmatory claim is
   an exact three-edge graph rather than a Full-SciTaste-centered star: Full vs
   Base measures the complete system, matched abstracted Taste vs same-source Raw

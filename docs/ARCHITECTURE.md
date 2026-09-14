@@ -3938,3 +3938,38 @@ set, and routes only registration. Resume recomputes and verifies these derived
 objects instead of overwriting them. Generation as Content consumes this ledger
 through its existing read seam and may submit only a pre-launch typed program
 revision; it has no experiment or claim authority.
+
+### ADR-127: Idea revision invalidates downstream Taste supervision and experiment freeze
+
+Status: accepted; revision binding and cross-channel candidate contract
+implemented, reviewed policy update remains open.
+
+The self-development case showed that an experiment can be mechanically ready
+while the scientific thesis is still being revised. Treating the Idea as prose
+would let an old ablation matrix continue running after the learned object,
+hypotheses, or claim boundary changed. SciTaste therefore reads the project's
+current Idea revision as a content-bound scientific contract. Its record,
+narrative, and declared evidence inputs are rehashed before a downstream binding
+is issued. Candidate revisions may guide method development, but they cannot
+freeze a title-level experiment or grant paper claim authority. Unrelated project
+updates do not invalidate the binding; selecting different Idea bytes does.
+
+Scientific Taste has one supervision object across three channels. An external
+source miner proposes a grounded precedent; Tool Intelligence's process miner
+proposes an interpretation of a real internal decision and delayed outcome; and
+Generation as Content records a typed, user- or project-scoped correction. Every
+`TasteEpisodeCandidate` closes the alternative set, chosen action, state,
+evidence, outcome horizon, separated hypothesis/design/execution/adaptation/
+claim/review/communication signals, causal-credit hypothesis, confounders,
+transfer/failure conditions, and reversal probe. Human interventions may remain
+in an explicit awaiting-outcome state.
+
+All three producers have the same negative authority: their output is not
+canonical evidence, is not retrieval-eligible, cannot update the policy, and
+cannot execute an action. Taste Core verifies the bytes and current Idea binding,
+then may send an outcome-bearing candidate to independent review. Later work must
+join delayed outcomes, adjudicate attribution and scope, admit a reusable episode,
+and demonstrate that an estimated boundary-aware policy changes held-out
+decisions. The existing five-arm native design is retained as a representation
+and specificity mechanism slice, but it cannot alone establish lifecycle-policy
+learning or trajectory credit.

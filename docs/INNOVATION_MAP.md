@@ -1,12 +1,14 @@
 # SciTaste Innovation Map
 
 SciTaste is one independent research system, not a collection of features around
-AutoResearchClaw. Its product-level differentiation is organized around three
-forms of intelligence, backed by a set of scientific and systems invariants.
+AutoResearchClaw. Its paper-level research object is one learned lifecycle
+Scientific Taste policy. Generation as Content and Tool Intelligence are
+orthogonal product/system planes that provide human intervention and endogenous
+outcome evidence to that policy; they are not co-equal scientific claims.
 
-## Three primary innovations
+## One research contribution and two system planes
 
-### 1. Scientific Taste — decision intelligence
+### 1. Scientific Taste — research object and decision intelligence
 
 Scientific Taste evaluates *what should be done next*, rather than merely scoring
 the fluency of an idea or paper. It ranks explicit candidate research actions from
@@ -55,15 +57,19 @@ no failure condition, align to a live action, avoid duplicate sources, and retai
 available action tension. The controller fails closed on state or pool drift and
 records the complete selection identity. Retrieval is therefore an efficiency
 mechanism downstream of Taste construction, not the definition of Taste itself.
-The continual path applies the same discipline to SciTaste's own
-experience: executed decisions first become quarantined reflections, then require
+The continual path applies the same discipline to SciTaste's own experience. One
+revision-bound `TasteEpisodeCandidate` now represents the closed alternatives,
+chosen action, outcome horizon, outcome-family-specific credit hypothesis,
+confounders, applicability/failure scope, reversal probe, and exact evidence.
+External sources, internal Tool Intelligence observations, and human corrections
+share this object without sharing authority. Candidates remain quarantined until
 exact outcome evidence, two independent conflict-cleared reviews, and conditional
-adjudication before the production retriever can see them. This prevents a
-mistaken self-explanation from recursively becoming its own authority.
+adjudication allow the production retriever to see them. This prevents a mistaken
+self-explanation from recursively becoming its own authority.
 Formal evidence that it improves scientific outcomes remains a matched-system
 evaluation question, not an assumption of the architecture.
 
-### 2. Generation as Content — interaction intelligence
+### 2. Generation as Content — external intervention plane
 
 Generation as Content means that a generated, evidence-bound representation is
 itself the interactive content. A project need not be forced into one fixed
@@ -111,7 +117,7 @@ focus to cited candidate evidence; it does not relax claim citations or accept
 unknown fields. Fixed labels are therefore acceleration infrastructure rather
 than the product's semantic ceiling.
 
-### 3. Tool Intelligence — execution intelligence
+### 3. Tool Intelligence — bounded semantic-agency plane
 
 Every effective next experiment gate now receives a shared, project-bound
 cost-sensitive verification route without changing its published priority.
@@ -200,7 +206,10 @@ designs:
   prevents retrieved facts from masquerading as decision-quality evidence.
 - **Outcome-gated continual Taste.** Project reflections remain quarantined until
   exact execution outcomes and independently reviewed causal/transfer judgments
-  justify reuse. Positive outcomes alone cannot write policy into memory.
+  justify reuse. Tool Intelligence may propose outcome attribution and Generation
+  as Content may record a scoped correction through the same episode contract,
+  but positive outcomes or human preference alone cannot write policy into
+  memory.
 - **Evidence-native communication.** Narrative, section, paragraph, review, and
   figure contracts resolve against canonical claims and evidence. Reviewer
   concerns become research obligations; evidence-bearing concerns cannot be
@@ -223,9 +232,9 @@ designs:
 
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
-| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, real decision-gap-driven OpenAlex/Crossref mining with frozen replay, source-identity/relevance/family/grounded-domain admission and saturation, prestige-blind five-dimensional reference qualification, a type-separated and stratum-matched H0 quality-versus-prestige selector with exact arm-to-projection identity continuity, replayable H1/H2 source/corpus/token treatment manifests, an exact-recording-to-blind-package compiler with precommitted generation ledgers, reviewer-specific offline blind workspaces, session/submission-bound review locking, an admitted-natural-source-to-grounded-input compiler, pre-key collection replay and post-key generation-chain opening, one opt-in content-bound model path that concretizes every non-trivial controller-owned candidate set, ledger-bound grounded contrastive Taste distillation, decision-grounded source-diverse and tension-preserving Taste selection, schema-1.1 dual-human source admission, a paired corpus compiler, and outcome-gated continual project memory are implemented; the search path has real self-iteration evidence | Content-authorized and quality-screened task-specific sources, provider-produced qualification/abstraction/selector traces, qualified independent humans using the implemented sessions, real frozen H0 source arms and H0/H1/H2 outcomes, real longitudinal admitted project memories, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
-| Generation as Content workspace | Trusted shell, evidence-bound generated surfaces, project conversations, concise model-authored/cited briefs and closed evidence-cited visual canvases over a bounded visible-data digest, exact-predecessor content-and-layout feedback editing with server-derived deltas, receiver-normalized provider variance, compact evidence-program home, secret-free project resource portfolio with current/historical/disabled lifecycle and model-planned catalog attachment, project-bound planner admission, model-authored snapshot- and route-bound planning amendments from every eligible gate, explicit accept/reject decisions, immutable predecessor-linked planning publication, explicit publication-to-project-resource binding compilation, a project-owned budgeted model warm cache whose fixed entries become flexible conversations, one exact owner-decision-to-local-executor experiment bridge, an authorized blind-review return-to-locked-result bridge, and forecast-to-exact grounded-abstraction resource planning are implemented; a real multidomain self-use page was generated and edited | Dynamic backend activation after project configuration, general action-packet adapters beyond the current Reference Quality calibration, administrator-level registry editing, counterbalanced human study, and a richer safe presentation repertoire guided by observed interaction failures |
-| Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, a durable project-owned single-step loop, a deterministic Full Workflow hotspot, per-gate cost-sensitive direct/targeted/full/owner routing across all parallel next options, same-call deterministic admission of semantic gray-zone advice, negative caching of cost-bearing schema rejections, inline-guarded consumption of one paid-compute owner decision, and cost-sensitive routing of one bounded isolated-runtime repair are implemented; project-local planning publication, resource membership/priority changes, exact current local artifact reads, natural-population compilation, blind-review return collection, admitted grounded-input compilation, and local runtime repair skip generic preflight by explicit expected-value policy; one registered live study is a narrow preliminary signal | Empirically calibrated routing priors, controlled model-advisory and intervention-cost evaluation, independent blinded review, durable observation-to-evidence admission, broader main-workflow tasks, and external replication |
+| Scientific Taste control | The existing controller, critics, grounded-source pipeline, transfer-bounded deliberation, causal condition contracts, and outcome-gated memory remain the substrate. A project-owned Idea revision now binds the current lifecycle-policy thesis, and one shared, revision-sensitive `TasteEpisodeCandidate` closes the proposal boundary across external precedents, internal outcomes, and human interventions without granting retrieval or policy-update authority | Complete the closest-work/novelty challenge and accept the Idea revision; implement reviewed trajectory reconstruction and credit assignment, a learned or estimated boundary-aware policy update with abstention, real longitudinal admitted episodes, and powered held-out H1--H4 evidence |
+| Generation as Content workspace | Trusted evidence-bound generated surfaces, project conversations, flexible planning edits, explicit project interventions, resource views, and proposal-only action bridges are implemented. The Core now exposes a typed human-intervention compiler that preserves operation, project/user scope, alternatives, evidence, transfer boundary, and reversal condition while waiting for downstream outcome attribution | Adapt the delivered conversation branch's accepted interaction into the shared episode candidate, add dynamic backend activation and general action packets, and conduct a counterbalanced human study after the scientific-policy loop is stable |
+| Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, durable bounded execution, cost-sensitive verification, and paper-evaluation contracts are implemented. Its new Core handoff fixes the required output of the future process-Taste-miner role: exact decision/outcome evidence, separated outcome families, confounders, credit hypothesis, transfer boundary, and no admission authority | Adapt durable Tool observations into real process-Taste candidates, acquire missing diagnostics when justified, independently review attribution, empirically evaluate routing and intervention cost, and replicate beyond authored fixtures |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |
 | Native experiment execution | Static code admission, isolated replicate measurement, exact-success recovery, one-attempt runtime diagnosis/source repair/re-admission, continuation through Evidence-to-Paper, content-bound read-only datasets, explicit NVIDIA device profiles, one content-bound local Qwen3-VL-2B CUDA environment, program-bound typed prelaunch evidence, and a real unchanged-core Agent Laboratory source/task materializer with byte-identical native-YAML translation are implemented | Dedicated external-method environments, provider-key-isolating telemetry gateway, external sandbox qualification, cross-host reproduction, quality evaluation, real schema-1.6 pilot manifests after source/adapter admission, broader workloads, and empirical live-repair quality |
 | Evidence-to-writing binding | Measured projection, hierarchical Writing Taste retrieval/audit, bounded semantic review, audit draft, and clean publication view implemented | Open-ended high-quality scientific prose, citation generation, and independent writing-quality evidence |

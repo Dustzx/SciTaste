@@ -294,7 +294,13 @@ from scitaste.model_nodes.openai_compatible import load_structured_openai_compat
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.schemas import VenuePaperReviewProposal
 from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
-from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.project import (
+    PaperManifest,
+    ProjectManifest,
+    ProjectRun,
+    ProjectRuntime,
+    inspect_current_idea_revision,
+)
 from scitaste.project.models import validate_entry_id
 from scitaste.project_substrate_cli import register_project_substrate_cli
 from scitaste.resource_cli import register_resource_cli
@@ -546,6 +552,18 @@ def build_parser() -> argparse.ArgumentParser:
     project_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_status)
     project_status.set_defaults(handler=_handle_project_status)
+
+    project_idea = project_commands.add_parser(
+        "idea", help="Inspect the content-bound current research Idea"
+    )
+    project_idea_commands = project_idea.add_subparsers(dest="project_idea_command", required=True)
+    project_idea_status = project_idea_commands.add_parser(
+        "status", help="Verify the current Idea revision and downstream readiness"
+    )
+    project_idea_status.add_argument("--project-id", required=True)
+    project_idea_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_idea_status)
+    project_idea_status.set_defaults(handler=_handle_project_idea_status)
 
     project_lifecycle = project_commands.add_parser(
         "lifecycle", help="Verify idea-to-paper-to-review lifecycle evidence"
@@ -2948,6 +2966,15 @@ def _handle_project_init(args: argparse.Namespace) -> int:
 def _handle_project_status(args: argparse.Namespace) -> int:
     snapshot = ProjectRuntime(args.outputs_root).open(args.project_id)
     print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_idea_status(args: argparse.Namespace) -> int:
+    report = inspect_current_idea_revision(
+        ProjectRuntime(args.outputs_root),
+        args.project_id,
+    )
+    print(report.model_dump_json(indent=2))
     return 0
 
 
