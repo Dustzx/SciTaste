@@ -129,6 +129,7 @@ from scitaste.evaluation import (
     inspect_task_selection,
     inspect_taste_corpus_curation,
     inspect_taste_corpus_pair,
+    inspect_taste_source_segmentation_execution_authorization,
     inspect_taste_source_segmentation_protocol,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
@@ -2152,6 +2153,20 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(taste_source_segmentation_pack)
     taste_source_segmentation_pack.set_defaults(
         handler=_handle_evaluation_taste_source_segmentation_request_pack
+    )
+    taste_source_segmentation_execution = evaluation_commands.add_parser(
+        "taste-source-segmentation-execution-inspect",
+        help="Verify one content-addressed live calibration authorization without API access",
+    )
+    taste_source_segmentation_execution.add_argument(
+        "--authorization", type=Path, required=True
+    )
+    taste_source_segmentation_execution.add_argument(
+        "--locator-root", type=Path, default=Path(".")
+    )
+    _add_log_level_option(taste_source_segmentation_execution)
+    taste_source_segmentation_execution.set_defaults(
+        handler=_handle_evaluation_taste_source_segmentation_execution_inspect
     )
     taste_source_segmentation = evaluation_commands.add_parser(
         "taste-source-decision-segmentation-normalize",
@@ -6843,6 +6858,57 @@ def _handle_evaluation_taste_source_segmentation_request_pack(
                 "unique_item_count": pack.unique_item_count,
                 "provider_contact_performed": pack.provider_contact_performed,
                 "execution_authorized": pack.execution_authorized,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_taste_source_segmentation_execution_inspect(
+    args: argparse.Namespace,
+) -> int:
+    inspection = inspect_taste_source_segmentation_execution_authorization(
+        authorization_path=args.authorization,
+        locator_root=args.locator_root,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "segmentation-execution-authorization-candidate-validated-no-live",
+                "authorization_id": inspection.authorization.authorization_id,
+                "authorization_sha256": (
+                    inspection.authorization.authorization_sha256
+                ),
+                "authorization_file_sha256": inspection.authorization_file_sha256,
+                "protocol_id": inspection.protocol.protocol.protocol_id,
+                "pack_sha256": inspection.request_pack.pack_sha256,
+                "packet_count": inspection.packet_count,
+                "unique_item_count": inspection.unique_item_count,
+                "provider": inspection.authorization.requested_provider,
+                "model": inspection.authorization.requested_model,
+                "maximum_provider_requests": (
+                    inspection.authorization.limits.maximum_provider_requests
+                ),
+                "maximum_total_cost_usd": (
+                    inspection.authorization.price_ceiling.maximum_total_cost_usd
+                ),
+                "runner_git_binding_verified": (
+                    inspection.runner_git_binding_verified
+                ),
+                "payload_firewall_verified": inspection.payload_firewall_verified,
+                "authorization_candidate_validated": (
+                    inspection.authorization_candidate_validated
+                ),
+                "execution_ready": inspection.execution_ready,
+                "external_action_performed": inspection.external_action_performed,
+                "human_review_claim_authorized": (
+                    inspection.authorization.authority.human_review_claim_authorized
+                ),
+                "scaled_execution_authorized": (
+                    inspection.authorization.authority.scaled_execution_authorized
+                ),
             },
             indent=2,
             ensure_ascii=False,

@@ -173,6 +173,56 @@ class SegmentationProtocolInputFirewall(BaseModel):
         return self
 
 
+class SegmentationProtocolAdjudicationInputFirewall(BaseModel):
+    """Distinct disputed-only boundary for the third AI adjudicator."""
+
+    model_config = _CONFIG
+
+    allowed: tuple[str, ...]
+    forbidden: tuple[str, ...]
+    disputed_items_only: Literal[True] = True
+    exact_agreement_items_copied_deterministically: Literal[True] = True
+    candidate_order_anonymized_and_hash_randomized: Literal[True] = True
+    no_provider_tools_exposed: Literal[True] = True
+    explicit_source_identity_withheld: Literal[True] = True
+    explicit_outcome_fields_withheld: Literal[True] = True
+    parametric_source_recognition_ruled_out: Literal[False] = False
+    boundary_statement: str = Field(min_length=1, max_length=4_000)
+
+    @model_validator(mode="after")
+    def adjudication_firewall_is_closed(
+        self,
+    ) -> SegmentationProtocolAdjudicationInputFirewall:
+        required_allowed = {
+            "frozen adjudication rubric",
+            "assigned disputed item abstract and review comment",
+            "typed agreement blockers",
+            "two anonymous segmenter candidates in hash-randomized order",
+            "opaque campaign and review item identifiers",
+        }
+        required_forbidden = {
+            "private item map",
+            "publisher or source identity",
+            "recommendation",
+            "author response",
+            "later revision",
+            "population outcome",
+            "non-disputed items",
+            "segmenter slot identities",
+            "arbitrary tools",
+            "web search",
+        }
+        if set(self.allowed) != required_allowed:
+            raise ValueError("Segmentation adjudication input allowlist drifted")
+        if not required_forbidden.issubset(self.forbidden):
+            raise ValueError("Segmentation adjudication input firewall is incomplete")
+        if len(self.allowed) != len(set(self.allowed)) or len(self.forbidden) != len(
+            set(self.forbidden)
+        ):
+            raise ValueError("Segmentation adjudication firewall entries must be unique")
+        return self
+
+
 class SegmentationProtocolMetrics(BaseModel):
     model_config = _CONFIG
 
@@ -258,7 +308,7 @@ class SegmentationProtocolScaleGate(BaseModel):
 class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     protocol_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol_created_at: datetime
@@ -272,6 +322,7 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     model_condition: SegmentationProtocolModelCondition
     generation: SegmentationProtocolGeneration
     input_firewall: SegmentationProtocolInputFirewall
+    adjudication_input_firewall: SegmentationProtocolAdjudicationInputFirewall | None = None
     metrics: SegmentationProtocolMetrics
     failure_policy: SegmentationProtocolFailurePolicy
     budget: SegmentationProtocolBudget
@@ -296,6 +347,10 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             raise ValueError("Segmentation request budget differs from the generation plan")
         if self.budget.maximum_output_tokens < task_output_ceiling:
             raise ValueError("Segmentation output-token budget cannot cover the planned calls")
+        if self.schema_version == "1.0" and self.adjudication_input_firewall is not None:
+            raise ValueError("Schema 1.0 cannot carry a separate adjudication firewall")
+        if self.schema_version == "1.1" and self.adjudication_input_firewall is None:
+            raise ValueError("Schema 1.1 requires a separate adjudication firewall")
         return self
 
 
@@ -1029,6 +1084,7 @@ def _canonical_sha256(value: object) -> str:
 
 
 __all__ = [
+    "SegmentationProtocolAdjudicationInputFirewall",
     "TasteSourceSegmentationFreezeReceipt",
     "TasteSourceSegmentationProspectiveProtocol",
     "TasteSourceSegmentationProtocolInspection",

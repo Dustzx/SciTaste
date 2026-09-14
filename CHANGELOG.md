@@ -22,7 +22,14 @@ semantic versioning.
   formulas, and budgets. A no-contact request-pack compiler emits eight
   source-balanced packets for two blinded segmenter slots using only anonymous
   IDs, abstract, and review text; explicit title, source, private, and delayed-
-  outcome fields are absent from the packets.
+  outcome fields are absent from the packets. A separate fail-closed execution
+  layer now validates a content-addressed authorization candidate, exact runner
+  and Git blobs, full packet/rubric/provider bindings, conservative cost and
+  token ceilings, and byte-identical persisted provider requests. It records a
+  runner-owned input-firewall receipt instead of asking the model to claim it
+  read hidden manifests. Inspection remains no-live and cannot itself authorize
+  a call; a schema-1.1 protocol must first separate segmenter blinding from the
+  disputed-only adjudicator boundary.
 - Added exact-span reconstruction for compound natural-source reviews. A model
   may propose multiple uniquely occurring verbatim decision spans, but every
   span is bound to the immutable scientific item, character offsets, one
