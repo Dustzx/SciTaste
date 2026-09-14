@@ -18,6 +18,7 @@ from scitaste.evaluation.f1000_domain_population import (
     publish_f1000_taste_population_run,
 )
 from scitaste.evaluation.natural_taste_review import (
+    TasteSourceReviewSession,
     load_taste_source_review_policy,
     prepare_taste_source_review_campaign,
     publish_taste_source_review_campaign_run,
@@ -29,6 +30,8 @@ from scitaste.generative_ui import (
     WorkspaceSurfaceFactory,
 )
 from scitaste.project import ProjectManifest, ProjectRuntime
+from scitaste.taste.intrinsic import TasteTask
+from scitaste.taste.reference_quality import ReferenceQualityDimension
 
 
 class _RecordedF1000:
@@ -355,6 +358,115 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert refreshed_review["reviewer_sessions_prepared"] == 3
     assert refreshed_review["owner_approval_required"] is False
     assert refreshed_review["human_recruitment_performed"] is False
+
+    private_rows = json.loads((campaign_root / "PRIVATE_ITEM_MAP.json").read_text())["items"]
+    private_by_id = {item["review_item_id"]: item for item in private_rows}
+    family_by_id = {
+        review_item_id: list(TasteTask)[index % len(TasteTask)].value
+        for index, review_item_id in enumerate(sorted(private_by_id))
+    }
+    started = datetime(2026, 9, 14, 12, 4, tzinfo=UTC)
+    submitted = datetime(2026, 9, 14, 12, 5, tzinfo=UTC)
+    session_paths = [
+        control_root / name / "session.json"
+        for name in ("scientific-1", "scientific-2", "privacy-1")
+    ]
+    sessions = [
+        TasteSourceReviewSession.model_validate_json(path.read_bytes())
+        for path in session_paths
+    ]
+    submission_payloads: list[dict[str, object]] = []
+    for session in sessions:
+        scientific = session.role.value == "scientific"
+        common = {
+            "schema_version": "1.0",
+            "session_id": session.session_id,
+            "session_sha256": session.session_sha256,
+            "campaign_sha256": session.campaign_sha256,
+            "role": session.role.value,
+            "reviewer_identity_sha256": session.reviewer_identity_sha256,
+            "review_started_at": started.isoformat(),
+            "submitted_at": submitted.isoformat(),
+            "conflict_cleared": True,
+            "independent_review": True,
+            "blinded_to_other_reviews": True,
+            "blinded_to_publisher_subject": scientific,
+            "blinded_to_observed_outcomes": scientific,
+            "consent_terms_accepted": True,
+            "explicit_lock_confirmed": True,
+        }
+        if scientific:
+            common["scientific_responses"] = [
+                {
+                    "review_item_id": item.review_item_id,
+                    "domain_label": private_by_id[item.review_item_id]["publisher_subject"],
+                    "primary_decision_family": family_by_id[item.review_item_id],
+                    "dimension_ratings": [
+                        {"dimension": dimension.value, "rating": "strong"}
+                        for dimension in ReferenceQualityDimension
+                    ],
+                    "transferable_taste_candidate": True,
+                    "rationale": "Synthetic independent content-grounded test judgment.",
+                    "duration_seconds": 60,
+                }
+                for item in session.items
+            ]
+            common["privacy_responses"] = []
+        else:
+            common["scientific_responses"] = []
+            common["privacy_responses"] = [
+                {
+                    "review_item_id": item.review_item_id,
+                    "release_safe": True,
+                    "risk_codes": ["none"],
+                    "rationale": "Synthetic de-identified test content.",
+                    "duration_seconds": 30,
+                }
+                for item in session.items
+            ]
+        submission_payloads.append(common)
+
+    for index, submission in enumerate(submission_payloads, 1):
+        collected = app.collect_taste_source_review_submission(
+            "f1000-test-project",
+            campaign.campaign_id,
+            {
+                "schema_version": "1.0",
+                "project_id": "f1000-test-project",
+                "campaign_id": campaign.campaign_id,
+                "campaign_sha256": campaign.campaign_sha256,
+                "control_id": authorized.record.control_id,
+                "control_sha256": authorized.record.control_sha256,
+                "submission": submission,
+            },
+        )
+        assert collected.reviewer_submissions_collected == index
+        assert collected.standalone_preflight_performed is False
+        assert collected.submission_verification_route.value == "direct_path"
+    assert collected.status == "review_locked"
+    assert collected.eligible_candidate_count == 10
+    assert collected.adjudication_required_count == 0
+    assert collected.ready_for_taste_abstraction_review is True
+    assert collected.ready_for_benchmark_admission is False
+    assert collected.result_locator == "review-control/RESULT.json"
+
+    locked_board = next(
+        component
+        for component in WorkspaceSurfaceFactory(runtime)
+        .build_surface(ProjectProgressQuery(project_id="f1000-test-project"))
+        .components
+        if component.component == "ProjectProgressBoard"
+    )
+    locked_review = locked_board.data["taste_source_review_campaigns"][0]
+    assert locked_review["review_collection_status"] == "review_locked"
+    assert locked_review["reviewer_submissions_collected"] == 3
+    assert locked_review["eligible_candidate_count"] == 10
+    assert locked_review["ready_for_taste_abstraction_review"] is True
+    locked_catalog = WorkspaceIntentResolver(runtime).quick_catalog("f1000-test-project")
+    assert any(
+        item.quick_intent_id == "plan-reviewed-taste-abstraction"
+        for item in locked_catalog.intents
+    )
 
 
 def test_f1000_acquisition_requires_explicit_network_switch(tmp_path: Path) -> None:

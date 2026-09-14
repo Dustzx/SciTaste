@@ -962,6 +962,7 @@ class WorkspaceSurfaceFactory:
                     "reviewer_submissions_collected": (
                         control.reviewer_submissions_collected
                     ),
+                    "review_collection_status": control.status,
                     "recruitment_status": (
                         "authorized-sessions-prepared-no-contact"
                         if control.record is not None
@@ -990,6 +991,21 @@ class WorkspaceSurfaceFactory:
                         if control.record is not None
                         else []
                     ),
+                    "collected_submission_locators": [
+                        f"{PurePosixPath(run.artifact).parent.as_posix()}/"
+                        f"{item.submission_locator}"
+                        for item in control.collected_submissions
+                    ],
+                    "result_locator": (
+                        f"{PurePosixPath(run.artifact).parent.as_posix()}/"
+                        f"{control.result_locator}"
+                        if control.result_locator is not None
+                        else None
+                    ),
+                    "result_file_sha256": control.result_file_sha256,
+                    "result_sha256": control.result_sha256,
+                    "eligible_candidate_count": control.eligible_candidate_count,
+                    "adjudication_required_count": control.adjudication_required_count,
                     "next_action": control.next_action,
                     "preparation_verification_route": (
                         campaign.preparation_verification.route.value
@@ -1003,11 +1019,17 @@ class WorkspaceSurfaceFactory:
                     "recruitment_reason_codes": (
                         list(campaign.recruitment_verification.reason_codes)
                     ),
+                    "submission_verification_route": (
+                        control.submission_verification_route.value
+                    ),
+                    "submission_verification_reason_codes": (
+                        list(control.submission_verification_reason_codes)
+                    ),
                     "source_outcomes_hidden_from_scientific_review": (
                         campaign.source_outcomes_hidden_from_scientific_review
                     ),
                     "ready_for_taste_abstraction_review": (
-                        campaign.ready_for_taste_abstraction_review
+                        control.ready_for_taste_abstraction_review
                     ),
                     "ready_for_benchmark_admission": (
                         campaign.ready_for_benchmark_admission
@@ -2247,11 +2269,27 @@ class WorkspaceSurfaceFactory:
             }
         ]
         if taste_population_rows or taste_domain_expansion_rows or taste_source_review_rows:
+            locked_taste_review = any(
+                item["review_collection_status"] == "review_locked"
+                for item in taste_source_review_rows
+            )
             next_step_candidates.append(
                 {
-                    "candidate_id": "review-taste-candidate-population",
-                    "kind": "review_taste_population",
-                    "label_code": "curate-natural-taste-candidate-population",
+                    "candidate_id": (
+                        "plan-reviewed-taste-abstraction"
+                        if locked_taste_review
+                        else "review-taste-candidate-population"
+                    ),
+                    "kind": (
+                        "plan_taste_abstraction"
+                        if locked_taste_review
+                        else "review_taste_population"
+                    ),
+                    "label_code": (
+                        "plan-evidence-bound-taste-abstraction"
+                        if locked_taste_review
+                        else "curate-natural-taste-candidate-population"
+                    ),
                     "support_ref_ids": list(
                         dict.fromkeys(
                             [

@@ -1781,3 +1781,34 @@ used 41,165 input and 7,322 output tokens, reported USD
 0.0039402985074626865, and took 59,116 ms total. This is an engineering
 observation of evidence recovery and feedback editing, not a usability or
 scientific-effect result.
+
+### Blind-review returns as a generated-to-Core feedback loop (2026-09-14)
+
+The project page now completes the return half of the natural Taste review
+campaign. After owner authorization has prepared the two scientific sessions
+and one privacy session, a user can import each exact JSON emitted by the
+offline reviewer interface. The receiver admits one file at a time, binds it to
+its authorized session, and updates observed progress from 0/3 through 2/3.
+When the third valid return arrives, the existing independent-review compiler
+locks domain, five-dimensional quality, decision-family, privacy, eligibility,
+and adjudication outcomes into `review-control/RESULT.json` and advances the
+project run. It still cannot admit a benchmark directly.
+
+This is not a new preflight. Tool Intelligence classifies collection as a cheap,
+reversible project-local write whose optional advance checks have negative
+value, so it selects `direct_path`. Exact session identity, complete item
+coverage, role/blinding attestations, hashes, and no-overwrite publication run
+inline because they define whether the submitted object is valid at all. The
+HTTP receiver retains the ordinary 64 KiB limit for other events and raises only
+this single-import route to a bounded 4 MiB ceiling.
+
+The locked counts and route enter the bounded model evidence digest. The fixed
+project entry then changes from candidate curation to
+`plan-reviewed-taste-abstraction`, while free questions and predecessor-bound
+feedback remain available. A model can therefore generate and visually
+recompose the post-review plan from observed human evidence; it cannot invent
+reviews, resolve adjudication, admit a corpus, or authorize downstream compute.
+The resource portfolio remains a sibling project surface: project membership
+and priority revisions are model-proposable and user-applicable, while shared
+definitions, credentials, probes, reservations, spend, and execution remain
+Core-owned transitions.

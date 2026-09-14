@@ -16,14 +16,23 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validat
 from scitaste.evaluation.natural_taste_review import (
     TasteSourceReviewActivation,
     TasteSourceReviewCampaign,
+    TasteSourceReviewResult,
     TasteSourceReviewRole,
     TasteSourceReviewSession,
+    TasteSourceReviewSubmission,
     load_taste_source_review_activation,
     load_taste_source_review_campaign,
+    lock_taste_source_review_submissions,
     prepare_taste_source_review_session,
 )
-from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, Sha256
-from scitaste.model_nodes.verification_policy import VerificationRoute
+from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, SafeLocator, Sha256
+from scitaste.model_nodes.verification_policy import (
+    ActionEffect,
+    ActionReversibility,
+    VerificationDecisionInput,
+    VerificationRoute,
+    decide_verification_route,
+)
 from scitaste.project import ProjectRun, ProjectRuntime, ProjectSnapshot
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 
@@ -37,6 +46,7 @@ _PROJECTION = "natural-taste-source-review-campaign-v1"
 _STAGE_PATH = "taste_source_review_campaign"
 _CONTROL_DIRECTORY = "review-control"
 _CONTROL_FILE = "CONTROL.json"
+_RESULT_FILE = "RESULT.json"
 _MAX_CONTROL_BYTES = 4 * 1024 * 1024
 
 
@@ -181,6 +191,33 @@ class TasteSourceReviewControlRecord(BaseModel):
         )
 
 
+class TasteSourceReviewSubmissionRequest(BaseModel):
+    """One reviewer-returned lock file bound to an already authorized session."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: ProjectIdentifier
+    campaign_id: SafeIdentifier
+    campaign_sha256: Sha256
+    control_id: SafeIdentifier
+    control_sha256: Sha256
+    submission: TasteSourceReviewSubmission
+
+
+class TasteSourceReviewCollectedSubmission(BaseModel):
+    """Secret-free project receipt for one validated reviewer return."""
+
+    model_config = _CONFIG
+
+    session_id: SafeIdentifier
+    role: TasteSourceReviewRole
+    ordinal: int = Field(ge=1, le=2)
+    submission_locator: SafeLocator
+    submission_file_sha256: Sha256
+    submission_sha256: Sha256
+
+
 class TasteSourceReviewControlView(BaseModel):
     """Current project-facing state of one owner-gated review campaign."""
 
@@ -193,35 +230,90 @@ class TasteSourceReviewControlView(BaseModel):
     run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$", max_length=255)
     campaign_id: SafeIdentifier
     campaign_sha256: Sha256
-    status: Literal["awaiting_owner_approval", "authorized_sessions_ready"]
+    status: Literal[
+        "awaiting_owner_approval",
+        "authorized_sessions_ready",
+        "collecting_reviews",
+        "review_locked",
+    ]
     verification_route: Literal[VerificationRoute.OWNER_APPROVAL]
     owner_approval_required: bool
     record: TasteSourceReviewControlRecord | None = None
     reviewer_sessions_prepared: int = Field(ge=0, le=3)
-    reviewer_submissions_collected: Literal[0] = 0
+    reviewer_submissions_collected: int = Field(ge=0, le=3)
+    collected_submissions: tuple[TasteSourceReviewCollectedSubmission, ...] = Field(
+        default=(), max_length=3
+    )
+    result_locator: SafeLocator | None = None
+    result_file_sha256: Sha256 | None = None
+    result_sha256: Sha256 | None = None
+    eligible_candidate_count: int | None = Field(default=None, ge=0)
+    adjudication_required_count: int | None = Field(default=None, ge=0)
+    ready_for_taste_abstraction_review: bool = False
+    ready_for_benchmark_admission: Literal[False] = False
+    submission_verification_route: Literal[VerificationRoute.DIRECT_PATH]
+    submission_verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    standalone_preflight_performed: Literal[False] = False
     human_contact_performed: Literal[False] = False
     next_action: Literal[
         "record_owner_decision",
         "distribute_sessions_outside_scitaste_and_collect_blind_reviews",
+        "collect_remaining_blind_reviews",
+        "resolve_adjudication_or_prepare_taste_abstraction",
     ]
     authorizes_experiment: Literal[False] = False
 
     @model_validator(mode="after")
     def view_is_consistent(self) -> TasteSourceReviewControlView:
         ready = self.record is not None
-        if ready != (self.status == "authorized_sessions_ready"):
+        if ready != (self.status != "awaiting_owner_approval"):
             raise ValueError("Taste review control status differs from its record")
         if self.owner_approval_required == ready:
             raise ValueError("Taste review owner-decision state is inconsistent")
         if self.reviewer_sessions_prepared != (3 if ready else 0):
             raise ValueError("Taste review session count differs from its control state")
+        if self.reviewer_submissions_collected != len(self.collected_submissions):
+            raise ValueError("Taste review collected submission count is inconsistent")
+        if not ready and self.reviewer_submissions_collected:
+            raise ValueError("Taste review submissions require an authorized control")
+        locked = self.result_sha256 is not None
+        result_fields = (
+            self.result_locator,
+            self.result_file_sha256,
+            self.result_sha256,
+            self.eligible_candidate_count,
+            self.adjudication_required_count,
+        )
+        if locked != all(value is not None for value in result_fields):
+            raise ValueError("Taste review locked result lineage is incomplete")
+        if locked != (self.status == "review_locked"):
+            raise ValueError("Taste review result status is inconsistent")
+        if locked != (self.reviewer_submissions_collected == 3):
+            raise ValueError("Taste review result requires exactly three submissions")
+        expected_status = (
+            "awaiting_owner_approval"
+            if not ready
+            else "authorized_sessions_ready"
+            if self.reviewer_submissions_collected == 0
+            else "collecting_reviews"
+            if self.reviewer_submissions_collected < 3
+            else "review_locked"
+        )
+        if self.status != expected_status:
+            raise ValueError("Taste review collection status is inconsistent")
         expected_action = (
-            "distribute_sessions_outside_scitaste_and_collect_blind_reviews"
-            if ready
-            else "record_owner_decision"
+            "record_owner_decision"
+            if not ready
+            else "distribute_sessions_outside_scitaste_and_collect_blind_reviews"
+            if self.reviewer_submissions_collected == 0
+            else "collect_remaining_blind_reviews"
+            if self.reviewer_submissions_collected < 3
+            else "resolve_adjudication_or_prepare_taste_abstraction"
         )
         if self.next_action != expected_action:
             raise ValueError("Taste review next action differs from its control state")
+        if self.ready_for_taste_abstraction_review and not locked:
+            raise ValueError("Taste abstraction readiness requires a locked review result")
         return self
 
     @computed_field
@@ -241,7 +333,9 @@ class ProjectTasteSourceReviewControlService:
         validate_entry_id(campaign_id, field_name="campaign_id")
         snapshot, run, campaign_path, campaign = self._context(project_id, campaign_id)
         record = self._load_control(campaign_path, run, campaign)
-        return self._view(snapshot, run, campaign, record)
+        collected = self._load_collected_submissions(campaign_path, record)
+        result = self._load_result(campaign_path, campaign, record, collected)
+        return self._view(snapshot, run, campaign, record, collected, result)
 
     def authorize(
         self,
@@ -262,7 +356,9 @@ class ProjectTasteSourceReviewControlService:
         if existing is not None:
             if existing.request_fingerprint != parsed.fingerprint:
                 raise ValueError("Taste review campaign already has another owner authorization")
-            return self._view(snapshot, run, campaign, existing)
+            collected = self._load_collected_submissions(campaign_path, existing)
+            result = self._load_result(campaign_path, campaign, existing, collected)
+            return self._view(snapshot, run, campaign, existing, collected, result)
         if (
             snapshot.revision != parsed.expected_project_revision
             or snapshot.snapshot_sha256 != parsed.expected_snapshot_sha256
@@ -326,7 +422,105 @@ class ProjectTasteSourceReviewControlService:
             no_gpu_work_performed=True,
             no_experiment_performed=True,
         )
-        return self._view(completed, run, campaign, record)
+        return self._view(completed, run, campaign, record, (), None)
+
+    def collect_submission(
+        self,
+        request: TasteSourceReviewSubmissionRequest | dict[str, object],
+    ) -> TasteSourceReviewControlView:
+        """Admit one exact reviewer return and lock the result when all three arrive."""
+
+        parsed = (
+            request
+            if isinstance(request, TasteSourceReviewSubmissionRequest)
+            else TasteSourceReviewSubmissionRequest.model_validate(request)
+        )
+        snapshot, run, campaign_path, campaign = self._context(
+            parsed.project_id,
+            parsed.campaign_id,
+        )
+        if campaign.campaign_sha256 != parsed.campaign_sha256:
+            raise ValueError("Taste review submission targets another campaign")
+        record = self._load_control(campaign_path, run, campaign)
+        if record is None:
+            raise ValueError("Taste review submissions require owner-authorized sessions")
+        if (
+            record.control_id != parsed.control_id
+            or record.control_sha256 != parsed.control_sha256
+        ):
+            raise ValueError("Taste review submission targets another review control")
+
+        binding, session = self._submission_session(campaign_path, record, parsed.submission)
+        self._validate_submission(session, parsed.submission)
+        root = campaign_path.parent.resolve(strict=True)
+        session_path = _bound_locator(root, binding.session_locator)
+        target = session_path.parent / "submission.json"
+        encoded = _canonical_json(parsed.submission.model_dump(mode="json")) + b"\n"
+        wrote_submission = False
+        if target.exists() or target.is_symlink():
+            observed = TasteSourceReviewSubmission.model_validate_json(
+                _bounded_file(root, target).read_bytes()
+            )
+            if observed != parsed.submission:
+                raise ValueError("Taste review session already has another locked submission")
+        else:
+            _write_new(target, encoded)
+            wrote_submission = True
+
+        collected = self._load_collected_submissions(campaign_path, record)
+        result = self._load_result(campaign_path, campaign, record, collected)
+        if len(collected) == 3 and result is None:
+            session_paths = tuple(
+                _bound_locator(root, item.session_locator) for item in record.sessions
+            )
+            submission_paths = tuple(path.parent / "submission.json" for path in session_paths)
+            result = lock_taste_source_review_submissions(
+                campaign_path=campaign_path,
+                activation_path=_bound_locator(root, record.activation_locator),
+                scientific_session_paths=(session_paths[0], session_paths[1]),
+                scientific_submission_paths=(submission_paths[0], submission_paths[1]),
+                privacy_session_path=session_paths[2],
+                privacy_submission_path=submission_paths[2],
+                output_path=root / _CONTROL_DIRECTORY / _RESULT_FILE,
+            )
+
+        result_sha256 = result.result_sha256 if result is not None else None
+        run_state = run.model_extra or {}
+        state_changed = wrote_submission or any(
+            (
+                run_state.get("reviewer_submissions_collected") != len(collected),
+                run_state.get("review_result_sha256") != result_sha256,
+            )
+        )
+        if state_changed:
+            snapshot = self._runtime.update_run(
+                parsed.project_id,
+                run.run_id,
+                expected_revision=snapshot.revision,
+                status=(
+                    "review-result-locked-awaiting-taste-abstraction"
+                    if result is not None
+                    else "collecting-independent-review-submissions"
+                ),
+                reviewer_submissions_collected=len(collected),
+                review_result_sha256=result_sha256,
+                eligible_candidate_count=(
+                    result.eligible_candidate_count if result is not None else None
+                ),
+                adjudication_required_count=(
+                    result.adjudication_required_count if result is not None else None
+                ),
+                ready_for_taste_abstraction_review=(
+                    result.ready_for_taste_abstraction_review if result is not None else False
+                ),
+                ready_for_benchmark_admission=False,
+                submission_verification_route=VerificationRoute.DIRECT_PATH.value,
+                standalone_preflight_performed=False,
+                no_model_call_performed=True,
+                no_gpu_work_performed=True,
+                no_experiment_performed=True,
+            )
+        return self._view(snapshot, run, campaign, record, collected, result)
 
     def _prepare_control(
         self,
@@ -520,14 +714,135 @@ class ProjectTasteSourceReviewControlService:
                 raise ValueError("Taste review session differs from the control")
         return record
 
+    def _load_collected_submissions(
+        self,
+        campaign_path: Path,
+        record: TasteSourceReviewControlRecord | None,
+    ) -> tuple[TasteSourceReviewCollectedSubmission, ...]:
+        if record is None:
+            return ()
+        root = campaign_path.parent.resolve(strict=True)
+        collected: list[TasteSourceReviewCollectedSubmission] = []
+        for binding in record.sessions:
+            session_path = _bound_locator(root, binding.session_locator)
+            submission_path = session_path.parent / "submission.json"
+            if not submission_path.exists() and not submission_path.is_symlink():
+                continue
+            source = _bounded_file(root, submission_path)
+            submission = TasteSourceReviewSubmission.model_validate_json(source.read_bytes())
+            session = TasteSourceReviewSession.model_validate_json(session_path.read_bytes())
+            self._validate_submission(session, submission)
+            collected.append(
+                TasteSourceReviewCollectedSubmission(
+                    session_id=session.session_id,
+                    role=binding.role,
+                    ordinal=binding.ordinal,
+                    submission_locator=submission_path.relative_to(root).as_posix(),
+                    submission_file_sha256=_sha256_file(source),
+                    submission_sha256=content_sha256(submission.model_dump(mode="json")),
+                )
+            )
+        return tuple(collected)
+
+    def _load_result(
+        self,
+        campaign_path: Path,
+        campaign: TasteSourceReviewCampaign,
+        record: TasteSourceReviewControlRecord | None,
+        collected: tuple[TasteSourceReviewCollectedSubmission, ...],
+    ) -> TasteSourceReviewResult | None:
+        if record is None:
+            return None
+        root = campaign_path.parent.resolve(strict=True)
+        result_path = root / _CONTROL_DIRECTORY / _RESULT_FILE
+        if not result_path.exists() and not result_path.is_symlink():
+            return None
+        result = TasteSourceReviewResult.model_validate_json(
+            _bounded_file(root, result_path).read_bytes()
+        )
+        if (
+            result.project_id != campaign.project_id
+            or result.campaign_id != campaign.campaign_id
+            or result.campaign_sha256 != campaign.campaign_sha256
+            or len(collected) != 3
+        ):
+            raise ValueError("Taste review result differs from its campaign submissions")
+        if tuple(item.submission_file_sha256 for item in collected) != tuple(
+            item.sha256 for item in result.submission_files
+        ):
+            raise ValueError("Taste review result differs from collected submission bytes")
+        return result
+
+    def _submission_session(
+        self,
+        campaign_path: Path,
+        record: TasteSourceReviewControlRecord,
+        submission: TasteSourceReviewSubmission,
+    ) -> tuple[TasteSourceReviewSessionBinding, TasteSourceReviewSession]:
+        root = campaign_path.parent.resolve(strict=True)
+        matches: list[tuple[TasteSourceReviewSessionBinding, TasteSourceReviewSession]] = []
+        for binding in record.sessions:
+            session = TasteSourceReviewSession.model_validate_json(
+                _bound_locator(root, binding.session_locator).read_bytes()
+            )
+            if session.session_id == submission.session_id:
+                matches.append((binding, session))
+        if len(matches) != 1:
+            raise ValueError("Taste review submission does not name an authorized session")
+        return matches[0]
+
+    @staticmethod
+    def _validate_submission(
+        session: TasteSourceReviewSession,
+        submission: TasteSourceReviewSubmission,
+    ) -> None:
+        if any(
+            (
+                submission.session_sha256 != session.session_sha256,
+                submission.campaign_sha256 != session.campaign_sha256,
+                submission.role is not session.role,
+                submission.reviewer_identity_sha256 != session.reviewer_identity_sha256,
+            )
+        ):
+            raise ValueError("Taste review submission differs from its exact session")
+        responses = (
+            submission.scientific_responses
+            if submission.role is TasteSourceReviewRole.SCIENTIFIC
+            else submission.privacy_responses
+        )
+        if {item.review_item_id for item in responses} != {
+            item.review_item_id for item in session.items
+        }:
+            raise ValueError("Taste review submission does not cover its exact session")
+
     @staticmethod
     def _view(
         snapshot: ProjectSnapshot,
         run: ProjectRun,
         campaign: TasteSourceReviewCampaign,
         record: TasteSourceReviewControlRecord | None,
+        collected: tuple[TasteSourceReviewCollectedSubmission, ...],
+        result: TasteSourceReviewResult | None,
     ) -> TasteSourceReviewControlView:
         ready = record is not None
+        verification = decide_verification_route(
+            VerificationDecisionInput(
+                action_id="collect-taste-source-review-submission",
+                reversibility=ActionReversibility.REVERSIBLE,
+                effects=(ActionEffect.FILESYSTEM_WRITE,),
+                evidence_state="current",
+                semantic_uncertainty="low",
+                failure_probability=0.03,
+                failure_impact_units=12,
+                targeted_check_cost_units=0.5,
+                targeted_detection_probability=0.8,
+                full_preflight_cost_units=2,
+                full_preflight_detection_probability=0.95,
+            )
+        )
+        if verification.route is not VerificationRoute.DIRECT_PATH:
+            raise ValueError("local review submission collection unexpectedly requires preflight")
+        count = len(collected)
         return TasteSourceReviewControlView(
             project_id=campaign.project_id,
             project_revision=snapshot.revision,
@@ -535,15 +850,51 @@ class ProjectTasteSourceReviewControlService:
             run_id=run.run_id,
             campaign_id=campaign.campaign_id,
             campaign_sha256=campaign.campaign_sha256,
-            status="authorized_sessions_ready" if ready else "awaiting_owner_approval",
+            status=(
+                "awaiting_owner_approval"
+                if not ready
+                else "authorized_sessions_ready"
+                if count == 0
+                else "collecting_reviews"
+                if result is None
+                else "review_locked"
+            ),
             verification_route=campaign.recruitment_verification.route,
             owner_approval_required=not ready,
             record=record,
             reviewer_sessions_prepared=3 if ready else 0,
+            reviewer_submissions_collected=count,
+            collected_submissions=collected,
+            result_locator=(
+                f"{_CONTROL_DIRECTORY}/{_RESULT_FILE}" if result is not None else None
+            ),
+            result_file_sha256=(
+                hashlib.sha256(
+                    _canonical_json(result.model_dump(mode="json")) + b"\n"
+                ).hexdigest()
+                if result is not None
+                else None
+            ),
+            result_sha256=result.result_sha256 if result is not None else None,
+            eligible_candidate_count=(
+                result.eligible_candidate_count if result is not None else None
+            ),
+            adjudication_required_count=(
+                result.adjudication_required_count if result is not None else None
+            ),
+            ready_for_taste_abstraction_review=(
+                result.ready_for_taste_abstraction_review if result is not None else False
+            ),
+            submission_verification_route=verification.route,
+            submission_verification_reason_codes=verification.reason_codes,
             next_action=(
-                "distribute_sessions_outside_scitaste_and_collect_blind_reviews"
-                if ready
-                else "record_owner_decision"
+                "record_owner_decision"
+                if not ready
+                else "distribute_sessions_outside_scitaste_and_collect_blind_reviews"
+                if count == 0
+                else "collect_remaining_blind_reviews"
+                if result is None
+                else "resolve_adjudication_or_prepare_taste_abstraction"
             ),
         )
 
@@ -610,7 +961,9 @@ def _canonical_json(value: object) -> bytes:
 __all__ = [
     "ProjectTasteSourceReviewControlService",
     "TasteSourceReviewAuthorizationRequest",
+    "TasteSourceReviewCollectedSubmission",
     "TasteSourceReviewControlRecord",
     "TasteSourceReviewControlView",
     "TasteSourceReviewSessionBinding",
+    "TasteSourceReviewSubmissionRequest",
 ]

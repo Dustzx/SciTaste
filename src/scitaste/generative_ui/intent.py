@@ -669,6 +669,7 @@ _CANDIDATE_GOALS = {
     "review_benchmark_qualification": IntentGoal.NEXT_STEP_REVIEW,
     "review_iteration": IntentGoal.NEXT_STEP_REVIEW,
     "review_taste_population": IntentGoal.NEXT_STEP_REVIEW,
+    "plan_taste_abstraction": IntentGoal.NEXT_STEP_REVIEW,
 }
 
 _QUICK_LABELS = {
@@ -689,6 +690,7 @@ _QUICK_LABELS = {
     "review_benchmark_qualification": "Review the executable benchmark qualification",
     "review_iteration": "Review the reviewer-driven research iteration plan",
     "review_taste_population": "Curate the natural Taste candidate population",
+    "plan_taste_abstraction": "Plan the evidence-bound Taste abstraction stage",
 }
 
 _GOAL_TERMS = (

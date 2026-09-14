@@ -1202,6 +1202,12 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
     privacy_assessment_count: int = Field(gt=0)
     reviewer_sessions_prepared: int = Field(ge=0, le=3)
     reviewer_submissions_collected: int = Field(ge=0, le=3)
+    review_collection_status: Literal[
+        "awaiting_owner_approval",
+        "authorized_sessions_ready",
+        "collecting_reviews",
+        "review_locked",
+    ]
     recruitment_status: Literal[
         "owner-and-ethics-approval-required",
         "authorized-sessions-prepared-no-contact",
@@ -1213,13 +1219,21 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
     control_id: SafeIdentifier | None = None
     control_sha256: Sha256 | None = None
     session_locators: tuple[SafeLocator, ...] = Field(default=(), max_length=3)
+    collected_submission_locators: tuple[SafeLocator, ...] = Field(default=(), max_length=3)
+    result_locator: SafeLocator | None = None
+    result_file_sha256: Sha256 | None = None
+    result_sha256: Sha256 | None = None
+    eligible_candidate_count: int | None = Field(default=None, ge=0)
+    adjudication_required_count: int | None = Field(default=None, ge=0)
     next_action: SafeIdentifier
     preparation_verification_route: Literal["direct_path"]
     recruitment_verification_route: Literal["owner_approval"]
     preparation_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
     recruitment_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    submission_verification_route: Literal["direct_path"]
+    submission_verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
     source_outcomes_hidden_from_scientific_review: Literal[True]
-    ready_for_taste_abstraction_review: Literal[False]
+    ready_for_taste_abstraction_review: bool
     ready_for_benchmark_admission: Literal[False]
     standalone_preflight_performed: Literal[False]
     model_calls_performed: Literal[False]
@@ -1256,6 +1270,37 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
             raise ValueError("Taste source-review session locators differ from readiness")
         if len(self.session_locators) != len(set(self.session_locators)):
             raise ValueError("Taste source-review session locators must be unique")
+        if self.reviewer_submissions_collected != len(self.collected_submission_locators):
+            raise ValueError("Taste source-review submission count is inconsistent")
+        if len(self.collected_submission_locators) != len(
+            set(self.collected_submission_locators)
+        ):
+            raise ValueError("Taste source-review submission locators must be unique")
+        locked = self.review_collection_status == "review_locked"
+        result_fields = (
+            self.result_locator,
+            self.result_file_sha256,
+            self.result_sha256,
+            self.eligible_candidate_count,
+            self.adjudication_required_count,
+        )
+        if locked != all(value is not None for value in result_fields):
+            raise ValueError("Taste source-review result lineage is inconsistent")
+        expected_collection_status = (
+            "awaiting_owner_approval"
+            if not ready
+            else "authorized_sessions_ready"
+            if self.reviewer_submissions_collected == 0
+            else "collecting_reviews"
+            if self.reviewer_submissions_collected < 3
+            else "review_locked"
+        )
+        if self.review_collection_status != expected_collection_status:
+            raise ValueError("Taste source-review collection status is inconsistent")
+        if locked != (self.reviewer_submissions_collected == 3):
+            raise ValueError("Taste source-review locked result requires three submissions")
+        if self.ready_for_taste_abstraction_review and not locked:
+            raise ValueError("Taste source-review abstraction readiness requires a result")
         if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
             raise ValueError("Taste source-review campaign lacks registered evidence")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
@@ -2189,6 +2234,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_benchmark_qualification",
         "review_iteration",
         "review_taste_population",
+        "plan_taste_abstraction",
     ]
     label_code: SafeIdentifier
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)

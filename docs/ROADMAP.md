@@ -46,6 +46,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.10 — multidomain Taste-source and generated-control pilot | done | an official F1000 API transaction adds two publisher-subject strata, compiles 77 natural review/response/revision episodes, projects both source populations into one flexible project intent, and completes one real feedback-directed model canvas edit; independent domain, quality, privacy, abstraction, and benchmark gates remain open |
 | Phase 9.11 — owner-gated natural Taste review sessions | done | the project home records an exact ethics/compensation/consent/conflict decision and prepares two scientific plus one privacy blind session without contacting reviewers or authorizing model/API/GPU/experiment work |
 | Phase 9.12 — cost-routed AWA license coverage | done | a targeted local read binds the exact acquired ZIP, proves 2,000 image/label identities but zero embedded per-image license records, blocks ingestion, and exposes acquire-manifest versus exclude-AWA as an explicit protocol decision without a standalone preflight |
+| Phase 9.13 — blind-review return and planning feedback | done | the project UI admits each exact authorized reviewer JSON through inline guards, locks the existing independent result after 3/3, projects eligibility/adjudication into model-visible evidence, and changes the generated next-step entry to Taste abstraction; the real campaign remains unreviewed |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen
@@ -1510,15 +1511,24 @@ citation/resource screen and exact adapters/licenses remain open.
   completed semantics, and removed unsupported resource edges. Fixed labels
   remain optional cache entries; free generation and feedback editing remain the
   primary interaction.
+- Done in the product path: the project page can collect the three exact JSON
+  returns one at a time, bind each to its authorized blind session, show 0/3 to
+  3/3 observed progress, and automatically compile the existing locked
+  independent result after the third return. Result counts and adjudication
+  state become model-visible evidence and replace the fixed curation entry with
+  a flexible post-review Taste-abstraction planning entry. The real self-project
+  remains at zero submissions until independent reviewers actually return work.
 - Tool Intelligence routes local campaign preparation directly because checking
   costs more than its avoidable loss, while reviewer recruitment crosses an
   irreversible owner boundary. The next action is therefore not another
   technical preflight: it is the user's ethics, compensation, consent,
   conflict-screening, and three-reviewer decision before any human contact.
-- Next: independently confirm the two publisher subjects as scientific-domain
-  labels, complete free-text privacy review, define the six decision-family
-  strata, collect two conflict-cleared quality judgments, and review grounded
-  Taste abstractions before freezing any benchmark split. Publisher subjects,
+- Next: use the prepared campaign with qualified independent people to confirm
+  the two publisher subjects as scientific-domain labels, complete free-text
+  privacy review, collect two conflict-cleared quality judgments, resolve any
+  disagreement, and review grounded Taste abstractions before freezing any
+  benchmark split. The six decision-family labels are collected by the review
+  instrument rather than inferred from publisher metadata. Publisher subjects,
   reviewer recommendations, author replies, later versions, and publication are
   observed context rather than quality gold. Neither natural population is a
   benchmark or an effectiveness result.

@@ -63,6 +63,7 @@ const quickIntentLabelKeys = Object.freeze({
   "approve-bounded-structured-metadata-read": "quick.metadata_read",
   "review-review-driven-iteration-plan": "quick.review_iteration",
   "curate-natural-taste-candidate-population": "quick.taste_population",
+  "plan-evidence-bound-taste-abstraction": "quick.taste_abstraction",
 });
 let activeLocale = localeFromFragment() || browserLocale();
 
@@ -3685,9 +3686,14 @@ function renderTasteSourceReviewCampaigns(items) {
   grid.className = "acquisition-grid";
   for (const item of items) {
     const card = document.createElement("article");
-    card.className = `acquisition-card status-${item.review_sessions_ready
+    const reviewState = item.review_collection_status || (item.review_sessions_ready
+      ? "authorized_sessions_ready"
+      : "awaiting_owner_approval");
+    card.className = `acquisition-card status-${reviewState === "review_locked"
       ? "complete"
-      : "awaiting_owner_approval"}`;
+      : reviewState === "awaiting_owner_approval"
+        ? "awaiting_owner_approval"
+        : "candidate"}`;
     const header = document.createElement("div");
     header.className = "compact-row-header";
     const identity = document.createElement("div");
@@ -3700,10 +3706,12 @@ function renderTasteSourceReviewCampaigns(items) {
     header.append(
       identity,
       progressPill(
-        item.review_sessions_ready ? "completed" : "blocked",
-        t(item.review_sessions_ready
-          ? "progress.taste_review.status.sessions_ready"
-          : "progress.taste_review.status.awaiting_owner"),
+        reviewState === "review_locked"
+          ? "completed"
+          : reviewState === "awaiting_owner_approval"
+            ? "blocked"
+            : "candidate",
+        t(`progress.taste_review.status.${reviewState}`),
       ),
     );
 
@@ -3715,6 +3723,7 @@ function renderTasteSourceReviewCampaigns(items) {
       ["reviewers", `${item.scientific_reviewer_count}+${item.privacy_reviewer_count}`],
       ["assessments", item.scientific_assessment_count + item.privacy_assessment_count],
       ["sessions", `${item.reviewer_sessions_prepared}/3`],
+      ["submissions", `${item.reviewer_submissions_collected}/3`],
     ]) {
       const fact = document.createElement("span");
       appendText(fact, t(`progress.taste_review.${key}`, {count: value}));
@@ -3736,9 +3745,7 @@ function renderTasteSourceReviewCampaigns(items) {
     appendText(boundary, t("progress.taste_review.boundary"));
     const next = document.createElement("p");
     next.className = "acquisition-purpose";
-    appendText(next, t(item.review_sessions_ready
-      ? "progress.taste_review.next.sessions_ready"
-      : "progress.taste_review.next.awaiting_owner"));
+    appendText(next, t(`progress.taste_review.next.${reviewState}`));
     const controls = document.createElement("div");
     controls.className = "component-actions";
     const generate = document.createElement("button");
@@ -3781,6 +3788,7 @@ function renderTasteSourceReviewCampaigns(items) {
           publisher_subject_group_counts: item.publisher_subject_group_counts,
           reviewer_sessions_prepared: item.reviewer_sessions_prepared,
           reviewer_submissions_collected: item.reviewer_submissions_collected,
+          review_collection_status: item.review_collection_status,
           recruitment_status: item.recruitment_status,
           owner_approval_required: item.owner_approval_required,
           review_sessions_ready: item.review_sessions_ready,
@@ -3789,9 +3797,17 @@ function renderTasteSourceReviewCampaigns(items) {
           control_id: item.control_id,
           control_sha256: item.control_sha256,
           session_locators: item.session_locators,
+          collected_submission_locators: item.collected_submission_locators,
+          result_locator: item.result_locator,
+          result_file_sha256: item.result_file_sha256,
+          result_sha256: item.result_sha256,
+          eligible_candidate_count: item.eligible_candidate_count,
+          adjudication_required_count: item.adjudication_required_count,
           next_action: item.next_action,
           preparation_reason_codes: item.preparation_reason_codes,
           recruitment_reason_codes: item.recruitment_reason_codes,
+          submission_verification_route: item.submission_verification_route,
+          submission_verification_reason_codes: item.submission_verification_reason_codes,
           source_outcomes_hidden_from_scientific_review:
             item.source_outcomes_hidden_from_scientific_review,
           standalone_preflight_performed: item.standalone_preflight_performed,
@@ -3809,6 +3825,7 @@ function renderTasteSourceReviewCampaigns(items) {
           "publisher_subject_group_counts",
           "reviewer_sessions_prepared",
           "reviewer_submissions_collected",
+          "review_collection_status",
           "recruitment_status",
           "owner_approval_required",
           "review_sessions_ready",
@@ -3817,9 +3834,17 @@ function renderTasteSourceReviewCampaigns(items) {
           "control_id",
           "control_sha256",
           "session_locators",
+          "collected_submission_locators",
+          "result_locator",
+          "result_file_sha256",
+          "result_sha256",
+          "eligible_candidate_count",
+          "adjudication_required_count",
           "next_action",
           "preparation_reason_codes",
           "recruitment_reason_codes",
+          "submission_verification_route",
+          "submission_verification_reason_codes",
           "source_outcomes_hidden_from_scientific_review",
           "standalone_preflight_performed",
           "model_calls_performed",
@@ -3984,6 +4009,48 @@ function renderTasteSourceReviewAuthorizationReceipt(item) {
     sessions.appendChild(row);
   }
   receipt.append(title, boundary, sessions);
+  if (item.review_collection_status === "review_locked") {
+    const result = document.createElement("p");
+    result.className = "generation-accepted";
+    appendText(result, t("progress.taste_review.collection.locked", {
+      eligible: item.eligible_candidate_count,
+      adjudication: item.adjudication_required_count,
+    }));
+    receipt.appendChild(result);
+    return receipt;
+  }
+
+  const collection = document.createElement("form");
+  collection.className = "taste-review-submission-form";
+  const explanation = document.createElement("small");
+  explanation.className = "muted";
+  appendText(explanation, t("progress.taste_review.collection.boundary"));
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/json,.json";
+  file.required = true;
+  file.setAttribute("aria-label", t("progress.taste_review.collection.file"));
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.className = "secondary-button";
+  appendText(submit, t("progress.taste_review.collection.submit"));
+  collection.append(explanation, file, submit);
+  collection.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!file.files?.length) return;
+    try {
+      const selected = file.files[0];
+      if (selected.size > 4 * 1024 * 1024) {
+        throw uiError("progress.taste_review.collection.too_large");
+      }
+      const submission = JSON.parse(await selected.text());
+      await collectTasteSourceReviewSubmission(item, submission);
+    } catch (error) {
+      intentResultState = {kind: "error", error};
+      renderIntentResult();
+    }
+  });
+  receipt.appendChild(collection);
   return receipt;
 }
 
@@ -7018,6 +7085,54 @@ async function authorizeTasteSourceReview(item, values) {
   }
 }
 
+async function collectTasteSourceReviewSubmission(item, submission) {
+  if (!quickIntentCatalog || !item?.control_id || !item?.control_sha256) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  const requestedProject = activeProjectId;
+  setIntentEnabled(false);
+  intentResultState = {kind: "taste_review_collecting"};
+  renderIntentResult();
+  try {
+    const view = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}`
+        + `/taste-source-reviews/${encodeURIComponent(item.campaign_id)}/submissions`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          project_id: requestedProject,
+          campaign_id: item.campaign_id,
+          campaign_sha256: item.campaign_sha256,
+          control_id: item.control_id,
+          control_sha256: item.control_sha256,
+          submission,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) return;
+    intentResultState = {
+      kind: "taste_review_collected",
+      count: view.reviewer_submissions_collected,
+      locked: view.status === "review_locked",
+    };
+    await loadWorkspace({
+      view: "project-progress",
+      project_id: requestedProject,
+    }, "replace");
+    renderIntentResult();
+  } catch (error) {
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
+  } finally {
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
+}
+
 function renderGenerationFailure(documentValue) {
   intentResultState = {kind: "failure", documentValue};
   renderIntentResult();
@@ -7129,6 +7244,22 @@ function renderIntentResult() {
     authorized.className = "generation-accepted";
     appendText(authorized, t("generation.taste_review_authorized"));
     intentResult.appendChild(authorized);
+    return;
+  }
+  if (intentResultState.kind === "taste_review_collecting") {
+    const collecting = document.createElement("p");
+    collecting.className = "muted";
+    appendText(collecting, t("generation.taste_review_collecting"));
+    intentResult.appendChild(collecting);
+    return;
+  }
+  if (intentResultState.kind === "taste_review_collected") {
+    const collected = document.createElement("p");
+    collected.className = "generation-accepted";
+    appendText(collected, t(intentResultState.locked
+      ? "generation.taste_review_locked"
+      : "generation.taste_review_collected", {count: intentResultState.count}));
+    intentResult.appendChild(collected);
     return;
   }
   if (intentResultState.kind === "gate_action_deciding") {

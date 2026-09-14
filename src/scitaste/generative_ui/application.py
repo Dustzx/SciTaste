@@ -77,6 +77,7 @@ from scitaste.generative_ui.taste_review_control import (
     ProjectTasteSourceReviewControlService,
     TasteSourceReviewAuthorizationRequest,
     TasteSourceReviewControlView,
+    TasteSourceReviewSubmissionRequest,
 )
 from scitaste.generative_ui.warm_cache import (
     CachedWorkspaceStartRequest,
@@ -308,6 +309,26 @@ class GenerativeUIApplication:
             raise ValueError("Taste review authorization route identity mismatch")
         with self._request_lock:
             return self._taste_source_reviews.authorize(parsed)
+
+    def collect_taste_source_review_submission(
+        self,
+        project_id: str,
+        campaign_id: str,
+        request: TasteSourceReviewSubmissionRequest | dict[str, object],
+    ) -> TasteSourceReviewControlView:
+        """Collect one exact local reviewer return without a standalone preflight."""
+
+        validate_project_id(project_id)
+        validate_entry_id(campaign_id, field_name="campaign_id")
+        parsed = (
+            request
+            if isinstance(request, TasteSourceReviewSubmissionRequest)
+            else TasteSourceReviewSubmissionRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id or parsed.campaign_id != campaign_id:
+            raise ValueError("Taste review submission route identity mismatch")
+        with self._request_lock:
+            return self._taste_source_reviews.collect_submission(parsed)
 
     def propose_program_revision(
         self,

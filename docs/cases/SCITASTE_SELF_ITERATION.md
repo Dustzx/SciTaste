@@ -1730,3 +1730,30 @@ conversation preserved AWA and resource choices and changed both content and
 layout. This is the intended recursive workflow: model-generated content exposes
 a product fault, feedback identifies the missing evidence, the adapter is
 repaired, and the next generated artifact demonstrates the correction.
+
+## Closing the human-return loop without a preflight ritual (2026-09-14)
+
+The self-iteration exposed another product gap: SciTaste could generate and
+authorize useful reviewer workspaces, but the project interface could not
+receive their outputs. That made the generated coordination plan descriptive at
+the point where a user needed to change scientific state. The application now
+imports one reviewer-returned JSON at a time, validates it against the exact
+authorized session, and reports partial collection directly on the project
+home. Three valid independent returns automatically invoke the existing locked
+review compiler, surface eligibility and adjudication counts, and make those
+facts available to the next model-generated page.
+
+Tool Intelligence selected `direct_path` for this project-local ingestion. The
+session, role, item-coverage, blinding, and hash checks are inline object
+invariants, not a separately scheduled preflight. Human recruitment remains an
+owner boundary and the locked result still grants no abstraction, benchmark,
+API, GPU, or experiment authority. A synthetic end-to-end campaign establishes
+the software path; the real self-development campaign remains unchanged until
+qualified reviewers return actual judgments.
+
+This preserves the intended product geometry. Generation as Content remains a
+parallel, model-authored and feedback-editable surface; SciTaste Core remains
+the authoritative state machine. Their interaction is a narrow user-mediated
+transition. Project-bound API/GPU/checkpoint choices are configured through the
+same pattern—model proposal, explicit user application, then a later execution
+gate—rather than being embedded as credentials or implicit model tools.

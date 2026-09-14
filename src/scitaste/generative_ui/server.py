@@ -50,6 +50,7 @@ from scitaste.generative_ui.workspace_store import (
 
 _LOGGER = logging.getLogger(__name__)
 _MAX_EVENT_BYTES = 64 * 1024
+_MAX_REVIEW_SUBMISSION_BYTES = 4 * 1024 * 1024
 _SECURITY_HEADERS = {
     "Cache-Control": "no-store",
     "Content-Security-Policy": (
@@ -558,6 +559,20 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             )
             self._send_model(HTTPStatus.CREATED, view)
             return
+        if (
+            len(parts) == 8
+            and resource == "taste-source-reviews"
+            and parts[7] == "submissions"
+        ):
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            view = self.server.application.collect_taste_source_review_submission(
+                project_id,
+                parts[6],
+                self._read_json_object(maximum_bytes=_MAX_REVIEW_SUBMISSION_BYTES),
+            )
+            self._send_model(HTTPStatus.CREATED, view)
+            return
         if len(parts) in {7, 8} and resource == "generations":
             generation_id = parts[6]
             operation = parts[7] if len(parts) == 8 else None
@@ -655,7 +670,11 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         document = self.server.application.current_workspace(query)
         self._send_model(HTTPStatus.OK, document, etag=document.fingerprint)
 
-    def _read_json_object(self) -> dict[str, object]:
+    def _read_json_object(
+        self,
+        *,
+        maximum_bytes: int = _MAX_EVENT_BYTES,
+    ) -> dict[str, object]:
         if self.headers.get_all("Transfer-Encoding", []):
             raise _HTTPProblem(
                 HTTPStatus.BAD_REQUEST,
@@ -685,7 +704,7 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 "a valid content length is required",
             )
         length = int(content_lengths[0])
-        if length > _MAX_EVENT_BYTES:
+        if length > maximum_bytes:
             raise _HTTPProblem(
                 HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
                 "request_too_large",
