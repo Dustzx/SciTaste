@@ -53,7 +53,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.17 — authorized evaluation campaign execution | done | the formal `EvaluationCellPlan` now has a project-owned, shell-free, budget-enforcing runner that refuses blocked proposals, executes exact approved cells, checkpoints every real attempt, preserves failures, resumes successes without recomputation, and hands a raw `EvaluationResultSet` to preregistered analysis or blind review |
 | Phase 9.18 — content-bound benchmark task workspaces | done | two real MLRC-Bench tasks now bind an exact upstream commit, model-visible source tree, editable surface, development/held-out commands, objective metric, baselines, acquired archive evidence, and current readiness; source-only workspaces can be explicitly materialized without exposing held-out bytes or pretending that data, environments, scorers, models, or experiments are ready |
 | Phase 9.19 — model-authored multi-file benchmark patches | done | a first-party model node can use condition-specific Knowledge, Taste, critic, and development feedback to propose bounded replacements for exact visible source or stop spending experiments; the controller binds predecessor bytes, rejects stale/out-of-surface/invalid edits, applies accepted replacements atomically, and retains a self-hashed transition without granting experiment authority |
-| Phase 9.20 — isolated development feedback loop | next | materialize licensed development assets and a pinned task-local environment, execute the frozen development command under cell budgets, parse the objective score without the benchmark's secondary LLM judge, and feed the result into the next bounded patch decision |
+| Phase 9.20 — isolated development feedback loop | in progress | the objective-only entrypoint and bounded Bubblewrap development runner are implemented, including campaign-scoped resource verification, source-integrity checks, GPU accounting, and score parsing without the benchmark's secondary LLM judge; licensed development-asset materialization, pinned task environments, and the first real feedback turn remain pending owner-reviewed resource activation |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen
@@ -853,6 +853,19 @@ citation/resource screen and exact adapters/licenses remain open.
   step itself invoked no model and ran no benchmark. The next missing edge is
   isolated development execution and objective feedback, not another UI or
   planning layer.
+- The cell can now execute a development attempt through a dedicated
+  `BenchmarkDevelopmentRunner` once its formal task and resource states are
+  verified. The runner mounts source read-only, overlays only declared output
+  directories as writable, mounts development data read-only, uses a pinned
+  task-local Python runtime, unshares the network, limits time/processes/files,
+  records measured GPU allocation, and rejects any protected or editable source
+  drift. Its MLRC entrypoint calls the objective evaluator directly, emits one
+  typed marker, and never enters MLRC-Bench's test-phase code-summary/LLM-judge
+  path. Large dataset/runtime bytes are fully verified once at campaign scope;
+  cells bind that receipt and use read-only mounts instead of rehashing gigabytes
+  before and after every attempt. This runtime has not yet been activated on the
+  acquired archives because extraction, environment construction, and formal
+  experiment launch remain unapproved.
 - The measured result is now projected from canonical state and the original
   native execution/metrics records into Communication claim/evidence contracts.
   The audit draft retains trace markers, while the project paper is built from a

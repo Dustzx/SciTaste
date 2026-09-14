@@ -78,6 +78,7 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
     research_problem: RuntimeEvidenceBinding
     read_only_manifest: RuntimeEvidenceBinding
     environment_manifest: RuntimeEvidenceBinding
+    objective_entrypoint: RuntimeEvidenceBinding
     editable_globs: tuple[str, ...] = Field(min_length=1, max_length=50)
     dataset_directories: tuple[str, ...] = Field(min_length=1, max_length=20)
     writable_output_directories: tuple[str, ...] = Field(min_length=1, max_length=20)
@@ -301,6 +302,7 @@ def inspect_benchmark_task_runtime(
         ("asset-receipt", spec.asset_receipt),
         ("archive-qualification", spec.archive_qualification),
         ("license-evidence", spec.license_evidence),
+        ("objective-entrypoint", spec.objective_entrypoint),
     ):
         if binding is not None:
             _verify_binding(root, binding, blockers, label=label)
@@ -391,6 +393,12 @@ def prepare_benchmark_workspace(
             else:
                 read_only.append(relative)
                 path.chmod(path.stat().st_mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+        for locator in spec.dataset_directories:
+            dataset = prepared / locator
+            if dataset.exists() and not dataset.is_dir():
+                raise ValueError("benchmark dataset directory collides with a file")
+            dataset.mkdir(parents=True, exist_ok=True)
+            dataset.chmod(dataset.stat().st_mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
         for locator in spec.writable_output_directories:
             output = prepared / locator
             if output.exists() and not output.is_dir():

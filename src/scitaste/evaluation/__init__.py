@@ -791,6 +791,16 @@ from scitaste.evaluation.structured_metadata_plan_bundle import (
     load_structured_metadata_audit_plan_bundle,
     save_structured_metadata_audit_plan_bundle,
 )
+from scitaste.evaluation.task_execution import (
+    BenchmarkDevelopmentExecutionReceipt,
+    BenchmarkDevelopmentLimits,
+    BenchmarkDevelopmentRunner,
+    BenchmarkDevelopmentRunRequest,
+    BenchmarkObjectivePayload,
+    BenchmarkResourceVerificationReceipt,
+    parse_benchmark_objective,
+    verify_benchmark_execution_resources,
+)
 from scitaste.evaluation.task_package import (
     BenchmarkTaskPackageManifest,
     TaskPackageAcquisition,
@@ -936,6 +946,10 @@ __all__ = [
     "AutomatedJudgeRole",
     "BenchmarkAllocationStratumInventory",
     "BenchmarkAllocationStratumResult",
+    "BenchmarkDevelopmentExecutionReceipt",
+    "BenchmarkDevelopmentLimits",
+    "BenchmarkDevelopmentRunRequest",
+    "BenchmarkDevelopmentRunner",
     "BenchmarkEditableFileSnapshot",
     "BenchmarkMetadataAllocationApproval",
     "BenchmarkMetadataAllocationApprovalInspection",
@@ -965,6 +979,7 @@ __all__ = [
     "BenchmarkMetadataScreeningChainInspection",
     "BenchmarkMetadataScreeningReport",
     "BenchmarkMetadataScreeningReportInspection",
+    "BenchmarkObjectivePayload",
     "BenchmarkPatchAdmission",
     "BenchmarkPatchApplicationReceipt",
     "BenchmarkPatchContext",
@@ -975,6 +990,7 @@ __all__ = [
     "BenchmarkPatchViolation",
     "BenchmarkRecordRuleDecision",
     "BenchmarkRecordScreenDisposition",
+    "BenchmarkResourceVerificationReceipt",
     "BenchmarkScreenAssessmentAuthority",
     "BenchmarkScreenEvidenceBinding",
     "BenchmarkScreenEvidenceMode",
@@ -1558,6 +1574,7 @@ __all__ = [
     "materialize_source_projections",
     "materialize_taste_corpus_pair",
     "objective_cell_population_sha256",
+    "parse_benchmark_objective",
     "plan_benchmark_metadata_allocation",
     "plan_benchmark_metadata_projection",
     "plan_clustered_power",
@@ -1637,5 +1654,6 @@ __all__ = [
     "source_projection_forbidden_exact_strings",
     "source_projection_protocol_sha256",
     "summarize_evaluation_readiness",
+    "verify_benchmark_execution_resources",
     "verify_locked_human_review_set",
 ]

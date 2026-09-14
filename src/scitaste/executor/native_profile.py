@@ -121,14 +121,14 @@ class NativeExecutionProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     profile_id: str = Field(pattern=_DATASET_ID)
     datasets: tuple[NativeDatasetInput, ...] = ()
     external_resources: tuple[NativeExternalResourceInput, ...] = ()
     python_runtime: NativePythonRuntimeRequest | None = None
     gpu: NativeGPURequest = Field(default_factory=NativeGPURequest)
     network_access: Literal[False] = False
-    writable_workspace: Literal[False] = False
+    writable_workspace: bool = False
 
     @model_validator(mode="after")
     def resource_identities_are_unique_and_runtime_is_admitted(self) -> NativeExecutionProfile:
@@ -143,6 +143,8 @@ class NativeExecutionProfile(BaseModel):
             raise ValueError("native external resource mount paths must be unique")
         if self.schema_version == "1.0" and (self.external_resources or self.python_runtime):
             raise ValueError("native profile schema 1.0 cannot admit external runtime resources")
+        if self.writable_workspace and self.schema_version != "1.2":
+            raise ValueError("writable task workspaces require native profile schema 1.2")
         if self.python_runtime is not None:
             runtime_mounts = [
                 PurePosixPath(resource.mount_path)
@@ -354,7 +356,7 @@ def inspect_native_execution_profile(path: str | Path) -> NativeExecutionProfile
         "profile": _profile_record_payload(profile),
         "datasets": [item.model_dump(mode="json", exclude={"source_path"}) for item in snapshots],
     }
-    if profile.schema_version == "1.1":
+    if profile.schema_version in {"1.1", "1.2"}:
         semantic["external_resources"] = [
             item.model_dump(mode="json", exclude={"source_path"}) for item in external_snapshots
         ]
@@ -430,7 +432,7 @@ def prepare_native_execution_profile(
             for item in prepared
         ],
     }
-    if inspection.profile.schema_version == "1.1":
+    if inspection.profile.schema_version in {"1.1", "1.2"}:
         payload["external_resources"] = [
             item.model_dump(mode="json", exclude={"source_path"}) for item in external_resources
         ]
@@ -505,6 +507,7 @@ def preflight_native_resources(
     *,
     prepared: PreparedNativeExecutionProfile | None = None,
     require_materialized_datasets: bool = True,
+    verify_prepared_integrity: bool = True,
 ) -> NativeResourceAvailability:
     """Verify all requested dataset copies and exact NVIDIA devices."""
 
@@ -518,7 +521,7 @@ def preflight_native_resources(
             external_mounts=external_mounts,
             reason="native datasets have not been materialized into the project run",
         )
-    if prepared is not None:
+    if prepared is not None and verify_prepared_integrity:
         try:
             verify_prepared_native_execution_profile(prepared)
         except (OSError, ValueError) as exc:
@@ -529,6 +532,14 @@ def preflight_native_resources(
                 external_mounts=external_mounts,
                 reason=str(exc),
             )
+    elif prepared is not None and prepared.profile != profile:
+        return NativeResourceAvailability(
+            available=False,
+            profile_id=profile.profile_id,
+            dataset_mounts=mounts,
+            external_mounts=external_mounts,
+            reason="prepared native resources belong to another profile",
+        )
     if not profile.gpu.enabled:
         return NativeResourceAvailability(
             available=True,

@@ -198,6 +198,11 @@ class NativeExperimentRunner:
         return tuple(paths)
 
     def availability(self) -> NativeExperimentAvailability:
+        if self.profile.writable_workspace:
+            return NativeExperimentAvailability(
+                available=False,
+                reason="single-source native experiments cannot use a writable task workspace",
+            )
         resources = preflight_native_resources(
             self.profile,
             prepared=self.execution_profile,

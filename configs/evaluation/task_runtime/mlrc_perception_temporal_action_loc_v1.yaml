@@ -20,6 +20,9 @@ read_only_manifest:
 environment_manifest:
   locator: MLAgentBench/benchmarks_base/perception_temporal_action_loc/scripts/environment.yml
   file_sha256: c1891d2ece598de6a57ecf3c2d36721f1628228f465f6ef50d721a6c8c4c4639
+objective_entrypoint:
+  locator: src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py
+  file_sha256: d5fe66efc3bb944601c4f3840d7ac54d7edc0a7acb958ccfd17481a4e5e204ac
 editable_globs:
   - configs/core_configs.yaml
   - libs/modeling/*.py
@@ -37,17 +40,25 @@ writable_output_directories:
   - output
 development_command:
   - python
-  - main.py
-  - -m
+  - /scitaste/runtime/mlrc_objective_entrypoint.py
+  - --task
+  - perception_temporal_action_loc
+  - --result-task-id
+  - perception-temporal-action-loc
+  - --method
   - my_method
-  - -p
+  - --phase
   - dev
 heldout_command:
   - python
-  - main.py
-  - -m
+  - /scitaste/runtime/mlrc_objective_entrypoint.py
+  - --task
+  - perception_temporal_action_loc
+  - --result-task-id
+  - perception-temporal-action-loc
+  - --method
   - my_method
-  - -p
+  - --phase
   - test
 heldout_materialization_paths:
   - data/pt/action_localisation_test_video_features

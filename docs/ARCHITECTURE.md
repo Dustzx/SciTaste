@@ -3703,3 +3703,36 @@ self-hashed receipt binds before/after editable surfaces and explicitly states
 that no model or benchmark was executed by the mutation step. Development
 execution, score parsing, best-candidate selection, and held-out scoring remain
 separate later authorities.
+
+### ADR-120: Development feedback uses an objective-only isolated entrypoint
+
+Status: runtime accepted; first real MLRC development execution pending resource
+activation.
+
+Calling the benchmark's original `main.py` on its test phase would also invoke
+its code summarizer and LLM judge, which is not the preregistered objective
+endpoint and could leak provider variance into the result. SciTaste therefore
+ships a hash-bound, dependency-free MLRC entrypoint that imports the frozen task
+implementation and calls only training, inference, and the benchmark's objective
+scorer. It emits exactly one typed development-result marker and explicitly
+records that no secondary LLM judge ran. The Meta-learning route also replaces
+the upstream shell-based output cleanup with bounded filesystem operations and
+shell-free subprocess arguments.
+
+The development runner requires an execution-authorized request bound to the
+campaign, owner approval, task spec, workspace receipt, current editable-source
+hash, task-local runtime profile, and campaign resource-verification receipt. It
+mounts the task workspace read-only in Bubblewrap, overlays only declared output
+directories as writable, mounts prepared development data read-only at declared
+dataset paths, exposes no API credentials, unshares the network, and meters wall
+and GPU time. A successful result requires one valid objective marker plus
+unchanged protected and editable source surfaces; artifacts and logs are bounded
+and content-hashed.
+
+Full content verification of multi-gigabyte datasets and runtime trees happens
+once before a campaign and produces a reusable receipt. Individual read-only
+cells bind that receipt and still check device availability and source integrity,
+but do not repeat full dataset hashing before and after every experiment. This is
+the Tool Intelligence cost rule applied to verification: repeat a check only
+when its expected failure cost exceeds the repeated verification cost or the
+underlying authority boundary has changed.

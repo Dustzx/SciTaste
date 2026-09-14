@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a bounded Bubblewrap development runner and objective-only MLRC-Bench
+  entrypoint for real task cells. It uses pinned task-local runtimes, read-only
+  source/data mounts, declared writable artifacts, no network or API secrets,
+  exact source postconditions, objective-score markers, and measured GPU time.
+  Multi-gigabyte resources are fully verified once per campaign and cells bind
+  that receipt instead of repeating expensive hashes. The acquired tasks remain
+  inactive until their data/runtime/scorer states and formal launch are approved.
 - Added the first-party `benchmark-research-patch` node and controller-owned
   multi-file replacement transaction. A research turn can condition separately
   on Knowledge, Taste, critic, and development feedback, propose edits only for

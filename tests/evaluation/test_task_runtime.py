@@ -10,6 +10,7 @@ import pytest
 
 from scitaste.backends.base import Usage
 from scitaste.evaluation.prelaunch import ReadinessStatus
+from scitaste.evaluation.task_execution import parse_benchmark_objective
 from scitaste.evaluation.task_patch import (
     BenchmarkPatchEdit,
     BenchmarkPatchPolicy,
@@ -62,6 +63,7 @@ def _fixture(tmp_path: Path) -> tuple[Path, BenchmarkTaskRuntimeSpec]:
     _write(root / "evidence" / "receipt.json", '{"receipt_sha256":"' + "a" * 64 + '"}\n')
     _write(root / "evidence" / "archive.json", '{"report_sha256":"' + "b" * 64 + '"}\n')
     _write(root / "evidence" / "license.json", '{"report_sha256":"' + "c" * 64 + '"}\n')
+    _write(root / "evidence" / "objective.py", "print('objective')\n")
 
     subprocess.run(["git", "init", "-q"], cwd=checkout, check=True)
     subprocess.run(["git", "add", "."], cwd=checkout, check=True)
@@ -114,6 +116,10 @@ def _fixture(tmp_path: Path) -> tuple[Path, BenchmarkTaskRuntimeSpec]:
         environment_manifest=binding(
             checkout / "task" / "environment.yml",
             "task/environment.yml",
+        ),
+        objective_entrypoint=binding(
+            root / "evidence" / "objective.py",
+            "evidence/objective.py",
         ),
         editable_globs=("methods/MyMethod.py",),
         dataset_directories=("data",),
@@ -465,3 +471,32 @@ def test_benchmark_patch_model_node_can_propose_or_stop_without_authority(tmp_pa
     assert admission.decision == "accepted"
     assert "benchmark-research-patch" in first_party_node_types()
     assert (workspace / "methods" / "MyMethod.py").read_text() == "VALUE = 1\n"
+
+
+def test_benchmark_objective_parser_requires_one_development_measurement() -> None:
+    marker = b"SCITASTE_BENCHMARK_OBJECTIVE_JSON="
+    payload = json.dumps(
+        {
+            "schema_version": "1.0",
+            "task_id": "fixture-task",
+            "phase": "dev",
+            "method": "my_method",
+            "score": 0.25,
+            "elapsed_seconds": 1.5,
+            "secondary_llm_judge_invoked": False,
+        },
+        separators=(",", ":"),
+    ).encode()
+
+    objective = parse_benchmark_objective(
+        b"training\n" + marker + payload + b"\n",
+        task_id="fixture-task",
+    )
+
+    assert objective.score == 0.25
+    assert objective.secondary_llm_judge_invoked is False
+    with pytest.raises(ValueError, match="exactly one"):
+        parse_benchmark_objective(
+            marker + payload + b"\n" + marker + payload,
+            task_id="fixture-task",
+        )
