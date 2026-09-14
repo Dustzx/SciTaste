@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added project-owned venue schedules and deadline-pressure inspection. An
+  immutable schedule distinguishes authoritative venue guidance from calendar
+  indexes, binds exact timezone-aware milestones, and computes the next required
+  outcomes plus a deterministic `defer_noncritical_work` signal. External
+  registration or submission is never inferred: completing a milestone requires
+  an explicit owner attestation bound to a regular project-owned evidence file.
+  The first tracked profile records the official ICLR 2027 abstract and paper
+  deadlines, and the self-development project can now carry that schedule in its
+  revisioned manifest for later generated-interface consumption.
 - Added a project-aware trajectory reconstruction path for continual Scientific
   Taste. A content-bound sampling plan fixes the current Idea, source project,
   natural trajectory group, partition, decision log, and bounded state-search

@@ -4069,3 +4069,32 @@ and reviewed causal credit. A real retrospective self-development replay exposed
 one valid comparative decision and one missing intermediate state; both remained
 audit-only. This is implementation evidence for the reconstruction boundary, not
 evidence that Scientific Taste improves research.
+
+### ADR-130: Venue deadlines are project state, not remembered dates
+
+Status: accepted and implemented.
+
+A research controller cannot trade off engineering polish, evidence collection,
+writing, and external submission reliably if the venue clock lives only in a
+human's memory or a transient UI. SciTaste therefore assigns one immutable,
+self-hashed `ProjectVenueSchedule` to the revisioned project manifest. Every
+milestone has an explicit timezone, required outcomes, source, hard/soft status,
+and external-action boundary. Hard deadlines must reference an authoritative
+venue source. Community deadline aggregators remain useful calendar indexes but
+cannot override the venue record.
+
+`ProjectDeadlineStatus` is a time-relative, self-hashed projection rather than a
+mutation. It records the observation time, next unfinished milestone, exact
+remaining seconds/hours/days, urgency, required outcomes, and a deterministic
+`defer_noncritical_work` signal. The first policy marks seven days or fewer as
+critical, fourteen or fewer as urgent, and thirty or fewer as active. Expired
+milestones remain visible; a clock crossing zero cannot silently advance the
+project.
+
+Registration and submission happen outside SciTaste. The runtime advances a
+milestone only after an explicit owner attestation binds a regular non-symlink
+project file and its SHA-256 digest into a new optimistic project revision. This
+does not prove acceptance or paper quality, but it prevents the scheduler and
+generated interface from confusing a planned external action with a completed
+one. The ICLR 2027 profile records the official abstract and paper deadlines and
+retains CCFDDL only as a secondary index.

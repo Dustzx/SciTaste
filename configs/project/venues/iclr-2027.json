@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "schedule_id": "iclr-2027-official-v1",
+  "venue_id": "iclr-2027",
+  "venue_name": "ICLR 2027",
+  "deadline_timezone": "Anywhere on Earth (UTC-12)",
+  "sources": [
+    {
+      "source_id": "iclr-2027-author-guidelines",
+      "role": "authoritative",
+      "url": "https://iclr.cc/Conferences/2027/AuthorGuidelines",
+      "checked_at": "2026-09-15T00:09:00+08:00"
+    },
+    {
+      "source_id": "ccfddl-calendar-index",
+      "role": "calendar-index",
+      "url": "https://ccfddl.com/",
+      "checked_at": "2026-09-15T00:09:00+08:00"
+    }
+  ],
+  "milestones": [
+    {
+      "milestone_id": "iclr2027-abstract-registration",
+      "kind": "abstract-registration",
+      "deadline_at": "2026-09-18T23:59:00-12:00",
+      "hard_deadline": true,
+      "source_id": "iclr-2027-author-guidelines",
+      "required_outcomes": [
+        "Freeze a genuine title and informative abstract aligned with the current evidence.",
+        "Freeze the complete author list and verify every author OpenReview profile.",
+        "Register the abstract in the ICLR 2027 OpenReview submission system.",
+        "Retain owner-attested local evidence of the external registration."
+      ],
+      "external_action_required": true
+    },
+    {
+      "milestone_id": "iclr2027-paper-submission",
+      "kind": "paper-submission",
+      "deadline_at": "2026-09-25T23:59:00-12:00",
+      "hard_deadline": true,
+      "source_id": "iclr-2027-author-guidelines",
+      "required_outcomes": [
+        "Complete claim-critical evidence or narrow the title and claims to established results.",
+        "Freeze an anonymous ICLR-format paper within the nine-page main-text limit and include the required AI-use statement.",
+        "Freeze the supplement and reproducibility evidence after an independent pre-submission review.",
+        "Submit the paper and supplement in the ICLR 2027 OpenReview submission system.",
+        "Retain owner-attested local evidence of the external submission."
+      ],
+      "external_action_required": true
+    }
+  ],
+  "schedule_sha256": "ce347ee0bd1e4ddcc301f707dafba7716a9d1f5852b026c07666496b1d3646d2"
+}

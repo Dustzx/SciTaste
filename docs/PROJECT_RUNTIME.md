@@ -4,8 +4,8 @@
 of treating `outputs/` as a collection of unrelated command directories. It
 manages versioned `PROJECT.json` state, registered runs, paper bundles, review
 rounds, no-run evaluation proposals, admitted evaluation results, current
-navigation aliases, and a content-hashed `ProjectSnapshot` for catalogs and
-generated interfaces.
+navigation aliases, an optional venue-deadline contract, and a content-hashed
+`ProjectSnapshot` for catalogs and generated interfaces.
 
 ## Safety and concurrency
 
@@ -33,6 +33,14 @@ generated interfaces.
 - The selected-action lifecycle copies that source into immutable inputs, runs
   against a separate working tree, binds both configuration contents, the source
   receipt, and the upstream pin, and registers only hashed verification evidence.
+- A venue schedule is immutable once assigned. Hard milestones must cite an
+  authoritative source; a community calendar such as CCFDDL may be retained only
+  as a calendar index. Status inspection converts the next unfinished milestone
+  into a deterministic urgency and noncritical-work deferral signal.
+- SciTaste does not claim that an external abstract or paper was submitted. An
+  owner must explicitly attest completion and bind it to a non-symlink regular
+  file beneath the project; the evidence hash becomes part of the next project
+  revision.
 
 The manifest accepts extension fields so the existing FLOOR preacceptance and
 SciTaste self-development records remain readable. Canonical fields stay strict;
@@ -183,6 +191,39 @@ Create and inspect a project:
   --project-id my-research-project \
   --outputs-root outputs
 ```
+
+Assign and inspect a venue calendar with the same optimistic revision guard:
+
+```bash
+.venv/bin/scitaste project deadline assign \
+  --project-id my-research-project \
+  --schedule configs/project/venues/iclr-2027.json \
+  --expected-revision 0 \
+  --outputs-root outputs
+
+.venv/bin/scitaste project deadline status \
+  --project-id my-research-project \
+  --outputs-root outputs
+```
+
+When the owner has actually completed the external action, retain a receipt or
+screenshot inside the project and attest it explicitly. This only records the
+action; it does not contact OpenReview:
+
+```bash
+.venv/bin/scitaste project deadline complete \
+  --project-id my-research-project \
+  --milestone-id iclr2027-abstract-registration \
+  --evidence-locator submission/iclr2027-abstract-receipt.png \
+  --attest-external-action-complete \
+  --expected-revision 1 \
+  --outputs-root outputs
+```
+
+`ProjectDeadlineStatus` is the stable handoff to scheduling and generated UI:
+it exposes the exact observed time, next deadline, remaining seconds/hours/days,
+urgency, required outcomes, and `defer_noncritical_work`. It does not guess task
+durations or invent a percentage complete.
 
 The status response includes the current revision. Supply it when registering or
 selecting a run:

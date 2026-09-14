@@ -299,7 +299,12 @@ from scitaste.project import (
     ProjectManifest,
     ProjectRun,
     ProjectRuntime,
+    assign_project_venue_schedule,
+    complete_project_venue_milestone,
     inspect_current_idea_revision,
+    inspect_project_deadline,
+    load_project_venue_schedule,
+    project_venue_schedule_assignment_required,
 )
 from scitaste.project.models import validate_entry_id
 from scitaste.project_substrate_cli import register_project_substrate_cli
@@ -561,6 +566,52 @@ def build_parser() -> argparse.ArgumentParser:
     project_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_status)
     project_status.set_defaults(handler=_handle_project_status)
+
+    project_deadline = project_commands.add_parser(
+        "deadline", help="Assign and inspect content-bound venue milestones"
+    )
+    project_deadline_commands = project_deadline.add_subparsers(
+        dest="project_deadline_command", required=True
+    )
+    project_deadline_assign = project_deadline_commands.add_parser(
+        "assign", help="Assign one immutable venue schedule to a project"
+    )
+    project_deadline_assign.add_argument("--project-id", required=True)
+    project_deadline_assign.add_argument("--schedule", type=Path, required=True)
+    project_deadline_assign.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_deadline_assign)
+    project_deadline_assign.set_defaults(handler=_handle_project_deadline_assign)
+    project_deadline_status = project_deadline_commands.add_parser(
+        "status", help="Compute current submission pressure and next required outcomes"
+    )
+    project_deadline_status.add_argument("--project-id", required=True)
+    project_deadline_status.add_argument("--at", default=None)
+    project_deadline_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_deadline_status)
+    project_deadline_status.set_defaults(handler=_handle_project_deadline_status)
+    project_deadline_complete = project_deadline_commands.add_parser(
+        "complete", help="Attest that one externally performed milestone is complete"
+    )
+    project_deadline_complete.add_argument("--project-id", required=True)
+    project_deadline_complete.add_argument("--milestone-id", required=True)
+    project_deadline_complete.add_argument("--expected-revision", type=int, required=True)
+    project_deadline_complete.add_argument(
+        "--evidence-locator",
+        required=True,
+        help="Project-relative non-symlink evidence for the completed external action",
+    )
+    project_deadline_complete.add_argument(
+        "--completed-at",
+        default=None,
+        help="Timezone-aware ISO-8601 completion time; defaults to the current time",
+    )
+    project_deadline_complete.add_argument(
+        "--attest-external-action-complete",
+        action="store_true",
+        required=True,
+    )
+    _add_project_options(project_deadline_complete)
+    project_deadline_complete.set_defaults(handler=_handle_project_deadline_complete)
 
     project_idea = project_commands.add_parser(
         "idea", help="Inspect the content-bound current research Idea"
@@ -3004,6 +3055,85 @@ def _handle_project_init(args: argparse.Namespace) -> int:
 def _handle_project_status(args: argparse.Namespace) -> int:
     snapshot = ProjectRuntime(args.outputs_root).open(args.project_id)
     print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_deadline_assign(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    schedule = load_project_venue_schedule(args.schedule)
+    if args.dry_run:
+        snapshot = runtime.open(args.project_id)
+        if snapshot.revision != args.expected_revision:
+            raise ValueError(
+                f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+            )
+        update_required = project_venue_schedule_assignment_required(snapshot, schedule)
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": args.project_id,
+                    "project_revision": snapshot.revision,
+                    "next_revision": snapshot.revision + int(update_required),
+                    "update_required": update_required,
+                    "schedule": schedule.model_dump(mode="json"),
+                    "no_external_action_performed": True,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = assign_project_venue_schedule(
+        runtime,
+        project_id=args.project_id,
+        schedule=schedule,
+        expected_revision=args.expected_revision,
+    )
+    print(
+        inspect_project_deadline(
+            snapshot,
+            project_root=runtime.projects_root / args.project_id,
+        ).model_dump_json(indent=2)
+    )
+    return 0
+
+
+def _handle_project_deadline_status(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    observed_at = None if args.at is None else datetime.fromisoformat(args.at)
+    print(
+        inspect_project_deadline(
+            snapshot,
+            observed_at=observed_at,
+            project_root=runtime.projects_root / args.project_id,
+        ).model_dump_json(indent=2)
+    )
+    return 0
+
+
+def _handle_project_deadline_complete(args: argparse.Namespace) -> int:
+    completed_at = (
+        datetime.now(UTC)
+        if args.completed_at is None
+        else datetime.fromisoformat(args.completed_at)
+    )
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = complete_project_venue_milestone(
+        runtime,
+        project_id=args.project_id,
+        milestone_id=args.milestone_id,
+        expected_revision=args.expected_revision,
+        completed_at=completed_at,
+        evidence_locator=args.evidence_locator,
+    )
+    print(
+        inspect_project_deadline(
+            snapshot,
+            project_root=runtime.projects_root / args.project_id,
+        ).model_dump_json(indent=2)
+    )
     return 0
 
 

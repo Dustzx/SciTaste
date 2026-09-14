@@ -57,6 +57,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.21 — frozen-candidate held-out campaign closure | done | the first-party adapter binds an authorized campaign cell to separate development/test resource profiles, freezes the selected source and required artifacts before hidden data opens, executes one scorer-owned held-out command with no later model call, and publishes raw objective/usage/evidence artifacts to the campaign runner |
 | Phase 9.22 — first real native prepilot activation | in progress | the Perception nine-archive mapping passes license, receipt, ZIP-safety, and exact development/held-out isolation gates; a five-arm matrix and multi-candidate claim contract now encode Full-vs-Base, matched-Taste-vs-same-source-Raw-RAG, and matched-vs-mismatched-Taste without a policy confound; an unapproved 10-cell v12 proposal and executable two-task objective contract now freeze the intended closure, while only the complete five-arm Perception block may be activated first; after materialization, pin its task environment, reproduce the scorer, curate the formal contexts, bind the adapter launcher, disclose the full model/data/GPU budget, and request block execution authority |
 | Phase 9.23 — lifecycle Taste policy and self-revising Idea contract | in progress | the project verifies one current content-bound Idea revision and all of its inputs; external precedents, Tool Intelligence outcomes, and Generation as Content corrections converge on one quarantined, revision-bound episode schema; independent attribution review, source-group/split-aware estimation, scientific-outcome filtering, uncertainty abstention, and controller traces are implemented; a project-aware reconstruction path now freezes prospective sampling and verifies exact decisions plus pre-decision states without manufacturing outcome labels, while retrospective self logs remain audit-only; next collect prospective longitudinal episodes and run held-out lifecycle evaluation before any old prepilot is treated as the title-level experiment |
+| Phase 9.24 — venue deadline and submission-pressure control | done | one content-bound schedule separates official venue guidance from calendar indexes, computes the next hard milestone and urgency from an explicit observation time, exposes a noncritical-work deferral signal, and advances only after owner-attested project evidence; the ICLR 2027 schedule is ready for assignment to the self-development project and generated-interface consumption |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -80,6 +81,14 @@ the pre-existing ranking. These mechanisms are implemented only on authored
 fixtures so far. The next mainline operator is real trajectory reconstruction and
 independent review, followed by a revised held-out H1--H4 program bound to an
 accepted Idea revision.
+
+Phase 9.24 makes calendar pressure part of project state rather than informal
+operator memory. The first profile records the ICLR 2027 abstract deadline at
+2026-09-18 23:59 AoE and full-paper deadline at 2026-09-25 23:59 AoE. The official
+ICLR author guide owns those times; CCFDDL is retained only as a discovery/index
+source. A current status can tell orchestration and Generation as Content to defer
+noncritical work, but it cannot mark an external submission complete or infer that
+required scientific evidence exists.
 
 Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a
