@@ -77,6 +77,15 @@ artifacts:
   - artifact_id: aaar-quality-local-calibration
     path: docs/research/data/aaar_reference_quality_local_calibration_v2.yaml
     sha256: ea8fbcddfb648b4e92f6d4300994bc1f9e6256286adf38b0b49755736c264551
+  - artifact_id: f1000-multidomain-pilot-result
+    path: docs/research/data/f1000_multidomain_taste_pilot_result_v1.yaml
+    sha256: a7578e65243324d5d0b6ace69ec715a8be73598e61583e7342839bb8e136e06e
+  - artifact_id: f1000-source-review-policy
+    path: configs/evaluation/human_review/f1000_multidomain_taste_source_review_v1.yaml
+    sha256: 84f647b407f13ba17dda1717b2e0dfcffa2b6532e0a9274a639f8781f5dd4b49
+  - artifact_id: f1000-source-review-campaign
+    path: docs/research/data/f1000_multidomain_taste_source_review_campaign_v1.yaml
+    sha256: 7cf0059b0490f9907a5f68cf9f997601b0cea4737109f0e47e6c7346f57dfe1e
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
@@ -103,7 +112,7 @@ artifacts:
     sha256: d091ece13eaa71e80bd9b9a51ba7babba2f4166b169c8033e18804a3632e373a
   - artifact_id: grounded-taste-distillation
     path: docs/GROUNDED_TASTE_DISTILLATION.md
-    sha256: b8f9b378c99aa01b42e20e33d3377510af2e8e5485f75ab7bed9075fa5771d8f
+    sha256: 86887ffc9e6dc99036baace877abc5d956a6636238974260c609b41345af5457
   - artifact_id: decision-grounded-taste-selection
     path: docs/TASTE_DELIBERATIVE_SELECTION.md
     sha256: 8596879c8addadbe9bbb9788907e86ff6212c61aa57c63d80d0c1acf9bdb19fb
@@ -182,13 +191,20 @@ tracks:
       dataset_id: scitastebench-v3
       role: >-
         At least 120 natural, source-group-disjoint research decisions across
-        at least three domains and all six SciTaste decision families. A
-        rights-filtered sixteen-record AAAR pilot is acquired and byte-verified
-        and now has sixteen bounded prestige-blind quality projections plus an
-        exact tokenizer-qualified two-record local calibration plan, but has not
-        received model/human quality judgments or admission into this target
-        population.
-      item_ids: [aaar-1.0, aries, openreview-public-comments]
+        at least three domains and all six SciTaste decision families. The
+        rights-filtered sixteen-record AAAR experiment-design pilot has bounded
+        prestige-blind quality projections and a two-record local calibration
+        plan. A separate F1000 pilot contributes 77 review-response-revision
+        candidates from 39 ecology/public-health source groups and has an
+        executable outcome-blind 2+1 human-review campaign. Neither population
+        has completed independent admission, grounded abstraction, or held-out
+        benchmark allocation.
+      item_ids:
+        - aaar-1.0
+        - aries
+        - openreview-public-comments
+        - f1000review-ecology
+        - f1000review-public-health
       population_floor: 120
       exact_bytes_available: false
       held_out_verified: false
@@ -237,6 +253,10 @@ tracks:
       - standing-local-read-policy
       - aaar-quality-projection
       - aaar-quality-local-calibration
+      - f1000-multidomain-pilot-result
+      - f1000-source-review-policy
+      - f1000-source-review-campaign
+      - grounded-taste-distillation
       - grounded-taste-abstraction-profiles
       - current-compute-catalog
       - current-project-resource-binding
@@ -250,6 +270,8 @@ tracks:
       - gpu-host-inventory
     blocker_codes:
       - natural-case-population:not-frozen
+      - f1000-source-review:not-owner-authorized-or-collected
+      - grounded-taste-abstractions:not-generated-or-reviewed
       - quality-screen-model-traces:not-collected
       - quality-screen-local-calibration:not-executed
       - expert-labels:not-collected
@@ -501,10 +523,12 @@ stages:
     state: blocked
     track_ids: [scientific-taste-decisions]
     depends_on: [approve-exact-source-acquisition]
-    external_actions: [run_gpu]
+    external_actions: [run_gpu, recruit_humans, call_api]
     owner_approval_required: true
     blocker_codes:
       - reference-quality-local-calibration:not-owner-approved-or-executed
+      - f1000-source-review:not-owner-authorized-or-collected
+      - f1000-grounded-abstraction:not-generated-or-reviewed
       - reference-quality-model-proposals:not-collected
       - dual-independent-human-reviews:not-collected
       - source-isolation:not-qualified
@@ -517,12 +541,19 @@ stages:
       - standing-local-read-policy
       - aaar-quality-projection
       - aaar-quality-local-calibration
+      - f1000-multidomain-pilot-result
+      - f1000-source-review-policy
+      - f1000-source-review-campaign
+      - grounded-taste-distillation
     next_decision: >-
-      Review and explicitly authorize the two-record, no-upload local
-      Qwen3-VL-2B Reference Quality calibration bounded to one RTX 3090 and one
-      GPU hour. Inspect grounding and schema failures before deciding whether to
-      expand to all sixteen projections, compile content-free receipts, and
-      obtain two independent prestige- and model-blind reviews before admission.
+      Coordinate two non-pooling source-qualification branches. For F1000, the
+      project owner must first settle ethics, compensation, consent, conflicts,
+      and two scientific plus one privacy reviewer; after 3/3 blind returns,
+      resolve adjudication and replace the 77-item capacity forecast with exact
+      grounded-abstraction demand before any API call. Separately decide whether
+      to authorize the two-record, no-upload local Qwen3-VL-2B AAAR calibration
+      bounded to one RTX 3090 and one GPU hour. Neither branch may claim source,
+      corpus, benchmark, or experimental admission before its independent gates.
 
   - stage_id: qualify-held-out-task-bytes
     kind: human_curation

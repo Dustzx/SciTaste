@@ -1782,3 +1782,14 @@ object guards. It retained owner approval for both paid generation and human
 verification. This is the desired removal of ritual checks: less ceremony on a
 low-cost deterministic transformation, no weakening of the scientific or
 authority boundaries where an error would be expensive.
+
+The dogfood pass also found a project-management inconsistency: the new F1000
+campaign appeared in the generated progress page, but the canonical evidence
+program above it still named only the earlier AAAR local calibration. SciTaste
+updated the project-owned dossier rather than hiding the mismatch in presentation.
+The current Taste-instrument stage now carries both non-pooling paths, their
+distinct human/GPU/API effects, seven unresolved gates, and a single bounded
+decision explaining where feedback may reorder priorities without authorizing
+work. This is the recursive case operating as intended: generated content made a
+planning lag legible, the authoritative project plan was repaired, and later
+model generations receive the repaired state.

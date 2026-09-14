@@ -1838,3 +1838,14 @@ parity, bounded files, and atomic publication are inline validity conditions of
 the object being written. Local compilation is cheap and reversible, so further
 advance inspection has negative value. Paid provider calls and human review are
 materially different actions and remain at explicit owner boundaries.
+
+The canonical ICLR evidence program was refreshed with the same evidence rather
+than leaving this only as a lower-page campaign card. Its current Taste-instrument
+decision now exposes two explicitly non-pooling branches: the F1000 2+1 blind
+source review followed by exact-capacity grounded abstraction, and the separate
+two-record local AAAR quality calibration. Consequently the top operating loop,
+the fixed project summary, free model questions, and model-authored planning
+amendments all start from one current project plan. The model may propose or edit
+their ordering and project-resource priorities; only an accepted and explicitly
+published amendment changes the Core planning overlay, and it still authorizes
+neither branch.
