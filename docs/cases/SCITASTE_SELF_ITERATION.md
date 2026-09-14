@@ -1555,3 +1555,56 @@ hash and telemetry and negative-caches only that exact cost-bearing rejection;
 transport failures with no response remain retryable. These observations verify
 artifact continuity, policy enforcement, and accounting behavior only. They do
 not establish interaction-quality, research-quality, or efficiency superiority.
+
+## Generating and editing the next Scientific Taste gate (2026-09-14)
+
+The next self-use pass exercised Generation as Content on acquired research
+evidence rather than on a synthetic project summary. SciTaste compiled the
+approved ARIES slice into 196 natural manual-review candidates from 42 held-out
+paper groups. It excluded 3,892 synthetic-review rows and kept observed revisions
+and upstream alignments explicitly non-gold. The resulting population currently
+covers only one of three target domains, has 103 candidates without an aligned
+edit, and still lacks independent quality labels, decision-family stratification,
+and privacy approval. It is therefore a curation input, not a benchmark or an
+effect result.
+
+The first live model generation exposed an information-boundary defect: the
+bounded evidence digest preserved the project sections but removed scalar facts
+inside repeated progress rows. The model could see that a Taste population
+existed without seeing its exact counts or blockers. The digest now uses an
+explicit safe-field projection for the current focus, evidence program,
+lifecycle, candidate population, next gates, and project resource bindings. It
+still excludes paths, locators, hashes, credentials, actions, and deep arbitrary
+containers.
+
+With that correction, GLM-5.3-Flash generated a compact decision canvas that
+reported the exact 196 candidates, 42 groups, one-of-three domain coverage,
+149/47 upstream alignment agreement/disagreement, 103 unaligned candidates, and
+the remaining admission blockers. A feedback turn edited the same artifact so
+quality labeling and privacy became parallel paths, joined at decision-family
+stratification, with domain expansion preceding benchmark admission. The two
+turns consumed 26,781 input and 4,514 output tokens at USD
+0.002511946197864433. This is evidence of model-authored artifact continuity and
+feedback-directed editing, not evidence that the proposed scientific plan is
+correct.
+
+Publishing the interaction as a program change surfaced a second contract gap.
+The model interpreted within-stage guidance as permission to reorder the entire
+remaining stage sequence. SciTaste retained each charged schema rejection in the
+negative cache, exposed a content-free failure category, and narrowed the model
+task to semantic fields; the receiver now injects invariant flags and applies
+the exact change-kind contract. The subsequent proposal
+`program-revision-2d78b1001879330710b8` targets
+`qualify-scientific-taste-source-pilot` and requires two-of-three domains, dual
+independent quality review, privacy review, and a decision-family result. It
+remains pending and unapplied: the model generated and revised the planning
+content, while the user boundary preserved Core authority.
+
+This pass also demonstrates the intended relation between Generation as Content
+and SciTaste Core. The two are parallel project surfaces: one flexibly generates
+and edits explanations, canvases, and proposals; the other owns evidence,
+resources, execution, and durable state. Their interaction is an explicit,
+reviewable publication event. Tool Intelligence chose a direct path for the
+local population compiler, so no standalone preflight was added; identity,
+archive-safety, bounded-read, and atomic-publication checks remained intrinsic
+because failure there would corrupt provenance or project state.

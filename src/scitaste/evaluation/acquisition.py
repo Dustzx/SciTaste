@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 from collections.abc import Callable
@@ -16,14 +17,23 @@ from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from scitaste.evaluation.prelaunch import ReadinessStatus
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
 _SHA256 = r"^[0-9a-f]{64}$"
-_COMMIT = r"^[0-9a-f]{40}$"
+_REVISION = r"^[A-Za-z0-9._-]{1,128}$"
+_HTTP_ETAG = r"^[0-9a-f]{32}(?:-[1-9][0-9]*)?$"
 _MAX_REQUEST_BYTES = 2 * 1024 * 1024
 _DOWNLOAD_CHUNK_BYTES = 64 * 1024
 _DOWNLOAD_TIMEOUT_SECONDS = 30.0
@@ -51,13 +61,15 @@ class AcquisitionItem(BaseModel):
 
     item_id: str = Field(pattern=_ID)
     source_url: str = Field(min_length=1, max_length=2_000)
-    source_revision: str = Field(pattern=_COMMIT)
+    source_revision: str = Field(pattern=_REVISION)
     destination: str = Field(min_length=1, max_length=1_000)
     maximum_bytes: int = Field(gt=0, le=_MAX_TRANSACTION_BYTES)
     media_type: Literal[
         "text/markdown",
+        "text/plain",
         "text/csv",
         "application/json",
+        "application/x-ndjson",
         "application/x-yaml",
         "application/gzip",
     ]
@@ -65,6 +77,7 @@ class AcquisitionItem(BaseModel):
     license_scope: str = Field(min_length=1, max_length=1_000)
     license_status: ReadinessStatus
     expected_sha256: str | None = Field(default=None, pattern=_SHA256)
+    expected_http_etag: str | None = Field(default=None, pattern=_HTTP_ETAG)
     runtime_assets_included: Literal[False] = False
 
     @model_validator(mode="after")
@@ -82,6 +95,13 @@ class AcquisitionItem(BaseModel):
             raise ValueError("acquisition source URL must contain its item ID")
         _validate_relative_path(self.destination, label="acquisition destination")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_http_etag(self, handler):  # type: ignore[no-untyped-def]
+        payload = handler(self)
+        if self.expected_http_etag is None:
+            payload.pop("expected_http_etag", None)
+        return payload
 
 
 class AcquisitionApproval(BaseModel):
@@ -221,11 +241,12 @@ class AcquiredItemReceipt(BaseModel):
 
     item_id: str = Field(pattern=_ID)
     source_url: str = Field(min_length=1, max_length=2_000)
-    source_revision: str = Field(pattern=_COMMIT)
+    source_revision: str = Field(pattern=_REVISION)
     destination: str = Field(min_length=1, max_length=1_000)
     size_bytes: int = Field(gt=0, le=_MAX_TRANSACTION_BYTES)
     sha256: str = Field(pattern=_SHA256)
     expected_sha256: str | None = Field(default=None, pattern=_SHA256)
+    expected_http_etag: str | None = Field(default=None, pattern=_HTTP_ETAG)
 
     @model_validator(mode="after")
     def item_receipt_is_bounded(self) -> AcquiredItemReceipt:
@@ -242,6 +263,13 @@ class AcquiredItemReceipt(BaseModel):
         if self.expected_sha256 is not None and self.sha256 != self.expected_sha256:
             raise ValueError("acquisition receipt differs from the expected item hash")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_http_etag(self, handler):  # type: ignore[no-untyped-def]
+        payload = handler(self)
+        if self.expected_http_etag is None:
+            payload.pop("expected_http_etag", None)
+        return payload
 
 
 class DatasetAcquisitionReceipt(BaseModel):
@@ -578,8 +606,14 @@ def materialize_dataset_acquisition(
                         item.maximum_bytes,
                         item.media_type,
                         staged_item,
+                        expected_http_etag=item.expected_http_etag,
                     )
                 else:
+                    if item.expected_http_etag is not None and item.expected_sha256 is None:
+                        raise ValueError(
+                            "a custom acquisition fetcher cannot attest an HTTP ETag without "
+                            "an expected content hash"
+                        )
                     content = fetcher(
                         item.source_url,
                         item.maximum_bytes,
@@ -608,6 +642,7 @@ def materialize_dataset_acquisition(
                         size_bytes=item_bytes,
                         sha256=observed_sha256,
                         expected_sha256=item.expected_sha256,
+                        expected_http_etag=item.expected_http_etag,
                     )
                 )
 
@@ -645,8 +680,19 @@ class _RejectRedirects(HTTPRedirectHandler):
         return None
 
 
-def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -> bytes:
-    response = _open_https_source(url, maximum_bytes, expected_media_type)
+def _fetch_https_bytes(
+    url: str,
+    maximum_bytes: int,
+    expected_media_type: str,
+    *,
+    expected_http_etag: str | None = None,
+) -> bytes:
+    response = _open_https_source(
+        url,
+        maximum_bytes,
+        expected_media_type,
+        expected_http_etag=expected_http_etag,
+    )
     with response:
         content = bytearray()
         while chunk := response.read(_DOWNLOAD_CHUNK_BYTES):
@@ -661,10 +707,17 @@ def _fetch_https_to_file(
     maximum_bytes: int,
     expected_media_type: str,
     target: Path,
+    *,
+    expected_http_etag: str | None = None,
 ) -> tuple[int, str]:
     """Stream one approved object to a new staging file without buffering it in RAM."""
 
-    response = _open_https_source(url, maximum_bytes, expected_media_type)
+    response = _open_https_source(
+        url,
+        maximum_bytes,
+        expected_media_type,
+        expected_http_etag=expected_http_etag,
+    )
     digest = hashlib.sha256()
     size = 0
     descriptor: int | None = None
@@ -695,7 +748,13 @@ def _fetch_https_to_file(
     return size, digest.hexdigest()
 
 
-def _open_https_source(url: str, maximum_bytes: int, expected_media_type: str):
+def _open_https_source(
+    url: str,
+    maximum_bytes: int,
+    expected_media_type: str,
+    *,
+    expected_http_etag: str | None = None,
+):
     parsed = urlparse(url)
     if parsed.scheme != "https" or not parsed.hostname:
         raise ValueError("acquisition fetch requires an HTTPS source")
@@ -704,7 +763,7 @@ def _open_https_source(url: str, maximum_bytes: int, expected_media_type: str):
         headers={
             "Accept": (
                 "application/gzip,application/x-gzip,application/octet-stream,"
-                "text/markdown,text/plain;q=0.9"
+                "application/x-ndjson,application/json,text/markdown,text/plain;q=0.9"
             ),
             "Accept-Encoding": "identity",
             "User-Agent": "SciTaste-approved-acquisition/1.0",
@@ -732,12 +791,20 @@ def _open_https_source(url: str, maximum_bytes: int, expected_media_type: str):
         observed_media_type = declared_media_type.partition(";")[0].strip().lower()
         accepted_media_types = {
             "text/markdown": {"text/markdown", "text/plain"},
+            "text/plain": {"text/plain", "application/octet-stream", "binary/octet-stream"},
             "text/csv": {"text/csv", "text/plain", "application/octet-stream"},
             # Pinned ``raw`` endpoints on Hugging Face and GitHub serve typed
             # text artifacts as ``text/plain``.  The request still binds the
             # intended semantic type and the later, separately authorized
             # content audit validates the bytes before ingestion.
             "application/json": {"application/json", "text/plain"},
+            "application/x-ndjson": {
+                "application/x-ndjson",
+                "application/json",
+                "text/plain",
+                "application/octet-stream",
+                "binary/octet-stream",
+            },
             "application/x-yaml": {
                 "application/x-yaml",
                 "application/yaml",
@@ -747,13 +814,19 @@ def _open_https_source(url: str, maximum_bytes: int, expected_media_type: str):
             "application/gzip": {
                 "application/gzip",
                 "application/x-gzip",
+                "application/x-tar",
                 "application/octet-stream",
+                "binary/octet-stream",
             },
         }
         if observed_media_type not in accepted_media_types.get(expected_media_type, set()):
             raise ValueError(
                 "acquisition source Content-Type does not match its approved media type"
             )
+        if expected_http_etag is not None:
+            observed_etag = _normalize_http_etag(response.headers.get("ETag"))
+            if observed_etag != expected_http_etag:
+                raise ValueError("acquisition source HTTP ETag differs from its approved identity")
         declared_length = response.headers.get("Content-Length")
         if declared_length is not None:
             try:
@@ -770,6 +843,19 @@ def _open_https_source(url: str, maximum_bytes: int, expected_media_type: str):
         _close_response(response)
         raise
     return response
+
+
+def _normalize_http_etag(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if normalized.startswith("W/"):
+        raise ValueError("acquisition source supplied a weak HTTP ETag")
+    if len(normalized) >= 2 and normalized[0] == normalized[-1] == '"':
+        normalized = normalized[1:-1]
+    if not normalized or not re.fullmatch(_HTTP_ETAG, normalized):
+        raise ValueError("acquisition source supplied an invalid HTTP ETag")
+    return normalized
 
 
 def _close_response(response: object) -> None:

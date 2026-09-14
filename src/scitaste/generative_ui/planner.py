@@ -55,6 +55,7 @@ from scitaste.model_nodes.openai_compatible import (
     StructuredBackendDisabledError,
     StructuredProviderResponseError,
 )
+from scitaste.model_nodes.verification_policy import VerificationAdvisory
 
 _MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -80,6 +81,28 @@ class PlannerOperation(StrEnum):
     INTENT_CLASSIFICATION = "intent_classification"
     SURFACE_COMPOSITION = "surface_composition"
     EVIDENCE_PROGRAM_REVISION = "evidence_program_revision"
+
+
+class _ModelProgramRevisionDraft(BaseModel):
+    """Semantic planning fields; the trusted receiver supplies all invariants."""
+
+    model_config = _MODEL_CONFIG
+
+    change_kind: Literal[
+        "reprioritize_next_gates",
+        "clarify_stage_decision",
+        "request_resource_revision",
+        "add_risk_note",
+    ]
+    target_stage_id: SafeIdentifier
+    target_track_ids: tuple[SafeIdentifier, ...] = ()
+    proposed_next_stage_order: tuple[SafeIdentifier, ...] = ()
+    summary: str = Field(min_length=1, max_length=1_000)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    required_evidence: tuple[str, ...] = Field(default=(), max_length=12)
+    requested_resource_roles: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+    requested_resource_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+    verification_advisory: VerificationAdvisory | None = None
 
 
 def _inert_model_text(value: str) -> str:
@@ -900,6 +923,23 @@ class StructuredWorkspacePlanner:
                 "request_resource_revision",
                 "add_risk_note",
             ],
+            "change_kind_contracts": {
+                "reprioritize_next_gates": (
+                    "Use only when feedback explicitly asks to reorder gates; "
+                    "proposed_next_stage_order must contain every next_stage_id exactly once."
+                ),
+                "clarify_stage_decision": (
+                    "Use for changed decision guidance or required evidence without reordering; "
+                    "proposed_next_stage_order must be empty."
+                ),
+                "request_resource_revision": (
+                    "Use only for project resource membership or priority; select only listed "
+                    "resources and compatible roles."
+                ),
+                "add_risk_note": (
+                    "Use only to record a risk without changing gate order or resources."
+                ),
+            },
             "prior_proposal": (
                 {
                     "proposal_id": prior_record.proposal_id,
@@ -924,7 +964,7 @@ class StructuredWorkspacePlanner:
                 snapshot_revision=request.snapshot_revision,
                 snapshot_sha256=request.snapshot_sha256,
                 input_payload=input_payload,
-                output_schema=ProgramRevisionDraft.model_json_schema(mode="validation"),
+                output_schema=_ModelProgramRevisionDraft.model_json_schema(mode="validation"),
                 identity_fingerprint=request.fingerprint,
                 system_instruction=(
                     "Draft one concise scientific-planning amendment from the user feedback. "
@@ -939,9 +979,13 @@ class StructuredWorkspacePlanner:
                     "verification_advisory using its verification.input_fingerprint; otherwise "
                     "leave verification_advisory null. Advice may skip a low-value check or "
                     "select only the positive-value best check, and never creates authority. "
+                    "Follow change_kind_contracts exactly. Decision guidance, evidence "
+                    "requirements, or within-stage sequencing use clarify_stage_decision unless "
+                    "the user explicitly asks to reorder every next gate. "
                     "Select only stage and track identifiers present in input_payload. Preserve "
-                    "completed stages and every blocker. Do not claim new evidence, apply a "
-                    "change, authorize an external action, or authorize execution. For a "
+                    "completed stages and every blocker. Do not claim new evidence. The trusted "
+                    "receiver binds the dossier identity and the immutable no-apply, no-external-"
+                    "action, and no-execution fields; do not return those integrity fields. For a "
                     "resource revision, project_resources with attached=false may be "
                     "selected only with exactly one of their compatible roles; publication then "
                     "attaches catalog metadata but must not claim access, probing, or use. "
@@ -949,7 +993,16 @@ class StructuredWorkspacePlanner:
                 ),
             )
             response = self._complete(structured_request)
-            draft = ProgramRevisionDraft.model_validate(response.output_payload)
+            semantic = _ModelProgramRevisionDraft.model_validate(response.output_payload)
+            draft = ProgramRevisionDraft(
+                base_dossier_sha256=catalog.dossier_sha256,
+                **semantic.model_dump(mode="python"),
+                preserves_completed_stages=True,
+                removes_blockers=False,
+                applies_change=False,
+                authorizes_external_action=False,
+                authorizes_execution=False,
+            )
             validate_program_revision_draft(draft, catalog)
             if (
                 request.target_stage_id is not None
@@ -1380,7 +1433,7 @@ def _bounded_evidence_digest(
             "component": candidate.component.component.value,
             "title": candidate.component.title,
             "evidence_ref_ids": list(candidate.component.evidence_ref_ids),
-            "facts": _bounded_model_value(candidate.component.data, depth=0),
+            "facts": _bounded_model_value(_model_visible_facts(candidate), depth=0),
         }
         encoded = _canonical_json(entry).encode("utf-8")
         if used_bytes + len(encoded) > _MAX_MODEL_EVIDENCE_BYTES:
@@ -1390,8 +1443,139 @@ def _bounded_evidence_digest(
     return digest
 
 
+def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
+    """Project the facts a model needs instead of truncating by key order."""
+
+    value = candidate.component.data
+    if (
+        candidate.component.component is not TrustedComponent.PROJECT_PROGRESS_BOARD
+        or not isinstance(value, dict)
+    ):
+        return value
+    facts = {
+        key: value[key]
+        for key in (
+            "project_status",
+            "publication_ready",
+            "focus",
+            "focus_status",
+            "focus_source",
+            "next_gate",
+            "milestone_state",
+            "next_step_candidates",
+        )
+        if key in value
+    }
+    counts = value.get("counts")
+    if isinstance(counts, dict):
+        facts["counts"] = {
+            key: counts[key]
+            for key in (
+                "runs_registered",
+                "runs_completed",
+                "runs_failed",
+                "runs_blocked",
+                "runs_active",
+                "papers_registered",
+                "evaluations_registered",
+                "evaluation_results_registered",
+                "acquisition_requests",
+                "acquisition_receipts",
+                "taste_candidate_populations",
+            )
+            if key in counts
+        }
+    populations = value.get("taste_candidate_populations")
+    if isinstance(populations, list):
+        facts["taste_candidate_populations"] = [
+            {
+                key: row[key]
+                for key in (
+                    "population_id",
+                    "candidate_count",
+                    "source_group_count",
+                    "domain_count_observed",
+                    "target_domain_count",
+                    "target_domain_floor_met",
+                    "target_population_floor",
+                    "target_population_floor_met",
+                    "alignment_agreement_count",
+                    "alignment_disagreement_count",
+                    "no_aligned_edit_count",
+                    "synthetic_review_row_count_excluded",
+                    "ready_for_taste_abstraction_review",
+                    "ready_for_benchmark_admission",
+                    "blocker_codes",
+                    "verification_route",
+                )
+                if key in row
+            }
+            for row in populations
+            if isinstance(row, dict)
+        ]
+    lifecycle = value.get("lifecycle")
+    if isinstance(lifecycle, dict):
+        facts["lifecycle"] = {
+            key: lifecycle[key]
+            for key in (
+                "lifecycle_state",
+                "idea_to_paper_complete",
+                "scientific_evidence_complete",
+                "scientific_effectiveness_established",
+                "internal_review_cycle_complete",
+                "independent_pre_submission_review_complete",
+                "top_venue_evidence_loop_complete",
+            )
+            if key in lifecycle
+        }
+    program = value.get("evidence_program")
+    if isinstance(program, dict):
+        facts["scientific_program"] = {
+            key: program[key]
+            for key in (
+                "program_id",
+                "current_stage_id",
+                "current_decision",
+                "control_effect",
+                "planning_directive",
+            )
+            if key in program
+        }
+    resources = value.get("resource_portfolio")
+    if isinstance(resources, dict):
+        facts["resource_summary"] = {
+            key: resources[key]
+            for key in (
+                "resource_count",
+                "verified_binding_count",
+                "pending_binding_count",
+                "blocked_binding_count",
+                "available_resource_count",
+                "configuration_authority",
+                "planner_binding_state",
+                "planner_resource_id",
+                "planner_provider_id",
+                "planner_model_id",
+            )
+            if key in resources
+        }
+        if "resources" in resources:
+            facts["project_resources"] = resources["resources"]
+        if "available_resources" in resources:
+            facts["available_project_resources"] = resources["available_resources"]
+    return facts
+
+
 def _bounded_model_value(value: JsonValue, *, depth: int) -> JsonValue:
-    if depth >= 3:
+    # Keep leaf facts at the boundary.  Bounding every value at depth three
+    # erased the scalar fields of list-backed progress rows (for example the
+    # exact candidate and domain counts) while still paying to send the row
+    # structure to the model.  Only nested containers need truncation here.
+    if depth >= 3 and isinstance(value, dict):
+        return "[bounded]"
+    if depth >= 3 and isinstance(value, list):
+        if all(not isinstance(item, (dict, list)) for item in value):
+            return [_bounded_model_value(item, depth=depth + 1) for item in value[:5]]
         return "[bounded]"
     if isinstance(value, dict):
         result: dict[str, JsonValue] = {}
@@ -1488,7 +1672,25 @@ def _program_revision_failure_reason(exc: Exception) -> str:
         return "model-program-revision-provider-response-invalid"
     if "cost telemetry" in str(exc):
         return "model-program-revision-cost-telemetry-unavailable"
-    if isinstance(exc, (ValidationError, ValueError)):
+    if isinstance(exc, ValidationError):
+        error_types = {item["type"] for item in exc.errors()}
+        if "extra_forbidden" in error_types:
+            return "model-program-revision-unexpected-fields"
+        if "missing" in error_types:
+            return "model-program-revision-missing-fields"
+        return "model-program-revision-field-schema-rejected"
+    if isinstance(exc, ValueError):
+        message = str(exc)
+        if "reprioritization" in message:
+            return "model-program-revision-stage-order-rejected"
+        if "resource" in message:
+            return "model-program-revision-resource-selection-rejected"
+        if "focused action route" in message:
+            return "model-program-revision-route-focus-rejected"
+        if "track" in message or "stage" in message:
+            return "model-program-revision-identifier-rejected"
+        if "verification" in message:
+            return "model-program-revision-verification-advice-rejected"
         return "model-program-revision-schema-rejected"
     return "model-program-revision-unavailable"
 

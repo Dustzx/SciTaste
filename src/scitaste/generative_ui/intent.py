@@ -668,6 +668,7 @@ _CANDIDATE_GOALS = {
     "review_reference_selection": IntentGoal.NEXT_STEP_REVIEW,
     "review_benchmark_qualification": IntentGoal.NEXT_STEP_REVIEW,
     "review_iteration": IntentGoal.NEXT_STEP_REVIEW,
+    "review_taste_population": IntentGoal.NEXT_STEP_REVIEW,
 }
 
 _QUICK_LABELS = {
@@ -687,6 +688,7 @@ _QUICK_LABELS = {
     "review_reference_selection": "Review the frozen H0 source-selection contrast",
     "review_benchmark_qualification": "Review the executable benchmark qualification",
     "review_iteration": "Review the reviewer-driven research iteration plan",
+    "review_taste_population": "Curate the natural Taste candidate population",
 }
 
 _GOAL_TERMS = (

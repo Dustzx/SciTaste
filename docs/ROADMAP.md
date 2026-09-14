@@ -1472,6 +1472,26 @@ citation/resource screen and exact adapters/licenses remain open.
   identity gap, not a reason to relabel another model as Agent Laboratory's
   native condition.
 
+## Natural Scientific Taste candidate population
+
+- Done: acquired the seven required official ARIES objects under the standing
+  sub-10-GB download authority and compiled 196 natural review-to-revision
+  candidates from 42 held-out paper groups. All 3,892 synthetic review rows are
+  excluded. Upstream edit alignments remain non-gold provenance, including 47
+  primary-versus-human disagreements and 103 candidates without an aligned edit.
+- Done: registered the population as project-owned evidence and exposed it in the
+  project home, the bounded model digest, and a dedicated Generation as Content
+  curation intent. One live model turn generated a decision graph; a feedback
+  turn changed its gate structure without executing work or changing Core state.
+  The same feedback then produced a valid, pending Core planning clarification
+  after the semantic program-revision contract was separated from server-owned
+  integrity fields. It has not been accepted or published for the user.
+- Next: add at least two genuinely distinct scientific domains, run the declared
+  privacy review, define decision-family strata, and collect two independent
+  conflict-cleared scientific-quality judgments before freezing any benchmark
+  split. The present population may support Taste-abstraction review but is not a
+  benchmark or an effectiveness result.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

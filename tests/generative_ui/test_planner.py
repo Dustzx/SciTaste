@@ -284,7 +284,6 @@ def _program_inputs() -> tuple[ProgramRevisionRequest, ProgramRevisionCatalog]:
 
 def _program_draft(request: StructuredModelRequest) -> dict[str, object]:
     return {
-        "base_dossier_sha256": request.input_payload["base_dossier_sha256"],
         "change_kind": "reprioritize_next_gates",
         "target_stage_id": "qualify-sources",
         "target_track_ids": ["native-causal"],
@@ -294,11 +293,6 @@ def _program_draft(request: StructuredModelRequest) -> dict[str, object]:
         "required_evidence": ["A source-identity and token-parity qualification report."],
         "requested_resource_roles": [],
         "requested_resource_ids": [],
-        "preserves_completed_stages": True,
-        "removes_blockers": False,
-        "applies_change": False,
-        "authorizes_external_action": False,
-        "authorizes_execution": False,
     }
 
 
@@ -467,6 +461,12 @@ def test_model_composition_receives_bounded_evidence_and_admits_cited_content(
     assert '"proposal"' not in serialized
     assert "locator" not in serialized
     assert "http" not in serialized
+    progress = next(
+        item
+        for item in request_payload["evidence_digest"]
+        if item["component"] == "ProjectProgressBoard"
+    )
+    assert progress["facts"]["counts"]["runs_registered"] == 2
 
 
 def test_followup_composition_edits_the_exact_prior_model_brief(tmp_path: Path) -> None:
@@ -588,9 +588,16 @@ def test_model_generates_a_non_executable_project_bound_program_amendment() -> N
         "target_route_sha256": "3" * 64,
     }
     assert len(backend.calls[0].input_payload["tool_intelligence_routes"]) == 2
+    assert "every next_stage_id exactly once" in backend.calls[0].input_payload[
+        "change_kind_contracts"
+    ]["reprioritize_next_gates"]
     assert "research-basis" not in {
         item["stage_id"] for item in backend.calls[0].input_payload["stages"]
     }
+    assert "base_dossier_sha256" not in backend.calls[0].output_schema["properties"]
+    assert "authorizes_execution" not in backend.calls[0].output_schema["properties"]
+    assert outcome.draft.base_dossier_sha256 == catalog.dossier_sha256
+    assert outcome.draft.authorizes_execution is False
 
 
 def test_program_amendment_rejects_model_ids_outside_the_server_catalog() -> None:

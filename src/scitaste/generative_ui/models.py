@@ -627,6 +627,7 @@ class ProjectProgressCounts(BaseModel):
     benchmark_metadata_allocation_plans: int = Field(default=0, ge=0)
     benchmark_metadata_allocations: int = Field(default=0, ge=0)
     reference_selection_comparisons: int = Field(default=0, ge=0)
+    taste_candidate_populations: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1048,6 +1049,65 @@ class ProjectProgressAcquisitionReceiptItem(BaseModel):
             raise ValueError("project acquisition receipt must cite its registered run")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
             raise ValueError("project acquisition receipt references must be unique")
+        return self
+
+
+class ProjectProgressTasteCandidatePopulationItem(BaseModel):
+    """One natural reference population awaiting Taste abstraction and review."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    artifact_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    population_id: SafeIdentifier
+    report_file_sha256: Sha256
+    report_sha256: Sha256
+    compiler_implementation_sha256: Sha256
+    candidate_count: int = Field(gt=0)
+    source_group_count: int = Field(gt=0)
+    target_population_floor: int = Field(gt=0)
+    target_population_floor_met: bool
+    domain_count_observed: int = Field(gt=0)
+    target_domain_count: int = Field(gt=0)
+    target_domain_floor_met: bool
+    alignment_agreement_count: int = Field(ge=0)
+    alignment_disagreement_count: int = Field(ge=0)
+    no_aligned_edit_count: int = Field(ge=0)
+    synthetic_review_row_count_excluded: int = Field(ge=0)
+    ready_for_taste_abstraction_review: bool
+    ready_for_benchmark_admission: bool
+    blocker_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    verification_route: Literal["direct_path"]
+    standalone_preflight_performed: Literal[False]
+    inline_integrity_guards_performed: Literal[True]
+    model_calls_performed: Literal[False]
+    gpu_work_performed: Literal[False]
+    experiment_performed: Literal[False]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=3)
+
+    @model_validator(mode="after")
+    def candidate_population_is_closed(
+        self,
+    ) -> ProjectProgressTasteCandidatePopulationItem:
+        if self.target_population_floor_met != (
+            self.candidate_count >= self.target_population_floor
+        ):
+            raise ValueError("Taste candidate population floor is inconsistent")
+        if self.target_domain_floor_met != (
+            self.domain_count_observed >= self.target_domain_count
+        ):
+            raise ValueError("Taste candidate domain floor is inconsistent")
+        if self.candidate_count != (
+            self.alignment_agreement_count + self.alignment_disagreement_count
+        ):
+            raise ValueError("Taste alignment counts do not cover the population")
+        if self.ready_for_benchmark_admission:
+            raise ValueError("candidate population cannot claim benchmark admission")
+        if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
+            raise ValueError("Taste candidate population lacks registered evidence")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("Taste candidate population evidence must be unique")
         return self
 
 
@@ -1930,6 +1990,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_reference_selection",
         "review_benchmark_qualification",
         "review_iteration",
+        "review_taste_population",
     ]
     label_code: SafeIdentifier
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
@@ -2595,6 +2656,9 @@ class ProjectProgressBoardData(BaseModel):
     reference_selection_comparisons: tuple[
         ProjectProgressReferenceSelectionComparisonItem, ...
     ] = ()
+    taste_candidate_populations: tuple[
+        ProjectProgressTasteCandidatePopulationItem, ...
+    ] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -2660,6 +2724,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.benchmark_metadata_allocation_plans,
             *self.benchmark_metadata_allocations,
             *self.reference_selection_comparisons,
+            *self.taste_candidate_populations,
             *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.review_iterations,
@@ -2740,6 +2805,8 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress reference-selection IDs must be unique")
         if self.counts.reference_selection_comparisons != len(self.reference_selection_comparisons):
             raise ValueError("project progress reference-selection count must match its rows")
+        if self.counts.taste_candidate_populations != len(self.taste_candidate_populations):
+            raise ValueError("project progress Taste-population count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):

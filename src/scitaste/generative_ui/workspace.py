@@ -29,6 +29,10 @@ from scitaste.evaluation.acquisition import (
     DatasetAcquisitionReceipt,
     load_dataset_acquisition_receipt,
 )
+from scitaste.evaluation.aries_population import (
+    AriesTastePopulationReport,
+    load_aries_taste_population_report,
+)
 from scitaste.evaluation.benchmark_metadata_allocation import (
     BenchmarkMetadataAllocationPlan,
     BenchmarkMetadataAllocationReport,
@@ -716,6 +720,80 @@ class WorkspaceSurfaceFactory:
             self._runtime,
             snapshot.project_id,
         )
+
+        taste_population_rows: list[dict[str, object]] = []
+        taste_population_ids: set[str] = set()
+        for run in snapshot.manifest.runs:
+            inspected_population = _aries_taste_population_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected_population is None:
+                continue
+            population, report_file_sha256 = inspected_population
+            if population.population_id in taste_population_ids:
+                raise ProjectSurfaceChangedError(
+                    "project registers multiple ARIES Taste candidate populations"
+                )
+            taste_population_ids.add(population.population_id)
+            run_ref = run_refs[run.run_id]
+            assert run.artifact is not None
+            artifact_ref = _evidence_for_locator(
+                binding,
+                EvidenceKind.ARTIFACT,
+                run.artifact,
+            )
+            evidence_ref_ids.append(artifact_ref.evidence_id)
+            taste_population_rows.append(
+                {
+                    "run_ref_id": run_ref.evidence_id,
+                    "artifact_ref_id": artifact_ref.evidence_id,
+                    "run_id": run.run_id,
+                    "population_id": population.population_id,
+                    "report_file_sha256": report_file_sha256,
+                    "report_sha256": population.report_sha256,
+                    "compiler_implementation_sha256": (
+                        population.compiler_implementation_sha256
+                    ),
+                    "candidate_count": population.candidate_count,
+                    "source_group_count": population.source_group_count,
+                    "target_population_floor": population.target_population_floor,
+                    "target_population_floor_met": population.target_population_floor_met,
+                    "domain_count_observed": population.domain_count_observed,
+                    "target_domain_count": population.target_domain_count,
+                    "target_domain_floor_met": population.target_domain_floor_met,
+                    "alignment_agreement_count": population.alignment_agreement_count,
+                    "alignment_disagreement_count": (
+                        population.alignment_disagreement_count
+                    ),
+                    "no_aligned_edit_count": population.no_aligned_edit_count,
+                    "synthetic_review_row_count_excluded": (
+                        population.synthetic_review_row_count_excluded
+                    ),
+                    "ready_for_taste_abstraction_review": (
+                        population.ready_for_taste_abstraction_review
+                    ),
+                    "ready_for_benchmark_admission": (
+                        population.ready_for_benchmark_admission
+                    ),
+                    "blocker_codes": [item.code for item in population.blockers],
+                    "verification_route": population.verification.route.value,
+                    "standalone_preflight_performed": (
+                        population.standalone_preflight_performed
+                    ),
+                    "inline_integrity_guards_performed": (
+                        population.inline_integrity_guards_performed
+                    ),
+                    "model_calls_performed": population.model_calls_performed,
+                    "gpu_work_performed": population.gpu_work_performed,
+                    "experiment_performed": population.experiment_performed,
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        run_ref.evidence_id,
+                        artifact_ref.evidence_id,
+                    ],
+                }
+            )
 
         acquisition_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
@@ -1891,6 +1969,32 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
+        if taste_population_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-taste-candidate-population",
+                    "kind": "review_taste_population",
+                    "label_code": "curate-natural-taste-candidate-population",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(
+                                    item["run_ref_id"]
+                                    for item in taste_population_rows
+                                ),
+                                *(
+                                    item["artifact_ref_id"]
+                                    for item in taste_population_rows
+                                ),
+                            ]
+                        )
+                    ),
+                    "target_ids": [
+                        item["population_id"] for item in taste_population_rows
+                    ],
+                }
+            )
         if metadata_audit_plan_rows:
             next_step_candidates.append(
                 {
@@ -2230,6 +2334,7 @@ class WorkspaceSurfaceFactory:
                     ),
                     "benchmark_metadata_allocations": len(benchmark_metadata_allocation_rows),
                     "reference_selection_comparisons": len(reference_selection_rows),
+                    "taste_candidate_populations": len(taste_population_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -2285,6 +2390,7 @@ class WorkspaceSurfaceFactory:
                 "benchmark_metadata_allocation_plans": (benchmark_metadata_allocation_plan_rows),
                 "benchmark_metadata_allocations": benchmark_metadata_allocation_rows,
                 "reference_selection_comparisons": reference_selection_rows,
+                "taste_candidate_populations": taste_population_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "review_iterations": review_iteration_rows,
@@ -2991,6 +3097,40 @@ def _project_relative(snapshot: ProjectSnapshot, locator: str) -> str:
         )
     except ValueError as exc:
         raise ProjectSurfaceChangedError("workspace evidence escaped its project") from exc
+
+
+def _aries_taste_population_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[AriesTastePopulationReport, str] | None:
+    """Load only the canonical project-owned natural Taste population."""
+
+    expected = f"runs/{run.run_id}/taste_candidate_population/REPORT.json"
+    if (
+        (run.model_extra or {}).get("generative_ui_projection")
+        != "aries-taste-candidate-population-v1"
+    ):
+        return None
+    if run.stage_path != "taste_candidate_population" or run.artifact != expected:
+        raise ProjectSurfaceChangedError("registered ARIES Taste population path is invalid")
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered ARIES Taste population is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError("registered ARIES Taste population escaped its project")
+    try:
+        report = load_aries_taste_population_report(resolved)
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered ARIES Taste population is invalid") from exc
+    if (
+        report.project_id != root.name
+        or report.population_id != (run.model_extra or {}).get("population_id")
+        or report.report_sha256 != (run.model_extra or {}).get("population_report_sha256")
+    ):
+        raise ProjectSurfaceChangedError("registered ARIES Taste population identity differs")
+    return report, hashlib.sha256(resolved.read_bytes()).hexdigest()
 
 
 def _acquisition_report_for_run(

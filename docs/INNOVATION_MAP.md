@@ -145,6 +145,15 @@ external mutations, and untrusted code retain deterministic gates. Model advice
 is confined to an explicitly measured semantic gray zone and cannot create
 authority.
 
+The same rule now covers natural-reference acquisition and compilation. Exact
+receipt identity, archive path/link/size bounds, split disjointness, atomic
+publication, and output hashes are inline integrity guards because violating them
+would corrupt the evidence object being created. A second repository-wide or
+standalone preflight has negative expected value for this reversible local step,
+so Tool Intelligence selects `direct_path` and records that no standalone
+preflight ran. This is the intended division: adaptive policy removes ceremony,
+but it cannot remove the invariants that define the scientific asset itself.
+
 ## Enabling innovations
 
 The three product ideas are made scientifically useful by the following system

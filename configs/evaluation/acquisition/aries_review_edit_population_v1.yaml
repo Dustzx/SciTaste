@@ -1,0 +1,123 @@
+schema_version: "1.0"
+request_id: aries-review-edit-population-v1
+project_id: scitaste-self-development
+track_id: scientific-taste-decisions
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Download the minimum official ARIES objects needed to construct source-grouped
+  natural review-to-edit decision candidates without downloading provider caches,
+  generated edits, synthetic training labels, or the full author-reply corpus.
+claim_boundary: >-
+  This transaction establishes only publisher-object identity and local bytes.
+  Observed edits and alignment labels are not preferred scientific actions;
+  benchmark admission still requires privacy filtering, source-group separation,
+  two independent scientific-value reviews, and a frozen formal split.
+selection_id: aries-review-edit-acquisition-scope-v1
+selection_proposal_sha256: 1901cf23d8cdef3b2183b808101896ef3e3e0a7f9f323a0ac51abbdc39c61491
+destination_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/raw
+allowed_hosts:
+  - ai2-s2-research-public.s3.amazonaws.com
+items:
+  - item_id: license
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/LICENSE?scitaste-revision=9dd6529fc4138a7799bb7c0aac21d9ab&item_id=license
+    source_revision: 9dd6529fc4138a7799bb7c0aac21d9ab
+    destination: LICENSE
+    maximum_bytes: 19977
+    media_type: text/plain
+    license_identifier: ODC-BY-1.0
+    license_scope: Official ARIES dataset license text retained with the acquired population.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: 9dd6529fc4138a7799bb7c0aac21d9ab
+    runtime_assets_included: false
+  - item_id: review_comments
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/review_comments.jsonl?scitaste-revision=807380a1259f84f76efcefafa827689c
+    source_revision: 807380a1259f84f76efcefafa827689c
+    destination: review_comments.jsonl
+    maximum_bytes: 1395177
+    media_type: application/x-ndjson
+    license_identifier: ODC-BY-1.0
+    license_scope: Public review comments used only as candidate decision context with identifiers removed before review.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: 807380a1259f84f76efcefafa827689c
+    runtime_assets_included: false
+  - item_id: paper_edits
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/paper_edits.jsonl?scitaste-revision=9c3bf0687f337aada697027d70aa69d0-2
+    source_revision: 9c3bf0687f337aada697027d70aa69d0-2
+    destination: paper_edits.jsonl
+    maximum_bytes: 12881188
+    media_type: application/x-ndjson
+    license_identifier: ODC-BY-1.0
+    license_scope: Released source-target edit mappings; observed edits are not treated as scientific-quality gold.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: 9c3bf0687f337aada697027d70aa69d0-2
+    runtime_assets_included: false
+  - item_id: edit_labels_test
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/edit_labels_test.jsonl?scitaste-revision=fb44ff1d192458907f0d7e5183b24487
+    source_revision: fb44ff1d192458907f0d7e5183b24487
+    destination: edit_labels_test.jsonl
+    maximum_bytes: 130783
+    media_type: application/x-ndjson
+    license_identifier: ODC-BY-1.0
+    license_scope: Released held-out alignment labels retained as provenance, not preferred-action labels.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: fb44ff1d192458907f0d7e5183b24487
+    runtime_assets_included: false
+  - item_id: alignment_human_eval
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/alignment_human_eval.jsonl?scitaste-revision=0c5c202cefd860e45976d87a0d337e8c
+    source_revision: 0c5c202cefd860e45976d87a0d337e8c
+    destination: alignment_human_eval.jsonl
+    maximum_bytes: 52624
+    media_type: application/x-ndjson
+    license_identifier: ODC-BY-1.0
+    license_scope: Released alignment-human-evaluation subset retained as provenance, not SciTasteBench labels.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: 0c5c202cefd860e45976d87a0d337e8c
+    runtime_assets_included: false
+  - item_id: split_ids
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/split_ids.json?scitaste-revision=d601f289aaa5f2361007567bbdecb744
+    source_revision: d601f289aaa5f2361007567bbdecb744
+    destination: split_ids.json
+    maximum_bytes: 151193
+    media_type: application/json
+    license_identifier: ODC-BY-1.0
+    license_scope: Released document split identity used to prevent cross-split source-group leakage.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: d601f289aaa5f2361007567bbdecb744
+    runtime_assets_included: false
+  - item_id: s2orc
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/s2orc.tar.gz?scitaste-revision=12eb92d33021536f4cbdf0b5fdb92072-12
+    source_revision: 12eb92d33021536f4cbdf0b5fdb92072-12
+    destination: s2orc.tar.gz
+    maximum_bytes: 93627656
+    media_type: application/gzip
+    license_identifier: ODC-BY-1.0
+    license_scope: Released source and revised S2ORC paper parses; only bounded passages may enter de-identified candidate contexts.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: 12eb92d33021536f4cbdf0b5fdb92072-12
+    runtime_assets_included: false
+maximum_total_bytes: 108258598
+evidence:
+  - evidence_id: aries-acquisition-scope
+    path: docs/research/data/aries_review_edit_acquisition_scope_v1.yaml
+    sha256: 1901cf23d8cdef3b2183b808101896ef3e3e0a7f9f323a0ac51abbdc39c61491
+  - evidence_id: scitastebench-source-screen
+    path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
+    sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
+approval:
+  approved: true
+  request_sha256: 1a195f9833670f558ee31d18401b6b0bee8dff3793e83651dcb0972ed4cab008
+  approved_by: project-owner-standing-sub-10gb-authority
+  approved_at: 2026-09-14T06:56:34+08:00
+  scope: download-only-no-ingestion
+redirects_allowed: false
+overwrite_allowed: false
+secrets_forbidden: true
+authorizes_ingestion: false
+authorizes_execution: false

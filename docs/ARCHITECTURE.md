@@ -3500,3 +3500,50 @@ the manifest's historical focus extension in both the browser projection and the
 model-visible digest. The manifest value remains a fallback for projects without
 a compiled program. This prevents generated content from treating stale project
 notes as a gate that SciTaste Core no longer consumes.
+
+The same receiver-owned identity rule now applies to program amendments. The
+model returns only change kind, current server-issued IDs, narrative guidance,
+evidence requirements, optional resource choices, and eligible Tool Intelligence
+advice. It no longer copies the dossier hash or safety booleans. The receiver
+injects those values and validates a declared contract for each change kind. In
+particular, within-stage guidance cannot masquerade as a partial gate reorder:
+`reprioritize_next_gates` must retain the entire current set, while
+`clarify_stage_decision` must provide no stage order. Rejections expose only a
+content-free failure category and retain bounded usage accounting.
+
+### ADR-115: Natural Taste populations are project evidence before they are benchmarks
+
+Status: accepted and exercised with the official ARIES review-edit population;
+multi-domain and human-quality admission remain open.
+
+High-quality reference acquisition begins with natural scientific decisions, not
+with model-generated pseudo-labels. The first compiler therefore binds seven
+official ARIES objects to one download receipt, retains only manual review rows,
+and reconstructs their observed revision evidence from source/target S2ORC
+documents without extracting the archive. Direct document, reviewer, and author
+identities are replaced by receipt-salted opaque IDs; email-like strings are
+redacted. Source groups remain on the upstream held-out split with zero overlap.
+
+Observed revisions and upstream alignment annotations are context, not preferred
+scientific actions. Agreement and disagreement remain separate facts, and a
+missing aligned edit remains visible rather than becoming a negative quality
+label. The resulting 196 candidates across 42 groups clear only the declared
+population floor. One machine-learning review domain cannot clear a three-domain
+coverage gate, and independent scientific-quality review, decision-family
+stratification, and privacy review remain explicit blockers. Project publication
+therefore sets Taste-abstraction review ready while benchmark admission stays
+false.
+
+Generation as Content receives a compact whitelist of project progress facts,
+including this population and its boundary, rather than a lexicographically
+truncated projection. A fixed curation label may be proactively cached, while
+free-form generation and predecessor-bound editing remain the primary interface.
+The generated plane may rearrange the review graph in response to feedback; only
+an explicitly accepted and published planning directive can influence SciTaste
+Core, and it still carries no execution authority.
+
+Tool Intelligence routes the local compiler directly. Receipt/file hashes, JSON
+duplicate-key rejection, tar path/link/expanded-byte limits, split disjointness,
+and atomic writes are intrinsic guards on the created evidence object, not a
+separate preflight. Network acquisition, secret use, paid compute, benchmark
+admission, and human labels retain their own authority boundaries.

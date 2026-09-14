@@ -62,6 +62,7 @@ const quickIntentLabelKeys = Object.freeze({
   "review-project-benchmark-qualification": "quick.benchmark_qualification",
   "approve-bounded-structured-metadata-read": "quick.metadata_read",
   "review-review-driven-iteration-plan": "quick.review_iteration",
+  "curate-natural-taste-candidate-population": "quick.taste_population",
 });
 let activeLocale = localeFromFragment() || browserLocale();
 
@@ -1354,6 +1355,7 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.metadata_allocation_plans"), data.counts.benchmark_metadata_allocation_plans || 0, t("progress.metric.metadata_allocation_plans_note")),
     progressMetric(t("progress.metric.metadata_allocations"), data.counts.benchmark_metadata_allocations || 0, t("progress.metric.metadata_allocations_note")),
     progressMetric(t("progress.metric.reference_selections"), data.counts.reference_selection_comparisons || 0, t("progress.metric.reference_selections_note")),
+    progressMetric(t("progress.metric.taste_populations"), data.counts.taste_candidate_populations || 0, t("progress.metric.taste_populations_note"), "candidate"),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
   const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
@@ -1379,6 +1381,9 @@ function renderProjectProgress(data) {
   );
   const datasetPackages = renderDatasetPackages(data.dataset_packages || []);
   const reviewIterations = renderReviewIterations(data.review_iterations || []);
+  const tastePopulations = renderTasteCandidatePopulations(
+    data.taste_candidate_populations || [],
+  );
   const distribution = renderRunDistribution(data.counts);
   const lifecycle = renderProjectLifecycle(data.lifecycle);
 
@@ -1852,6 +1857,9 @@ function renderProjectProgress(data) {
     container.appendChild(resourcePortfolio);
   }
   container.appendChild(hero);
+  if (tastePopulations) {
+    container.appendChild(tastePopulations);
+  }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
 }
@@ -3386,6 +3394,125 @@ function renderMetadataAuditPlans(items) {
           "authorizes_local_content_read",
           "authorizes_projection",
           "authorizes_execution",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderTasteCandidatePopulations(items) {
+  if (items.length === 0) return null;
+  const section = progressSection(
+    t("progress.taste_population.title"),
+    t("progress.taste_population.subtitle", {count: items.length}),
+  );
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = "acquisition-card status-candidate";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.taste_population.population"));
+    const title = document.createElement("strong");
+    appendText(title, item.population_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill("candidate", t("progress.taste_population.status")),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const [key, value] of [
+      ["candidates", item.candidate_count],
+      ["groups", item.source_group_count],
+      ["agreement", `${item.alignment_agreement_count}/${item.candidate_count}`],
+      ["domains", `${item.domain_count_observed}/${item.target_domain_count}`],
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, t(`progress.taste_population.${key}`, {count: value}));
+      facts.appendChild(fact);
+    }
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.taste_population.boundary", {
+      synthetic: item.synthetic_review_row_count_excluded,
+      blockers: item.blocker_codes.length,
+    }));
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t("progress.taste_population.next"));
+    const controls = document.createElement("div");
+    controls.className = "component-actions";
+    const explore = document.createElement("button");
+    explore.type = "button";
+    explore.className = "primary-button";
+    appendText(explore, t("progress.taste_population.explore"));
+    explore.addEventListener("click", () => prepareAuthoredBriefFollowup(
+      t("progress.taste_population.followup", {
+        candidates: item.candidate_count,
+        groups: item.source_group_count,
+        domains: item.domain_count_observed,
+        target: item.target_domain_count,
+      }),
+    ));
+    const inspect = document.createElement("button");
+    inspect.type = "button";
+    inspect.className = "secondary-button";
+    appendText(inspect, t("progress.taste_population.inspect"));
+    inspect.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    controls.append(explore, inspect);
+    card.append(
+      header,
+      facts,
+      boundary,
+      next,
+      controls,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          report_file_sha256: item.report_file_sha256,
+          report_sha256: item.report_sha256,
+          compiler_implementation_sha256: item.compiler_implementation_sha256,
+          target_population_floor_met: item.target_population_floor_met,
+          target_domain_floor_met: item.target_domain_floor_met,
+          alignment_disagreement_count: item.alignment_disagreement_count,
+          no_aligned_edit_count: item.no_aligned_edit_count,
+          blocker_codes: item.blocker_codes,
+          verification_route: item.verification_route,
+          standalone_preflight_performed: item.standalone_preflight_performed,
+          inline_integrity_guards_performed: item.inline_integrity_guards_performed,
+          model_calls_performed: item.model_calls_performed,
+          gpu_work_performed: item.gpu_work_performed,
+          experiment_performed: item.experiment_performed,
+          ready_for_benchmark_admission: item.ready_for_benchmark_admission,
+        },
+        names: [
+          "report_file_sha256",
+          "report_sha256",
+          "compiler_implementation_sha256",
+          "target_population_floor_met",
+          "target_domain_floor_met",
+          "alignment_disagreement_count",
+          "no_aligned_edit_count",
+          "blocker_codes",
+          "verification_route",
+          "standalone_preflight_performed",
+          "inline_integrity_guards_performed",
+          "model_calls_performed",
+          "gpu_work_performed",
+          "experiment_performed",
+          "ready_for_benchmark_admission",
         ],
       }),
     );

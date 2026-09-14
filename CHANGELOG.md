@@ -5,6 +5,23 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the first real natural review-to-revision Scientific Taste candidate
+  population from the official ARIES release. The receipt-bound compiler excludes
+  all 3,892 synthetic review rows, de-identifies 196 natural candidates across 42
+  held-out paper groups, preserves 149 alignment agreements and 47 disagreements
+  as non-gold provenance, and exposes the remaining domain, independent-quality,
+  decision-family, and privacy gates. The project home and a new fixed-label Taste
+  curation intent now surface these facts to the flexible model composer. The
+  model-visible progress projection retains exact leaf counts instead of erasing
+  them at the depth bound. A live GLM-5.3-Flash conversation generated the
+  evidence-cited curation graph and edited it from feedback into parallel quality
+  and privacy paths without executing or admitting a benchmark. Program revisions
+  now ask the model only for semantic planning fields; the receiver injects dossier
+  and no-authority invariants. Explicit per-change-kind contracts separate
+  within-stage decision clarification from full gate reordering, and content-free
+  rejection codes identify malformed fields, identifiers, resources, routes, or
+  stage orders without exposing model output. The repaired live path produced a
+  pending, unapplied `clarify_stage_decision` proposal for the current Taste gate.
 - Made flexible Generation as Content reachable for every unresolved free-form
   project question, rather than only questions containing no known keywords.
   Deterministic intent recognition remains the zero-cost fast path; ambiguous or

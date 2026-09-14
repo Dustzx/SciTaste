@@ -1,0 +1,85 @@
+schema_version: "1.0"
+scope_id: aries-review-edit-population-v1
+project_id: scitaste-self-development
+source_id: aries
+source_name: ARIES-review-informed-edits
+official_repository: https://github.com/allenai/aries
+repository_commit: 5691bae71a101225ed345d0ffc42e47609f03bbb
+official_dataset_prefix: s3://ai2-s2-research-public/aries/
+dataset_license: ODC-BY-1.0
+code_license: Apache-2.0
+authorization_basis: project-owner-standing-sub-10gb-download-authority
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Acquire the smallest official ARIES slice that preserves a real public review,
+  its aligned paper edits, source/target paper text, split identity, and the
+  released human alignment subset. These bytes are natural Scientific Taste case
+  candidates; observed edits and released alignment labels are context, not
+  scientific-quality gold labels.
+claim_boundary: >-
+  Download and byte identity do not admit a benchmark case, a Taste precedent,
+  a preferred action, or an experiment result. Source-group deduplication,
+  identifier removal, two independent conflict-cleared scientific-value reviews,
+  case/precedent disjointness, and formal split freezing remain required.
+population_role: natural-review-to-edit-candidate-source
+selected_objects:
+  - item_id: license
+    key: aries/LICENSE
+    version_id: gTCQB0ZZW0uRLdV9EzvqSTnelOF1tla.
+    etag: 9dd6529fc4138a7799bb7c0aac21d9ab
+    size_bytes: 19977
+    role: dataset-license
+  - item_id: review_comments
+    key: aries/review_comments.jsonl
+    version_id: 69mrGMhHqkfQHikqPETZ5wvuDeovPO9b
+    etag: 807380a1259f84f76efcefafa827689c
+    size_bytes: 1395177
+    role: public-review-context
+  - item_id: paper_edits
+    key: aries/paper_edits.jsonl
+    version_id: KFXqqeLdt0k.bXT.Ob6B.91TQl_dAoQy
+    etag: 9c3bf0687f337aada697027d70aa69d0-2
+    size_bytes: 12881188
+    role: source-target-edit-alignment
+  - item_id: edit_labels_test
+    key: aries/edit_labels_test.jsonl
+    version_id: kUq5Bbrc_G8OBZsFq6j4JFSOu1RmFPcR
+    etag: fb44ff1d192458907f0d7e5183b24487
+    size_bytes: 130783
+    role: released-test-alignment-labels
+  - item_id: alignment_human_eval
+    key: aries/alignment_human_eval.jsonl
+    version_id: VGEyse09smdljwA7gIt5Pk1ucvM.zDIP
+    etag: 0c5c202cefd860e45976d87a0d337e8c
+    size_bytes: 52624
+    role: released-human-alignment-subset
+  - item_id: split_ids
+    key: aries/split_ids.json
+    version_id: OhmXG2I1A0ZrBnl5qElqftLCkX17B112
+    etag: d601f289aaa5f2361007567bbdecb744
+    size_bytes: 151193
+    role: document-split-identity
+  - item_id: s2orc
+    key: aries/s2orc.tar.gz
+    version_id: HgbMOECtsHdQkoapyoudxHX_psAgAioP
+    etag: 12eb92d33021536f4cbdf0b5fdb92072-12
+    size_bytes: 93627656
+    role: source-and-revised-paper-text
+selected_object_count: 7
+maximum_total_bytes: 108258598
+excluded_objects:
+  - key: aries/gpt3_cache.sqlite
+    reason: provider-cache-not-needed-for-natural-case-curation
+  - key: aries/generated_edits.jsonl
+    reason: model-generated-output-is-not-natural-case-evidence
+  - key: aries/review_replies.jsonl
+    reason: 198981013-byte-reply-corpus-not-needed-for-the-first-review-edit-population
+  - key: aries/edit_labels_train.jsonl
+    reason: synthetic-training-alignment-is-not-needed-for-the-held-out-candidate-population
+  - key: aries/edit_labels_dev.jsonl
+    reason: synthetic-development-alignment-is-not-needed-for-the-held-out-candidate-population
+network_calls_authorized: true
+source_text_ingestion_authorized: false
+model_calls_authorized: false
+gpu_work_authorized: false
+human_labels_created: false

@@ -1,0 +1,69 @@
+schema_version: "1.0"
+result_id: aries-review-edit-taste-candidates-v1
+project_id: scitaste-self-development
+source_id: aries
+source_role: natural-review-to-revision-taste-candidates
+official_repository: https://github.com/allenai/aries
+repository_commit: 5691bae71a101225ed345d0ffc42e47609f03bbb
+dataset_license: ODC-BY-1.0
+acquisition:
+  request_path: configs/evaluation/acquisition/aries_review_edit_population_v1.yaml
+  request_file_sha256: 930debcad7e3f42f6399cc007ec8ef50aaa7f5810d2c6d2171f1f3a00d0def90
+  request_sha256: 1a195f9833670f558ee31d18401b6b0bee8dff3793e83651dcb0972ed4cab008
+  receipt_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/RECEIPT.json
+  receipt_file_sha256: 3e9b725791bb7fdf23b9ee55930060f0143afed428d9a36624ee467eb609a6f0
+  receipt_sha256: 6815fdbcaf22ce11207bc0623b48ea0ec888c6854bc0f02934a4731d03626acb
+  acquired_object_count: 7
+  acquired_bytes: 108258598
+population:
+  report_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-population-v1/REPORT.json
+  report_file_sha256: 3df1006844934b122b6e99dcc285ec1060a91d8c6fca3f417c21dc5583ba85f9
+  report_sha256: 22e13be5fdee3ca8d36a3c8268c1b1eefa803cbacc0bb85f630d07ab1cb20b67
+  candidate_file_sha256: dcfa71324ea28793c96955f261c8740ecdab86880bae803191dee0fab7c66450
+  compiler_implementation_sha256: f0c8fbebacf63b44e385158d12258d74537221bd7705a64818000f8f65023759
+  candidate_count: 196
+  source_group_count: 42
+  acquired_document_pair_count: 1720
+  natural_review_row_count: 196
+  synthetic_review_row_count_excluded: 3892
+  alignment_agreement_count: 149
+  alignment_disagreement_count: 47
+  no_aligned_edit_count: 103
+  split_source_group_counts:
+    train: 1489
+    dev: 189
+    test: 42
+  cross_split_source_group_overlap_count: 0
+scientific_boundary:
+  population_floor: 120
+  population_floor_met: true
+  observed_domain_count: 1
+  target_domain_count: 3
+  domain_floor_met: false
+  ready_for_taste_abstraction_review: true
+  ready_for_benchmark_admission: false
+  observed_revisions_are_quality_gold: false
+  upstream_alignments_are_quality_gold: false
+  blocker_codes:
+    - single-domain-source
+    - independent-quality-labels-pending
+    - decision-family-stratification-pending
+    - privacy-review-pending
+execution:
+  verification_route: direct_path
+  standalone_preflight_performed: false
+  inline_integrity_guards_performed: true
+  network_access_performed_during_compilation: false
+  model_calls_performed_during_compilation: false
+  gpu_work_performed: false
+  experiment_performed: false
+project_projection:
+  run_id: 2026-09-14__scitaste-native__aries-taste-candidate-population-v1__seed-00
+  stage: taste_candidate_population
+  status: complete-taste-candidate-population
+  project_revision: 478
+  generation_as_content_projection: project-progress-and-taste-curation-quick-intent
+claim_boundary: >-
+  This result is a de-identified natural candidate population for Scientific
+  Taste abstraction review. It is not a quality-labelled benchmark, an
+  experiment result, or evidence that SciTaste improves research outcomes.
