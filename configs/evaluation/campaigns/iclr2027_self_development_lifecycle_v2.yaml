@@ -79,6 +79,15 @@ artifacts:
   - artifact_id: scitastebench-segmentation-request-pack-v1
     path: docs/research/data/scitastebench_segmentation_request_pack_v1.yaml
     sha256: e33ce8be0c82181d5b76cb332d61de898ee74177c7675ad2672de3f72b627fd4
+  - artifact_id: scitastebench-segmentation-prospective-protocol-v2
+    path: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v2.yaml
+    sha256: 9496738a89dfa129664135e5be983b187e1f3da673afeab2eef80b106e947f65
+  - artifact_id: scitastebench-segmentation-prospective-freeze-v2
+    path: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v2.yaml
+    sha256: 9f4d7c90d2544a61976aea268fb715ec3950f456846d28abfdb749bb41dbc8f2
+  - artifact_id: scitastebench-segmentation-request-pack-v2
+    path: docs/research/data/scitastebench_segmentation_request_pack_v2.yaml
+    sha256: dac4ef3d98e5c6db01d4e1b9182a6c29e1cc33fb559f0e3bdd3117662a2ea90a
   - artifact_id: objective-task-resource-qualification-v2
     path: docs/research/data/objective_task_resource_qualification_v2.yaml
     sha256: abb4fe2dd36431cada47e23cc8a1ed1bdf623d12bac11440663ad64e70076c34
@@ -162,9 +171,9 @@ tracks:
       - scitastebench-segmentation-calibration-sample-v1
       - scitastebench-atomic-decision-calibration-v1
       - scitastebench-segmentation-prospective-sample-v1
-      - scitastebench-segmentation-prospective-protocol-v1
-      - scitastebench-segmentation-prospective-freeze-v1
-      - scitastebench-segmentation-request-pack-v1
+      - scitastebench-segmentation-prospective-protocol-v2
+      - scitastebench-segmentation-prospective-freeze-v2
+      - scitastebench-segmentation-request-pack-v2
     blocker_codes:
       - admitted-benchmark-population-below-formal-120-case-floor
       - raw-candidate-population-not-yet-scitastebench
