@@ -554,6 +554,56 @@ class SegmentationEvidenceUnitSelectionReceipt(BaseModel):
     fuzzy_matching_performed: Literal[False] = False
 
 
+class SegmentationProviderTransportReceipt(BaseModel):
+    """Provider envelope and billing evidence persisted before task validation."""
+
+    model_config = _CONFIG
+
+    sequence: int = Field(ge=1, le=100)
+    role: ApiIdentityCallRole
+    packet_id: str | None = Field(default=None, pattern=_ID)
+    request_sha256: str = Field(pattern=_SHA256)
+    response_sha256: str = Field(pattern=_SHA256)
+    raw_request_ref: str = Field(min_length=1, max_length=1_000)
+    raw_response_ref: str = Field(min_length=1, max_length=1_000)
+    http_status: int = Field(ge=100, le=599)
+    client_request_id: str = Field(min_length=1, max_length=64)
+    echoed_request_id: str = Field(min_length=1, max_length=64)
+    provider_task_id: str = Field(min_length=1, max_length=500)
+    returned_model: str = Field(min_length=1, max_length=200)
+    request_started_at: datetime
+    response_completed_at: datetime
+    input_tokens: int = Field(ge=0)
+    cached_input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    estimated_cost_cny: float = Field(ge=0, allow_inf_nan=False)
+    request_id_echo_passed: bool
+    model_allowlist_passed: bool
+    semantic_validation_performed: Literal[False] = False
+    retry_count: Literal[0] = 0
+
+    @model_validator(mode="after")
+    def transport_is_consistent(self) -> SegmentationProviderTransportReceipt:
+        if (
+            self.request_started_at.utcoffset() is None
+            or self.response_completed_at.utcoffset() is None
+            or self.response_completed_at < self.request_started_at
+        ):
+            raise ValueError("Segmentation transport receipt times are invalid")
+        if self.request_id_echo_passed != (
+            self.client_request_id == self.echoed_request_id
+        ):
+            raise ValueError("Segmentation transport request-ID result drifted")
+        if self.cached_input_tokens > self.input_tokens:
+            raise ValueError("Segmentation transport cached input exceeds total input")
+        if self.total_tokens != self.input_tokens + self.output_tokens:
+            raise ValueError("Segmentation transport total-token count drifted")
+        _safe_locator(self.raw_request_ref)
+        _safe_locator(self.raw_response_ref)
+        return self
+
+
 class SegmentationProviderCallReceipt(BaseModel):
     model_config = _CONFIG
 
@@ -1499,10 +1549,60 @@ def run_taste_source_segmentation_calibration(
                 },
             )
             extracted = extract_openai_chat_response(response)
-            if extracted.client_request_id != payload["request_id"]:
-                raise ValueError("Segmentation provider request ID echo drifted")
             policy = identity_protocol.policy(provider.resource_id)
-            if extracted.returned_model not in policy.allowed_returned_model_ids:
+            estimated_cost_cny = _estimate_call_cost_cny(
+                input_tokens=extracted.input_tokens,
+                cached_input_tokens=extracted.cached_input_tokens,
+                output_tokens=extracted.output_tokens,
+                price=authorization.price_ceiling,
+            )
+            transport_receipt = SegmentationProviderTransportReceipt(
+                sequence=sequence,
+                role=role,
+                packet_id=packet_id,
+                request_sha256=request_sha256,
+                response_sha256=hashlib.sha256(response.content).hexdigest(),
+                raw_request_ref=request_ref,
+                raw_response_ref=_relative_to_root(response_path, root),
+                http_status=response.status_code,
+                client_request_id=payload["request_id"],
+                echoed_request_id=extracted.client_request_id,
+                provider_task_id=extracted.provider_task_id,
+                returned_model=extracted.returned_model,
+                request_started_at=request_started_at,
+                response_completed_at=response_completed_at,
+                input_tokens=extracted.input_tokens,
+                cached_input_tokens=extracted.cached_input_tokens,
+                output_tokens=extracted.output_tokens,
+                total_tokens=extracted.total_tokens,
+                estimated_cost_cny=estimated_cost_cny,
+                request_id_echo_passed=(extracted.client_request_id == payload["request_id"]),
+                model_allowlist_passed=(
+                    extracted.returned_model in policy.allowed_returned_model_ids
+                ),
+            )
+            _write_json_new(
+                output_root / "calls" / call_name / "TRANSPORT_RECEIPT.json",
+                transport_receipt.model_dump(mode="json"),
+            )
+            projected_input = sum(
+                item.call.input_tokens for item in call_receipts
+            ) + transport_receipt.input_tokens
+            projected_output = sum(
+                item.call.output_tokens for item in call_receipts
+            ) + transport_receipt.output_tokens
+            projected_cost = sum(
+                item.estimated_cost_cny for item in call_receipts
+            ) + transport_receipt.estimated_cost_cny
+            if (
+                projected_input > authorization.limits.maximum_input_tokens
+                or projected_output > authorization.limits.maximum_output_tokens
+                or projected_cost > authorization.price_ceiling.maximum_estimated_cost_cny
+            ):
+                raise ValueError("Segmentation execution cumulative budget exceeded")
+            if not transport_receipt.request_id_echo_passed:
+                raise ValueError("Segmentation provider request ID echo drifted")
+            if not transport_receipt.model_allowlist_passed:
                 raise ValueError("Segmentation provider returned an unapproved model")
             if role is ApiIdentityCallRole.WORKLOAD and packet is not None:
                 output: object = validate_segmentation_provider_output(
@@ -1521,12 +1621,6 @@ def run_taste_source_segmentation_calibration(
                 output = json.loads(extracted.text)
                 if output != {"sentinel": "scitaste-api-identity-v3"}:
                     raise ValueError("Segmentation identity sentinel output drifted")
-            estimated_cost_cny = _estimate_call_cost_cny(
-                input_tokens=extracted.input_tokens,
-                cached_input_tokens=extracted.cached_input_tokens,
-                output_tokens=extracted.output_tokens,
-                price=authorization.price_ceiling,
-            )
             identity_call = ApiIdentityCallReceipt(
                 sequence=sequence,
                 role=role,
