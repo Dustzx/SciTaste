@@ -62,7 +62,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.26 — complete natural-source admission packets | done | the source-review compiler now admits both F1000 and ARIES population schemas into outcome-blind scientific and separate privacy packets; all 273 candidates are covered by 546 scientific and 273 privacy assessments, while reviewer contact, results, adjudication, abstraction, and benchmark admission remain closed |
 | Phase 9.27 — deadline-operational SciTasteBench review | in progress | all 273 candidates have a deterministic 8-scientific-slot/2-privacy-slot assignment; the real 12-case dual-agent screen is now typed, invocation-separated, and bound to exact reviewer-visible bytes, while v2 release governance permits internal AI screening but keeps both source populations non-public; exact model/runtime bindings and rubric calibration remain open before scaling |
 | Phase 9.28 — atomic scientific-decision reconstruction | done | two blind agents proposed 50 and 46 atomic spans from the fixed retrospective 12-source pilot; exact-span F1 is 0.396 while 0.5-IoU overlap F1 is 0.833 and matched-family agreement is 0.850; 10/12 items were explicitly routed to a third AI adjudicator, producing 53 source-bound decisions, but unbound model/runtime and network isolation keep scale and formal use blocked |
-| Phase 9.29 — prospective atomic-calibration planning | in progress | a deterministic planner has frozen 24 previously unseen, source-balanced records; a no-run GLM-5.3-Flash protocol records input isolation, metrics, thresholds, identity-window, request/token/cost limits, and failure routing, and an external receipt binds it to clean commit `e843e3c` before provider contact; next implement and inspect the bounded transcript-bearing runner, then execute only this calibration before any 273-source shard |
+| Phase 9.29 — prospective atomic-calibration planning | in progress | a deterministic planner has frozen 24 previously unseen, source-balanced records; a no-run GLM-5.3-Flash protocol records input isolation, metrics, thresholds, identity-window, request/token/cost limits, and failure routing, and an external receipt binds it to clean commit `e843e3c` before provider contact; a typed inspector and eight-packet no-contact compiler now verify the freeze and expose only anonymous IDs, abstract, and review text; next bind the committed runner and add authenticated identity/usage response receipts, then execute only this calibration before any 273-source shard |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -170,6 +170,19 @@ scale-out. Only after a bounded runner records the exact request, provider
 identity window, runtime, usage, price, raw response, and input-firewall receipt
 may this calibration execute; only a passing immutable run may open a separate
 273-source execution manifest.
+
+The prospective protocol inspector verifies both current file hashes and every
+frozen Git blob rather than trusting YAML assertions. It replays the sample and
+rejects source, exclusion, identity-policy, rubric, metric, request-count,
+token-budget, or implementation drift. The request-pack compiler then writes
+all eight segmenter requests before provider contact. Each packet contains six
+items, balanced as three ARIES plus three F1000 records; both segmenter slots see
+the same 24 anonymous records while remaining output-blind. Packet item objects
+contain only campaign ID, review-item ID, reviewed abstract, and review comment.
+No title, private map, recommendation, response, revision, publisher group, or
+source identity is serialized. The first local pack is still preparation-only:
+it records zero provider calls and false execution authority until its compiler
+commit and an authenticated temporal model window are separately bound.
 
 Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a

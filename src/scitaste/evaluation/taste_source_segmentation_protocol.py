@@ -1,0 +1,1043 @@
+"""Frozen prospective calibration inspection and outcome-field-blind request packs."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+from datetime import datetime
+from pathlib import Path, PurePosixPath
+from typing import Literal
+
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, model_validator
+
+from scitaste.evaluation.model_identity import (
+    ApiIdentityMode,
+    load_api_identity_protocol,
+)
+from scitaste.evaluation.natural_taste_review import (
+    ScientificTasteSourceReviewItem,
+    TasteSourceReviewRole,
+    load_taste_source_review_items,
+)
+from scitaste.evaluation.taste_source_segmentation import (
+    TasteSourceSegmentationSampleManifest,
+    verify_taste_source_segmentation_sample_bindings,
+)
+from scitaste.resources import ApiModelDefinition
+
+_CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+_ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
+_SHA256 = r"^[0-9a-f]{64}$"
+_COMMIT = r"^[0-9a-f]{40}$"
+_MAX_CONFIG_BYTES = 2 * 1_048_576
+_MAX_CAMPAIGN_BYTES = 64 * 1_048_576
+
+
+class SegmentationProtocolFileBinding(BaseModel):
+    model_config = _CONFIG
+
+    locator: str = Field(min_length=1, max_length=2_000)
+    file_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def locator_is_safe(self) -> SegmentationProtocolFileBinding:
+        _safe_locator(self.locator)
+        return self
+
+
+class SegmentationProtocolSampleBinding(SegmentationProtocolFileBinding):
+    sample_sha256: str = Field(pattern=_SHA256)
+    item_count: int = Field(gt=0, le=100_000)
+    prior_items_excluded: int = Field(gt=0, le=100_000)
+    source_balanced: Literal[True] = True
+
+
+class SegmentationFreezeSampleBinding(SegmentationProtocolFileBinding):
+    sample_sha256: str = Field(pattern=_SHA256)
+
+
+class SegmentationProtocolPanel(BaseModel):
+    model_config = _CONFIG
+
+    segmenter_count: Literal[2] = 2
+    adjudicator_count: Literal[1] = 1
+    same_model_condition_for_segmenters: Literal[True] = True
+    distinct_invocations_required: Literal[True] = True
+    cross_output_blinding_required: Literal[True] = True
+    adjudicator_must_not_be_a_segmenter_invocation: Literal[True] = True
+    reviewer_kind: Literal["ai"] = "ai"
+    human_review_claim_allowed: Literal[False] = False
+
+
+class SegmentationProtocolModelCondition(BaseModel):
+    model_config = _CONFIG
+
+    state: Literal["selected-for-calibration-not-yet-authenticated"]
+    provider_id: str = Field(pattern=_ID)
+    resource_id: str = Field(pattern=_ID)
+    resource_locator: str = Field(min_length=1, max_length=2_000)
+    resource_file_sha256: str = Field(pattern=_SHA256)
+    requested_model_id: str = Field(min_length=1, max_length=500)
+    identity_mode: Literal["temporal_window_only"]
+    identity_protocol_locator: str = Field(min_length=1, max_length=2_000)
+    identity_protocol_file_sha256: str = Field(pattern=_SHA256)
+    returned_model_allowlist: tuple[str, ...] = Field(min_length=1, max_length=8)
+    maximum_window_hours: int = Field(gt=0, le=24)
+    start_and_end_sentinels_required: Literal[True] = True
+    exact_runtime_receipt_required: Literal[True] = True
+    fallback_model_allowed: Literal[False] = False
+
+    @model_validator(mode="after")
+    def identities_are_safe(self) -> SegmentationProtocolModelCondition:
+        _safe_locator(self.resource_locator)
+        _safe_locator(self.identity_protocol_locator)
+        if self.requested_model_id not in self.returned_model_allowlist:
+            raise ValueError("Requested segmentation model is outside its allowlist")
+        return self
+
+
+class SegmentationProtocolGeneration(BaseModel):
+    model_config = _CONFIG
+
+    response_format: Literal["json_object"] = "json_object"
+    thinking: Literal["enabled"] = "enabled"
+    reasoning_effort: Literal["low"] = "low"
+    temperature: float = Field(ge=0, le=2, allow_inf_nan=False)
+    maximum_output_tokens_per_call: int = Field(gt=0, le=128_000)
+    items_per_shard: int = Field(gt=0, le=1_000)
+    segmenter_shards: int = Field(gt=0, le=1_000)
+    segmenter_total_requests: int = Field(gt=0, le=10_000)
+    maximum_adjudication_shards: int = Field(ge=0, le=1_000)
+    identity_sentinel_requests: Literal[2] = 2
+    maximum_total_requests: int = Field(gt=0, le=10_000)
+    retry_count: Literal[0] = 0
+
+    @model_validator(mode="after")
+    def request_formula_is_exact(self) -> SegmentationProtocolGeneration:
+        if self.segmenter_total_requests != 2 * self.segmenter_shards:
+            raise ValueError("Segmentation request count differs from its two segmenters")
+        expected_total = (
+            self.segmenter_total_requests
+            + self.maximum_adjudication_shards
+            + self.identity_sentinel_requests
+        )
+        if self.maximum_total_requests != expected_total:
+            raise ValueError("Segmentation maximum request count is inconsistent")
+        return self
+
+
+class SegmentationProtocolInputFirewall(BaseModel):
+    model_config = _CONFIG
+
+    allowed: tuple[str, ...]
+    forbidden: tuple[str, ...]
+    request_payload_must_be_persisted_before_provider_contact: Literal[True] = True
+    no_provider_tools_exposed: Literal[True] = True
+    explicit_source_identity_withheld: Literal[True] = True
+    explicit_outcome_fields_withheld: Literal[True] = True
+    parametric_source_recognition_ruled_out: Literal[False] = False
+    boundary_statement: str = Field(min_length=1, max_length=4_000)
+
+    @model_validator(mode="after")
+    def firewall_is_closed(self) -> SegmentationProtocolInputFirewall:
+        required_allowed = {
+            "frozen segmentation or adjudication rubric",
+            "assigned scientific item abstract",
+            "assigned scientific item review comment",
+            "opaque campaign and review item identifiers",
+        }
+        required_forbidden = {
+            "private item map",
+            "publisher or source identity",
+            "recommendation",
+            "author response",
+            "later revision",
+            "population outcome",
+            "another segmenter output",
+            "arbitrary tools",
+            "web search",
+        }
+        if set(self.allowed) != required_allowed:
+            raise ValueError("Segmentation input allowlist drifted")
+        if not required_forbidden.issubset(self.forbidden):
+            raise ValueError("Segmentation input firewall is incomplete")
+        if len(self.allowed) != len(set(self.allowed)) or len(self.forbidden) != len(
+            set(self.forbidden)
+        ):
+            raise ValueError("Segmentation firewall entries must be unique")
+        return self
+
+
+class SegmentationProtocolMetrics(BaseModel):
+    model_config = _CONFIG
+
+    exact_span_f1: dict[str, JsonValue]
+    overlap_span_f1: dict[str, JsonValue]
+    overlap_matched_family_agreement: dict[str, JsonValue]
+    adjudication_item_rate: dict[str, JsonValue]
+    residual_risk_item_rate_after_adjudication: dict[str, JsonValue]
+    thresholds_frozen_before_execution: Literal[True] = True
+
+    @model_validator(mode="after")
+    def engineering_gate_is_fixed(self) -> SegmentationProtocolMetrics:
+        if self.exact_span_f1 != {
+            "role": "conservative-routing-diagnostic",
+            "threshold": None,
+        }:
+            raise ValueError("Exact-span metric must remain diagnostic")
+        if self.overlap_span_f1 != {
+            "matching": "deterministic-maximum-cardinality-interval-iou",
+            "iou_threshold": 0.5,
+            "pass_threshold": 0.8,
+        }:
+            raise ValueError("Prospective overlap metric drifted")
+        if self.overlap_matched_family_agreement != {"pass_threshold": 0.8}:
+            raise ValueError("Prospective family metric drifted")
+        if self.adjudication_item_rate != {"pass_threshold_maximum": 0.5}:
+            raise ValueError("Prospective adjudication-rate metric drifted")
+        if self.residual_risk_item_rate_after_adjudication != {
+            "pass_threshold_maximum": 0.0
+        }:
+            raise ValueError("Prospective residual-risk metric drifted")
+        return self
+
+
+class SegmentationProtocolBudget(BaseModel):
+    model_config = _CONFIG
+
+    maximum_provider_requests: int = Field(gt=0)
+    maximum_input_tokens: int = Field(gt=0)
+    maximum_output_tokens: int = Field(gt=0)
+    maximum_api_cost_usd: float = Field(gt=0, allow_inf_nan=False)
+    price_unknown_action: Literal["require-cost-receipt-before-first-task-call"]
+
+
+class SegmentationProtocolFailurePolicy(BaseModel):
+    model_config = _CONFIG
+
+    malformed_or_truncated_output: Literal["fail-run-no-retry"]
+    missing_usage_or_request_identity: Literal["fail-run-no-retry"]
+    returned_model_outside_allowlist: Literal["close-window-and-fail"]
+    input_firewall_violation: Literal["invalidate-run"]
+    threshold_failure: Literal["revise-rubric-and-freeze-new-protocol-version"]
+    same_sample_recalibration_allowed: Literal[False] = False
+
+
+class SegmentationProtocolAuthority(BaseModel):
+    model_config = _CONFIG
+
+    sample_preregistered: Literal[True] = True
+    protocol_preregistered: Literal[False] = False
+    api_calls_authorized: Literal[False] = False
+    calibration_execution_authorized: Literal[False] = False
+    scaled_execution_authorized: Literal[False] = False
+    benchmark_admission_authorized: Literal[False] = False
+    formal_evidence_eligible: Literal[False] = False
+
+
+class SegmentationProtocolScaleGate(BaseModel):
+    model_config = _CONFIG
+
+    target_population_item_count: Literal[273] = 273
+    calibration_must_pass_all_frozen_metrics: Literal[True] = True
+    authenticated_model_window_required: Literal[True] = True
+    runtime_identity_required: Literal[True] = True
+    input_firewall_receipt_required: Literal[True] = True
+    raw_requests_and_responses_required: Literal[True] = True
+    scale_requires_separate_content_addressed_execution_manifest: Literal[True] = Field(
+        default=True,
+        alias="scale_requires_separate_content-addressed_execution_manifest",
+    )
+
+
+class TasteSourceSegmentationProspectiveProtocol(BaseModel):
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    protocol_id: str = Field(pattern=_ID)
+    project_id: str = Field(pattern=_ID)
+    protocol_created_at: datetime
+    protocol_status: Literal["candidate-awaiting-git-freeze-receipt"]
+    purpose: str = Field(min_length=1, max_length=4_000)
+    claim_boundary: str = Field(min_length=1, max_length=4_000)
+    sample: SegmentationProtocolSampleBinding
+    segmentation_rubric: SegmentationProtocolFileBinding
+    adjudication_rubric: SegmentationProtocolFileBinding
+    panel: SegmentationProtocolPanel
+    model_condition: SegmentationProtocolModelCondition
+    generation: SegmentationProtocolGeneration
+    input_firewall: SegmentationProtocolInputFirewall
+    metrics: SegmentationProtocolMetrics
+    failure_policy: SegmentationProtocolFailurePolicy
+    budget: SegmentationProtocolBudget
+    scale_gate: SegmentationProtocolScaleGate
+    authority: SegmentationProtocolAuthority
+    next_gate: str = Field(min_length=1, max_length=4_000)
+
+    @model_validator(mode="after")
+    def protocol_is_no_run(self) -> TasteSourceSegmentationProspectiveProtocol:
+        if self.protocol_created_at.utcoffset() is None:
+            raise ValueError("Segmentation protocol creation time must include a timezone")
+        planned_sample_count = (
+            self.generation.items_per_shard * self.generation.segmenter_shards
+        )
+        if self.sample.item_count != planned_sample_count:
+            raise ValueError("Segmentation sample does not fit its exact shard plan")
+        task_output_ceiling = (
+            self.generation.segmenter_total_requests
+            + self.generation.maximum_adjudication_shards
+        ) * self.generation.maximum_output_tokens_per_call
+        if self.budget.maximum_provider_requests != self.generation.maximum_total_requests:
+            raise ValueError("Segmentation request budget differs from the generation plan")
+        if self.budget.maximum_output_tokens < task_output_ceiling:
+            raise ValueError("Segmentation output-token budget cannot cover the planned calls")
+        return self
+
+
+class SegmentationFreezeGit(BaseModel):
+    model_config = _CONFIG
+
+    repository: str = Field(min_length=1)
+    branch: str = Field(min_length=1)
+    commit: str = Field(pattern=_COMMIT)
+    worktree_clean_at_commit: Literal[True] = True
+
+
+class SegmentationFreezeBindingSet(BaseModel):
+    model_config = _CONFIG
+
+    protocol: SegmentationProtocolFileBinding
+    sample: SegmentationFreezeSampleBinding
+    segmentation_rubric: SegmentationProtocolFileBinding
+    adjudication_rubric: SegmentationProtocolFileBinding
+    provider_resource: SegmentationProtocolFileBinding
+    identity_policy: SegmentationProtocolFileBinding
+
+
+class SegmentationFreezeImplementation(BaseModel):
+    model_config = _CONFIG
+
+    segmentation_module: SegmentationProtocolFileBinding
+    cli: SegmentationProtocolFileBinding
+
+
+class SegmentationFreezeAttestation(BaseModel):
+    model_config = _CONFIG
+
+    first_provider_request_performed_before_freeze: Literal[False] = False
+    task_or_sample_content_sent_before_freeze: Literal[False] = False
+    source_records_manually_inspected_for_selection: Literal[False] = False
+    sample_replay_verified: Literal[True] = True
+    retrospective_sample_overlap_count: Literal[0] = 0
+    item_count: int = Field(gt=0)
+    creates_immutable_protocol_version: Literal[True] = True
+    protocol_change_requires_new_version: Literal[True] = True
+
+
+class SegmentationFreezeAuthority(BaseModel):
+    model_config = _CONFIG
+
+    protocol_preregistered_by_external_receipt: Literal[True] = True
+    authorizes_provider_contact: Literal[False] = False
+    authorizes_calibration_execution: Literal[False] = False
+    authorizes_scaled_execution: Literal[False] = False
+    authorizes_benchmark_admission: Literal[False] = False
+    formal_evidence_eligible: Literal[False] = False
+
+
+class TasteSourceSegmentationFreezeReceipt(BaseModel):
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    freeze_receipt_id: str = Field(pattern=_ID)
+    project_id: str = Field(pattern=_ID)
+    frozen_at: datetime
+    git: SegmentationFreezeGit
+    bindings: SegmentationFreezeBindingSet
+    implementation: SegmentationFreezeImplementation
+    freeze_attestation: SegmentationFreezeAttestation
+    authority: SegmentationFreezeAuthority
+    next_gate: str = Field(min_length=1, max_length=4_000)
+
+    @model_validator(mode="after")
+    def freeze_is_timestamped(self) -> TasteSourceSegmentationFreezeReceipt:
+        if self.frozen_at.utcoffset() is None:
+            raise ValueError("Segmentation freeze time must include a timezone")
+        return self
+
+
+class TasteSourceSegmentationProtocolInspection(BaseModel):
+    model_config = _CONFIG
+
+    protocol_path: Path
+    protocol_file_sha256: str = Field(pattern=_SHA256)
+    freeze_receipt_path: Path
+    freeze_receipt_file_sha256: str = Field(pattern=_SHA256)
+    protocol: TasteSourceSegmentationProspectiveProtocol
+    freeze_receipt: TasteSourceSegmentationFreezeReceipt
+    sample: TasteSourceSegmentationSampleManifest
+    git_commit_verified: Literal[True] = True
+    artifact_bindings_verified: Literal[True] = True
+    sample_replay_verified: Literal[True] = True
+    protocol_frozen_before_provider_contact: Literal[True] = True
+    provider_contact_authorized: Literal[False] = False
+    calibration_execution_authorized: Literal[False] = False
+
+
+class TasteSourceSegmentationRequestItem(BaseModel):
+    model_config = _CONFIG
+
+    campaign_token: str = Field(pattern=_ID)
+    review_item_id: str = Field(pattern=_ID)
+    reviewed_abstract: str = Field(min_length=1, max_length=8_000)
+    review_comment: str = Field(min_length=1, max_length=8_000)
+
+
+class TasteSourceSegmentationRequestPacket(BaseModel):
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    packet_id: str = Field(pattern=_ID)
+    project_id: str = Field(pattern=_ID)
+    protocol_id: str = Field(pattern=_ID)
+    sample_sha256: str = Field(pattern=_SHA256)
+    sample_manifest_file_sha256: str = Field(pattern=_SHA256)
+    rubric_file_sha256: str = Field(pattern=_SHA256)
+    segmenter_slot: Literal["segmenter-a", "segmenter-b"]
+    shard_index: int = Field(ge=1)
+    shard_count: int = Field(ge=1)
+    requested_provider: str = Field(pattern=_ID)
+    requested_model: str = Field(min_length=1)
+    system_instruction: str = Field(min_length=1, max_length=8_000)
+    rubric: dict[str, JsonValue]
+    items: tuple[TasteSourceSegmentationRequestItem, ...] = Field(min_length=1)
+    output_contract: dict[str, JsonValue]
+    structured_source_identity_fields_withheld: Literal[True] = True
+    explicit_outcome_fields_withheld: Literal[True] = True
+    other_segmenter_output_absent: Literal[True] = True
+    provider_tools_allowed: Literal[False] = False
+    provider_contact_performed: Literal[False] = False
+
+    @model_validator(mode="after")
+    def packet_is_scoped(self) -> TasteSourceSegmentationRequestPacket:
+        if self.shard_index > self.shard_count:
+            raise ValueError("Segmentation request shard index exceeds its count")
+        keys = [(item.campaign_token, item.review_item_id) for item in self.items]
+        if keys != sorted(set(keys)):
+            raise ValueError("Segmentation request items must be sorted and unique")
+        return self
+
+    @computed_field
+    @property
+    def packet_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"packet_sha256"}))
+
+
+class TasteSourceSegmentationRequestBinding(BaseModel):
+    model_config = _CONFIG
+
+    locator: str = Field(min_length=1, max_length=2_000)
+    file_sha256: str = Field(pattern=_SHA256)
+    packet_sha256: str = Field(pattern=_SHA256)
+    segmenter_slot: Literal["segmenter-a", "segmenter-b"]
+    shard_index: int = Field(ge=1)
+    item_count: int = Field(gt=0)
+
+
+class TasteSourceSegmentationRequestPack(BaseModel):
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    pack_id: str = Field(pattern=_ID)
+    project_id: str = Field(pattern=_ID)
+    created_at: datetime
+    protocol_file_sha256: str = Field(pattern=_SHA256)
+    freeze_receipt_file_sha256: str = Field(pattern=_SHA256)
+    sample_sha256: str = Field(pattern=_SHA256)
+    requests: tuple[TasteSourceSegmentationRequestBinding, ...] = Field(min_length=1)
+    unique_item_count: int = Field(gt=0)
+    segmenter_count: Literal[2] = 2
+    request_count: int = Field(gt=0)
+    input_field_names: tuple[
+        Literal["campaign_token", "review_item_id", "reviewed_abstract", "review_comment"],
+        ...,
+    ]
+    forbidden_source_field_names: tuple[str, ...]
+    all_request_payloads_persisted: Literal[True] = True
+    provider_contact_performed: Literal[False] = False
+    execution_authorized: Literal[False] = False
+
+    @model_validator(mode="after")
+    def pack_is_closed(self) -> TasteSourceSegmentationRequestPack:
+        if self.created_at.utcoffset() is None:
+            raise ValueError("Segmentation request-pack time must include a timezone")
+        if self.request_count != len(self.requests):
+            raise ValueError("Segmentation request-pack count is inconsistent")
+        if len({(item.segmenter_slot, item.shard_index) for item in self.requests}) != len(
+            self.requests
+        ):
+            raise ValueError("Segmentation request packets must be unique")
+        if sum(item.item_count for item in self.requests) != 2 * self.unique_item_count:
+            raise ValueError("Segmentation request-pack item coverage is inconsistent")
+        if self.input_field_names != (
+            "campaign_token",
+            "review_item_id",
+            "reviewed_abstract",
+            "review_comment",
+        ):
+            raise ValueError("Segmentation request-pack input fields drifted")
+        required_forbidden = {
+            "article_title",
+            "author_response",
+            "later_revision",
+            "observed_recommendation",
+            "publisher_subject",
+            "source_identity",
+        }
+        if not required_forbidden.issubset(self.forbidden_source_field_names):
+            raise ValueError("Segmentation request-pack forbidden fields are incomplete")
+        return self
+
+    @computed_field
+    @property
+    def pack_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"pack_sha256"}))
+
+
+def inspect_taste_source_segmentation_protocol(
+    *,
+    protocol_path: str | Path,
+    freeze_receipt_path: str | Path,
+    locator_root: str | Path,
+) -> TasteSourceSegmentationProtocolInspection:
+    """Verify the no-run protocol, external freeze, Git snapshot, and sample replay."""
+
+    root = Path(locator_root).resolve(strict=True)
+    protocol_source = _bounded_file(Path(protocol_path), _MAX_CONFIG_BYTES)
+    freeze_source = _bounded_file(Path(freeze_receipt_path), _MAX_CONFIG_BYTES)
+    protocol = TasteSourceSegmentationProspectiveProtocol.model_validate(
+        _yaml_mapping(protocol_source)
+    )
+    freeze = TasteSourceSegmentationFreezeReceipt.model_validate(_yaml_mapping(freeze_source))
+    if protocol.project_id != freeze.project_id:
+        raise ValueError("Segmentation protocol and freeze target different projects")
+    if freeze.frozen_at < protocol.protocol_created_at:
+        raise ValueError("Segmentation freeze predates its protocol")
+    if freeze.freeze_attestation.item_count != protocol.sample.item_count:
+        raise ValueError("Segmentation freeze item count differs from the protocol")
+
+    expected_bindings = {
+        "protocol": (protocol_source, freeze.bindings.protocol),
+        "sample": (root / protocol.sample.locator, freeze.bindings.sample),
+        "segmentation_rubric": (
+            root / protocol.segmentation_rubric.locator,
+            freeze.bindings.segmentation_rubric,
+        ),
+        "adjudication_rubric": (
+            root / protocol.adjudication_rubric.locator,
+            freeze.bindings.adjudication_rubric,
+        ),
+        "provider_resource": (
+            root / protocol.model_condition.resource_locator,
+            freeze.bindings.provider_resource,
+        ),
+        "identity_policy": (
+            root / protocol.model_condition.identity_protocol_locator,
+            freeze.bindings.identity_policy,
+        ),
+    }
+    for binding_name, (candidate_path, binding) in expected_bindings.items():
+        source = _bounded_file(Path(candidate_path), _MAX_CONFIG_BYTES)
+        expected_locator = _relative(source, root)
+        if binding.locator != expected_locator or _sha256_file(source) != binding.file_sha256:
+            raise ValueError(f"Segmentation freeze {binding_name} binding drifted")
+
+    if (
+        freeze.bindings.protocol.file_sha256 != _sha256_file(protocol_source)
+        or freeze.bindings.sample.file_sha256 != protocol.sample.file_sha256
+        or freeze.bindings.sample.sample_sha256 != protocol.sample.sample_sha256
+        or freeze.bindings.segmentation_rubric != protocol.segmentation_rubric
+        or freeze.bindings.adjudication_rubric != protocol.adjudication_rubric
+        or freeze.bindings.provider_resource.file_sha256
+        != protocol.model_condition.resource_file_sha256
+        or freeze.bindings.identity_policy.file_sha256
+        != protocol.model_condition.identity_protocol_file_sha256
+    ):
+        raise ValueError("Segmentation freeze and protocol content bindings differ")
+
+    resource_payload = _yaml_mapping(root / protocol.model_condition.resource_locator)
+    resource = ApiModelDefinition.model_validate(resource_payload.get("resource"))
+    if (
+        resource.resource_id != protocol.model_condition.resource_id
+        or resource.provider_id != protocol.model_condition.provider_id
+        or resource.model_id != protocol.model_condition.requested_model_id
+        or not resource.rolling_alias
+    ):
+        raise ValueError("Segmentation provider resource differs from its model condition")
+    identity = load_api_identity_protocol(
+        root / protocol.model_condition.identity_protocol_locator
+    )
+    if identity.file_sha256 != protocol.model_condition.identity_protocol_file_sha256:
+        raise ValueError("Segmentation identity-policy file hash drifted")
+    identity_policy = identity.protocol.policy(protocol.model_condition.resource_id)
+    if (
+        identity_policy.identity_mode is not ApiIdentityMode.TEMPORAL_WINDOW_ONLY
+        or identity_policy.maximum_formal_window_hours
+        != protocol.model_condition.maximum_window_hours
+        or identity_policy.allowed_returned_model_ids
+        != protocol.model_condition.returned_model_allowlist
+    ):
+        raise ValueError("Segmentation identity policy differs from its model condition")
+
+    sample_inspection = verify_taste_source_segmentation_sample_bindings(
+        root / protocol.sample.locator,
+        locator_root=root,
+    )
+    if (
+        sample_inspection.file_sha256 != protocol.sample.file_sha256
+        or sample_inspection.sample.sample_sha256 != protocol.sample.sample_sha256
+        or sample_inspection.sample.item_count != protocol.sample.item_count
+    ):
+        raise ValueError("Segmentation protocol sample binding drifted")
+
+    _verify_git_commit(root, freeze.git.commit)
+    for binding in (
+        freeze.bindings.protocol,
+        freeze.bindings.sample,
+        freeze.bindings.segmentation_rubric,
+        freeze.bindings.adjudication_rubric,
+        freeze.bindings.provider_resource,
+        freeze.bindings.identity_policy,
+        freeze.implementation.segmentation_module,
+        freeze.implementation.cli,
+    ):
+        if _git_blob_sha256(root, freeze.git.commit, binding.locator) != binding.file_sha256:
+            raise ValueError("Segmentation freeze implementation Git blob drifted")
+    return TasteSourceSegmentationProtocolInspection(
+        protocol_path=protocol_source,
+        protocol_file_sha256=_sha256_file(protocol_source),
+        freeze_receipt_path=freeze_source,
+        freeze_receipt_file_sha256=_sha256_file(freeze_source),
+        protocol=protocol,
+        freeze_receipt=freeze,
+        sample=sample_inspection.sample,
+    )
+
+
+def prepare_taste_source_segmentation_request_pack(
+    *,
+    pack_id: str,
+    protocol_path: str | Path,
+    freeze_receipt_path: str | Path,
+    locator_root: str | Path,
+    output_dir: str | Path,
+    created_at: datetime,
+) -> tuple[Path, TasteSourceSegmentationRequestPack]:
+    """Persist every allowed model input byte without contacting the provider."""
+
+    inspection = inspect_taste_source_segmentation_protocol(
+        protocol_path=protocol_path,
+        freeze_receipt_path=freeze_receipt_path,
+        locator_root=locator_root,
+    )
+    root = Path(locator_root).resolve(strict=True)
+    protocol = inspection.protocol
+    sample = inspection.sample
+    selected_keys = {(item.campaign_id, item.review_item_id) for item in sample.items}
+    campaign_tokens = {
+        campaign_id: segmentation_campaign_token(pack_id, campaign_id)
+        for campaign_id in sample.source_campaign_locators or {}
+    }
+    items_by_campaign: dict[str, list[TasteSourceSegmentationRequestItem]] = {}
+    observed_keys: set[tuple[str, str]] = set()
+    for campaign_id, locator in sorted((sample.source_campaign_locators or {}).items()):
+        campaign_items = load_taste_source_review_items(
+            root / locator,
+            TasteSourceReviewRole.SCIENTIFIC,
+        )
+        selected_source_items = [
+            item
+            for item in campaign_items
+            if isinstance(item, ScientificTasteSourceReviewItem)
+            and (campaign_id, item.review_item_id) in selected_keys
+        ]
+        observed_keys.update(
+            (campaign_id, item.review_item_id) for item in selected_source_items
+        )
+        selected = [
+            TasteSourceSegmentationRequestItem(
+                campaign_token=campaign_tokens[campaign_id],
+                review_item_id=item.review_item_id,
+                reviewed_abstract=item.reviewed_abstract,
+                review_comment=item.review_comment,
+            )
+            for item in selected_source_items
+        ]
+        items_by_campaign[campaign_id] = sorted(selected, key=lambda item: item.review_item_id)
+    if observed_keys != selected_keys:
+        raise ValueError("Segmentation request pack does not resolve its exact sample")
+
+    shard_count = protocol.generation.segmenter_shards
+    items_per_source_shard = protocol.generation.items_per_shard // len(items_by_campaign)
+    if (
+        items_per_source_shard * len(items_by_campaign)
+        != protocol.generation.items_per_shard
+        or any(
+            len(items) != shard_count * items_per_source_shard
+            for items in items_by_campaign.values()
+        )
+    ):
+        raise ValueError("Segmentation sample cannot satisfy the source-balanced shard plan")
+    rubric_payload = _yaml_mapping(root / protocol.segmentation_rubric.locator)
+    output_contract: dict[str, JsonValue] = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["items"],
+        "properties": {
+            "items": {
+                "type": "array",
+                "minItems": protocol.generation.items_per_shard,
+                "maxItems": protocol.generation.items_per_shard,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "campaign_token",
+                        "review_item_id",
+                        "segments",
+                        "residual_decision_bearing_text_possible",
+                    ],
+                    "properties": {
+                        "campaign_token": {"type": "string"},
+                        "review_item_id": {"type": "string"},
+                        "segments": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 128,
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": [
+                                    "verbatim_decision_text",
+                                    "primary_decision_family",
+                                    "atomic_decision_statement",
+                                    "rationale",
+                                    "uncertainty",
+                                ],
+                                "properties": {
+                                    "verbatim_decision_text": {
+                                        "type": "string",
+                                        "minLength": 8,
+                                    },
+                                    "primary_decision_family": {
+                                        "enum": [
+                                            "idea",
+                                            "experiment",
+                                            "evidence",
+                                            "writing",
+                                            "review",
+                                            "visual",
+                                            "cannot-assess",
+                                        ]
+                                    },
+                                    "atomic_decision_statement": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                    },
+                                    "rationale": {"type": "string", "minLength": 1},
+                                    "uncertainty": {
+                                        "enum": ["low", "medium", "high"]
+                                    },
+                                },
+                            },
+                        },
+                        "residual_decision_bearing_text_possible": {"type": "boolean"},
+                    },
+                },
+            }
+        },
+        "item_rule": (
+            "Return every assigned campaign_token and review_item_id exactly once. "
+            "Copy each verbatim_decision_text exactly from review_comment and emit "
+            "one primary family per atomic decision."
+        ),
+    }
+    packets: list[TasteSourceSegmentationRequestPacket] = []
+    campaign_ids = sorted(items_by_campaign)
+    for slot in ("segmenter-a", "segmenter-b"):
+        for shard_index in range(shard_count):
+            shard_items: list[TasteSourceSegmentationRequestItem] = []
+            start = shard_index * items_per_source_shard
+            end = start + items_per_source_shard
+            for campaign_id in campaign_ids:
+                shard_items.extend(items_by_campaign[campaign_id][start:end])
+            packet_id = f"{pack_id}-{slot}-shard-{shard_index + 1:02d}"
+            packets.append(
+                TasteSourceSegmentationRequestPacket(
+                    packet_id=packet_id,
+                    project_id=protocol.project_id,
+                    protocol_id=protocol.protocol_id,
+                    sample_sha256=sample.sample_sha256,
+                    sample_manifest_file_sha256=protocol.sample.file_sha256,
+                    rubric_file_sha256=protocol.segmentation_rubric.file_sha256,
+                    segmenter_slot=slot,
+                    shard_index=shard_index + 1,
+                    shard_count=shard_count,
+                    requested_provider=protocol.model_condition.provider_id,
+                    requested_model=protocol.model_condition.requested_model_id,
+                    system_instruction=(
+                        "Segment only the supplied review comments under the bound rubric. "
+                        "Do not infer hidden source or outcome fields, use tools, browse, or "
+                        "read another segmenter's output. Return one JSON object only."
+                    ),
+                    rubric=rubric_payload,
+                    items=tuple(
+                        sorted(
+                            shard_items,
+                            key=lambda item: (item.campaign_token, item.review_item_id),
+                        )
+                    ),
+                    output_contract=output_contract,
+                )
+            )
+
+    target = Path(output_dir)
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.", dir=target.parent))
+    try:
+        request_dir = staging / "requests"
+        request_dir.mkdir()
+        bindings: list[TasteSourceSegmentationRequestBinding] = []
+        for packet in packets:
+            packet_path = request_dir / f"{packet.packet_id}.json"
+            _atomic_json(packet_path, packet.model_dump(mode="json"))
+            bindings.append(
+                TasteSourceSegmentationRequestBinding(
+                    locator=packet_path.relative_to(staging).as_posix(),
+                    file_sha256=_sha256_file(packet_path),
+                    packet_sha256=packet.packet_sha256,
+                    segmenter_slot=packet.segmenter_slot,
+                    shard_index=packet.shard_index,
+                    item_count=len(packet.items),
+                )
+            )
+        pack = TasteSourceSegmentationRequestPack(
+            pack_id=pack_id,
+            project_id=protocol.project_id,
+            created_at=created_at,
+            protocol_file_sha256=inspection.protocol_file_sha256,
+            freeze_receipt_file_sha256=inspection.freeze_receipt_file_sha256,
+            sample_sha256=sample.sample_sha256,
+            requests=tuple(bindings),
+            unique_item_count=sample.item_count,
+            request_count=len(bindings),
+            input_field_names=(
+                "campaign_token",
+                "review_item_id",
+                "reviewed_abstract",
+                "review_comment",
+            ),
+            forbidden_source_field_names=(
+                "article_title",
+                "author_response",
+                "later_revision",
+                "observed_recommendation",
+                "publisher_subject",
+                "source_identity",
+            ),
+        )
+        _atomic_json(staging / "REQUEST_PACK.json", pack.model_dump(mode="json"))
+        os.rename(staging, target)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    return target, pack
+
+
+def load_taste_source_segmentation_request_packet(
+    path: str | Path,
+) -> TasteSourceSegmentationRequestPacket:
+    """Load one immutable packet and verify its semantic self-hash."""
+
+    source = _bounded_file(Path(path), _MAX_CAMPAIGN_BYTES)
+    payload = json.loads(source.read_bytes())
+    if not isinstance(payload, dict):
+        raise ValueError("Segmentation request packet must contain a mapping")
+    recorded = payload.pop("packet_sha256", None)
+    packet = TasteSourceSegmentationRequestPacket.model_validate(payload)
+    if recorded != packet.packet_sha256:
+        raise ValueError("Segmentation request packet hash mismatch")
+    return packet
+
+
+def load_taste_source_segmentation_request_pack(
+    path: str | Path,
+) -> TasteSourceSegmentationRequestPack:
+    """Load a pack and verify every packet, binding, and dual-slot item copy."""
+
+    source = _bounded_file(Path(path), _MAX_CAMPAIGN_BYTES)
+    payload = json.loads(source.read_bytes())
+    if not isinstance(payload, dict):
+        raise ValueError("Segmentation request pack must contain a mapping")
+    recorded = payload.pop("pack_sha256", None)
+    pack = TasteSourceSegmentationRequestPack.model_validate(payload)
+    if recorded != pack.pack_sha256:
+        raise ValueError("Segmentation request-pack hash mismatch")
+    pack_root = source.parent
+    packets: dict[tuple[str, int], TasteSourceSegmentationRequestPacket] = {}
+    for binding in pack.requests:
+        locator = _safe_locator(binding.locator)
+        packet_path = _bounded_file(pack_root / locator, _MAX_CAMPAIGN_BYTES)
+        try:
+            packet_path.relative_to(pack_root)
+        except ValueError as error:  # pragma: no cover - defended by safe locator
+            raise ValueError("Segmentation request packet escapes its pack") from error
+        packet = load_taste_source_segmentation_request_packet(packet_path)
+        if (
+            _sha256_file(packet_path) != binding.file_sha256
+            or packet.packet_sha256 != binding.packet_sha256
+            or packet.segmenter_slot != binding.segmenter_slot
+            or packet.shard_index != binding.shard_index
+            or len(packet.items) != binding.item_count
+            or packet.project_id != pack.project_id
+            or packet.sample_sha256 != pack.sample_sha256
+        ):
+            raise ValueError("Segmentation request packet binding drifted")
+        packets[(packet.segmenter_slot, packet.shard_index)] = packet
+    shard_ids = sorted({shard for _, shard in packets})
+    for shard_id in shard_ids:
+        first = packets.get(("segmenter-a", shard_id))
+        second = packets.get(("segmenter-b", shard_id))
+        if first is None or second is None or first.items != second.items:
+            raise ValueError("Segmentation dual slots do not bind identical shard inputs")
+    unique_keys = {
+        (item.campaign_token, item.review_item_id)
+        for (slot, _), packet in packets.items()
+        if slot == "segmenter-a"
+        for item in packet.items
+    }
+    if len(unique_keys) != pack.unique_item_count:
+        raise ValueError("Segmentation request pack unique item count drifted")
+    return pack
+
+
+def segmentation_campaign_token(pack_id: str, campaign_id: str) -> str:
+    """Derive a stable packet-local token without serializing the source name."""
+
+    digest = _canonical_sha256(
+        {
+            "domain": "scitaste-segmentation-campaign-token-v1",
+            "pack_id": pack_id,
+            "campaign_id": campaign_id,
+        }
+    )
+    return f"source-{digest[:24]}"
+
+
+def _verify_git_commit(root: Path, commit: str) -> None:
+    result = subprocess.run(
+        ["git", "-C", str(root), "cat-file", "-e", f"{commit}^{{commit}}"],
+        check=False,
+        capture_output=True,
+        timeout=15,
+    )
+    if result.returncode != 0:
+        raise ValueError("Segmentation freeze Git commit is unavailable")
+
+
+def _git_blob_sha256(root: Path, commit: str, locator: str) -> str:
+    _safe_locator(locator)
+    result = subprocess.run(
+        ["git", "-C", str(root), "show", f"{commit}:{locator}"],
+        check=False,
+        capture_output=True,
+        timeout=15,
+    )
+    if result.returncode != 0:
+        raise ValueError("Segmentation freeze Git blob is unavailable")
+    return hashlib.sha256(result.stdout).hexdigest()
+
+
+def _yaml_mapping(path: Path) -> dict[str, JsonValue]:
+    source = _bounded_file(path, _MAX_CONFIG_BYTES)
+    payload = yaml.safe_load(source.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Segmentation protocol input must contain a mapping")
+    return payload
+
+
+def _bounded_file(path: Path, maximum_bytes: int) -> Path:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Segmentation protocol input must be a regular non-symlink file")
+    if path.stat().st_size > maximum_bytes:
+        raise ValueError("Segmentation protocol input exceeds its byte limit")
+    return path.resolve(strict=True)
+
+
+def _safe_locator(locator: str) -> PurePosixPath:
+    candidate = PurePosixPath(locator)
+    if (
+        "\\" in locator
+        or candidate.is_absolute()
+        or any(part in {"", ".", ".."} for part in candidate.parts)
+    ):
+        raise ValueError("Segmentation protocol locator is unsafe")
+    return candidate
+
+
+def _relative(path: Path, root: Path) -> str:
+    try:
+        return path.resolve(strict=True).relative_to(root).as_posix()
+    except ValueError as error:
+        raise ValueError("Segmentation protocol artifact is outside its root") from error
+
+
+def _atomic_json(path: Path, payload: object) -> None:
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.rename(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1_048_576), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _canonical_sha256(value: object) -> str:
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
+
+
+__all__ = [
+    "TasteSourceSegmentationFreezeReceipt",
+    "TasteSourceSegmentationProspectiveProtocol",
+    "TasteSourceSegmentationProtocolInspection",
+    "TasteSourceSegmentationRequestItem",
+    "TasteSourceSegmentationRequestPack",
+    "TasteSourceSegmentationRequestPacket",
+    "inspect_taste_source_segmentation_protocol",
+    "load_taste_source_segmentation_request_pack",
+    "load_taste_source_segmentation_request_packet",
+    "prepare_taste_source_segmentation_request_pack",
+    "segmentation_campaign_token",
+]

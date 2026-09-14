@@ -6,10 +6,12 @@ import json
 import tarfile
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import yaml
 
+import scitaste.evaluation.taste_source_segmentation_protocol as protocol_module
 from scitaste.evaluation import (
     AcquisitionEvidenceBinding,
     AcquisitionItem,
@@ -23,6 +25,7 @@ from scitaste.evaluation import (
     load_taste_source_review_assignment_plan,
     load_taste_source_review_policy,
     load_taste_source_segmentation_agreement_report,
+    load_taste_source_segmentation_request_pack,
     load_taste_source_segmentation_resolution_run,
     load_taste_source_segmentation_sample_manifest,
     materialize_aries_taste_population,
@@ -34,6 +37,7 @@ from scitaste.evaluation import (
     plan_taste_source_segmentation_sample,
     prepare_taste_source_review_campaign,
     prepare_taste_source_review_session,
+    prepare_taste_source_segmentation_request_pack,
     publish_aries_taste_population_run,
     publish_taste_source_review_campaign_run,
     save_dataset_acquisition_request,
@@ -82,6 +86,7 @@ def _s2orc_archive() -> bytes:
 
 def test_natural_aries_population_is_projected_without_becoming_benchmark(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     runtime = ProjectRuntime(tmp_path / "outputs")
     snapshot = runtime.create(
@@ -491,6 +496,66 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
             random_seed=20260915,
             locator_root=tmp_path,
         )
+    protocol_stub = SimpleNamespace(
+        project_id=campaign.project_id,
+        protocol_id="aries-prospective-segmentation-protocol-v1",
+        sample=SimpleNamespace(
+            locator=prospective_sample_path.relative_to(tmp_path).as_posix(),
+            file_sha256=hashlib.sha256(prospective_sample_path.read_bytes()).hexdigest(),
+        ),
+        segmentation_rubric=SimpleNamespace(
+            locator=segmentation_rubric.relative_to(tmp_path).as_posix(),
+            file_sha256=hashlib.sha256(segmentation_rubric.read_bytes()).hexdigest(),
+        ),
+        generation=SimpleNamespace(segmenter_shards=1, items_per_shard=1),
+        model_condition=SimpleNamespace(
+            provider_id="test-provider",
+            requested_model_id="test-model",
+        ),
+    )
+    inspection_stub = SimpleNamespace(
+        protocol=protocol_stub,
+        sample=prospective_sample,
+        protocol_file_sha256="1" * 64,
+        freeze_receipt_file_sha256="2" * 64,
+    )
+    monkeypatch.setattr(
+        protocol_module,
+        "inspect_taste_source_segmentation_protocol",
+        lambda **_: inspection_stub,
+    )
+    request_pack_path, request_pack = prepare_taste_source_segmentation_request_pack(
+        pack_id="aries-prospective-request-pack-v1",
+        protocol_path=tmp_path / "unused-protocol.yaml",
+        freeze_receipt_path=tmp_path / "unused-freeze.yaml",
+        locator_root=tmp_path,
+        output_dir=tmp_path / "request-pack",
+        created_at=datetime(2026, 9, 15, 1, 0, tzinfo=UTC),
+    )
+    assert request_pack.request_count == 2
+    assert request_pack.unique_item_count == 1
+    assert request_pack.provider_contact_performed is False
+    assert (
+        load_taste_source_segmentation_request_pack(
+            request_pack_path / "REQUEST_PACK.json"
+        ).pack_sha256
+        == request_pack.pack_sha256
+    )
+    request_payload = json.loads(
+        next((request_pack_path / "requests").glob("*.json")).read_text(encoding="utf-8")
+    )
+    assert set(request_payload["items"][0]) == {
+        "campaign_token",
+        "review_item_id",
+        "reviewed_abstract",
+        "review_comment",
+    }
+    assert "article_title" not in request_payload["items"][0]
+    assert request_payload["rubric_file_sha256"] == hashlib.sha256(
+        segmentation_rubric.read_bytes()
+    ).hexdigest()
+    assert request_payload["output_contract"]["required"] == ["items"]
+    assert request_payload["output_contract"]["properties"]["items"]["minItems"] == 1
     raw_segmentation_payload = json.loads(raw_segmentation.read_text(encoding="utf-8"))
     raw_segmentation_payload.update(
         {

@@ -129,6 +129,7 @@ from scitaste.evaluation import (
     inspect_task_selection,
     inspect_taste_corpus_curation,
     inspect_taste_corpus_pair,
+    inspect_taste_source_segmentation_protocol,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_agent_laboratory_preparation,
@@ -203,6 +204,7 @@ from scitaste.evaluation import (
     prepare_human_reviewer_session,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
+    prepare_taste_source_segmentation_request_pack,
     project_benchmark_metadata_population,
     publish_project_evaluation,
     publish_project_evaluation_result,
@@ -2117,6 +2119,39 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(taste_source_segmentation_sample)
     taste_source_segmentation_sample.set_defaults(
         handler=_handle_evaluation_taste_source_segmentation_sample_plan
+    )
+    taste_source_segmentation_protocol = evaluation_commands.add_parser(
+        "taste-source-segmentation-protocol-inspect",
+        help="Verify a frozen prospective segmentation protocol without provider access",
+    )
+    taste_source_segmentation_protocol.add_argument("--protocol", type=Path, required=True)
+    taste_source_segmentation_protocol.add_argument(
+        "--freeze-receipt", type=Path, required=True
+    )
+    taste_source_segmentation_protocol.add_argument(
+        "--locator-root", type=Path, default=Path(".")
+    )
+    _add_log_level_option(taste_source_segmentation_protocol)
+    taste_source_segmentation_protocol.set_defaults(
+        handler=_handle_evaluation_taste_source_segmentation_protocol_inspect
+    )
+    taste_source_segmentation_pack = evaluation_commands.add_parser(
+        "taste-source-segmentation-request-pack",
+        help="Persist outcome-field-blind segmenter request packets without provider access",
+    )
+    taste_source_segmentation_pack.add_argument("--pack-id", required=True)
+    taste_source_segmentation_pack.add_argument("--protocol", type=Path, required=True)
+    taste_source_segmentation_pack.add_argument(
+        "--freeze-receipt", type=Path, required=True
+    )
+    taste_source_segmentation_pack.add_argument("--created-at", required=True)
+    taste_source_segmentation_pack.add_argument(
+        "--locator-root", type=Path, default=Path(".")
+    )
+    taste_source_segmentation_pack.add_argument("--output-dir", type=Path, required=True)
+    _add_log_level_option(taste_source_segmentation_pack)
+    taste_source_segmentation_pack.set_defaults(
+        handler=_handle_evaluation_taste_source_segmentation_request_pack
     )
     taste_source_segmentation = evaluation_commands.add_parser(
         "taste-source-decision-segmentation-normalize",
@@ -6750,6 +6785,64 @@ def _handle_evaluation_taste_source_segmentation_sample_plan(
                     "scaled_execution_authorized"
                 ],
                 "formal_evidence_eligible": sample.authority["formal_evidence_eligible"],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_taste_source_segmentation_protocol_inspect(
+    args: argparse.Namespace,
+) -> int:
+    inspection = inspect_taste_source_segmentation_protocol(
+        protocol_path=args.protocol,
+        freeze_receipt_path=args.freeze_receipt,
+        locator_root=args.locator_root,
+    )
+    payload = {
+        "status": "prospective-segmentation-protocol-frozen-no-run",
+        "protocol_id": inspection.protocol.protocol_id,
+        "protocol_file_sha256": inspection.protocol_file_sha256,
+        "freeze_receipt_file_sha256": inspection.freeze_receipt_file_sha256,
+        "sample_sha256": inspection.sample.sample_sha256,
+        "sample_item_count": inspection.sample.item_count,
+        "git_commit": inspection.freeze_receipt.git.commit,
+        "git_commit_verified": inspection.git_commit_verified,
+        "artifact_bindings_verified": inspection.artifact_bindings_verified,
+        "sample_replay_verified": inspection.sample_replay_verified,
+        "provider_contact_authorized": inspection.provider_contact_authorized,
+        "calibration_execution_authorized": (
+            inspection.calibration_execution_authorized
+        ),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_evaluation_taste_source_segmentation_request_pack(
+    args: argparse.Namespace,
+) -> int:
+    output, pack = prepare_taste_source_segmentation_request_pack(
+        pack_id=args.pack_id,
+        protocol_path=args.protocol,
+        freeze_receipt_path=args.freeze_receipt,
+        locator_root=args.locator_root,
+        output_dir=args.output_dir,
+        created_at=datetime.fromisoformat(args.created_at),
+    )
+    print(
+        json.dumps(
+            {
+                "status": "segmentation-request-pack-prepared-no-provider-contact",
+                "output_dir": str(output),
+                "manifest": str(output / "REQUEST_PACK.json"),
+                "pack_sha256": pack.pack_sha256,
+                "request_count": pack.request_count,
+                "unique_item_count": pack.unique_item_count,
+                "provider_contact_performed": pack.provider_contact_performed,
+                "execution_authorized": pack.execution_authorized,
             },
             indent=2,
             ensure_ascii=False,

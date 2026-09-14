@@ -17,7 +17,12 @@ semantic versioning.
   protocol, sample, rubrics, provider resource, identity policy, planner module,
   and CLI before any provider request. It grants no provider, scale, admission,
   or formal-evidence authority until a bounded runner and authenticated receipts
-  are separately accepted.
+  are separately accepted. A typed inspector now replays every sample binding,
+  verifies frozen Git blobs, identity/resource files, thresholds, shard/request
+  formulas, and budgets. A no-contact request-pack compiler emits eight
+  source-balanced packets for two blinded segmenter slots using only anonymous
+  IDs, abstract, and review text; explicit title, source, private, and delayed-
+  outcome fields are absent from the packets.
 - Added exact-span reconstruction for compound natural-source reviews. A model
   may propose multiple uniquely occurring verbatim decision spans, but every
   span is bound to the immutable scientific item, character offsets, one
