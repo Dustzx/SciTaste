@@ -1,0 +1,58 @@
+schema_version: "1.4"
+rubric_id: scitastebench-decision-segmentation-adjudication-v5
+purpose: >-
+  Resolve only disputed AI trigger/context proposals without conferring human,
+  source-admission, benchmark, or external-validity authority.
+input_boundary:
+  allowed:
+    - frozen adjudication rubric
+    - assigned disputed structurally pseudonymized text, evidence units, and typed blockers
+    - two candidates in hash-randomized anonymous order
+  forbidden:
+    - non-disputed records or segmenter slot identities
+    - private item map or privacy-review records
+    - structured publisher source identity
+    - recommendation, author response, later revision, or population outcome
+semantic_identity_limit: >-
+  Candidate slots are anonymous, but public names, titles, and URLs inside source
+  text are not removed. Parametric source recognition cannot be ruled out.
+resolution_rules:
+  - Read the complete disputed review_comment and resolve every independently actionable decision.
+  - The candidates are proposals, not a forced binary choice; C must be able to output zero or reselect all ranges.
+  - Return zero segments plus no_decision_rationale when no actionable decision is present.
+  - For each decision choose the shortest direct trigger_range and only necessary context_ranges.
+  - Trigger ranges must be ordered and non-overlapping; context ranges may be shared across decisions.
+  - Context must not overlap its own trigger and must not conceal a second actionable request.
+  - Never merge independently actionable changes solely because they share a sentence, family, or context.
+  - Assign the family of the scientific decision changed, not the rhetorical form of the request.
+  - cannot-assess requires a real trigger and high uncertainty; it is not a no-decision placeholder.
+  - Do not return trigger text, context text, source-span transcriptions, or character offsets.
+  - Record residual risk whenever potentially actionable text may remain unsegmented.
+runner_reconstruction_boundary:
+  provider_output_role: trigger-and-context-unit-selection-only
+  algorithm: unicode-word-punctuation-v1
+  token_pattern: "\\w+|[^\\w\\s]"
+  requirements:
+    - all selected IDs must exist in the assigned item
+    - trigger ranges must be forward, ordered, non-overlapping, and item-local
+    - each decision's context ranges must be forward, ordered, unique, and non-adjacent
+    - final trigger and context text and offsets are copied deterministically from review_comment
+  forbidden:
+    - provider-authored trigger, context, or source-span text fields or character offsets
+    - normalization, fuzzy matching, insertion, deletion, or retry repair
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: an actionable decision trigger exists but visible text cannot identify one primary family
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  human_agreement_claim_allowed: false
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false

@@ -4,11 +4,13 @@ import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Literal
 
 import pytest
 import yaml
 from pydantic import ValidationError
 
+from scitaste.evaluation.model_identity import ApiIdentityCallReceipt, ApiIdentityCallRole
 from scitaste.evaluation.taste_source_segmentation import _normalize_raw_segments
 from scitaste.evaluation.taste_source_segmentation_execution import (
     SegmentationExecutionAuthority,
@@ -17,6 +19,7 @@ from scitaste.evaluation.taste_source_segmentation_execution import (
     SegmentationExecutionPackBinding,
     SegmentationExecutionPriceCeiling,
     SegmentationExecutionRunnerBinding,
+    SegmentationProviderCallReceipt,
     TasteSourceSegmentationExecutionAuthorization,
     build_segmentation_adjudication_request,
     build_segmentation_provider_request,
@@ -108,10 +111,87 @@ def _v4_protocol():
     return TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
 
 
-def _anchored_packet() -> TasteSourceSegmentationRequestPacket:
+def _v15_protocol():
+    payload = _v4_protocol().model_dump(mode="json", exclude_none=True, by_alias=True)
+    payload["schema_version"] = "1.5"
+    payload["sample"].update(
+        {
+            "prior_source_groups_excluded": 20,
+            "source_group_disjoint": True,
+            "maximum_items_per_source_group": 1,
+            "per_campaign_eligible_source_group_counts": {
+                "aries-taste-source-review-v1": 12,
+                "f1000-multidomain-taste-source-review-v1": 12,
+            },
+            "per_campaign_sampling_fraction_micros": {
+                "aries-taste-source-review-v1": 1_000_000,
+                "f1000-multidomain-taste-source-review-v1": 1_000_000,
+            },
+            "uncertainty_estimand": (
+                "descriptive-calibration-superpopulation-work-model"
+            ),
+        }
+    )
+    payload["evidence_unit_selection"].update(
+        {
+            "system_instruction_sha256": _SHA,
+            "output_contract_sha256": _SHA,
+            "range_contract": "trigger-plus-shared-context-v1",
+            "zero_decision_allowed": True,
+            "maximum_context_ranges_per_decision": 8,
+            "trigger_ranges_overlapping_allowed": False,
+            "context_ranges_may_overlap_across_decisions": True,
+            "context_may_overlap_another_decision_trigger": True,
+        }
+    )
+    payload["integrity_gate"] = {"locator": "integrity.yaml", "file_sha256": _SHA}
+    payload["authority_gate"] = {"locator": "authority.yaml", "file_sha256": _SHA}
+    payload["model_condition"].update(
+        {
+            "identity_claim_scope": (
+                "provider-reported-rolling-alias-envelope-continuity-only"
+            ),
+            "backend_revision_identified": False,
+        }
+    )
+    payload["metrics"].update(
+        {
+            "decision_presence_agreement": {
+                "role": "reported-primary-diagnostic",
+                "pass_threshold": 0.8,
+            },
+            "exact_trigger_context_set_agreement": {
+                "role": "reported-diagnostic",
+                "threshold": None,
+            },
+            "source_group_uncertainty": {
+                "unit": "source_group_id",
+                "estimator": "campaign-stratified-source-group-bootstrap-v1",
+                "estimand": "descriptive-calibration-superpopulation-work-model",
+                "scale_gate_role": "diagnostic-only",
+                "campaign_weighting": "equal-by-design",
+                "confidence_level": 0.95,
+                "replicates": 10000,
+                "random_seed": 2026091506,
+            },
+        }
+    )
+    payload["scale_gate"].update(
+        {
+            "calibration_only_no_direct_scale": True,
+            "independent_source_group_validation_required": True,
+            "new_source_groups_required_for_validation": True,
+        }
+    )
+    return TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
+
+
+def _anchored_packet(
+    schema_version: Literal["1.1", "1.2"] = "1.1",
+) -> TasteSourceSegmentationRequestPacket:
     source = "Compare A-B with A-B. Also preserve *quoted* spacing around (x, y)."
     return TasteSourceSegmentationRequestPacket(
-        schema_version="1.1",
+        schema_version=schema_version,
         packet_id="anchored-packet-v1",
         project_id="scitaste-self-development",
         protocol_id="anchored-protocol-v1",
@@ -435,6 +515,220 @@ def test_v4_selects_source_units_without_copying_or_searching_text() -> None:
         "unit_id": "u0001",
         "surface": "Compare",
     }
+
+
+def test_v15_accepts_zero_decisions_only_with_a_rationale() -> None:
+    packet = _anchored_packet("1.2")
+    item = {
+        "campaign_token": "campaign-opaque",
+        "review_item_id": "item-opaque",
+        "segments": [],
+        "no_decision_rationale": "The comment contains no actionable requested change.",
+        "residual_decision_bearing_text_possible": False,
+    }
+    output = validate_segmentation_provider_output(
+        json.dumps({"items": [item]}),
+        packet=packet,
+        protocol=_v15_protocol(),
+    )
+    assert output.items[0].segments == ()
+    assert output.items[0].no_decision_rationale == item["no_decision_rationale"]
+
+    item.pop("no_decision_rationale")
+    with pytest.raises(ValidationError, match="no_decision_rationale"):
+        validate_segmentation_provider_output(
+            json.dumps({"items": [item]}),
+            packet=packet,
+            protocol=_v15_protocol(),
+        )
+
+
+def test_v15_preserves_shared_context_separately_from_ordered_triggers() -> None:
+    packet = _anchored_packet("1.2")
+    rows = taste_source_comment_unit_offsets(packet.items[0].review_comment)
+    unit_by_surface = {}
+    for unit_id, surface, _, _ in rows:
+        unit_by_surface.setdefault(surface, []).append(unit_id)
+    shared_context = {
+        "start_unit_id": unit_by_surface["A"][0],
+        "end_unit_id": unit_by_surface["B"][0],
+    }
+    segments = [
+        {
+            "trigger_range": {
+                "start_unit_id": unit_by_surface["Compare"][0],
+                "end_unit_id": unit_by_surface["Compare"][0],
+            },
+            "context_ranges": [shared_context],
+            "primary_decision_family": "experiment",
+            "atomic_decision_statement": "Compare the stated conditions.",
+            "rationale": "The trigger requests a comparison.",
+            "uncertainty": "low",
+        },
+        {
+            "trigger_range": {
+                "start_unit_id": unit_by_surface["preserve"][0],
+                "end_unit_id": unit_by_surface["preserve"][0],
+            },
+            "context_ranges": [shared_context],
+            "primary_decision_family": "writing",
+            "atomic_decision_statement": "Preserve the marked wording.",
+            "rationale": "The trigger requests preservation.",
+            "uncertainty": "low",
+        },
+    ]
+    raw = json.dumps(
+        {
+            "items": [
+                {
+                    "campaign_token": "campaign-opaque",
+                    "review_item_id": "item-opaque",
+                    "segments": segments,
+                    "no_decision_rationale": None,
+                    "residual_decision_bearing_text_possible": False,
+                }
+            ]
+        }
+    )
+    output = validate_segmentation_provider_output(
+        raw,
+        packet=packet,
+        protocol=_v15_protocol(),
+    )
+    assert [segment.verbatim_decision_text for segment in output.items[0].segments] == [
+        "Compare",
+        "preserve",
+    ]
+    assert [
+        segment.context_ranges[0].verbatim_context_text
+        for segment in output.items[0].segments
+    ] == ["A-B", "A-B"]
+
+    segments[0]["context_ranges"] = [segments[0]["trigger_range"]]
+    overlapping_payload = json.loads(raw)
+    overlapping_payload["items"][0]["segments"] = segments
+    with pytest.raises(ValueError, match="context overlaps its decision trigger"):
+        validate_segmentation_provider_output(
+            json.dumps(overlapping_payload),
+            packet=packet,
+            protocol=_v15_protocol(),
+        )
+
+
+def test_v15_rejects_legacy_packet_and_adjacent_context_units() -> None:
+    legacy_packet = _anchored_packet()
+    empty_item = {
+        "campaign_token": "campaign-opaque",
+        "review_item_id": "item-opaque",
+        "segments": [],
+        "no_decision_rationale": "No actionable requested change is present.",
+        "residual_decision_bearing_text_possible": False,
+    }
+    with pytest.raises(ValueError, match="protocol and request-packet schemas differ"):
+        validate_segmentation_provider_output(
+            json.dumps({"items": [empty_item]}),
+            packet=legacy_packet,
+            protocol=_v15_protocol(),
+        )
+
+    packet = _anchored_packet("1.2")
+    rows = taste_source_comment_unit_offsets(packet.items[0].review_comment)
+    adjacent_context = [
+        {"start_unit_id": rows[1][0], "end_unit_id": rows[1][0]},
+        {"start_unit_id": rows[2][0], "end_unit_id": rows[2][0]},
+    ]
+    payload = {
+        "items": [
+            {
+                "campaign_token": "campaign-opaque",
+                "review_item_id": "item-opaque",
+                "segments": [
+                    {
+                        "trigger_range": {
+                            "start_unit_id": rows[-2][0],
+                            "end_unit_id": rows[-2][0],
+                        },
+                        "context_ranges": adjacent_context,
+                        "primary_decision_family": "experiment",
+                        "atomic_decision_statement": "Compare the stated conditions.",
+                        "rationale": "The trigger requests a comparison.",
+                        "uncertainty": "low",
+                    }
+                ],
+                "no_decision_rationale": None,
+                "residual_decision_bearing_text_possible": False,
+            }
+        ]
+    }
+    with pytest.raises(ValueError, match="evidence-unit ranges overlap or are adjacent"):
+        validate_segmentation_provider_output(
+            json.dumps(payload),
+            packet=packet,
+            protocol=_v15_protocol(),
+        )
+
+
+def test_v15_call_receipt_requires_anchored_item_receipts_and_clean_sentinel() -> None:
+    timestamp = datetime(2026, 9, 15, tzinfo=UTC)
+
+    def identity_call(role: ApiIdentityCallRole) -> ApiIdentityCallReceipt:
+        workload = role is ApiIdentityCallRole.WORKLOAD
+        return ApiIdentityCallReceipt(
+            sequence=1,
+            role=role,
+            provider_id="zhipu",
+            endpoint="https://example.invalid/chat",
+            interface="openai-chat-completions",
+            requested_model_id="glm-5.3-flash",
+            returned_model="glm-5.3-flash",
+            provider_request_id="provider-task-1",
+            request_started_at_utc=timestamp,
+            response_completed_at_utc=timestamp,
+            request_sha256=_SHA,
+            response_sha256=_SHA,
+            raw_request_ref="calls/request.json",
+            raw_response_ref="calls/response.json",
+            http_status=200,
+            input_tokens=1,
+            output_tokens=1,
+            sentinel_template_sha256=None if workload else _SHA,
+            task_or_benchmark_content_present=workload,
+        )
+
+    with pytest.raises(ValueError, match="item receipts are incomplete"):
+        SegmentationProviderCallReceipt(
+            schema_version="1.1",
+            call=identity_call(ApiIdentityCallRole.WORKLOAD),
+            packet_id="packet-v1",
+            packet_sha256=_SHA,
+            client_request_id="request-1",
+            echoed_request_id="request-1",
+            provider_task_id="provider-task-1",
+            raw_provider_response_sha256=_SHA,
+            output_object_sha256=_SHA,
+            cached_input_tokens=0,
+            total_tokens=2,
+            estimated_cost_cny=0.0,
+            assigned_item_count=1,
+            verbatim_spans_verified=None,
+            anchor_ranges_verified=True,
+        )
+
+    sentinel = SegmentationProviderCallReceipt(
+        schema_version="1.1",
+        call=identity_call(ApiIdentityCallRole.START_SENTINEL),
+        client_request_id="request-1",
+        echoed_request_id="request-1",
+        provider_task_id="provider-task-1",
+        raw_provider_response_sha256=_SHA,
+        output_object_sha256=_SHA,
+        cached_input_tokens=0,
+        total_tokens=2,
+        estimated_cost_cny=0.0,
+        verbatim_spans_verified=None,
+        identity_sentinel_output_verified=True,
+    )
+    assert sentinel.anchor_ranges_verified is None
 
 
 def test_v4_rejects_unknown_reversed_and_overlapping_unit_ranges() -> None:

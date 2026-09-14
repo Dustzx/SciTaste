@@ -1,0 +1,35 @@
+schema_version: '1.0'
+record_id: scitastebench-segmentation-sample-v4-supersession-v1
+recorded_at: '2026-09-15T07:03:12+08:00'
+project_id: scitaste-self-development
+superseded_sample:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v4.yaml
+  file_sha256: 0a878bf30b82e6a999b0e0ba6b706d11a65264f8c66136387eb8b480782b01dc
+  sample_sha256: 55e5ac8e4267a3af3b22961a62203a268454152551413992392a67477f970a95
+  selection_algorithm_version: sha256-ranked-source-group-disjoint-v2
+replacement_sample:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v5.yaml
+  file_sha256: 8ddabcbb6fdada1ca11519d06518fd1092ebb12c8004f7cf8b47730ed162a9b2
+  sample_sha256: 118b3ade59e17bbc2f03d4e1a285f61da2cd016f29e9e062e673c771a34c2f57
+  selection_algorithm_version: sha256-ranked-source-group-disjoint-v3
+reason:
+  code: item-first-group-size-selection-bias
+  statement: >-
+    Version 2 ranked items before deduplicating source groups, so groups containing
+    more review items had more opportunities to enter the sample. Version 3 ranks
+    eligible source groups first and independently selects one item within each
+    selected group.
+observation_boundary:
+  selection_metadata_observed: true
+  review_text_read_by_ai: false
+  review_text_read_by_human: false
+  provider_contact_performed: false
+  api_call_count: 0
+  sample_consumed: false
+  calibration_result_created: false
+  formal_evidence_eligible: false
+review:
+  reviewer_kind: ai
+  not_human_review: true
+  human_agreement_claim_allowed: false
+  verdict: superseded-before-content-observation

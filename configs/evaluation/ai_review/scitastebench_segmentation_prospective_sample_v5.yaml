@@ -1,0 +1,108 @@
+schema_version: '1.2'
+sample_id: scitastebench-segmentation-prospective-calibration-v5
+project_id: scitaste-self-development
+selection_timing: preregistered
+selection_rationale: Freeze an outcome-blind, source-balanced calibration sample before
+  either segmenter receives item text; all earlier calibration source groups are excluded.
+sampling_algorithm: 'sha256-ranked-source-group-disjoint-v3: exclude every source
+  group represented in prior samples; first rank remaining groups by a canonical SHA-256
+  binding the seed, campaign, and private source-group ID, then independently rank
+  records within each selected group and take one record.'
+random_seed: 2026091505
+selection_algorithm_version: sha256-ranked-source-group-disjoint-v3
+source_campaign_locators:
+  aries-taste-source-review-v1: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-source-review-v1/CAMPAIGN.json
+  f1000-multidomain-taste-source-review-v1: outputs/projects/scitaste-self-development/evaluations/reviews/f1000-multidomain-taste-source-review-v1/CAMPAIGN.json
+source_campaign_file_sha256s:
+  aries-taste-source-review-v1: 85bced0fcc8a470578aa2fee4040c6182900657ab474c286eb21aad30b426844
+  f1000-multidomain-taste-source-review-v1: deb793bc065d09ddcfd6e02350bd430ecb81f9fc563d9f1bb7b466ebcd60263e
+source_campaign_sha256s:
+  aries-taste-source-review-v1: 83c95d2d0dcbc9f96708aedf95caa9808a093383efb8d61a063572f52adb6af3
+  f1000-multidomain-taste-source-review-v1: 74a45dc4ec755776e887ccc22ae433878abd6a5ad587a89e53690cb95cd99539
+source_scientific_items_sha256s:
+  aries-taste-source-review-v1: 946981aa247e4a50bdac7acd26c65e74658b1307d96c113ffdd2e76460efdbbd
+  f1000-multidomain-taste-source-review-v1: cc6d7d283b2e7dc3a5efef90a04b3dc4d5e2433ba0717940856ba306de74eefd
+excluded_sample_locators:
+  scitastebench-segmentation-calibration-sample-v1: configs/evaluation/ai_review/scitastebench_segmentation_calibration_sample_v1.yaml
+  scitastebench-segmentation-prospective-calibration-v1: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v1.yaml
+  scitastebench-segmentation-prospective-calibration-v2: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v2.yaml
+  scitastebench-segmentation-prospective-calibration-v3: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v3.yaml
+excluded_sample_file_sha256s:
+  scitastebench-segmentation-calibration-sample-v1: be8ee5edf23c52ad9d5385e7deae7200c58bafda9a42d600b0bd460d3e7c76f9
+  scitastebench-segmentation-prospective-calibration-v1: 77d6a74690ee11200c6f2099e2eb078e919216bc82af1cf3a57246870f161a41
+  scitastebench-segmentation-prospective-calibration-v2: 2820dc77ad3663f2d603a2cafb0c9deb27bd2e32e5849df2ca9f1363814700b7
+  scitastebench-segmentation-prospective-calibration-v3: da22ffd1c3a0273cdfad2b9604dedf7cbe4bbeaa9b578013e951dc6efdc1bf25
+excluded_sample_sha256s:
+  scitastebench-segmentation-calibration-sample-v1: 96fb57bbfade9f0ff5ea29b9f2a09aae3b408f2e547a7def96093eea81e01b1c
+  scitastebench-segmentation-prospective-calibration-v1: 83abf856f011835714ee0cb2c9629584d55b402bbed82effb0d08fa7014c46cc
+  scitastebench-segmentation-prospective-calibration-v2: 7cb4fc5a23a43d231b257c94137492096ed9ac81e23f58a5871e2e2697d58fed
+  scitastebench-segmentation-prospective-calibration-v3: 394f7819ee0a463b383246b027ac8abea09adb8e4d7e5a2fedcb9eb095b6df60
+per_campaign_item_counts:
+  aries-taste-source-review-v1: 10
+  f1000-multidomain-taste-source-review-v1: 10
+source_private_map_file_sha256s:
+  aries-taste-source-review-v1: 92da1725e5c7172ce9f904d79860ef0aa70ec600851d88d8403d352dfc0f7cad
+  f1000-multidomain-taste-source-review-v1: c10d45ed5ea6afeb391095189f06355ebec11842a8d1497bf0b09b419d7fd365
+per_campaign_source_group_counts:
+  aries-taste-source-review-v1: 10
+  f1000-multidomain-taste-source-review-v1: 10
+per_campaign_excluded_source_group_counts:
+  aries-taste-source-review-v1: 29
+  f1000-multidomain-taste-source-review-v1: 29
+per_campaign_eligible_source_group_counts:
+  aries-taste-source-review-v1: 13
+  f1000-multidomain-taste-source-review-v1: 10
+per_campaign_sampling_fraction_micros:
+  aries-taste-source-review-v1: 769230
+  f1000-multidomain-taste-source-review-v1: 1000000
+uncertainty_estimand: descriptive-calibration-superpopulation-work-model
+source_group_disjoint_from_exclusions: true
+maximum_items_per_source_group: 1
+source_group_ids_exposed_to_provider: false
+items:
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-1f5bbc142c188c38620b63aa
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-2b5a8a51e8729f9b3a73c32c
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-3393a63d4e17c339dccd69e8
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-50d592631a5d8cc838b9f981
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-692b64b02bbcfb6fdfbcb6c9
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-8cb445e41986d1c1d8bda870
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-c26bd47464fb9babfb9fd08e
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-d9c99e34a9bef9e98500440d
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-de81d9d62fb81a441ecd8219
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-fa7a8e4cbcabb63912338082
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-1f1f9e51bb04d03632fc5684
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-3a7e28e49992f19780f1beba
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-470ce40467da0c0620f39347
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-74184f215e82e5a9def90b7c
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-7a999dab57d497ac4f9b8498
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-7dd9f923236be49af174c95b
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-9435eb9eafa80acd7b4fdf65
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-bca4d5a7adc01c0f16fc9713
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-cd9dd8e2108fbc761d898f94
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-ffd2b87300e3d9af9500a879
+item_count: 20
+authority:
+  preregistered: true
+  confirmatory_calibration_authorized: false
+  scaled_execution_authorized: false
+  formal_evidence_eligible: false

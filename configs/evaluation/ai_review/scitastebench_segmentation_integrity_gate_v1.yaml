@@ -1,0 +1,64 @@
+schema_version: "1.0"
+gate_id: scitastebench-segmentation-integrity-gate-v1
+role_id: ai-d-content-integrity
+reviewer_kind: ai
+not_human_review: true
+decision_mode: veto-only
+check_ids:
+  - complete-item-inventory
+  - common-omission
+  - residual-self-report
+  - false-positive-decision
+  - atomic-trigger-and-context
+  - decision-family
+purpose: >-
+  Produce a sealed, independent decision inventory for every calibration item before
+  any final A/B/C resolution or metric is visible. A deterministic comparator later
+  uses this inventory only as a veto source for missed decisions, false positives,
+  improper merges, non-atomic triggers, context misuse, and family errors.
+input_boundary:
+  allowed:
+    - frozen integrity-gate rubric
+    - structurally pseudonymized abstract and complete review comment
+    - deterministic evidence-unit IDs and surfaces for that comment
+  forbidden:
+    - segmenter or adjudicator identities
+    - segmenter proposals, adjudicator output, or final resolution
+    - agreement, calibration metrics, thresholds, or pass status
+    - private source-group map
+    - recommendation, author response, later revision, or population outcome
+    - provider call costs or calibration pass status
+inventory_rules:
+  - A zero-decision result is a false negative if any independently actionable change is present.
+  - A non-empty result is a false positive if the text contains only praise, summary, future value, or checklist boilerplate.
+  - Every independently actionable change has exactly one minimal trigger.
+  - Shared context is not duplicated into triggers and does not conceal another action.
+  - Each primary family describes the decision changed rather than the request's rhetoric.
+  - cannot-assess has a real trigger and high uncertainty.
+output_contract:
+  required_root_fields: [items]
+  required_item_fields:
+    - campaign_token
+    - review_item_id
+    - decisions
+    - no_decision_rationale
+    - residual_decision_bearing_text_possible
+  required_decision_fields:
+    - trigger_range
+    - context_ranges
+    - primary_decision_family
+    - atomic_decision_statement
+    - rationale
+    - uncertainty
+  exact_assigned_item_coverage_required: true
+  source_text_or_character_offsets_forbidden: true
+  final_resolution_fields_forbidden: true
+authority:
+  may_veto_calibration: true
+  deterministic_comparator_may_use_inventory_to_veto: true
+  inventory_is_gold_label: false
+  may_override_deterministic_failure: false
+  may_create_or_edit_gold_labels: false
+  human_agreement_claim_allowed: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false

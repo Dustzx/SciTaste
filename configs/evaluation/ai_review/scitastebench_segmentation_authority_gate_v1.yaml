@@ -1,0 +1,49 @@
+schema_version: "1.0"
+gate_id: scitastebench-segmentation-authority-gate-v1
+role_id: ai-e-protocol-authority
+reviewer_kind: ai
+not_human_review: true
+decision_mode: veto-only
+check_ids:
+  - receipt-binding
+  - raw-byte-replay
+  - range-reconstruction
+  - source-group-independence
+  - claim-authority
+  - rolling-alias-identity-boundary
+purpose: >-
+  Review a deterministic evidence-chain replay of immutable bindings, source-group
+  independence, request firewalls, provider identity, token and cost receipts,
+  group-aware statistics, and claim authority. The AI may add a veto but cannot
+  override any deterministic replay blocker.
+input_boundary:
+  allowed:
+    - frozen authority-gate rubric
+    - content-addressed deterministic evidence-chain replay receipt
+    - protocol, sample, freeze, request-pack, authorization, and Git binding summaries
+  forbidden:
+    - changing any frozen artifact
+    - retrying or reusing a consumed sample
+    - granting human, expert, benchmark, or formal-evidence authority
+checks:
+  - Any deterministic replay blocker forces veto and cannot be waived by the AI.
+  - The sample excludes every previously exposed source group and uses at most one item per group.
+  - The provider never receives the private map, structured outcomes, peer slot identities, tools, or character offsets.
+  - Every provider call has a first-class transport and cost receipt, including failed calls.
+  - Trigger and context anchors reconstruct exact source bytes without normalization or fuzzy repair.
+  - Statistics use campaign-stratified source-group bootstrap with the frozen seed and replicate count.
+  - A/B agreement is only repeated-invocation consistency; same-model C only adjudicates disagreements and adds no independent validity.
+  - AI review is never represented as human or expert validity evidence.
+  - Rolling-alias identity is only provider-reported envelope continuity; backend revision remains unidentified.
+output_contract:
+  required_fields: [decision, blocker_codes, binding_findings, rationale]
+  decision_values: [pass, veto]
+  blocker_codes_must_be_typed: true
+authority:
+  may_veto_calibration: true
+  may_override_deterministic_failure: false
+  may_authorize_provider_contact: false
+  may_authorize_scaled_execution: false
+  human_agreement_claim_allowed: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false

@@ -1,0 +1,233 @@
+schema_version: "1.5"
+protocol_id: scitastebench-segmentation-prospective-calibration-v6
+project_id: scitaste-self-development
+protocol_created_at: 2026-09-15T07:06:27+08:00
+protocol_status: candidate-awaiting-git-freeze-receipt
+purpose: >-
+  Measure whether independent invocations under one fixed API model condition can
+  reproducibly recover decision triggers, shared interpretive context, and primary
+  decision families on a source-group-disjoint calibration sample.
+claim_boundary: >-
+  This is a bounded AI engineering calibration, not human or expert annotation.
+  A/B agreement estimates repeated-invocation consistency under the provider-reported
+  glm-5.3-flash rolling alias; same-model C only adjudicates disagreements and adds no
+  independent validity. This protocol cannot authenticate checkpoint weights. Structured
+  source fields are withheld, but semantic source recognition from review text or
+  parametric memory cannot be ruled out. Group-bootstrap intervals are descriptive
+  superpopulation work-model diagnostics, not finite-inventory uncertainty, benchmark
+  validity, Scientific Taste effectiveness, scaled-execution authority, or ICLR evidence.
+sample:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v5.yaml
+  file_sha256: 8ddabcbb6fdada1ca11519d06518fd1092ebb12c8004f7cf8b47730ed162a9b2
+  sample_sha256: 118b3ade59e17bbc2f03d4e1a285f61da2cd016f29e9e062e673c771a34c2f57
+  item_count: 20
+  prior_items_excluded: 84
+  source_balanced: true
+  prior_source_groups_excluded: 58
+  source_group_disjoint: true
+  maximum_items_per_source_group: 1
+  per_campaign_eligible_source_group_counts:
+    aries-taste-source-review-v1: 13
+    f1000-multidomain-taste-source-review-v1: 10
+  per_campaign_sampling_fraction_micros:
+    aries-taste-source-review-v1: 769230
+    f1000-multidomain-taste-source-review-v1: 1000000
+  uncertainty_estimand: descriptive-calibration-superpopulation-work-model
+segmentation_rubric:
+  locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_v5.yaml
+  file_sha256: 9d3fe293259b67dc271a44c26e35e633b8a9ede6b78564656d21dca1e2cd156d
+adjudication_rubric:
+  locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_adjudication_v5.yaml
+  file_sha256: f5c00ca6dd95f1d86bb51ba474715fce16c3a4f21193b49648df467f5055c3db
+integrity_gate:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_integrity_gate_v1.yaml
+  file_sha256: d9db4312fd362685d7f271937f2933d34ac11019bda1e700ac08c1ee77d0449f
+authority_gate:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_authority_gate_v1.yaml
+  file_sha256: e63540fa829a87e472a1685dd933f6c8cf0c399ec341579f478169907b42ffb0
+panel:
+  segmenter_count: 2
+  adjudicator_count: 1
+  same_model_condition_for_segmenters: true
+  distinct_invocations_required: true
+  cross_output_blinding_required: true
+  adjudicator_must_not_be_a_segmenter_invocation: true
+  reviewer_kind: ai
+  human_review_claim_allowed: false
+model_condition:
+  state: selected-for-calibration-not-yet-authenticated
+  provider_id: zhipu
+  resource_id: zhipu-glm53-flash
+  resource_locator: configs/resources/api/zhipu_glm53_flash_v3.yaml
+  resource_file_sha256: 0810d7b015a6d4d3de3572e1a47689221410096ec0bd4ec061b087ac67d5373a
+  requested_model_id: glm-5.3-flash
+  identity_mode: temporal_window_only
+  identity_protocol_locator: configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml
+  identity_protocol_file_sha256: 237f79c76b873a32b2c2b06f510aef5179e16bdace9b9de2af4ad56257db9fac
+  returned_model_allowlist: [glm-5.3-flash]
+  maximum_window_hours: 12
+  start_and_end_sentinels_required: true
+  exact_runtime_receipt_required: true
+  fallback_model_allowed: false
+  identity_claim_scope: provider-reported-rolling-alias-envelope-continuity-only
+  backend_revision_identified: false
+generation:
+  response_format: json_object
+  thinking: enabled
+  reasoning_effort: low
+  temperature: 0.2
+  maximum_output_tokens_per_call: 8192
+  items_per_shard: 4
+  segmenter_shards: 5
+  segmenter_total_requests: 10
+  maximum_adjudication_shards: 5
+  identity_sentinel_requests: 2
+  maximum_total_requests: 17
+  retry_count: 0
+evidence_unit_selection:
+  unitizer_algorithm: unicode-word-punctuation-v1
+  token_pattern: "\\w+|[^\\w\\s]"
+  unit_id_format: "u%04d"
+  unit_text_source: original-review-comment
+  source_offsets_exposed_to_provider: false
+  model_returns_source_span_field: false
+  reconstructed_text_source: original-review-comment-slice
+  unique_text_match_required: false
+  normalization_allowed: false
+  fuzzy_matching_allowed: false
+  insertion_or_deletion_repair_allowed: false
+  overlapping_ranges_allowed: false
+  system_instruction_sha256: 94bc47e461fbe59977c410f7ac7e406304110db2d8576ef37bbda6402cabd042
+  output_contract_sha256: d93bdeb9e26a4383cd0054a71b188a139e91cfd84665bebbdc649bc04f2225a9
+  range_contract: trigger-plus-shared-context-v1
+  zero_decision_allowed: true
+  maximum_context_ranges_per_decision: 8
+  trigger_ranges_overlapping_allowed: false
+  context_ranges_may_overlap_across_decisions: true
+  context_may_overlap_another_decision_trigger: true
+consumed_sample_registry:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_consumed_samples_v3.yaml
+  file_sha256: 232f6cef2fe918ff4e9d975a9a93cd19594530dc0991908513bf5c3a346c4ad1
+input_firewall:
+  allowed:
+    - frozen segmentation rubric
+    - assigned scientific item abstract
+    - assigned scientific item review comment
+    - opaque campaign and review item identifiers
+    - deterministic source evidence-unit table
+  forbidden:
+    - private item map
+    - publisher or source identity
+    - recommendation
+    - author response
+    - later revision
+    - population outcome
+    - another segmenter output
+    - arbitrary tools
+    - web search
+  request_payload_must_be_persisted_before_provider_contact: true
+  no_provider_tools_exposed: true
+  structured_source_identity_fields_withheld: true
+  explicit_outcome_fields_withheld: true
+  parametric_source_recognition_ruled_out: false
+  boundary_statement: >-
+    The provider sees complete review text and offset-free surface units. Structured
+    source identity, outcome, peer-output, tool, character-offset, and dedicated
+    span-transcription fields are absent; semantic recognition is not claimed absent.
+adjudication_input_firewall:
+  allowed:
+    - frozen adjudication rubric
+    - assigned disputed item abstract and review comment
+    - typed agreement blockers
+    - two anonymous segmenter candidates in hash-randomized order
+    - opaque campaign and review item identifiers
+    - deterministic source evidence-unit table
+  forbidden:
+    - private item map
+    - publisher or source identity
+    - recommendation
+    - author response
+    - later revision
+    - population outcome
+    - non-disputed items
+    - segmenter slot identities
+    - arbitrary tools
+    - web search
+  disputed_items_only: true
+  exact_agreement_items_copied_deterministically: true
+  candidate_order_anonymized_and_hash_randomized: true
+  no_provider_tools_exposed: true
+  structured_source_identity_fields_withheld: true
+  explicit_outcome_fields_withheld: true
+  parametric_source_recognition_ruled_out: false
+  boundary_statement: >-
+    C sees only disputed review text, offset-free units, typed blockers, and anonymous
+    candidates. Structured source/outcome fields and slot identities are absent;
+    semantic source recognition from text or memory remains possible.
+metrics:
+  exact_span_f1:
+    role: conservative-routing-diagnostic
+    threshold: null
+  overlap_span_f1:
+    matching: deterministic-maximum-cardinality-interval-iou
+    iou_threshold: 0.5
+    pass_threshold: 0.80
+  overlap_matched_family_agreement:
+    pass_threshold: 0.80
+  adjudication_item_rate:
+    pass_threshold_maximum: 0.50
+  residual_risk_item_rate_after_adjudication:
+    pass_threshold_maximum: 0.0
+  decision_presence_agreement:
+    role: reported-primary-diagnostic
+    pass_threshold: 0.80
+  exact_trigger_context_set_agreement:
+    role: reported-diagnostic
+    threshold: null
+  source_group_uncertainty:
+    unit: source_group_id
+    estimator: campaign-stratified-source-group-bootstrap-v1
+    estimand: descriptive-calibration-superpopulation-work-model
+    scale_gate_role: diagnostic-only
+    campaign_weighting: equal-by-design
+    confidence_level: 0.95
+    replicates: 10000
+    random_seed: 2026091506
+  thresholds_frozen_before_execution: true
+failure_policy:
+  malformed_or_truncated_output: fail-run-no-retry
+  missing_usage_or_request_identity: fail-run-no-retry
+  returned_model_outside_allowlist: close-window-and-fail
+  input_firewall_violation: invalidate-run
+  threshold_failure: revise-rubric-and-freeze-new-protocol-version
+  same_sample_recalibration_allowed: false
+budget:
+  maximum_provider_requests: 17
+  maximum_input_tokens: 300000
+  maximum_output_tokens: 140000
+  maximum_api_cost_usd: 10.0
+  price_unknown_action: require-cost-receipt-before-first-task-call
+scale_gate:
+  target_population_item_count: 273
+  calibration_must_pass_all_frozen_metrics: true
+  authenticated_model_window_required: true
+  runtime_identity_required: true
+  input_firewall_receipt_required: true
+  raw_requests_and_responses_required: true
+  scale_requires_separate_content-addressed_execution_manifest: true
+  calibration_only_no_direct_scale: true
+  independent_source_group_validation_required: true
+  new_source_groups_required_for_validation: true
+authority:
+  sample_preregistered: true
+  protocol_preregistered: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+next_gate: >-
+  Validate this no-run protocol and the synthetic adversarial contract; commit the
+  exact sampler, sample, rubrics, AI-D/AI-E gates, and runner; create an external
+  Git-bound freeze; then compile and independently AI-audit a no-contact request pack.
+  Any provider contact requires a new one-time owner authorization for at most 17 calls.

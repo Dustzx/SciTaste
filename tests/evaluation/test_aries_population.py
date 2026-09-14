@@ -455,6 +455,31 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
     assert prospective_sample.items[0].review_item_id == item_id
     assert prospective_sample.per_campaign_item_counts == {campaign.campaign_id: 1}
     assert prospective_sample.authority["scaled_execution_authorized"] is False
+    group_disjoint_sample = plan_taste_source_segmentation_sample(
+        sample_id="aries-source-group-prospective-segmentation-v1",
+        campaign_paths=(campaign_root / "CAMPAIGN.json",),
+        excluded_sample_paths=(exclusion_sample,),
+        per_campaign_item_count=1,
+        random_seed=20260915,
+        locator_root=tmp_path,
+        source_group_disjoint=True,
+    )
+    assert group_disjoint_sample.schema_version == "1.2"
+    assert group_disjoint_sample.per_campaign_source_group_counts == {
+        campaign.campaign_id: 1
+    }
+    assert group_disjoint_sample.maximum_items_per_source_group == 1
+    assert group_disjoint_sample.source_group_ids_exposed_to_provider is False
+    assert group_disjoint_sample.per_campaign_eligible_source_group_counts == {
+        campaign.campaign_id: 1
+    }
+    assert group_disjoint_sample.per_campaign_sampling_fraction_micros == {
+        campaign.campaign_id: 1_000_000
+    }
+    assert (
+        group_disjoint_sample.uncertainty_estimand
+        == "descriptive-calibration-superpopulation-work-model"
+    )
     prospective_sample_path = tmp_path / "prospective-sample.yaml"
     save_taste_source_segmentation_sample_manifest(
         prospective_sample,
@@ -687,12 +712,14 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
                                 "atomic_decision_statement": (
                                     "Strengthen the visible causal argument."
                                 ),
-                                "rationale": "Both segmenters exactly agree.",
+                                "rationale": "The request concerns claim support.",
                                 "uncertainty": "low",
                             }
                         ],
                         "residual_decision_bearing_text_possible": False,
-                        "resolution_rationale": "Exact span and family agreement.",
+                        "resolution_rationale": (
+                            "Copied deterministically from exact dual-agent agreement."
+                        ),
                     }
                 ],
             }

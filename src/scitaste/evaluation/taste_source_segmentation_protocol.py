@@ -59,11 +59,100 @@ class SegmentationProtocolFileBinding(BaseModel):
         return self
 
 
+class SegmentationPostAuditGateRubric(BaseModel):
+    """Machine-readable AI-only veto gate; never a human validity instrument."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    gate_id: str = Field(pattern=_ID)
+    role_id: Literal["ai-d-content-integrity", "ai-e-protocol-authority"]
+    reviewer_kind: Literal["ai"] = "ai"
+    not_human_review: Literal[True] = True
+    decision_mode: Literal["veto-only"] = "veto-only"
+    check_ids: tuple[str, ...] = Field(min_length=1)
+    purpose: str = Field(min_length=1, max_length=4_000)
+    input_boundary: dict[str, tuple[str, ...]]
+    checks: tuple[str, ...] | None = None
+    inventory_rules: tuple[str, ...] | None = None
+    output_contract: dict[str, JsonValue]
+    authority: dict[str, bool]
+
+    @model_validator(mode="after")
+    def gate_is_ai_only_and_veto_only(self) -> SegmentationPostAuditGateRubric:
+        if self.check_ids != tuple(dict.fromkeys(self.check_ids)):
+            raise ValueError("Segmentation post-audit check IDs must be unique and ordered")
+        required = (
+            {
+                "complete-item-inventory",
+                "common-omission",
+                "residual-self-report",
+                "false-positive-decision",
+                "atomic-trigger-and-context",
+                "decision-family",
+            }
+            if self.role_id == "ai-d-content-integrity"
+            else {
+                "receipt-binding",
+                "raw-byte-replay",
+                "range-reconstruction",
+                "source-group-independence",
+                "claim-authority",
+                "rolling-alias-identity-boundary",
+            }
+        )
+        if set(self.check_ids) != required:
+            raise ValueError("Segmentation post-audit gate check catalog drifted")
+        if set(self.input_boundary) != {"allowed", "forbidden"} or not all(
+            self.input_boundary[key] for key in ("allowed", "forbidden")
+        ):
+            raise ValueError("Segmentation post-audit input boundary is incomplete")
+        if self.authority.get("may_veto_calibration") is not True or any(
+            self.authority.get(key) is not False
+            for key in (
+                "human_agreement_claim_allowed",
+                "benchmark_admission_authorized",
+                "formal_evidence_eligible",
+            )
+        ):
+            raise ValueError("Segmentation post-audit gate overclaims authority")
+        if self.role_id == "ai-d-content-integrity":
+            if (
+                self.inventory_rules is None
+                or self.checks is not None
+                or self.authority.get("inventory_is_gold_label") is not False
+            ):
+                raise ValueError("AI-D must use a sealed non-gold inventory")
+        elif (
+            self.checks is None
+            or self.inventory_rules is not None
+            or self.authority.get("may_override_deterministic_failure") is not False
+        ):
+            raise ValueError("AI-E cannot override deterministic replay failures")
+        return self
+
+
+class SegmentationPostAuditGateInspection(BaseModel):
+    model_config = _CONFIG
+
+    path: Path
+    file_sha256: str = Field(pattern=_SHA256)
+    gate: SegmentationPostAuditGateRubric
+
+
 class SegmentationProtocolSampleBinding(SegmentationProtocolFileBinding):
     sample_sha256: str = Field(pattern=_SHA256)
     item_count: int = Field(gt=0, le=100_000)
     prior_items_excluded: int = Field(gt=0, le=100_000)
     source_balanced: Literal[True] = True
+    prior_source_groups_excluded: int | None = Field(default=None, ge=1, le=100_000)
+    source_group_disjoint: bool | None = None
+    maximum_items_per_source_group: int | None = Field(default=None, ge=1, le=1)
+    per_campaign_eligible_source_group_counts: dict[str, int] | None = None
+    per_campaign_sampling_fraction_micros: dict[str, int] | None = None
+    uncertainty_estimand: Literal[
+        "descriptive-calibration-superpopulation-work-model"
+    ] | None = None
 
 
 class SegmentationFreezeSampleBinding(SegmentationProtocolFileBinding):
@@ -100,6 +189,10 @@ class SegmentationProtocolModelCondition(BaseModel):
     start_and_end_sentinels_required: Literal[True] = True
     exact_runtime_receipt_required: Literal[True] = True
     fallback_model_allowed: Literal[False] = False
+    identity_claim_scope: Literal[
+        "provider-reported-rolling-alias-envelope-continuity-only"
+    ] | None = None
+    backend_revision_identified: bool | None = None
 
     @model_validator(mode="after")
     def identities_are_safe(self) -> SegmentationProtocolModelCondition:
@@ -179,6 +272,12 @@ class SegmentationProtocolEvidenceUnitSelection(BaseModel):
     overlapping_ranges_allowed: Literal[False] = False
     system_instruction_sha256: str | None = Field(default=None, pattern=_SHA256)
     output_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
+    range_contract: Literal["trigger-plus-shared-context-v1"] | None = None
+    zero_decision_allowed: bool | None = None
+    maximum_context_ranges_per_decision: int | None = Field(default=None, ge=0, le=8)
+    trigger_ranges_overlapping_allowed: bool | None = None
+    context_ranges_may_overlap_across_decisions: bool | None = None
+    context_may_overlap_another_decision_trigger: bool | None = None
 
 
 class SegmentationProtocolInputFirewall(BaseModel):
@@ -188,7 +287,13 @@ class SegmentationProtocolInputFirewall(BaseModel):
     forbidden: tuple[str, ...]
     request_payload_must_be_persisted_before_provider_contact: Literal[True] = True
     no_provider_tools_exposed: Literal[True] = True
-    explicit_source_identity_withheld: Literal[True] = True
+    structured_source_identity_fields_withheld: Literal[True] = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "structured_source_identity_fields_withheld",
+            "explicit_source_identity_withheld",
+        ),
+    )
     explicit_outcome_fields_withheld: Literal[True] = True
     parametric_source_recognition_ruled_out: Literal[False] = False
     boundary_statement: str = Field(min_length=1, max_length=4_000)
@@ -247,7 +352,13 @@ class SegmentationProtocolAdjudicationInputFirewall(BaseModel):
     exact_agreement_items_copied_deterministically: Literal[True] = True
     candidate_order_anonymized_and_hash_randomized: Literal[True] = True
     no_provider_tools_exposed: Literal[True] = True
-    explicit_source_identity_withheld: Literal[True] = True
+    structured_source_identity_fields_withheld: Literal[True] = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "structured_source_identity_fields_withheld",
+            "explicit_source_identity_withheld",
+        ),
+    )
     explicit_outcome_fields_withheld: Literal[True] = True
     parametric_source_recognition_ruled_out: Literal[False] = False
     boundary_statement: str = Field(min_length=1, max_length=4_000)
@@ -297,6 +408,9 @@ class SegmentationProtocolMetrics(BaseModel):
     overlap_matched_family_agreement: dict[str, JsonValue]
     adjudication_item_rate: dict[str, JsonValue]
     residual_risk_item_rate_after_adjudication: dict[str, JsonValue]
+    decision_presence_agreement: dict[str, JsonValue] | None = None
+    exact_trigger_context_set_agreement: dict[str, JsonValue] | None = None
+    source_group_uncertainty: dict[str, JsonValue] | None = None
     thresholds_frozen_before_execution: Literal[True] = True
 
     @model_validator(mode="after")
@@ -318,6 +432,28 @@ class SegmentationProtocolMetrics(BaseModel):
             raise ValueError("Prospective adjudication-rate metric drifted")
         if self.residual_risk_item_rate_after_adjudication != {"pass_threshold_maximum": 0.0}:
             raise ValueError("Prospective residual-risk metric drifted")
+        if self.decision_presence_agreement is not None and self.decision_presence_agreement != {
+            "role": "reported-primary-diagnostic",
+            "pass_threshold": 0.8,
+        }:
+            raise ValueError("Decision-presence agreement metric drifted")
+        if (
+            self.exact_trigger_context_set_agreement is not None
+            and self.exact_trigger_context_set_agreement
+            != {"role": "reported-diagnostic", "threshold": None}
+        ):
+            raise ValueError("Trigger-context agreement metric drifted")
+        if self.source_group_uncertainty is not None and self.source_group_uncertainty != {
+            "unit": "source_group_id",
+            "estimator": "campaign-stratified-source-group-bootstrap-v1",
+            "estimand": "descriptive-calibration-superpopulation-work-model",
+            "scale_gate_role": "diagnostic-only",
+            "campaign_weighting": "equal-by-design",
+            "confidence_level": 0.95,
+            "replicates": 10000,
+            "random_seed": 2026091506,
+        }:
+            raise ValueError("Source-group uncertainty protocol drifted")
         return self
 
 
@@ -367,12 +503,15 @@ class SegmentationProtocolScaleGate(BaseModel):
         default=True,
         alias="scale_requires_separate_content-addressed_execution_manifest",
     )
+    calibration_only_no_direct_scale: bool | None = None
+    independent_source_group_validation_required: bool | None = None
+    new_source_groups_required_for_validation: bool | None = None
 
 
 class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"] = "1.0"
     protocol_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol_created_at: datetime
@@ -382,6 +521,8 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     sample: SegmentationProtocolSampleBinding
     segmentation_rubric: SegmentationProtocolFileBinding
     adjudication_rubric: SegmentationProtocolFileBinding
+    integrity_gate: SegmentationProtocolFileBinding | None = None
+    authority_gate: SegmentationProtocolFileBinding | None = None
     panel: SegmentationProtocolPanel
     model_condition: SegmentationProtocolModelCondition
     generation: SegmentationProtocolGeneration
@@ -413,17 +554,17 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             raise ValueError("Segmentation output-token budget cannot cover the planned calls")
         if self.schema_version == "1.0" and self.adjudication_input_firewall is not None:
             raise ValueError("Schema 1.0 cannot carry a separate adjudication firewall")
-        if self.schema_version in {"1.1", "1.2", "1.3", "1.4"} and (
+        if self.schema_version in {"1.1", "1.2", "1.3", "1.4", "1.5"} and (
             self.adjudication_input_firewall is None
         ):
             raise ValueError("Schema 1.1+ requires a separate adjudication firewall")
         if (self.schema_version == "1.2") != (self.span_reconstruction is not None):
             raise ValueError("Schema 1.2 uniquely requires bounded span reconstruction")
-        if (self.schema_version in {"1.3", "1.4"}) != (
+        if (self.schema_version in {"1.3", "1.4", "1.5"}) != (
             self.evidence_unit_selection is not None
         ):
             raise ValueError("Schema 1.3+ requires evidence-unit selection")
-        if (self.schema_version in {"1.2", "1.3", "1.4"}) != (
+        if (self.schema_version in {"1.2", "1.3", "1.4", "1.5"}) != (
             self.consumed_sample_registry is not None
         ):
             raise ValueError("Schema 1.2+ requires a consumed-sample registry")
@@ -444,7 +585,7 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             if self.adjudication_input_firewall is not None
             else ()
         )
-        expected_anchor_scope = self.schema_version in {"1.3", "1.4"}
+        expected_anchor_scope = self.schema_version in {"1.3", "1.4", "1.5"}
         if (
             segmenter_has_anchor_scope != expected_anchor_scope
             or adjudicator_has_anchor_scope != expected_anchor_scope
@@ -456,13 +597,60 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
                 self.evidence_unit_selection.output_contract_sha256,
             )
             if (
-                self.schema_version == "1.4"
+                self.schema_version in {"1.4", "1.5"}
                 and not all(item is not None for item in pins)
             ) or (
-                self.schema_version != "1.4"
+                self.schema_version not in {"1.4", "1.5"}
                 and any(item is not None for item in pins)
             ):
-                raise ValueError("Schema 1.4 uniquely requires anchored request-contract pins")
+                raise ValueError("Schema 1.4+ requires anchored request-contract pins")
+        if self.schema_version == "1.5":
+            assert self.evidence_unit_selection is not None
+            evidence = self.evidence_unit_selection
+            if (
+                evidence.range_contract != "trigger-plus-shared-context-v1"
+                or evidence.zero_decision_allowed is not True
+                or evidence.maximum_context_ranges_per_decision != 8
+                or evidence.trigger_ranges_overlapping_allowed is not False
+                or evidence.context_ranges_may_overlap_across_decisions is not True
+                or evidence.context_may_overlap_another_decision_trigger is not True
+            ):
+                raise ValueError("Schema 1.5 trigger/context evidence contract is incomplete")
+            if (
+                self.sample.source_group_disjoint is not True
+                or self.sample.maximum_items_per_source_group != 1
+                or self.sample.prior_source_groups_excluded is None
+                or self.sample.per_campaign_eligible_source_group_counts is None
+                or self.sample.per_campaign_sampling_fraction_micros is None
+                or self.sample.uncertainty_estimand
+                != "descriptive-calibration-superpopulation-work-model"
+            ):
+                raise ValueError("Schema 1.5 requires source-group-disjoint sample binding")
+            if any(
+                value is None
+                for value in (
+                    self.metrics.decision_presence_agreement,
+                    self.metrics.exact_trigger_context_set_agreement,
+                    self.metrics.source_group_uncertainty,
+                )
+            ):
+                raise ValueError("Schema 1.5 requires presence, context, and group metrics")
+            if self.integrity_gate is None or self.authority_gate is None:
+                raise ValueError("Schema 1.5 requires frozen AI-D and AI-E veto gates")
+            if (
+                self.model_condition.identity_claim_scope
+                != "provider-reported-rolling-alias-envelope-continuity-only"
+                or self.model_condition.backend_revision_identified is not False
+            ):
+                raise ValueError("Schema 1.5 overclaims rolling-alias model identity")
+            if (
+                self.scale_gate.calibration_only_no_direct_scale is not True
+                or self.scale_gate.independent_source_group_validation_required is not True
+                or self.scale_gate.new_source_groups_required_for_validation is not True
+            ):
+                raise ValueError("Schema 1.5 cannot authorize scale from calibration alone")
+        elif self.integrity_gate is not None or self.authority_gate is not None:
+            raise ValueError("Only schema 1.5 carries post-calibration AI veto gates")
         return self
 
 
@@ -482,6 +670,8 @@ class SegmentationFreezeBindingSet(BaseModel):
     sample: SegmentationFreezeSampleBinding
     segmentation_rubric: SegmentationProtocolFileBinding
     adjudication_rubric: SegmentationProtocolFileBinding
+    integrity_gate: SegmentationProtocolFileBinding | None = None
+    authority_gate: SegmentationProtocolFileBinding | None = None
     provider_resource: SegmentationProtocolFileBinding
     identity_policy: SegmentationProtocolFileBinding
     consumed_sample_registry: SegmentationProtocolFileBinding | None = None
@@ -523,7 +713,7 @@ class SegmentationFreezeAuthority(BaseModel):
 class TasteSourceSegmentationFreezeReceipt(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"] = "1.0"
     freeze_receipt_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     frozen_at: datetime
@@ -544,14 +734,24 @@ class TasteSourceSegmentationFreezeReceipt(BaseModel):
         )
         if self.schema_version == "1.0" and any(item is not None for item in extended):
             raise ValueError("Schema 1.0 cannot bind prospective execution modules")
-        if self.schema_version in {"1.1", "1.2", "1.3", "1.4"} and any(
+        if self.schema_version in {"1.1", "1.2", "1.3", "1.4", "1.5"} and any(
             item is None for item in extended
         ):
             raise ValueError("Schema 1.1+ must bind protocol and execution modules")
-        if (self.schema_version in {"1.2", "1.3", "1.4"}) != (
+        if (self.schema_version in {"1.2", "1.3", "1.4", "1.5"}) != (
             self.bindings.consumed_sample_registry is not None
         ):
             raise ValueError("Schema 1.2+ binds the consumed-sample registry")
+        if (self.bindings.integrity_gate is None) != (
+            self.bindings.authority_gate is None
+        ):
+            raise ValueError("Segmentation freeze must bind both AI veto gates")
+        veto_gates_bound = (
+            self.bindings.integrity_gate is not None
+            and self.bindings.authority_gate is not None
+        )
+        if (self.schema_version == "1.5") != veto_gates_bound:
+            raise ValueError("Segmentation freeze AI veto-gate bindings differ from schema")
         return self
 
 
@@ -646,7 +846,7 @@ class TasteSourceSegmentationRequestItem(BaseModel):
 class TasteSourceSegmentationRequestPacket(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     packet_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
@@ -678,7 +878,7 @@ class TasteSourceSegmentationRequestPacket(BaseModel):
         anchored = all(item.evidence_units is not None for item in self.items)
         if any(item.evidence_units is not None for item in self.items) != anchored:
             raise ValueError("Segmentation request packet mixes anchored and legacy items")
-        if (self.schema_version == "1.1") != anchored:
+        if (self.schema_version in {"1.1", "1.2"}) != anchored:
             raise ValueError("Segmentation request packet schema differs from anchor mode")
         return self
 
@@ -707,7 +907,7 @@ class TasteSourceSegmentationRequestBinding(BaseModel):
 class TasteSourceSegmentationRequestPack(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     pack_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     created_at: datetime
@@ -747,7 +947,9 @@ class TasteSourceSegmentationRequestPack(BaseModel):
             "evidence_units",
             "evidence_unit_table_sha256",
         )
-        expected_fields = anchored_fields if self.schema_version == "1.1" else legacy_fields
+        expected_fields = (
+            anchored_fields if self.schema_version in {"1.1", "1.2"} else legacy_fields
+        )
         if self.input_field_names != expected_fields:
             raise ValueError("Segmentation request-pack input fields drifted")
         required_forbidden = {
@@ -766,6 +968,17 @@ class TasteSourceSegmentationRequestPack(BaseModel):
     @property
     def pack_sha256(self) -> str:
         return _canonical_sha256(self.model_dump(mode="json", exclude={"pack_sha256"}))
+
+
+def load_segmentation_post_audit_gate(
+    path: str | Path,
+) -> SegmentationPostAuditGateInspection:
+    source = _bounded_file(Path(path), _MAX_CONFIG_BYTES)
+    return SegmentationPostAuditGateInspection(
+        path=source,
+        file_sha256=_sha256_file(source),
+        gate=SegmentationPostAuditGateRubric.model_validate(_yaml_mapping(source)),
+    )
 
 
 def inspect_taste_source_segmentation_protocol(
@@ -817,6 +1030,15 @@ def inspect_taste_source_segmentation_protocol(
             root / protocol.consumed_sample_registry.locator,
             freeze.bindings.consumed_sample_registry,
         )
+    if protocol.integrity_gate is not None and protocol.authority_gate is not None:
+        expected_bindings["integrity_gate"] = (
+            root / protocol.integrity_gate.locator,
+            freeze.bindings.integrity_gate,
+        )
+        expected_bindings["authority_gate"] = (
+            root / protocol.authority_gate.locator,
+            freeze.bindings.authority_gate,
+        )
     for binding_name, (candidate_path, binding) in expected_bindings.items():
         source = _bounded_file(Path(candidate_path), _MAX_CONFIG_BYTES)
         expected_locator = _relative(source, root)
@@ -834,6 +1056,8 @@ def inspect_taste_source_segmentation_protocol(
         or freeze.bindings.identity_policy.file_sha256
         != protocol.model_condition.identity_protocol_file_sha256
         or freeze.bindings.consumed_sample_registry != protocol.consumed_sample_registry
+        or freeze.bindings.integrity_gate != protocol.integrity_gate
+        or freeze.bindings.authority_gate != protocol.authority_gate
     ):
         raise ValueError("Segmentation freeze and protocol content bindings differ")
 
@@ -869,6 +1093,39 @@ def inspect_taste_source_segmentation_protocol(
         or sample_inspection.sample.item_count != protocol.sample.item_count
     ):
         raise ValueError("Segmentation protocol sample binding drifted")
+    if protocol.schema_version == "1.5" and (
+        sample_inspection.sample.schema_version != "1.2"
+        or sample_inspection.sample.source_group_disjoint_from_exclusions is not True
+        or sample_inspection.sample.maximum_items_per_source_group != 1
+        or sample_inspection.sample.source_group_ids_exposed_to_provider is not False
+        or protocol.sample.per_campaign_eligible_source_group_counts
+        != sample_inspection.sample.per_campaign_eligible_source_group_counts
+        or protocol.sample.per_campaign_sampling_fraction_micros
+        != sample_inspection.sample.per_campaign_sampling_fraction_micros
+        or protocol.sample.uncertainty_estimand
+        != sample_inspection.sample.uncertainty_estimand
+        or protocol.sample.prior_source_groups_excluded
+        != sum(
+            (sample_inspection.sample.per_campaign_excluded_source_group_counts or {}).values()
+        )
+    ):
+        raise ValueError("Schema 1.5 protocol lacks a source-group-disjoint sample")
+    if protocol.schema_version == "1.5":
+        assert protocol.integrity_gate is not None
+        assert protocol.authority_gate is not None
+        integrity_gate = load_segmentation_post_audit_gate(
+            root / protocol.integrity_gate.locator
+        )
+        authority_gate = load_segmentation_post_audit_gate(
+            root / protocol.authority_gate.locator
+        )
+        if (
+            integrity_gate.file_sha256 != protocol.integrity_gate.file_sha256
+            or authority_gate.file_sha256 != protocol.authority_gate.file_sha256
+            or integrity_gate.gate.role_id != "ai-d-content-integrity"
+            or authority_gate.gate.role_id != "ai-e-protocol-authority"
+        ):
+            raise ValueError("Schema 1.5 post-audit gate semantics drifted")
     if protocol.consumed_sample_registry is not None:
         consumed_payload = _yaml_mapping(root / protocol.consumed_sample_registry.locator)
         consumed = consumed_payload.get("consumed_samples")
@@ -894,6 +1151,12 @@ def inspect_taste_source_segmentation_protocol(
         freeze.bindings.adjudication_rubric,
         freeze.bindings.provider_resource,
         freeze.bindings.identity_policy,
+        *(
+            (freeze.bindings.integrity_gate, freeze.bindings.authority_gate)
+            if freeze.bindings.integrity_gate is not None
+            and freeze.bindings.authority_gate is not None
+            else ()
+        ),
         *(
             (freeze.bindings.consumed_sample_registry,)
             if freeze.bindings.consumed_sample_registry is not None
@@ -935,7 +1198,7 @@ def prepare_taste_source_segmentation_request_pack(
     sample = inspection.sample
     if created_at.utcoffset() is None:
         raise ValueError("Segmentation request-pack time must include a timezone")
-    if getattr(protocol, "schema_version", "1.0") in {"1.3", "1.4"} and (
+    if getattr(protocol, "schema_version", "1.0") in {"1.3", "1.4", "1.5"} and (
         created_at < inspection.freeze_receipt.frozen_at
         or created_at > datetime.now().astimezone()
     ):
@@ -995,6 +1258,7 @@ def prepare_taste_source_segmentation_request_pack(
         raise ValueError("Segmentation sample cannot satisfy the source-balanced shard plan")
     rubric_payload = _yaml_mapping(root / protocol.segmentation_rubric.locator)
     anchored = getattr(protocol, "evidence_unit_selection", None) is not None
+    nested_anchor_contract = getattr(protocol, "schema_version", "1.0") == "1.5"
     reported_text_field = (
         None
         if anchored
@@ -1005,8 +1269,11 @@ def prepare_taste_source_segmentation_request_pack(
         )
     )
     required_segment_fields = [
-        "start_unit_id",
-        "end_unit_id",
+        *(
+            ("trigger_range", "context_ranges")
+            if nested_anchor_contract
+            else ("start_unit_id", "end_unit_id")
+        ),
         "primary_decision_family",
         "atomic_decision_statement",
         "rationale",
@@ -1035,12 +1302,34 @@ def prepare_taste_source_segmentation_request_pack(
         "uncertainty": {"enum": ["low", "medium", "high"]},
     }
     if anchored:
-        segment_properties.update(
-            {
+        range_contract: dict[str, JsonValue] = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["start_unit_id", "end_unit_id"],
+            "properties": {
                 "start_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
                 "end_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
-            }
-        )
+            },
+        }
+        if nested_anchor_contract:
+            segment_properties.update(
+                {
+                    "trigger_range": range_contract,
+                    "context_ranges": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": range_contract,
+                    },
+                }
+            )
+        else:
+            segment_properties.update(
+                {
+                    "start_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
+                    "end_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
+                }
+            )
     else:
         assert reported_text_field is not None
         segment_properties[reported_text_field] = {"type": "string", "minLength": 8}
@@ -1060,6 +1349,7 @@ def prepare_taste_source_segmentation_request_pack(
                         "campaign_token",
                         "review_item_id",
                         "segments",
+                        *(["no_decision_rationale"] if nested_anchor_contract else []),
                         "residual_decision_bearing_text_possible",
                     ],
                     "properties": {
@@ -1067,7 +1357,7 @@ def prepare_taste_source_segmentation_request_pack(
                         "review_item_id": {"type": "string"},
                         "segments": {
                             "type": "array",
-                            "minItems": 1,
+                            "minItems": 0 if nested_anchor_contract else 1,
                             "maxItems": 128,
                             "items": {
                                 "type": "object",
@@ -1076,17 +1366,58 @@ def prepare_taste_source_segmentation_request_pack(
                                 "properties": segment_properties,
                             },
                         },
+                        **(
+                            {
+                                "no_decision_rationale": {
+                                    "type": ["string", "null"],
+                                    "minLength": 1,
+                                    "maxLength": 2000,
+                                }
+                            }
+                            if nested_anchor_contract
+                            else {}
+                        ),
                         "residual_decision_bearing_text_possible": {"type": "boolean"},
                     },
+                    **(
+                        {
+                            "allOf": [
+                                {
+                                    "if": {"properties": {"segments": {"maxItems": 0}}},
+                                    "then": {
+                                        "properties": {
+                                            "no_decision_rationale": {"type": "string"}
+                                        }
+                                    },
+                                    "else": {
+                                        "properties": {
+                                            "no_decision_rationale": {"type": "null"}
+                                        }
+                                    },
+                                }
+                            ]
+                        }
+                        if nested_anchor_contract
+                        else {}
+                    ),
                 },
             }
         },
         "item_rule": (
             "Return every assigned campaign_token and review_item_id exactly once. "
             + (
-                "Select start_unit_id and end_unit_id from the supplied deterministic "
-                "evidence_units. Never return or reconstruct source text; the runner "
-                "copies the exact source slice from the selected anchors. "
+                (
+                    "For every atomic decision, select a minimal trigger_range and zero or "
+                    "more context_ranges from the supplied evidence_units. Trigger ranges "
+                    "must be ordered and non-overlapping; context may be shared across "
+                    "decisions. Return an empty segments list plus a no-decision rationale "
+                    "when no actionable decision is present. "
+                    if nested_anchor_contract
+                    else "Select start_unit_id and end_unit_id from the supplied deterministic "
+                    "evidence_units. "
+                )
+                + "Never return or reconstruct source text; the runner copies exact source "
+                "slices from the selected anchors. "
                 if anchored
                 else
                 "Return reported_decision_text as an exact locator candidate; the runner "
@@ -1110,7 +1441,9 @@ def prepare_taste_source_segmentation_request_pack(
             packet_id = f"{pack_id}-{slot}-shard-{shard_index + 1:02d}"
             packets.append(
                 TasteSourceSegmentationRequestPacket(
-                    schema_version="1.1" if anchored else "1.0",
+                    schema_version=(
+                        "1.2" if nested_anchor_contract else "1.1" if anchored else "1.0"
+                    ),
                     packet_id=packet_id,
                     project_id=protocol.project_id,
                     protocol_id=protocol.protocol_id,
@@ -1127,8 +1460,14 @@ def prepare_taste_source_segmentation_request_pack(
                         "Do not infer hidden source or outcome fields, use tools, browse, or "
                         "read another segmenter's output. "
                         + (
-                            "Select only supplied evidence-unit IDs; do not return a dedicated "
-                            "source-span transcription field. "
+                            (
+                                "Select a minimal trigger range plus only necessary context "
+                                "ranges using supplied evidence-unit IDs; allow zero decisions "
+                                "with a rationale. "
+                                if nested_anchor_contract
+                                else "Select only supplied evidence-unit IDs; "
+                            )
+                            + "Do not return a dedicated source-span transcription field. "
                             if anchored
                             else ""
                         )
@@ -1168,7 +1507,9 @@ def prepare_taste_source_segmentation_request_pack(
                 )
             )
         pack = TasteSourceSegmentationRequestPack(
-            schema_version="1.1" if anchored else "1.0",
+            schema_version=(
+                "1.2" if nested_anchor_contract else "1.1" if anchored else "1.0"
+            ),
             pack_id=pack_id,
             project_id=protocol.project_id,
             created_at=created_at,

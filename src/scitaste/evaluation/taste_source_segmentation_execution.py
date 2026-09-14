@@ -43,6 +43,7 @@ from scitaste.evaluation.model_identity import (
 from scitaste.evaluation.taste_source_segmentation import (
     TasteSourceDecisionSegmentationRun,
     TasteSourceSegmentationAgreementReport,
+    TasteSourceSegmentationGroupUncertainty,
     compile_taste_source_segmentation_agreement,
     normalize_taste_source_decision_segmentation,
     normalize_taste_source_segmentation_resolution,
@@ -236,6 +237,22 @@ class TasteSourceSegmentationExecutionInspection(BaseModel):
     external_action_performed: Literal[False] = False
 
 
+class SegmentationProviderContextRange(BaseModel):
+    model_config = _CONFIG
+
+    verbatim_context_text: str = Field(min_length=1, max_length=16_000)
+    start_char: int = Field(ge=0, exclude=True)
+    end_char: int = Field(gt=0, exclude=True)
+
+    @model_validator(mode="after")
+    def internal_offsets_are_consistent(self) -> SegmentationProviderContextRange:
+        if self.end_char <= self.start_char:
+            raise ValueError("Segmentation context offsets are reversed")
+        if self.end_char - self.start_char != len(self.verbatim_context_text):
+            raise ValueError("Segmentation context offsets differ from source text")
+        return self
+
+
 class SegmentationProviderSegment(BaseModel):
     model_config = _CONFIG
 
@@ -252,6 +269,9 @@ class SegmentationProviderSegment(BaseModel):
     uncertainty: Literal["low", "medium", "high"]
     start_char: int | None = Field(default=None, ge=0, exclude=True)
     end_char: int | None = Field(default=None, gt=0, exclude=True)
+    context_ranges: tuple[SegmentationProviderContextRange, ...] = Field(
+        default=(), max_length=8, exclude_if=lambda value: not value
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -272,7 +292,24 @@ class SegmentationProviderSegment(BaseModel):
                 raise ValueError("Segmentation provider internal offsets are reversed")
             if self.end_char - self.start_char != len(self.verbatim_decision_text):
                 raise ValueError("Segmentation provider internal offsets differ from source text")
+            intervals = [(item.start_char, item.end_char) for item in self.context_ranges]
+            if intervals != sorted(set(intervals)):
+                raise ValueError("Segmentation provider context ranges are unordered or repeated")
+            if any(first[1] > second[0] for first, second in pairwise(intervals)):
+                raise ValueError("Segmentation provider context ranges overlap")
+            if any(
+                start < self.end_char and end > self.start_char
+                for start, end in intervals
+            ):
+                raise ValueError("Segmentation provider context overlaps its trigger")
         return self
+
+
+class SegmentationAnchoredEvidenceRange(BaseModel):
+    model_config = _CONFIG
+
+    start_unit_id: str = Field(pattern=r"^u[0-9]{4}$")
+    end_unit_id: str = Field(pattern=r"^u[0-9]{4}$")
 
 
 class SegmentationAnchoredProviderSegment(BaseModel):
@@ -288,6 +325,25 @@ class SegmentationAnchoredProviderSegment(BaseModel):
     uncertainty: Literal["low", "medium", "high"]
 
 
+class SegmentationAnchoredProviderSegmentV15(BaseModel):
+    model_config = _CONFIG
+
+    trigger_range: SegmentationAnchoredEvidenceRange
+    context_ranges: tuple[SegmentationAnchoredEvidenceRange, ...] = Field(max_length=8)
+    primary_decision_family: Literal[
+        "idea", "experiment", "evidence", "writing", "review", "visual", "cannot-assess"
+    ]
+    atomic_decision_statement: str = Field(min_length=1, max_length=2_000)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    uncertainty: Literal["low", "medium", "high"]
+
+    @model_validator(mode="after")
+    def cannot_assess_is_uncertain(self) -> SegmentationAnchoredProviderSegmentV15:
+        if self.primary_decision_family == "cannot-assess" and self.uncertainty != "high":
+            raise ValueError("cannot-assess decision segments require high uncertainty")
+        return self
+
+
 class SegmentationAnchoredProviderItem(BaseModel):
     model_config = _CONFIG
 
@@ -299,10 +355,34 @@ class SegmentationAnchoredProviderItem(BaseModel):
     residual_decision_bearing_text_possible: bool
 
 
+class SegmentationAnchoredProviderItemV15(BaseModel):
+    model_config = _CONFIG
+
+    campaign_token: str = Field(pattern=_ID)
+    review_item_id: str = Field(pattern=_ID)
+    segments: tuple[SegmentationAnchoredProviderSegmentV15, ...] = Field(
+        min_length=0, max_length=128
+    )
+    no_decision_rationale: str | None = Field(min_length=1, max_length=2_000)
+    residual_decision_bearing_text_possible: bool
+
+    @model_validator(mode="after")
+    def zero_decision_rationale_is_conditional(self) -> SegmentationAnchoredProviderItemV15:
+        if (not self.segments) != (self.no_decision_rationale is not None):
+            raise ValueError("Exactly zero segments require exactly one no-decision rationale")
+        return self
+
+
 class SegmentationAnchoredProviderOutput(BaseModel):
     model_config = _CONFIG
 
     items: tuple[SegmentationAnchoredProviderItem, ...] = Field(min_length=1)
+
+
+class SegmentationAnchoredProviderOutputV15(BaseModel):
+    model_config = _CONFIG
+
+    items: tuple[SegmentationAnchoredProviderItemV15, ...] = Field(min_length=1)
 
 
 class SegmentationAnchoredAdjudicationProviderItem(SegmentationAnchoredProviderItem):
@@ -315,13 +395,37 @@ class SegmentationAnchoredAdjudicationProviderOutput(BaseModel):
     items: tuple[SegmentationAnchoredAdjudicationProviderItem, ...] = Field(min_length=1)
 
 
+class SegmentationAnchoredAdjudicationProviderItemV15(
+    SegmentationAnchoredProviderItemV15
+):
+    resolution_rationale: str = Field(min_length=1, max_length=4_000)
+
+
+class SegmentationAnchoredAdjudicationProviderOutputV15(BaseModel):
+    model_config = _CONFIG
+
+    items: tuple[SegmentationAnchoredAdjudicationProviderItemV15, ...] = Field(min_length=1)
+
+
 class SegmentationProviderItem(BaseModel):
     model_config = _CONFIG
 
     campaign_token: str = Field(pattern=_ID)
     review_item_id: str = Field(pattern=_ID)
-    segments: tuple[SegmentationProviderSegment, ...] = Field(min_length=1, max_length=128)
+    segments: tuple[SegmentationProviderSegment, ...] = Field(min_length=0, max_length=128)
+    no_decision_rationale: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=2_000,
+        exclude_if=lambda value: value is None,
+    )
     residual_decision_bearing_text_possible: bool
+
+    @model_validator(mode="after")
+    def zero_decision_rationale_is_conditional(self) -> SegmentationProviderItem:
+        if (not self.segments) != (self.no_decision_rationale is not None):
+            raise ValueError("Exactly zero segments require exactly one no-decision rationale")
+        return self
 
 
 class SegmentationProviderOutput(BaseModel):
@@ -347,6 +451,12 @@ class SegmentationCalibrationMetrics(BaseModel):
     overlap_matched_family_agreement_micros: int = Field(ge=0, le=1_000_000)
     adjudication_item_rate_micros: int = Field(ge=0, le=1_000_000)
     residual_risk_item_rate_after_adjudication_micros: int = Field(ge=0, le=1_000_000)
+    decision_presence_agreement_micros: int | None = Field(
+        default=None, ge=0, le=1_000_000, exclude_if=lambda value: value is None
+    )
+    exact_trigger_context_set_agreement_micros: int | None = Field(
+        default=None, ge=0, le=1_000_000, exclude_if=lambda value: value is None
+    )
     all_frozen_thresholds_passed: bool
 
     @model_validator(mode="after")
@@ -356,6 +466,10 @@ class SegmentationCalibrationMetrics(BaseModel):
             and self.overlap_matched_family_agreement_micros >= 800_000
             and self.adjudication_item_rate_micros <= 500_000
             and self.residual_risk_item_rate_after_adjudication_micros == 0
+            and (
+                self.decision_presence_agreement_micros is None
+                or self.decision_presence_agreement_micros >= 800_000
+            )
         )
         if self.all_frozen_thresholds_passed != passed:
             raise ValueError("Segmentation calibration threshold summary drifted")
@@ -380,7 +494,7 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     run_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     authorization_sha256: str = Field(pattern=_SHA256)
@@ -393,19 +507,24 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
     returned_models: tuple[str, ...] = Field(min_length=1)
     identity_attestation: SegmentationRunArtifactBinding
     identity_report: ApiIdentityWindowReport
-    call_receipts: tuple[SegmentationProviderCallReceipt, ...] = Field(min_length=10)
+    call_receipts: tuple[SegmentationProviderCallReceipt, ...] = Field(
+        min_length=6, max_length=100
+    )
     segmenter_firewall_receipts: tuple[SegmentationInputFirewallReceipt, ...] = Field(
-        min_length=8, max_length=8
+        min_length=4, max_length=96
     )
     adjudication_firewall_receipts: tuple[SegmentationAdjudicationInputFirewallReceipt, ...] = (
-        Field(max_length=4)
+        Field(max_length=96)
     )
     segmenter_a: SegmentationRunArtifactBinding
     segmenter_b: SegmentationRunArtifactBinding
     agreement: SegmentationRunArtifactBinding
     resolution: SegmentationRunArtifactBinding
     metrics: SegmentationCalibrationMetrics
-    request_count: int = Field(ge=10, le=14)
+    group_uncertainty: TasteSourceSegmentationGroupUncertainty | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    request_count: int = Field(ge=6, le=100)
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     estimated_cost_cny: float = Field(ge=0, allow_inf_nan=False)
@@ -437,6 +556,102 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
         observed_cost = sum(item.estimated_cost_cny for item in self.call_receipts)
         if abs(self.estimated_cost_cny - observed_cost) > 1e-9:
             raise ValueError("Segmentation calibration estimated cost drifted")
+        if (self.schema_version == "1.1") != (self.group_uncertainty is not None):
+            raise ValueError("Segmentation calibration schema differs from group uncertainty")
+        workload_calls = tuple(
+            item
+            for item in self.call_receipts
+            if item.call.role is ApiIdentityCallRole.WORKLOAD
+        )
+        sentinel_calls = tuple(
+            item
+            for item in self.call_receipts
+            if item.call.role is not ApiIdentityCallRole.WORKLOAD
+        )
+        if len(sentinel_calls) != 2:
+            raise ValueError("Segmentation calibration requires start and end sentinels")
+        if (
+            tuple(item.call.sequence for item in self.call_receipts)
+            != tuple(range(1, len(self.call_receipts) + 1))
+            or self.call_receipts[0].call.role
+            is not ApiIdentityCallRole.START_SENTINEL
+            or self.call_receipts[-1].call.role
+            is not ApiIdentityCallRole.END_SENTINEL
+            or any(
+                item.call.role is not ApiIdentityCallRole.WORKLOAD
+                for item in self.call_receipts[1:-1]
+            )
+        ):
+            raise ValueError("Segmentation calibration call topology drifted")
+        workload_packet_ids = tuple(item.packet_id for item in workload_calls)
+        firewall_packet_ids = tuple(
+            item.packet_id
+            for item in (
+                *self.segmenter_firewall_receipts,
+                *self.adjudication_firewall_receipts,
+            )
+        )
+        if (
+            len(workload_packet_ids) != len(set(workload_packet_ids))
+            or len(firewall_packet_ids) != len(set(firewall_packet_ids))
+            or set(workload_packet_ids) != set(firewall_packet_ids)
+        ):
+            raise ValueError("Segmentation workload firewall coverage drifted")
+        workload_by_packet = {item.packet_id: item for item in workload_calls}
+        if any(
+            (
+                workload_by_packet[item.packet_id].call.request_sha256,
+                workload_by_packet[item.packet_id].packet_sha256,
+                workload_by_packet[item.packet_id].call.raw_request_ref,
+            )
+            != (
+                item.raw_request_sha256,
+                item.packet_sha256,
+                item.raw_request_ref,
+            )
+            for item in (
+                *self.segmenter_firewall_receipts,
+                *self.adjudication_firewall_receipts,
+            )
+        ):
+            raise ValueError("Segmentation firewall and provider request hashes differ")
+        observed_returned_models = tuple(
+            dict.fromkeys(item.call.returned_model for item in self.call_receipts)
+        )
+        if (
+            not self.identity_report.admitted
+            or self.identity_report.attestation_sha256
+            != self.identity_attestation.semantic_sha256
+            or self.identity_report.call_count != len(self.call_receipts)
+            or self.identity_report.sentinel_count != len(sentinel_calls)
+            or self.identity_report.returned_model_ids != observed_returned_models
+            or self.returned_models != observed_returned_models
+        ):
+            raise ValueError("Segmentation identity report differs from call evidence")
+        if self.schema_version == "1.1":
+            uncertainty = self.group_uncertainty
+            assert uncertainty is not None
+            if (
+                any(item.schema_version != "1.1" for item in self.call_receipts)
+                or any(item.anchor_ranges_verified is not True for item in workload_calls)
+                or any(item.anchor_ranges_verified is not None for item in sentinel_calls)
+                or self.metrics.decision_presence_agreement_micros is None
+                or self.metrics.exact_trigger_context_set_agreement_micros
+                != (
+                    uncertainty.exact_trigger_context_set_agreement.point_micros
+                    if uncertainty.exact_trigger_context_set_agreement is not None
+                    else None
+                )
+                or self.metrics.overlap_span_f1_micros
+                != uncertainty.overlap_trigger_span_f1.point_micros
+                or self.metrics.overlap_matched_family_agreement_micros
+                != uncertainty.overlap_matched_family_agreement.point_micros
+                or self.metrics.decision_presence_agreement_micros
+                != uncertainty.decision_presence_agreement.point_micros
+                or self.metrics.adjudication_item_rate_micros
+                != uncertainty.adjudication_item_rate.point_micros
+            ):
+                raise ValueError("Segmentation schema-1.1 calibration evidence drifted")
         expected = _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
         if self.receipt_sha256 != expected:
             raise ValueError("Segmentation calibration receipt hash mismatch")
@@ -540,6 +755,12 @@ class SegmentationEvidenceUnitSelectionReceipt(BaseModel):
     campaign_token: str = Field(pattern=_ID)
     review_item_id: str = Field(pattern=_ID)
     segment_ordinal: int = Field(ge=1, le=128)
+    range_role: Literal["trigger", "context"] = Field(
+        default="trigger", exclude_if=lambda value: value == "trigger"
+    )
+    context_ordinal: int | None = Field(
+        default=None, ge=1, le=8, exclude_if=lambda value: value is None
+    )
     algorithm: Literal["unicode-word-punctuation-v1"]
     start_unit_id: str = Field(pattern=r"^u[0-9]{4}$")
     end_unit_id: str = Field(pattern=r"^u[0-9]{4}$")
@@ -552,6 +773,33 @@ class SegmentationEvidenceUnitSelectionReceipt(BaseModel):
     provider_span_text_field_received: Literal[False] = False
     normalization_performed: Literal[False] = False
     fuzzy_matching_performed: Literal[False] = False
+
+    @model_validator(mode="after")
+    def role_is_consistent(self) -> SegmentationEvidenceUnitSelectionReceipt:
+        if (self.range_role == "context") != (self.context_ordinal is not None):
+            raise ValueError("Segmentation evidence range role differs from its ordinal")
+        return self
+
+
+class SegmentationEvidenceUnitItemReceipt(BaseModel):
+    model_config = _CONFIG
+
+    campaign_token: str = Field(pattern=_ID)
+    review_item_id: str = Field(pattern=_ID)
+    source_comment_sha256: str = Field(pattern=_SHA256)
+    evidence_unit_table_sha256: str = Field(pattern=_SHA256)
+    segment_count: int = Field(ge=0, le=128)
+    zero_decision: bool
+    no_decision_rationale_sha256: str | None = Field(default=None, pattern=_SHA256)
+    residual_decision_bearing_text_possible: bool
+
+    @model_validator(mode="after")
+    def zero_decision_is_receipted(self) -> SegmentationEvidenceUnitItemReceipt:
+        if self.zero_decision != (self.segment_count == 0):
+            raise ValueError("Segmentation item receipt zero-decision status drifted")
+        if self.zero_decision != (self.no_decision_rationale_sha256 is not None):
+            raise ValueError("Segmentation item receipt lacks its no-decision rationale hash")
+        return self
 
 
 class SegmentationProviderTransportReceipt(BaseModel):
@@ -607,6 +855,9 @@ class SegmentationProviderTransportReceipt(BaseModel):
 class SegmentationProviderCallReceipt(BaseModel):
     model_config = _CONFIG
 
+    schema_version: Literal["1.0", "1.1"] = Field(
+        default="1.0", exclude_if=lambda value: value == "1.0"
+    )
     call: ApiIdentityCallReceipt
     packet_id: str | None = Field(default=None, pattern=_ID)
     packet_sha256: str | None = Field(default=None, pattern=_SHA256)
@@ -622,10 +873,24 @@ class SegmentationProviderCallReceipt(BaseModel):
     evidence_unit_selection_receipts: tuple[
         SegmentationEvidenceUnitSelectionReceipt, ...
     ] = ()
+    evidence_unit_item_receipts: tuple[SegmentationEvidenceUnitItemReceipt, ...] = Field(
+        default=(), exclude_if=lambda value: not value
+    )
+    assigned_item_count: int | None = Field(
+        default=None, ge=1, exclude_if=lambda value: value is None
+    )
     retry_count: Literal[0] = 0
     response_schema_verified: Literal[True] = True
     assigned_item_set_verified: Literal[True] = True
-    verbatim_spans_verified: Literal[True] = True
+    verbatim_spans_verified: bool | None = Field(
+        default=True, exclude_if=lambda value: value is None
+    )
+    anchor_ranges_verified: bool | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    identity_sentinel_output_verified: bool | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def role_matches_packet(self) -> SegmentationProviderCallReceipt:
@@ -638,6 +903,93 @@ class SegmentationProviderCallReceipt(BaseModel):
             raise ValueError("Segmentation cached input exceeds total input tokens")
         if self.total_tokens != self.call.input_tokens + self.call.output_tokens:
             raise ValueError("Segmentation provider total-token count drifted")
+        if (
+            self.raw_provider_response_sha256 != self.call.response_sha256
+            or self.provider_task_id != self.call.provider_request_id
+        ):
+            raise ValueError("Segmentation provider transport bindings drifted")
+        if not workload:
+            if (
+                self.anchor_ranges_verified is not None
+                or self.assigned_item_count is not None
+                or self.span_reconstruction_receipts
+                or self.evidence_unit_selection_receipts
+                or self.evidence_unit_item_receipts
+            ):
+                raise ValueError("Segmentation sentinel cannot claim source-range validation")
+            if (
+                self.schema_version == "1.1"
+                and self.identity_sentinel_output_verified is not True
+            ):
+                raise ValueError("Segmentation sentinel lacks exact-output verification")
+            return self
+        if self.identity_sentinel_output_verified is not None:
+            raise ValueError("Segmentation workload cannot claim sentinel verification")
+        if self.schema_version == "1.1" and self.anchor_ranges_verified is not True:
+            raise ValueError("Schema-1.1 workload lacks evidence-unit validation")
+        if self.anchor_ranges_verified is True:
+            if self.verbatim_spans_verified is not None or self.span_reconstruction_receipts:
+                raise ValueError("Evidence-unit validation cannot claim verbatim-span validation")
+            item_receipts = {
+                (item.campaign_token, item.review_item_id): item
+                for item in self.evidence_unit_item_receipts
+            }
+            if not item_receipts or len(item_receipts) != len(
+                self.evidence_unit_item_receipts
+            ):
+                raise ValueError("Segmentation anchored workload item receipts are incomplete")
+            if self.assigned_item_count != len(item_receipts):
+                raise ValueError("Segmentation anchored assigned-item count drifted")
+            ranges_by_item: dict[
+                tuple[str, str], list[SegmentationEvidenceUnitSelectionReceipt]
+            ] = {key: [] for key in item_receipts}
+            for receipt in self.evidence_unit_selection_receipts:
+                key = (receipt.campaign_token, receipt.review_item_id)
+                if key not in ranges_by_item:
+                    raise ValueError("Segmentation range receipt names an unreceipted item")
+                item_receipt = item_receipts[key]
+                if (
+                    receipt.source_comment_sha256
+                    != item_receipt.source_comment_sha256
+                    or receipt.evidence_unit_table_sha256
+                    != item_receipt.evidence_unit_table_sha256
+                ):
+                    raise ValueError("Segmentation range and item receipts bind different sources")
+                ranges_by_item[key].append(receipt)
+            for key, item_receipt in item_receipts.items():
+                ranges = ranges_by_item[key]
+                triggers = [item for item in ranges if item.range_role == "trigger"]
+                if [item.segment_ordinal for item in triggers] != list(
+                    range(1, item_receipt.segment_count + 1)
+                ):
+                    raise ValueError("Segmentation trigger receipts differ from segment count")
+                if item_receipt.zero_decision and ranges:
+                    raise ValueError("Zero-decision item cannot carry range receipts")
+                for segment_ordinal in range(1, item_receipt.segment_count + 1):
+                    contexts = [
+                        item
+                        for item in ranges
+                        if item.range_role == "context"
+                        and item.segment_ordinal == segment_ordinal
+                    ]
+                    if [item.context_ordinal for item in contexts] != list(
+                        range(1, len(contexts) + 1)
+                    ):
+                        raise ValueError("Segmentation context receipt ordinals are not contiguous")
+                if any(
+                    item.range_role == "context"
+                    and item.segment_ordinal > item_receipt.segment_count
+                    for item in ranges
+                ):
+                    raise ValueError("Segmentation context receipt names an absent segment")
+        elif (
+            self.anchor_ranges_verified is not None
+            or self.evidence_unit_item_receipts
+            or self.assigned_item_count is not None
+        ):
+            raise ValueError("Legacy workload cannot carry schema-1.5 item receipts")
+        elif self.verbatim_spans_verified is not True:
+            raise ValueError("Legacy workload lacks verbatim-span validation")
         return self
 
 
@@ -798,7 +1150,7 @@ def inspect_taste_source_segmentation_execution_authorization(
         locator_root=root,
     )
     if (
-        protocol.protocol.schema_version not in {"1.1", "1.2", "1.4"}
+        protocol.protocol.schema_version not in {"1.1", "1.2", "1.4", "1.5"}
         or protocol.protocol.adjudication_input_firewall is None
     ):
         raise ValueError(
@@ -815,11 +1167,13 @@ def inspect_taste_source_segmentation_execution_authorization(
         or pack.sample_sha256 != protocol.sample.sample_sha256
     ):
         raise ValueError("Segmentation execution pack differs from the frozen protocol")
-    if (protocol.protocol.schema_version == "1.4") != (
-        pack.schema_version == "1.1"
-    ):
+    expected_pack_schema = {
+        "1.4": "1.1",
+        "1.5": "1.2",
+    }.get(protocol.protocol.schema_version, "1.0")
+    if pack.schema_version != expected_pack_schema:
         raise ValueError("Segmentation execution pack anchor schema differs from protocol")
-    if protocol.protocol.schema_version == "1.4" and any(
+    if protocol.protocol.schema_version in {"1.4", "1.5"} and any(
         timestamp > authorization.authorized_at
         for timestamp in (
             protocol.protocol.protocol_created_at,
@@ -933,7 +1287,7 @@ def inspect_taste_source_segmentation_execution_authorization(
             raise ValueError("Segmentation execution packet differs from the frozen plan")
         packets.append(packet)
     anchor_contract = protocol.protocol.evidence_unit_selection
-    if anchor_contract is not None and protocol.protocol.schema_version == "1.4":
+    if anchor_contract is not None and protocol.protocol.schema_version in {"1.4", "1.5"}:
         assert anchor_contract.system_instruction_sha256 is not None
         assert anchor_contract.output_contract_sha256 is not None
         for packet in packets:
@@ -1019,8 +1373,32 @@ def validate_segmentation_provider_output(
         payload = json.loads(cleaned)
     except json.JSONDecodeError as error:
         raise ValueError("Segmentation provider output is not valid JSON") from error
+    if protocol is not None:
+        expected_packet_schema = (
+            "1.2"
+            if protocol.schema_version == "1.5"
+            else "1.1"
+            if protocol.evidence_unit_selection is not None
+            else "1.0"
+        )
+        if packet.schema_version != expected_packet_schema:
+            raise ValueError("Segmentation protocol and request-packet schemas differ")
     expected = {(item.campaign_token, item.review_item_id): item for item in packet.items}
     if protocol is not None and protocol.evidence_unit_selection is not None:
+        if protocol.schema_version == "1.5":
+            anchored_output_v15 = SegmentationAnchoredProviderOutputV15.model_validate(payload)
+            observed_v15 = [
+                (item.campaign_token, item.review_item_id)
+                for item in anchored_output_v15.items
+            ]
+            if len(observed_v15) != len(set(observed_v15)) or set(observed_v15) != set(
+                expected
+            ):
+                raise ValueError("Segmentation provider output item coverage drifted")
+            return _resolve_anchored_provider_output_v15(
+                anchored_output_v15,
+                packet=packet,
+            )
         anchored_output = SegmentationAnchoredProviderOutput.model_validate(payload)
         observed = [
             (item.campaign_token, item.review_item_id) for item in anchored_output.items
@@ -1029,6 +1407,8 @@ def validate_segmentation_provider_output(
             raise ValueError("Segmentation provider output item coverage drifted")
         return _resolve_anchored_provider_output(anchored_output, packet=packet)
     output = SegmentationProviderOutput.model_validate(payload)
+    if any(not item.segments for item in output.items):
+        raise ValueError("Legacy segmentation provider output requires at least one segment")
     observed = [(item.campaign_token, item.review_item_id) for item in output.items]
     if len(observed) != len(set(observed)) or set(observed) != set(expected):
         raise ValueError("Segmentation provider output item coverage drifted")
@@ -1064,6 +1444,22 @@ def validate_adjudication_provider_output(
     except json.JSONDecodeError as error:
         raise ValueError("Segmentation adjudication output is not valid JSON") from error
     if protocol is not None and protocol.evidence_unit_selection is not None:
+        if protocol.schema_version == "1.5":
+            anchored_output_v15 = (
+                SegmentationAnchoredAdjudicationProviderOutputV15.model_validate(payload)
+            )
+            observed_v15 = [
+                (item.campaign_token, item.review_item_id)
+                for item in anchored_output_v15.items
+            ]
+            if len(observed_v15) != len(set(observed_v15)) or set(observed_v15) != set(
+                expected_items
+            ):
+                raise ValueError("Segmentation adjudication output item coverage drifted")
+            return _resolve_anchored_adjudication_output_v15(
+                anchored_output_v15,
+                expected_items=expected_items,
+            )
         anchored_output = SegmentationAnchoredAdjudicationProviderOutput.model_validate(payload)
         observed = [
             (item.campaign_token, item.review_item_id) for item in anchored_output.items
@@ -1075,6 +1471,8 @@ def validate_adjudication_provider_output(
             expected_items=expected_items,
         )
     output = SegmentationAdjudicationProviderOutput.model_validate(payload)
+    if any(not item.segments for item in output.items):
+        raise ValueError("Legacy segmentation adjudication output requires at least one segment")
     observed = [(item.campaign_token, item.review_item_id) for item in output.items]
     if len(observed) != len(set(observed)) or set(observed) != set(expected_items):
         raise ValueError("Segmentation adjudication output item coverage drifted")
@@ -1105,6 +1503,7 @@ def build_segmentation_adjudication_request(
     if not items or len(items) > protocol.generation.items_per_shard:
         raise ValueError("Segmentation adjudication shard size is invalid")
     anchored = protocol.evidence_unit_selection is not None
+    nested_anchor_contract = protocol.schema_version == "1.5"
     reported_text_field = (
         None
         if anchored
@@ -1115,8 +1514,11 @@ def build_segmentation_adjudication_request(
         )
     )
     required_segment_fields = [
-        "start_unit_id",
-        "end_unit_id",
+        *(
+            ("trigger_range", "context_ranges")
+            if nested_anchor_contract
+            else ("start_unit_id", "end_unit_id")
+        ),
         "primary_decision_family",
         "atomic_decision_statement",
         "rationale",
@@ -1146,12 +1548,34 @@ def build_segmentation_adjudication_request(
         "uncertainty": {"type": "string", "enum": ["low", "medium", "high"]},
     }
     if anchored:
-        segment_properties.update(
-            {
+        range_contract: dict[str, JsonValue] = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["start_unit_id", "end_unit_id"],
+            "properties": {
                 "start_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
                 "end_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
-            }
-        )
+            },
+        }
+        if nested_anchor_contract:
+            segment_properties.update(
+                {
+                    "trigger_range": range_contract,
+                    "context_ranges": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": range_contract,
+                    },
+                }
+            )
+        else:
+            segment_properties.update(
+                {
+                    "start_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
+                    "end_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
+                }
+            )
     else:
         assert reported_text_field is not None
         segment_properties[reported_text_field] = {"type": "string", "minLength": 8}
@@ -1171,6 +1595,7 @@ def build_segmentation_adjudication_request(
                         "campaign_token",
                         "review_item_id",
                         "segments",
+                        *(["no_decision_rationale"] if nested_anchor_contract else []),
                         "residual_decision_bearing_text_possible",
                         "resolution_rationale",
                     ],
@@ -1179,7 +1604,7 @@ def build_segmentation_adjudication_request(
                         "review_item_id": {"type": "string"},
                         "segments": {
                             "type": "array",
-                            "minItems": 1,
+                            "minItems": 0 if nested_anchor_contract else 1,
                             "maxItems": 128,
                             "items": {
                                 "type": "object",
@@ -1188,9 +1613,41 @@ def build_segmentation_adjudication_request(
                                 "properties": segment_properties,
                             },
                         },
+                        **(
+                            {
+                                "no_decision_rationale": {
+                                    "type": ["string", "null"],
+                                    "minLength": 1,
+                                    "maxLength": 2000,
+                                }
+                            }
+                            if nested_anchor_contract
+                            else {}
+                        ),
                         "residual_decision_bearing_text_possible": {"type": "boolean"},
                         "resolution_rationale": {"type": "string", "minLength": 1},
                     },
+                    **(
+                        {
+                            "allOf": [
+                                {
+                                    "if": {"properties": {"segments": {"maxItems": 0}}},
+                                    "then": {
+                                        "properties": {
+                                            "no_decision_rationale": {"type": "string"}
+                                        }
+                                    },
+                                    "else": {
+                                        "properties": {
+                                            "no_decision_rationale": {"type": "null"}
+                                        }
+                                    },
+                                }
+                            ]
+                        }
+                        if nested_anchor_contract
+                        else {}
+                    ),
                 },
             }
         },
@@ -1209,9 +1666,15 @@ def build_segmentation_adjudication_request(
                     "Do not infer hidden source or outcome fields, use tools, or browse. "
                     "Return one bare JSON object only. "
                     + (
-                        "Select only supplied evidence-unit IDs and return no dedicated "
-                        "source-span transcription field; final source text is copied by "
-                        "the runner."
+                        (
+                            "Select a minimal trigger range plus only necessary context ranges "
+                            "using supplied evidence-unit IDs; zero decisions are valid with a "
+                            "rationale. "
+                            if nested_anchor_contract
+                            else "Select only supplied evidence-unit IDs. "
+                        )
+                        + "Return no dedicated source-span transcription field; final source "
+                        "text is copied by the runner."
                         if anchored
                         else "The reported decision text is only a locator candidate; final "
                         "source text is copied by the runner."
@@ -1267,13 +1730,15 @@ def verify_persisted_segmentation_provider_request(
         "tools",
         "tool_choice",
     }
-    if packet.schema_version == "1.1":
+    if packet.schema_version in {"1.1", "1.2"}:
         forbidden_keys.update(
             {
                 "start_char",
                 "end_char",
                 "verbatim_decision_text",
                 "reported_decision_text",
+                "trigger_text",
+                "context_text",
             }
         )
     if (_recursive_keys(observed) | _recursive_keys(content)) & forbidden_keys:
@@ -1338,6 +1803,8 @@ def verify_persisted_segmentation_adjudication_request(
                 "end_char",
                 "verbatim_decision_text",
                 "reported_decision_text",
+                "trigger_text",
+                "context_text",
             }
         )
     if (_recursive_keys(observed) | _recursive_keys(content)) & forbidden_keys:
@@ -1715,6 +2182,9 @@ def run_taste_source_segmentation_calibration(
                 task_or_benchmark_content_present=role is ApiIdentityCallRole.WORKLOAD,
             )
             receipt = SegmentationProviderCallReceipt(
+                schema_version=(
+                    "1.1" if protocol.schema_version == "1.5" else "1.0"
+                ),
                 call=identity_call,
                 packet_id=packet_id,
                 packet_sha256=packet_sha256,
@@ -1745,6 +2215,7 @@ def run_taste_source_segmentation_calibration(
                     _compile_evidence_unit_selection_receipts(
                         raw_text=extracted.text,
                         output=output,
+                        protocol=protocol,
                         source_texts=(
                             {
                                 (item.campaign_token, item.review_item_id): item.review_comment
@@ -1757,6 +2228,47 @@ def run_taste_source_segmentation_calibration(
                     if protocol.evidence_unit_selection is not None
                     and role is ApiIdentityCallRole.WORKLOAD
                     else ()
+                ),
+                evidence_unit_item_receipts=(
+                    _compile_evidence_unit_item_receipts(
+                        output=output,
+                        source_texts=(
+                            {
+                                (item.campaign_token, item.review_item_id): item.review_comment
+                                for item in packet.items
+                            }
+                            if packet is not None
+                            else adjudication_expected
+                        ),
+                    )
+                    if protocol.schema_version == "1.5"
+                    and role is ApiIdentityCallRole.WORKLOAD
+                    else ()
+                ),
+                assigned_item_count=(
+                    len(packet.items)
+                    if protocol.schema_version == "1.5"
+                    and role is ApiIdentityCallRole.WORKLOAD
+                    and packet is not None
+                    else len(adjudication_expected or {})
+                    if protocol.schema_version == "1.5"
+                    and role is ApiIdentityCallRole.WORKLOAD
+                    else None
+                ),
+                verbatim_spans_verified=(
+                    None
+                    if protocol.schema_version == "1.5"
+                    or role is not ApiIdentityCallRole.WORKLOAD
+                    else True
+                ),
+                anchor_ranges_verified=(
+                    True
+                    if protocol.schema_version == "1.5"
+                    and role is ApiIdentityCallRole.WORKLOAD
+                    else None
+                ),
+                identity_sentinel_output_verified=(
+                    True if role is not ApiIdentityCallRole.WORKLOAD else None
                 ),
             )
             projected = [*call_receipts, receipt]
@@ -1961,6 +2473,7 @@ def run_taste_source_segmentation_calibration(
                         "candidates": {
                             "candidate-left": _anonymous_candidate(
                                 candidate_left,
+                                nested_anchor_contract=protocol.schema_version == "1.5",
                                 source=(
                                     review_comment
                                     if protocol.evidence_unit_selection is not None
@@ -1969,6 +2482,7 @@ def run_taste_source_segmentation_calibration(
                             ),
                             "candidate-right": _anonymous_candidate(
                                 candidate_right,
+                                nested_anchor_contract=protocol.schema_version == "1.5",
                                 source=(
                                     review_comment
                                     if protocol.evidence_unit_selection is not None
@@ -2083,6 +2597,20 @@ def run_taste_source_segmentation_calibration(
         resolution_path = output_root / "derived" / "resolution.json"
         save_taste_source_segmentation_resolution_run(resolution, resolution_path)
         item_count = agreement.source_item_count
+        decision_presence_agreement_micros = (
+            sum(
+                (item.segmenter_a_count > 0) == (item.segmenter_b_count > 0)
+                for item in agreement.items
+            )
+            * 1_000_000
+            // item_count
+        )
+        exact_trigger_context_set_agreement_micros = (
+            agreement.group_uncertainty.exact_trigger_context_set_agreement.point_micros
+            if agreement.group_uncertainty is not None
+            and agreement.group_uncertainty.exact_trigger_context_set_agreement is not None
+            else None
+        )
         metrics = SegmentationCalibrationMetrics(
             overlap_span_f1_micros=agreement.overlap_span_f1_micros,
             overlap_matched_family_agreement_micros=(
@@ -2094,14 +2622,27 @@ def run_taste_source_segmentation_calibration(
             residual_risk_item_rate_after_adjudication_micros=(
                 resolution.residual_risk_item_count * 1_000_000 // item_count
             ),
+            decision_presence_agreement_micros=(
+                decision_presence_agreement_micros
+                if protocol.schema_version == "1.5"
+                else None
+            ),
+            exact_trigger_context_set_agreement_micros=(
+                exact_trigger_context_set_agreement_micros
+            ),
             all_frozen_thresholds_passed=(
                 agreement.overlap_span_f1_micros >= 800_000
                 and agreement.overlap_matched_family_agreement_micros >= 800_000
                 and agreement.adjudication_item_count * 1_000_000 // item_count <= 500_000
                 and resolution.residual_risk_item_count == 0
+                and (
+                    protocol.schema_version != "1.5"
+                    or decision_presence_agreement_micros >= 800_000
+                )
             ),
         )
         receipt = TasteSourceSegmentationCalibrationReceipt.create(
+            schema_version="1.1" if protocol.schema_version == "1.5" else "1.0",
             run_id=authorization.run_id,
             project_id=authorization.project_id,
             authorization_sha256=authorization.authorization_sha256,
@@ -2144,6 +2685,7 @@ def run_taste_source_segmentation_calibration(
                 semantic_sha256=resolution.run_sha256,
             ),
             metrics=metrics,
+            group_uncertainty=agreement.group_uncertainty,
             request_count=len(call_receipts),
             input_tokens=sum(item.call.input_tokens for item in call_receipts),
             output_tokens=sum(item.call.output_tokens for item in call_receipts),
@@ -2247,6 +2789,90 @@ def _resolve_anchored_segments(
     return tuple(resolved)
 
 
+def _resolve_anchored_segments_v15(
+    segments: tuple[SegmentationAnchoredProviderSegmentV15, ...],
+    *,
+    source: str,
+) -> tuple[SegmentationProviderSegment, ...]:
+    unit_rows = taste_source_comment_unit_offsets(source)
+    units = {
+        unit_id: (ordinal, start, end)
+        for ordinal, (unit_id, _, start, end) in enumerate(unit_rows, 1)
+    }
+
+    def resolve_range(
+        selected: SegmentationAnchoredEvidenceRange,
+    ) -> tuple[int, int, int, int]:
+        try:
+            start_ordinal, start_char, _ = units[selected.start_unit_id]
+            end_ordinal, _, end_char = units[selected.end_unit_id]
+        except KeyError as error:
+            raise ValueError(
+                "Segmentation provider selected an unknown evidence-unit ID"
+            ) from error
+        if end_ordinal < start_ordinal:
+            raise ValueError("Segmentation provider evidence-unit range is reversed")
+        return start_ordinal, end_ordinal, start_char, end_char
+
+    resolved: list[SegmentationProviderSegment] = []
+    trigger_intervals: list[tuple[int, int]] = []
+    for segment in segments:
+        _, _, start_char, end_char = resolve_range(segment.trigger_range)
+        trigger_intervals.append((start_char, end_char))
+        contexts: list[SegmentationProviderContextRange] = []
+        context_intervals: list[tuple[int, int]] = []
+        context_unit_intervals: list[tuple[int, int]] = []
+        for context in segment.context_ranges:
+            (
+                context_start_ordinal,
+                context_end_ordinal,
+                context_start,
+                context_end,
+            ) = resolve_range(context)
+            context_intervals.append((context_start, context_end))
+            context_unit_intervals.append(
+                (context_start_ordinal, context_end_ordinal)
+            )
+            contexts.append(
+                SegmentationProviderContextRange(
+                    verbatim_context_text=source[context_start:context_end],
+                    start_char=context_start,
+                    end_char=context_end,
+                )
+            )
+        if context_intervals != sorted(set(context_intervals)):
+            raise ValueError("Segmentation provider context ranges are unordered or repeated")
+        if any(
+            first_end + 1 >= second_start
+            for (_, first_end), (second_start, _) in pairwise(context_unit_intervals)
+        ):
+            raise ValueError(
+                "Segmentation provider context evidence-unit ranges overlap or are adjacent"
+            )
+        if any(
+            context_start < end_char and context_end > start_char
+            for context_start, context_end in context_intervals
+        ):
+            raise ValueError("Segmentation provider context overlaps its decision trigger")
+        resolved.append(
+            SegmentationProviderSegment(
+                verbatim_decision_text=source[start_char:end_char],
+                primary_decision_family=segment.primary_decision_family,
+                atomic_decision_statement=segment.atomic_decision_statement,
+                rationale=segment.rationale,
+                uncertainty=segment.uncertainty,
+                start_char=start_char,
+                end_char=end_char,
+                context_ranges=tuple(contexts),
+            )
+        )
+    if trigger_intervals != sorted(trigger_intervals):
+        raise ValueError("Segmentation provider trigger ranges are out of order")
+    if any(first[1] > second[0] for first, second in pairwise(trigger_intervals)):
+        raise ValueError("Segmentation provider trigger ranges overlap")
+    return tuple(resolved)
+
+
 def _resolve_anchored_provider_output(
     output: SegmentationAnchoredProviderOutput,
     *,
@@ -2274,6 +2900,34 @@ def _resolve_anchored_provider_output(
     return SegmentationProviderOutput(items=tuple(resolved))
 
 
+def _resolve_anchored_provider_output_v15(
+    output: SegmentationAnchoredProviderOutputV15,
+    *,
+    packet: TasteSourceSegmentationRequestPacket,
+) -> SegmentationProviderOutput:
+    expected = {(item.campaign_token, item.review_item_id): item for item in packet.items}
+    resolved = []
+    for item in output.items:
+        source_item = expected[(item.campaign_token, item.review_item_id)]
+        if source_item.evidence_units is None:
+            raise ValueError("Segmentation anchored output targets a legacy request item")
+        resolved.append(
+            SegmentationProviderItem(
+                campaign_token=item.campaign_token,
+                review_item_id=item.review_item_id,
+                segments=_resolve_anchored_segments_v15(
+                    item.segments,
+                    source=source_item.review_comment,
+                ),
+                no_decision_rationale=item.no_decision_rationale,
+                residual_decision_bearing_text_possible=(
+                    item.residual_decision_bearing_text_possible
+                ),
+            )
+        )
+    return SegmentationProviderOutput(items=tuple(resolved))
+
+
 def _resolve_anchored_adjudication_output(
     output: SegmentationAnchoredAdjudicationProviderOutput,
     *,
@@ -2287,6 +2941,29 @@ def _resolve_anchored_adjudication_output(
                 campaign_token=item.campaign_token,
                 review_item_id=item.review_item_id,
                 segments=_resolve_anchored_segments(item.segments, source=source),
+                residual_decision_bearing_text_possible=(
+                    item.residual_decision_bearing_text_possible
+                ),
+                resolution_rationale=item.resolution_rationale,
+            )
+        )
+    return SegmentationAdjudicationProviderOutput(items=tuple(resolved))
+
+
+def _resolve_anchored_adjudication_output_v15(
+    output: SegmentationAnchoredAdjudicationProviderOutputV15,
+    *,
+    expected_items: dict[tuple[str, str], str],
+) -> SegmentationAdjudicationProviderOutput:
+    resolved = []
+    for item in output.items:
+        source = expected_items[(item.campaign_token, item.review_item_id)]
+        resolved.append(
+            SegmentationAdjudicationProviderItem(
+                campaign_token=item.campaign_token,
+                review_item_id=item.review_item_id,
+                segments=_resolve_anchored_segments_v15(item.segments, source=source),
+                no_decision_rationale=item.no_decision_rationale,
                 residual_decision_bearing_text_possible=(
                     item.residual_decision_bearing_text_possible
                 ),
@@ -2427,6 +3104,7 @@ def _compile_evidence_unit_selection_receipts(
     *,
     raw_text: str,
     output: object,
+    protocol: TasteSourceSegmentationProspectiveProtocol,
     source_texts: dict[tuple[str, str], str] | None,
 ) -> tuple[SegmentationEvidenceUnitSelectionReceipt, ...]:
     if not isinstance(
@@ -2437,11 +3115,18 @@ def _compile_evidence_unit_selection_receipts(
     if source_texts is None:
         raise ValueError("Segmentation evidence-unit receipt lacks source text")
     payload = json.loads(raw_text)
-    anchored = (
-        SegmentationAnchoredAdjudicationProviderOutput.model_validate(payload)
-        if isinstance(output, SegmentationAdjudicationProviderOutput)
-        else SegmentationAnchoredProviderOutput.model_validate(payload)
-    )
+    if protocol.schema_version == "1.5":
+        anchored = (
+            SegmentationAnchoredAdjudicationProviderOutputV15.model_validate(payload)
+            if isinstance(output, SegmentationAdjudicationProviderOutput)
+            else SegmentationAnchoredProviderOutputV15.model_validate(payload)
+        )
+    else:
+        anchored = (
+            SegmentationAnchoredAdjudicationProviderOutput.model_validate(payload)
+            if isinstance(output, SegmentationAdjudicationProviderOutput)
+            else SegmentationAnchoredProviderOutput.model_validate(payload)
+        )
     anchored_items = {
         (item.campaign_token, item.review_item_id): item for item in anchored.items
     }
@@ -2462,8 +3147,13 @@ def _compile_evidence_unit_selection_receipts(
             zip(anchored_item.segments, item.segments, strict=True),
             1,
         ):
-            _, start, _ = unit_map[raw_segment.start_unit_id]
-            _, _, end = unit_map[raw_segment.end_unit_id]
+            trigger = (
+                raw_segment.trigger_range
+                if isinstance(raw_segment, SegmentationAnchoredProviderSegmentV15)
+                else raw_segment
+            )
+            _, start, _ = unit_map[trigger.start_unit_id]
+            _, _, end = unit_map[trigger.end_unit_id]
             restored = source[start:end]
             if (
                 segment.verbatim_decision_text != restored
@@ -2477,8 +3167,8 @@ def _compile_evidence_unit_selection_receipts(
                     review_item_id=item.review_item_id,
                     segment_ordinal=ordinal,
                     algorithm="unicode-word-punctuation-v1",
-                    start_unit_id=raw_segment.start_unit_id,
-                    end_unit_id=raw_segment.end_unit_id,
+                    start_unit_id=trigger.start_unit_id,
+                    end_unit_id=trigger.end_unit_id,
                     source_comment_sha256=hashlib.sha256(source.encode()).hexdigest(),
                     evidence_unit_table_sha256=table_hash,
                     source_text_sha256=hashlib.sha256(restored.encode()).hexdigest(),
@@ -2486,6 +3176,78 @@ def _compile_evidence_unit_selection_receipts(
                     end_char=end,
                 )
             )
+            if isinstance(raw_segment, SegmentationAnchoredProviderSegmentV15):
+                if len(raw_segment.context_ranges) != len(segment.context_ranges):
+                    raise ValueError("Segmentation context resolution changed range count")
+                for context_ordinal, (raw_context, context) in enumerate(
+                    zip(raw_segment.context_ranges, segment.context_ranges, strict=True),
+                    1,
+                ):
+                    _, context_start, _ = unit_map[raw_context.start_unit_id]
+                    _, _, context_end = unit_map[raw_context.end_unit_id]
+                    context_text = source[context_start:context_end]
+                    if (
+                        context.verbatim_context_text != context_text
+                        or context.start_char != context_start
+                        or context.end_char != context_end
+                    ):
+                        raise ValueError(
+                            "Segmentation context evidence receipt differs from source slice"
+                        )
+                    receipts.append(
+                        SegmentationEvidenceUnitSelectionReceipt(
+                            campaign_token=item.campaign_token,
+                            review_item_id=item.review_item_id,
+                            segment_ordinal=ordinal,
+                            range_role="context",
+                            context_ordinal=context_ordinal,
+                            algorithm="unicode-word-punctuation-v1",
+                            start_unit_id=raw_context.start_unit_id,
+                            end_unit_id=raw_context.end_unit_id,
+                            source_comment_sha256=hashlib.sha256(source.encode()).hexdigest(),
+                            evidence_unit_table_sha256=table_hash,
+                            source_text_sha256=hashlib.sha256(context_text.encode()).hexdigest(),
+                            start_char=context_start,
+                            end_char=context_end,
+                        )
+                    )
+    return tuple(receipts)
+
+
+def _compile_evidence_unit_item_receipts(
+    *,
+    output: object,
+    source_texts: dict[tuple[str, str], str] | None,
+) -> tuple[SegmentationEvidenceUnitItemReceipt, ...]:
+    if not isinstance(
+        output,
+        (SegmentationProviderOutput, SegmentationAdjudicationProviderOutput),
+    ):
+        return ()
+    if source_texts is None:
+        raise ValueError("Segmentation evidence-unit item receipt lacks source text")
+    receipts = []
+    for item in output.items:
+        key = (item.campaign_token, item.review_item_id)
+        source = source_texts[key]
+        receipts.append(
+            SegmentationEvidenceUnitItemReceipt(
+                campaign_token=item.campaign_token,
+                review_item_id=item.review_item_id,
+                source_comment_sha256=hashlib.sha256(source.encode()).hexdigest(),
+                evidence_unit_table_sha256=taste_source_evidence_unit_table_sha256(source),
+                segment_count=len(item.segments),
+                zero_decision=not item.segments,
+                no_decision_rationale_sha256=(
+                    hashlib.sha256(item.no_decision_rationale.encode()).hexdigest()
+                    if item.no_decision_rationale is not None
+                    else None
+                ),
+                residual_decision_bearing_text_possible=(
+                    item.residual_decision_bearing_text_possible
+                ),
+            )
+        )
     return tuple(receipts)
 
 
@@ -2566,6 +3328,11 @@ def _legacy_segmenter_payload(
                     )
                     for segment in item.segments
                 ],
+                **(
+                    {"no_decision_rationale": item.no_decision_rationale}
+                    if item.no_decision_rationale is not None
+                    else {}
+                ),
                 "residual_decision_bearing_text_possible": (
                     item.residual_decision_bearing_text_possible
                 ),
@@ -2592,6 +3359,7 @@ def _legacy_segmenter_payload(
 def _anonymous_candidate(
     item: SegmentationProviderItem,
     *,
+    nested_anchor_contract: bool,
     source: str | None,
 ) -> dict[str, JsonValue]:
     if source is not None:
@@ -2609,24 +3377,63 @@ def _anonymous_candidate(
                 raise ValueError(
                     "Anchored candidate offsets differ from unit boundaries"
                 ) from error
-            segments.append(
-                {
-                    "start_unit_id": start_unit_id,
-                    "end_unit_id": end_unit_id,
-                    "primary_decision_family": segment.primary_decision_family,
-                    "atomic_decision_statement": segment.atomic_decision_statement,
-                    "rationale": segment.rationale,
-                    "uncertainty": segment.uncertainty,
-                }
-            )
+            segment_payload: dict[str, JsonValue] = {
+                "primary_decision_family": segment.primary_decision_family,
+                "atomic_decision_statement": segment.atomic_decision_statement,
+                "rationale": segment.rationale,
+                "uncertainty": segment.uncertainty,
+            }
+            if nested_anchor_contract:
+                context_payload: list[JsonValue] = []
+                for context in segment.context_ranges:
+                    try:
+                        context_start_unit_id = start_ids[context.start_char]
+                        context_end_unit_id = end_ids[context.end_char]
+                    except KeyError as error:
+                        raise ValueError(
+                            "Anchored candidate context differs from unit boundaries"
+                        ) from error
+                    context_payload.append(
+                        {
+                            "start_unit_id": context_start_unit_id,
+                            "end_unit_id": context_end_unit_id,
+                        }
+                    )
+                segment_payload.update(
+                    {
+                        "trigger_range": {
+                            "start_unit_id": start_unit_id,
+                            "end_unit_id": end_unit_id,
+                        },
+                        "context_ranges": context_payload,
+                    }
+                )
+            else:
+                segment_payload.update(
+                    {
+                        "start_unit_id": start_unit_id,
+                        "end_unit_id": end_unit_id,
+                    }
+                )
+            segments.append(segment_payload)
         return {
             "segments": segments,
+            **(
+                {"no_decision_rationale": item.no_decision_rationale}
+                if nested_anchor_contract
+                else {}
+            ),
             "residual_decision_bearing_text_possible": (
                 item.residual_decision_bearing_text_possible
             ),
         }
     return {
         "segments": [segment.model_dump(mode="json") for segment in item.segments],
+        **(
+            {"no_decision_rationale": item.no_decision_rationale}
+            if item.no_decision_rationale is not None
+            else {}
+        ),
         "residual_decision_bearing_text_possible": (item.residual_decision_bearing_text_possible),
     }
 
@@ -2642,6 +3449,15 @@ def _canonical_provider_segment_payload(
             raise ValueError("Anchored segmentation segment lacks deterministic offsets")
         payload["start_char"] = segment.start_char
         payload["end_char"] = segment.end_char
+        if segment.context_ranges:
+            payload["context_ranges"] = [
+                {
+                    "verbatim_context_text": context.verbatim_context_text,
+                    "start_char": context.start_char,
+                    "end_char": context.end_char,
+                }
+                for context in segment.context_ranges
+            ]
     return payload
 
 
@@ -2671,6 +3487,7 @@ def _legacy_resolution_payload(
                 for segment in adjudicated_item.segments
             ]
             residual = adjudicated_item.residual_decision_bearing_text_possible
+            no_decision_rationale = adjudicated_item.no_decision_rationale
             rationale = adjudicated_item.resolution_rationale
             resolution_kind = "ai-adjudicated"
         else:
@@ -2684,10 +3501,25 @@ def _legacy_resolution_payload(
                     "atomic_decision_statement": segment.atomic_decision_statement,
                     "rationale": segment.rationale,
                     "uncertainty": segment.uncertainty,
+                    **(
+                        {
+                            "context_ranges": [
+                                {
+                                    "verbatim_context_text": context.verbatim_context_text,
+                                    "start_char": context.start_char,
+                                    "end_char": context.end_char,
+                                }
+                                for context in segment.context_ranges
+                            ]
+                        }
+                        if segment.context_ranges
+                        else {}
+                    ),
                 }
                 for segment in source.segments
             ]
             residual = source.residual_decision_bearing_text_possible
+            no_decision_rationale = source.no_decision_rationale
             rationale = "Copied deterministically from exact dual-agent agreement."
             resolution_kind = "exact-dual-agent-agreement"
         resolved.append(
@@ -2697,6 +3529,11 @@ def _legacy_resolution_payload(
                 "resolution_kind": resolution_kind,
                 "source_blocker_codes": list(item.blocker_codes),
                 "segments": segments,
+                **(
+                    {"no_decision_rationale": no_decision_rationale}
+                    if no_decision_rationale is not None
+                    else {}
+                ),
                 "residual_decision_bearing_text_possible": residual,
                 "resolution_rationale": rationale,
             }
@@ -2979,6 +3816,8 @@ __all__ = [
     "SegmentationAdjudicationProviderItem",
     "SegmentationAdjudicationProviderOutput",
     "SegmentationCalibrationMetrics",
+    "SegmentationEvidenceUnitItemReceipt",
+    "SegmentationEvidenceUnitSelectionReceipt",
     "SegmentationExecutionAuthority",
     "SegmentationExecutionFileBinding",
     "SegmentationExecutionLimits",

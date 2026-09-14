@@ -2112,6 +2112,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     taste_source_segmentation_sample.add_argument("--per-campaign-items", type=int, required=True)
     taste_source_segmentation_sample.add_argument("--seed", type=int, required=True)
+    taste_source_segmentation_sample.add_argument(
+        "--source-group-disjoint",
+        action="store_true",
+        help=(
+            "exclude every source group seen in prior samples and select at most one item "
+            "per remaining group"
+        ),
+    )
     taste_source_segmentation_sample.add_argument("--locator-root", type=Path, default=Path("."))
     taste_source_segmentation_sample.add_argument("--output", type=Path, required=True)
     _add_log_level_option(taste_source_segmentation_sample)
@@ -6782,6 +6790,7 @@ def _handle_evaluation_taste_source_segmentation_sample_plan(
         per_campaign_item_count=args.per_campaign_items,
         random_seed=args.seed,
         locator_root=args.locator_root,
+        source_group_disjoint=args.source_group_disjoint,
     )
     saved = save_taste_source_segmentation_sample_manifest(sample, args.output)
     print(
@@ -6792,6 +6801,14 @@ def _handle_evaluation_taste_source_segmentation_sample_plan(
                 "sample_sha256": sample.sample_sha256,
                 "item_count": sample.item_count,
                 "per_campaign_item_counts": sample.per_campaign_item_counts,
+                "per_campaign_source_group_counts": sample.per_campaign_source_group_counts,
+                "per_campaign_eligible_source_group_counts": (
+                    sample.per_campaign_eligible_source_group_counts
+                ),
+                "per_campaign_sampling_fraction_micros": (
+                    sample.per_campaign_sampling_fraction_micros
+                ),
+                "uncertainty_estimand": sample.uncertainty_estimand,
                 "excluded_sample_ids": sorted(sample.excluded_sample_sha256s or {}),
                 "scaled_execution_authorized": sample.authority["scaled_execution_authorized"],
                 "formal_evidence_eligible": sample.authority["formal_evidence_eligible"],
