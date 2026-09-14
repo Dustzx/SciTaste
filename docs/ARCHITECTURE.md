@@ -3870,3 +3870,33 @@ observed tokens, token ceiling, truncation, provenance/curation tier, and outcom
 availability. Old guidance cannot be attached to the formal matrix. Knowledge-
 only, Taste-plus-Utility, and Critics-only cells remain optional diagnostics and
 do not inflate the confirmatory allocation.
+
+### ADR-125: Native Taste claims bind three directional contrasts, not one star topology
+
+Status: accepted and implemented; first real five-arm feasibility block remains
+resource-gated.
+
+The generic claim contract originally required every contrast to share the Full
+SciTaste candidate. That representation was appropriate for external-system
+comparisons and the earlier bundle-oriented diagnostic, but it could not encode
+the causal graph in ADR-124. In particular, `full-scitaste` versus
+`raw-source-rag` changes several policies at once and cannot estimate whether
+abstraction improves on the same source content.
+
+The `native_taste_mechanisms` estimand therefore admits exactly one closed
+five-system lane and three confirmatory directional contrasts:
+`full-scitaste` versus `native-base`, `matched-abstracted-taste` versus
+`raw-source-rag`, and `matched-abstracted-taste` versus `mismatched-taste`.
+Their registered roles are respectively complete-bundle, reference-
+representation, and source-domain-relation evidence. Every system must occur in
+the contrast graph, every non-Full system remains a first-party ablation under
+one matched backbone, and all three comparisons must pass the same multiplicity
+family before the native Taste title claim is eligible.
+
+Legacy native and external estimands retain their common-candidate rule. The
+cell planner, objective analysis, failure-inclusive input hashes, and result
+admission already operate on each contrast's own candidate/comparator pair, so
+the new estimand removes the upstream schema confound without introducing a
+second analysis path. A one-task five-cell run remains feasibility evidence
+only; it can resume the exact cells and measure runtime/failure behavior, but it
+cannot satisfy the preregistered multi-task claim.

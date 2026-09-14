@@ -334,6 +334,22 @@ alternative once an exact public implementation and task assets can be pinned.
 This source order is based on endpoint fit, not on whether its models or data
 already exist on either available machine.
 
+The executable native claim contract uses the
+`native_taste_mechanisms` estimand. It does not force a Full-SciTaste-centered
+star comparison. The three directional comparisons are:
+
+1. `full-scitaste > native-base` for complete-system utility;
+2. `matched-abstracted-taste > raw-source-rag` for abstraction over identical
+   source identities and matched context budgets; and
+3. `matched-abstracted-taste > mismatched-taste` for domain-relation value under
+   the same representation and context budget.
+
+All three are confirmatory in the formal study and share one multiplicity
+family. The initial Perception-only five-cell block is explicitly a feasibility
+run: it may validate the closed execution path and estimate cost/failure modes,
+but it cannot establish the multi-task paper claim or determine a favorable
+formal sample size from its outcomes.
+
 ### 3. External-system ecological comparison
 
 Compare SciTaste Native, a direct tool-using agent, and at least two accepted

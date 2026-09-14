@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a native Scientific Taste mechanism estimand whose confirmatory claim is
+  an exact three-edge graph rather than a Full-SciTaste-centered star: Full vs
+  Base measures the complete system, matched abstracted Taste vs same-source Raw
+  RAG measures representation, and matched vs source-disjoint mismatched Taste
+  measures domain relation. Legacy native and external claims retain their
+  common-candidate constraint, while downstream paired objective analysis can
+  use each registered contrast's own candidate/comparator identities.
 - Added a separate five-arm native confirmatory matrix for the paper's actual
   causal questions: Base, same-source Raw RAG, matched abstracted Taste,
   source-disjoint mismatched Taste, and Full SciTaste. Formal guidance schema

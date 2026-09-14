@@ -517,7 +517,11 @@ class EvaluationOutcomeAssessment(BaseModel):
             if self.headline_eligible != causal_complete:
                 raise ValueError("headline eligibility must match complete causal evidence")
             expected_title = (
-                self.confirmatory_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+                self.confirmatory_estimand_kind
+                in {
+                    ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
+                    ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                }
                 and self.confirmatory_evidence_complete
                 and self.confirmatory_conclusion_supported
             )
@@ -860,7 +864,11 @@ def inspect_evaluation_results(
             "confirmatory_evidence_complete": confirmatory_complete,
             "confirmatory_conclusion_supported": conclusion_supported,
             "title_claim_eligible": (
-                claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+                claim.estimand_kind
+                in {
+                    ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
+                    ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                }
                 and conclusion_supported
             ),
             "external_superiority_eligible": (

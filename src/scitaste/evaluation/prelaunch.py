@@ -116,6 +116,7 @@ class ConfirmatoryEstimandKind(StrEnum):
     """Scientific interpretation that one exact result contract may support."""
 
     NATIVE_TASTE_CAUSAL = "native_taste_causal"
+    NATIVE_TASTE_MECHANISMS = "native_taste_mechanisms"
     EXTERNAL_MATCHED_SUPERIORITY = "external_matched_superiority"
     EXTERNAL_BEST_NATIVE = "external_best_native"
 
@@ -124,6 +125,7 @@ class ConfirmatoryContrastRole(StrEnum):
     """Scientific control represented by one preregistered contrast."""
 
     NO_TASTE_CONTROL = "no_taste_control"
+    REFERENCE_REPRESENTATION_CONTROL = "reference_representation_control"
     MISMATCHED_TASTE_PLACEBO = "mismatched_taste_placebo"
     COMPONENT_ABLATION = "component_ablation"
     COMPONENT_ONLY = "component_only"
@@ -187,7 +189,9 @@ class ClaimAdmissionContract(BaseModel):
             raise ValueError("preregistered contrast IDs must be unique")
         if len(pairs) != len(set(pairs)):
             raise ValueError("preregistered candidate/comparator pairs must be unique")
-        if any(item.candidate_system_id != self.candidate_system_id for item in self.contrasts):
+        if self.estimand_kind is not ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS and any(
+            item.candidate_system_id != self.candidate_system_id for item in self.contrasts
+        ):
             raise ValueError("every preregistered contrast must use the declared candidate")
         return self
 
@@ -762,25 +766,98 @@ class ExperimentPrelaunchManifest(BaseModel):
         comparator_ids = {item.comparator_system_id for item in claim.contrasts}
         if comparator_ids - set(lane.system_ids) or comparator_ids - set(systems):
             raise ValueError("claim contrast references a comparator outside its lane")
-        if claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL:
+        if claim.estimand_kind in {
+            ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
+            ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+        }:
             if (
                 lane.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE
                 or lane.comparison_regime is not ComparisonRegime.MATCHED_BACKBONE
                 or lane.model_effects_confounded is not False
             ):
                 raise ValueError("native Taste causality requires a matched, unconfounded lane")
-            if any(systems[item].role is not SystemRole.ABLATION for item in comparator_ids):
-                raise ValueError("native Taste causal comparators must be SciTaste ablations")
-            roles = {item.role for item in claim.contrasts}
-            required = {
-                ConfirmatoryContrastRole.NO_TASTE_CONTROL,
-                ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO,
+            participating_system_ids = {
+                system_id
+                for contrast in claim.contrasts
+                for system_id in (
+                    contrast.candidate_system_id,
+                    contrast.comparator_system_id,
+                )
             }
-            if not required <= roles:
-                raise ValueError("native Taste causality requires no-Taste and placebo contrasts")
+            if participating_system_ids - set(systems):
+                raise ValueError("native Taste contrast references an unknown system")
+            if any(
+                systems[item].role is not SystemRole.ABLATION
+                for item in participating_system_ids - {claim.candidate_system_id}
+            ):
+                raise ValueError("native Taste controls and treatments must be SciTaste ablations")
+            roles = {item.role for item in claim.contrasts}
+            if claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS:
+                expected_systems = {
+                    "full-scitaste",
+                    "native-base",
+                    "raw-source-rag",
+                    "matched-abstracted-taste",
+                    "mismatched-taste",
+                }
+                expected_contrasts = {
+                    (
+                        "full-scitaste",
+                        "native-base",
+                        ConfirmatoryContrastRole.NO_TASTE_CONTROL,
+                    ),
+                    (
+                        "matched-abstracted-taste",
+                        "raw-source-rag",
+                        ConfirmatoryContrastRole.REFERENCE_REPRESENTATION_CONTROL,
+                    ),
+                    (
+                        "matched-abstracted-taste",
+                        "mismatched-taste",
+                        ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO,
+                    ),
+                }
+                observed_contrasts = {
+                    (
+                        item.candidate_system_id,
+                        item.comparator_system_id,
+                        item.role,
+                    )
+                    for item in claim.contrasts
+                }
+                if claim.candidate_system_id != "full-scitaste":
+                    raise ValueError(
+                        "native Taste mechanisms require Full SciTaste as the headline system"
+                    )
+                if set(lane.system_ids) != expected_systems:
+                    raise ValueError(
+                        "native Taste mechanisms require the exact identified five-arm lane"
+                    )
+                if observed_contrasts != expected_contrasts:
+                    raise ValueError(
+                        "native Taste mechanisms require exact bundle, representation, "
+                        "and domain-relation contrasts"
+                    )
+                if any(
+                    item.inference_role is not ContrastInferenceRole.CONFIRMATORY
+                    for item in claim.contrasts
+                ):
+                    raise ValueError("native Taste mechanism contrasts must all be confirmatory")
+            else:
+                required = {
+                    ConfirmatoryContrastRole.NO_TASTE_CONTROL,
+                    ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO,
+                }
+                if not required <= roles:
+                    raise ValueError(
+                        "native Taste causality requires no-Taste and placebo contrasts"
+                    )
             if ConfirmatoryContrastRole.EXTERNAL_METHOD in roles:
                 raise ValueError("native Taste causality cannot use external-method contrasts")
-            if explicit_inference:
+            if (
+                explicit_inference
+                and claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+            ):
                 for contrast in claim.contrasts:
                     expected = (
                         ContrastInferenceRole.CONFIRMATORY
@@ -828,9 +905,23 @@ class ExperimentPrelaunchManifest(BaseModel):
             ):
                 raise ValueError("external best-native evidence must retain model confounding")
 
-        lane_comparator_ids = set(lane.system_ids) - {claim.candidate_system_id}
-        if comparator_ids != lane_comparator_ids:
-            raise ValueError("claim contrasts must cover every non-candidate system in its lane")
+        if claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS:
+            participating_system_ids = {
+                system_id
+                for contrast in claim.contrasts
+                for system_id in (
+                    contrast.candidate_system_id,
+                    contrast.comparator_system_id,
+                )
+            }
+            if participating_system_ids != set(lane.system_ids):
+                raise ValueError("mechanism contrasts must cover every system in their lane")
+        else:
+            lane_comparator_ids = set(lane.system_ids) - {claim.candidate_system_id}
+            if comparator_ids != lane_comparator_ids:
+                raise ValueError(
+                    "claim contrasts must cover every non-candidate system in its lane"
+                )
 
     @property
     def proposal_sha256(self) -> str:
