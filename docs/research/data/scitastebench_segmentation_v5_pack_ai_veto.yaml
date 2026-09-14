@@ -1,0 +1,94 @@
+schema_version: "1.0"
+audit_id: scitastebench-segmentation-v5-pack-ai-veto
+project_id: scitaste-self-development
+audited_at: 2026-09-15T06:14:31+08:00
+audit_kind: independent-veto-only-pre-execution-semantic-and-science-gate
+reviewers:
+  - reviewer_id: v5-pack-semantic-gate
+    reviewer_kind: ai
+    not_human_review: true
+  - reviewer_id: v5-protocol-science-gate
+    reviewer_kind: ai
+    not_human_review: true
+human_agreement_claim_allowed: false
+provider_contact_performed: false
+api_cost_incurred: false
+bindings:
+  sample:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v3.yaml
+    file_sha256: da22ffd1c3a0273cdfad2b9604dedf7cbe4bbeaa9b578013e951dc6efdc1bf25
+    sample_sha256: 394f7819ee0a463b383246b027ac8abea09adb8e4d7e5a2fedcb9eb095b6df60
+  protocol:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v5.yaml
+    file_sha256: bc91100ffc21f2e2c0f5998be06b9335a2af1b7f04e8c953c899c2147727ae2e
+  freeze_receipt:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v7.yaml
+    file_sha256: bf36c07a114ecf6fb327a06a4a3b072e706cae0d38f3aab75e0f1f9e43f83124
+  request_pack:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v5/request-pack-v7/REQUEST_PACK.json
+    file_sha256: 73d4138643832810b3962425b1742f9c31b8a00f7ed4989571b7caa5c072bdd7
+    pack_sha256: 87b3ca65766acf6abd23cb77f8a5122a136950001580b6a534fde6ed1e76b29f
+decision: veto
+blocking_findings:
+  - code: zero-decision-item-forced-positive
+    affected_review_item_ids: [item-daa41e81715a2aca2bc88923]
+    finding: >-
+      The review contains praise, future-value language, and a standard checklist
+      but no atomic requested change under the frozen rubric. The output contract
+      nevertheless requires at least one segment, so execution would force a false
+      positive. cannot-assess is not a valid no-decision placeholder.
+    required_change: >-
+      Allow an empty segment list and require a bounded no-decision rationale when,
+      and only when, the list is empty.
+  - code: shared-context-conflicts-with-single-nonoverlap-range
+    affected_review_item_ids: [item-4a4927ef298c981cdfc64ee4]
+    affected_unit_window: u0259-u0292
+    finding: >-
+      Several independent requests share one FFT context. A single continuous,
+      globally non-overlapping range per decision cannot preserve atomicity,
+      intelligibility, and exact evidence at the same time.
+    required_change: >-
+      Separate an ordered non-overlapping decision-trigger range from zero or more
+      context ranges that may be shared across decisions.
+  - code: source-group-independence-not-enforced
+    finding: >-
+      Item-level exclusion is insufficient for cluster-correlated review records.
+      The sample contains 22 distinct source groups across 24 items, includes two
+      within-sample repeated groups, and reuses source groups exposed in earlier
+      calibration samples.
+    required_change: >-
+      Select and replay a new sample at source-group level, bind the private-map
+      receipt without exposing it to segmenters, and report group-aware uncertainty.
+  - code: semantic-anonymity-overclaimed
+    finding: >-
+      Structured identifiers are pseudonymized, but review text may itself contain
+      author names, paper titles, or public URLs. Parametric recognition is not
+      ruled out, so the material is not semantically anonymous.
+    required_change: >-
+      Describe the input as structurally pseudonymized and preserve the explicit
+      limitation on semantic identity leakage.
+scientific_limits:
+  - Same-model A/B/C estimates repeated-invocation consistency, not external validity.
+  - Adjudicator self-report of zero residual risk cannot prove segmentation completeness.
+  - AI-only review cannot be reported as human, expert, or inter-annotator agreement.
+  - The protocol lacks a frozen source-group bootstrap or cluster-aware interval.
+passed_checks:
+  - A and B receive identical items within each shard.
+  - Evidence-unit identifiers are continuous and reconstruct exact source slices.
+  - No structured outcomes, private-map fields, or peer outputs appear in the pack.
+  - Ordinary single requests and non-shared multi-request cases are representable.
+consumption:
+  status: design-observed-consumed-no-calibration
+  whole_sample_consumed: true
+  provider_request_count: 0
+  same_sample_recalibration_allowed: false
+  next_sample_must_exclude_prior_item_count: 84
+authority:
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  authorizes_scaled_execution: false
+  authorizes_benchmark_admission: false
+  formal_evidence_eligible: false
+next_gate: >-
+  Implement and adversarially test the zero-decision/shared-context contract and a
+  source-group-disjoint sampler before selecting another prospective sample.
