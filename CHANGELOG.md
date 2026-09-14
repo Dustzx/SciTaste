@@ -14,8 +14,13 @@ semantic versioning.
   failure-only, and shuffled-credit arms; exact Idea/domain/stage scope and
   uncertainty gates make it abstain outside support. The controller records the
   bound assessment and changes only feasible-action scores, never hard budgets.
-  Schema-1.0 episode artifacts remain replayable but cannot train without a
-  newly bound attribution producer.
+  Episode schema 1.2 freezes source project/relationship, source group, and dataset
+  partition before review; self-project evidence is development-only, formal
+  held-out episodes can never enter a training configuration, repeated decisions
+  from one trajectory share one unit of effective weight, and execution-only
+  credit is excluded from the scientific policy by default. Policy schema 1.1
+  records the effective source-group weight. Older episode and policy artifacts
+  remain replayable, but episodes cannot train without the new bindings.
 - Added a first-class, content-bound project Idea-revision ledger reader and
   registration path. A current revision now verifies its narrative and every
   declared input byte, exposes a stable method-development binding, and keeps

@@ -69,8 +69,11 @@ evidence, two independent conflict-cleared reviews, and conditional adjudication
 admit one immutable training episode. Neither producer can review its own claim.
 An explicit outcome-updated policy fit then estimates action-, stage-, domain-,
 venue-, and tag-conditioned pairwise preferences. Each episode contributes at
-most its review confidence regardless of how many alternatives it contains, and
-authored expected-value fields are not recycled as labels. The controller changes
+most its review confidence regardless of how many alternatives it contains, all
+decisions from one trajectory share one source-group unit, formal-held-out and
+self-effectiveness leakage is structurally excluded, and authored expected-value
+fields are not recycled as labels. The scientific policy also excludes
+execution-only credit by default. The controller changes
 ranking only when structured scope, support, pairwise probability, and a credible
 margin all pass; otherwise it records an exact abstention. This prevents a
 mistaken self-explanation from recursively becoming its own authority.

@@ -47,6 +47,19 @@ class TasteSupervisionScope(StrEnum):
     COMMUNITY_CANDIDATE = "community-candidate"
 
 
+class TasteEpisodePartition(StrEnum):
+    DEVELOPMENT = "development"
+    CALIBRATION = "calibration"
+    PILOT = "pilot"
+    FORMAL_HELDOUT = "formal-heldout"
+
+
+class TasteEpisodeSourceRelationship(StrEnum):
+    SELF_PROJECT = "self-project"
+    INDEPENDENT_PROJECT = "independent-project"
+    EXTERNAL_RECORD = "external-record"
+
+
 class TasteInterventionOperation(StrEnum):
     ACCEPT = "accept"
     REJECT = "reject"
@@ -189,9 +202,13 @@ class TasteEpisodeCandidate(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.1"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     candidate_id: str = Field(pattern=_ID)
     project_id: str
+    source_project_id: str | None = None
+    source_group_id: str | None = Field(default=None, pattern=_ID)
+    dataset_partition: TasteEpisodePartition | None = None
+    source_relationship: TasteEpisodeSourceRelationship | None = None
     source_project_revision: int = Field(ge=0)
     source_project_snapshot_sha256: str = Field(pattern=_SHA256)
     idea_revision: ProjectIdeaRevisionBinding
@@ -230,9 +247,14 @@ class TasteEpisodeCandidate(BaseModel):
     @model_validator(mode="after")
     def candidate_is_closed_and_quarantined(self) -> TasteEpisodeCandidate:
         validate_project_id(self.project_id)
+        if self.source_project_id is not None:
+            validate_project_id(self.source_project_id)
         if self.idea_revision.project_id != self.project_id:
             raise ValueError("Taste episode Idea revision belongs to another project")
-        if self.idea_revision.observed_project_revision > self.source_project_revision:
+        if (
+            self.source_project_id == self.project_id
+            and self.idea_revision.observed_project_revision > self.source_project_revision
+        ):
             raise ValueError("Taste episode predates its bound Idea revision")
         action_ids = [item.action_id for item in self.alternatives]
         if len(action_ids) != len(set(action_ids)):
@@ -240,10 +262,31 @@ class TasteEpisodeCandidate(BaseModel):
         selected = [item.action_id for item in self.alternatives if item.selected]
         if selected != [self.selected_action_id]:
             raise ValueError("Taste episode must mark exactly its selected action")
-        if self.schema_version == "1.1" and any(
+        if self.schema_version in {"1.1", "1.2"} and any(
             item.action_type == "unspecified" for item in self.alternatives
         ):
-            raise ValueError("schema-1.1 Taste alternatives require action types")
+            raise ValueError("schema-1.1+ Taste alternatives require action types")
+        if self.schema_version == "1.2":
+            if (
+                self.source_group_id is None
+                or self.dataset_partition is None
+                or self.source_relationship is None
+            ):
+                raise ValueError("schema-1.2 Taste episodes require a frozen sampling unit")
+            if self.source_relationship is TasteEpisodeSourceRelationship.EXTERNAL_RECORD:
+                if self.source_project_id is not None:
+                    raise ValueError("external-record Taste source cannot claim a project identity")
+            elif self.source_project_id is None:
+                raise ValueError("project trajectory Taste source requires a source project")
+            elif (self.source_relationship is TasteEpisodeSourceRelationship.SELF_PROJECT) != (
+                self.source_project_id == self.project_id
+            ):
+                raise ValueError("Taste source relationship disagrees with project identity")
+            if (
+                self.source_relationship is TasteEpisodeSourceRelationship.SELF_PROJECT
+                and self.dataset_partition is not TasteEpisodePartition.DEVELOPMENT
+            ):
+                raise ValueError("self-project Taste evidence is development-only")
         outcome_ids = [item.outcome_id for item in self.outcomes]
         credit_ids = [item.credit_id for item in self.credit_assignments]
         confounder_ids = [item.confounder_id for item in self.confounders]
@@ -309,7 +352,7 @@ class TasteEpisodeCandidate(BaseModel):
                 raise ValueError("outcome-pending Taste episodes cannot carry attribution")
         elif not self.outcomes or not self.credit_assignments:
             raise ValueError("attribution-proposed episodes require outcomes and credit")
-        elif self.schema_version == "1.1":
+        elif self.schema_version in {"1.1", "1.2"}:
             if self.attribution_producer_role is None or self.attribution_producer_id is None:
                 raise ValueError("outcome attribution requires its producer identity")
             expected_attribution_role = (
@@ -332,8 +375,8 @@ class TasteEpisodeCandidate(BaseModel):
         payload = self.model_dump(mode="json", exclude={"candidate_sha256"})
         expected = content_sha256(payload)
         legacy_expected = (
-            content_sha256(_legacy_v1_candidate_payload(payload))
-            if self.schema_version == "1.0"
+            content_sha256(_legacy_candidate_payload(payload, self.schema_version))
+            if self.schema_version in {"1.0", "1.1"}
             else None
         )
         if self.candidate_sha256 not in {expected, legacy_expected}:
@@ -342,7 +385,7 @@ class TasteEpisodeCandidate(BaseModel):
 
     @classmethod
     def create(cls, **values: object) -> TasteEpisodeCandidate:
-        payload = {"schema_version": "1.1", **values}
+        payload = {"schema_version": "1.2", **values}
         payload.pop("candidate_sha256", None)
         unsigned = cls.model_construct(candidate_sha256="0" * 64, **payload)
         return cls(
@@ -384,6 +427,9 @@ def compile_process_taste_episode_candidate(
     *,
     candidate_id: str,
     project_id: str,
+    source_project_id: str,
+    source_group_id: str,
+    dataset_partition: TasteEpisodePartition,
     source_project_revision: int,
     source_project_snapshot_sha256: str,
     idea_revision: ProjectIdeaRevisionBinding,
@@ -421,6 +467,14 @@ def compile_process_taste_episode_candidate(
     return TasteEpisodeCandidate.create(
         candidate_id=candidate_id,
         project_id=project_id,
+        source_project_id=source_project_id,
+        source_group_id=source_group_id,
+        dataset_partition=dataset_partition,
+        source_relationship=(
+            TasteEpisodeSourceRelationship.SELF_PROJECT
+            if source_project_id == project_id
+            else TasteEpisodeSourceRelationship.INDEPENDENT_PROJECT
+        ),
         source_project_revision=source_project_revision,
         source_project_snapshot_sha256=source_project_snapshot_sha256,
         idea_revision=idea_revision,
@@ -500,6 +554,9 @@ def compile_human_taste_intervention_candidate(
     *,
     candidate_id: str,
     project_id: str,
+    source_project_id: str,
+    source_group_id: str,
+    dataset_partition: TasteEpisodePartition,
     source_project_revision: int,
     source_project_snapshot_sha256: str,
     idea_revision: ProjectIdeaRevisionBinding,
@@ -534,6 +591,14 @@ def compile_human_taste_intervention_candidate(
     return TasteEpisodeCandidate.create(
         candidate_id=candidate_id,
         project_id=project_id,
+        source_project_id=source_project_id,
+        source_group_id=source_group_id,
+        dataset_partition=dataset_partition,
+        source_relationship=(
+            TasteEpisodeSourceRelationship.SELF_PROJECT
+            if source_project_id == project_id
+            else TasteEpisodeSourceRelationship.INDEPENDENT_PROJECT
+        ),
         source_project_revision=source_project_revision,
         source_project_snapshot_sha256=source_project_snapshot_sha256,
         idea_revision=idea_revision,
@@ -665,10 +730,22 @@ def _episode_add(
         findings.append(TasteEpisodeFinding(code=code, message=message))
 
 
-def _legacy_v1_candidate_payload(payload: dict[str, object]) -> dict[str, object]:
-    """Reproduce the schema-1.0 hash after additive schema-1.1 parsing."""
+def _legacy_candidate_payload(
+    payload: dict[str, object],
+    schema_version: str,
+) -> dict[str, object]:
+    """Reproduce schema-1.0/1.1 hashes after additive parsing."""
 
     legacy = dict(payload)
+    for field in (
+        "source_project_id",
+        "source_group_id",
+        "dataset_partition",
+        "source_relationship",
+    ):
+        legacy.pop(field, None)
+    if schema_version == "1.1":
+        return legacy
     for field in (
         "attribution_producer_role",
         "attribution_producer_id",
@@ -698,7 +775,9 @@ __all__ = [
     "TasteEpisodeInspection",
     "TasteEpisodeMaturity",
     "TasteEpisodeOutcome",
+    "TasteEpisodePartition",
     "TasteEpisodeProducerRole",
+    "TasteEpisodeSourceRelationship",
     "TasteInterventionOperation",
     "TasteOutcomeFamily",
     "TasteOutcomePolarity",

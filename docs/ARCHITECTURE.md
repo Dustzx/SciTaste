@@ -3984,10 +3984,14 @@ part of the original judgment rather than independent evidence for that judgment
 SciTaste therefore makes outcome attribution a reviewed scientific object. A
 schema-1.1 episode records action types and tags while retaining the full
 alternative set, exact delayed outcomes, confounders, credit hypotheses, and
-Idea revision. Generation as Content remains the intervention producer when a
-process miner later joins an outcome; the two identities cannot be collapsed.
-Schema-1.0 episodes remain replayable under their original hash, but an unbound
-legacy attribution cannot enter the new training path.
+Idea revision. Schema 1.2 additionally freezes the source project or external
+relationship, source group, and dataset partition before review. Self-project
+evidence is development-only, and a formal-held-out partition is structurally
+excluded from policy training. Generation as Content remains the intervention
+producer when a process miner later joins an outcome; the two identities cannot
+be collapsed. Schema-1.0/1.1 episodes remain replayable under their original
+hashes, but an attribution without the new sampling identity cannot enter the
+new training path.
 
 Two distinct, conflict-cleared primary reviewers must independently accept the
 same preferred action and at least one shared credit assignment. A split verdict
@@ -4000,20 +4004,29 @@ running controller or authorize an experiment.
 
 The first estimator is `factorized-beta-pairwise-v1`. For every admitted episode,
 the reviewed preferred action is compared with each recorded alternative. Its
-total confidence weight is divided across alternatives so a large authored
-candidate set cannot masquerade as independent sample size. Independent Beta
-posteriors estimate action-type, stage-action, domain-action, venue-action, tag,
-and stage-tag features. The explicit update modes—outcome-updated, no-update,
+total confidence weight is divided across alternatives, and all decisions from
+one source trajectory share at most one source-group unit of weight, so neither
+a large authored candidate set nor a long trajectory can masquerade as
+independent sample size. Independent Beta posteriors estimate action-type,
+stage-action, domain-action, venue-action, tag, and stage-tag features. The
+explicit update modes—outcome-updated, no-update,
 unambiguous success-only, unambiguous failure-only, and deterministically shuffled
 credit—are experimental conditions rather than hidden flags. Mixed or unresolved
 outcomes cannot leak into the success/failure controls. Source/training episode
-identities, priors,
-posterior counts, and policy bytes close under content hashes. Because these
+identities, priors, posterior counts, and policy bytes close under content
+hashes. Because these
 factor features originate from the same episode, assessment uses a fully
 correlated uncertainty upper bound rather than treating feature count as sample
 size.
 
-At decision time only feasible actions are scored. The caller must supply the
+Policy schema 1.1 records the composite source-group keys and their effective
+training weight. Schema-1.0 policies remain hash-replayable, but do not acquire
+the newer independence claim retroactively.
+
+Execution-only credit is excluded from the scientific policy by default; an
+explicitly separate configuration may study operational policy without mixing
+it into the title-level estimand. At decision time only feasible actions are
+scored. The caller must supply the
 currently verified Idea binding; a missing or changed Idea forces abstention.
 Cross-domain transfer is off by default, stage support can be required, and
 insufficient support, low pairwise probability, or a credible margin crossing

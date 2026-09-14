@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from scitaste.project import ProjectIdeaRevisionBinding
+from scitaste.project.models import content_sha256
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.taste import (
@@ -21,6 +22,7 @@ from scitaste.taste import (
     TasteEpisodeEvidence,
     TasteEpisodeEvidenceRole,
     TasteEpisodeOutcome,
+    TasteEpisodePartition,
     TasteOutcomeFamily,
     TasteOutcomePolarity,
     admit_taste_episode,
@@ -74,6 +76,8 @@ def _candidate(
     ordinal: int,
     *,
     polarity: TasteOutcomePolarity = TasteOutcomePolarity.SUPPORTS,
+    family: TasteOutcomeFamily = TasteOutcomeFamily.DESIGN,
+    source_group_id: str | None = None,
 ):
     actions = _actions()
     decision = ResearchDecision(
@@ -98,7 +102,7 @@ def _candidate(
     )
     outcome = TasteEpisodeOutcome(
         outcome_id=f"outcome-{ordinal:02d}",
-        family=TasteOutcomeFamily.DESIGN,
+        family=family,
         summary="The decision boundary was resolved.",
         horizon="next research decision",
         polarity=polarity,
@@ -106,7 +110,7 @@ def _candidate(
     )
     credit = TasteCreditAssignment(
         credit_id=f"credit-{ordinal:02d}",
-        family=TasteOutcomeFamily.DESIGN,
+        family=family,
         direction=(
             TasteCreditDirection.BENEFICIAL
             if polarity is TasteOutcomePolarity.SUPPORTS
@@ -120,6 +124,9 @@ def _candidate(
         decision,
         candidate_id=f"process-episode-{ordinal:02d}",
         project_id="episode-project",
+        source_project_id="episode-project",
+        source_group_id=source_group_id or f"source-group-{ordinal:02d}",
+        dataset_partition=TasteEpisodePartition.DEVELOPMENT,
         source_project_revision=4 + ordinal,
         source_project_snapshot_sha256=f"{ordinal % 10}" * 64,
         idea_revision=_idea_binding(),
@@ -192,8 +199,16 @@ def _admitted(
     *,
     preferred: str = "probe-boundary",
     polarity: TasteOutcomePolarity = TasteOutcomePolarity.SUPPORTS,
+    family: TasteOutcomeFamily = TasteOutcomeFamily.DESIGN,
+    source_group_id: str | None = None,
 ):
-    candidate = _candidate(tmp_path, ordinal, polarity=polarity)
+    candidate = _candidate(
+        tmp_path,
+        ordinal,
+        polarity=polarity,
+        family=family,
+        source_group_id=source_group_id,
+    )
     reviews = (
         _review(candidate, reviewer_id=f"reviewer-a-{ordinal:02d}", preferred_action_id=preferred),
         _review(candidate, reviewer_id=f"reviewer-b-{ordinal:02d}", preferred_action_id=preferred),
@@ -397,6 +412,116 @@ def test_success_and_failure_controls_use_disjoint_outcome_episodes(tmp_path: Pa
 
     assert success.training_episode_ids == ("admitted-episode-01",)
     assert failure.training_episode_ids == ("admitted-episode-02",)
+
+
+def test_scientific_policy_excludes_execution_only_credit_by_default(tmp_path: Path) -> None:
+    episodes = (
+        _admitted(tmp_path, 1, family=TasteOutcomeFamily.DESIGN),
+        _admitted(tmp_path, 2, family=TasteOutcomeFamily.EXECUTION),
+    )
+
+    policy = fit_lifecycle_taste_policy(
+        episodes,
+        LifecycleTastePolicyConfig(
+            policy_id="scientific-outcome-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+        ),
+    )
+
+    assert policy.source_episode_ids == (
+        "admitted-episode-01",
+        "admitted-episode-02",
+    )
+    assert policy.training_episode_ids == ("admitted-episode-01",)
+
+
+def test_repeated_decisions_from_one_trajectory_do_not_inflate_support(
+    tmp_path: Path,
+    research_state,
+) -> None:
+    episodes = tuple(
+        _admitted(tmp_path, ordinal, source_group_id="shared-trajectory") for ordinal in range(1, 9)
+    )
+    policy = fit_lifecycle_taste_policy(
+        episodes,
+        LifecycleTastePolicyConfig(
+            policy_id="group-weighted-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+            minimum_feature_support=3.0,
+        ),
+    )
+
+    assessment = assess_lifecycle_taste_policy(
+        policy,
+        state=research_state,
+        actions=_actions(),
+        current_idea_revision=_idea_binding(),
+    )
+
+    assert policy.training_episode_count == 8
+    assert policy.training_source_group_count == 1
+    assert policy.effective_training_weight == 0.9
+    assert assessment.abstained is True
+    assert "insufficient-support" in assessment.reason_codes
+
+
+def test_schema_11_episode_replays_but_cannot_train_without_sampling_unit(
+    tmp_path: Path,
+) -> None:
+    current = _candidate(tmp_path, 1)
+    payload = current.model_dump(mode="json", exclude={"candidate_sha256"})
+    payload["schema_version"] = "1.1"
+    for field in (
+        "source_project_id",
+        "source_group_id",
+        "dataset_partition",
+        "source_relationship",
+    ):
+        payload.pop(field)
+    legacy_sha256 = content_sha256(payload)
+    legacy = type(current).model_validate({**payload, "candidate_sha256": legacy_sha256})
+    reviews = (
+        _review(legacy, reviewer_id="reviewer-a"),
+        _review(legacy, reviewer_id="reviewer-b"),
+    )
+    admitted = admit_taste_episode(
+        legacy,
+        reviews,
+        admission_id="legacy-admitted-episode-01",
+        evidence_root=str(tmp_path),
+        current_idea_revision=_idea_binding(),
+    )
+
+    with pytest.raises(ValueError, match="frozen sampling unit"):
+        fit_lifecycle_taste_policy(
+            (admitted,),
+            LifecycleTastePolicyConfig(
+                policy_id="legacy-policy",
+                update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+                idea_revision=_idea_binding(),
+            ),
+        )
+
+
+def test_schema_10_policy_replays_under_its_original_hash(tmp_path: Path) -> None:
+    current = _policy(tmp_path)
+    payload = current.model_dump(mode="json", exclude={"policy_sha256"})
+    payload["schema_version"] = "1.0"
+    for field in (
+        "training_source_group_keys",
+        "training_source_group_count",
+        "effective_training_weight",
+    ):
+        payload.pop(field)
+    legacy_sha256 = content_sha256(payload)
+
+    legacy = type(current).model_validate({**payload, "policy_sha256": legacy_sha256})
+
+    assert legacy.schema_version == "1.0"
+    assert legacy.policy_sha256 == legacy_sha256
+    assert legacy.training_source_group_keys == ()
 
 
 def test_policy_update_rejects_episode_from_another_idea_revision(tmp_path: Path) -> None:

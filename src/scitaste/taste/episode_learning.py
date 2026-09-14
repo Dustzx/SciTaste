@@ -20,9 +20,12 @@ from scitaste.project.models import content_sha256
 from scitaste.schema.actions import ResearchAction
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.episodes import (
+    TasteCreditDirection,
     TasteEpisodeCandidate,
     TasteEpisodeInspection,
     TasteEpisodeMaturity,
+    TasteEpisodePartition,
+    TasteOutcomeFamily,
     TasteOutcomePolarity,
     inspect_taste_episode_candidate,
 )
@@ -319,6 +322,17 @@ def inspect_taste_episode_admission(
                 supported = tuple(sorted(adjudicator.supported_credit_ids))
                 confidence = min(item.attribution_confidence for item in decisive)
 
+    credit_by_id = {item.credit_id: item for item in candidate.credit_assignments}
+    if supported and any(
+        credit_by_id[credit_id].direction is TasteCreditDirection.NOT_ATTRIBUTABLE
+        for credit_id in supported
+    ):
+        _admission_add(
+            findings,
+            "review-supported-non-attributable-credit",
+            "reviewers cannot train on credit declared not attributable",
+        )
+
     if not episode_inspection.ready_for_independent_review:
         _admission_add(
             findings,
@@ -403,12 +417,34 @@ class LifecycleTastePolicyConfig(BaseModel):
     require_stage_support: bool = True
     allow_cross_domain: bool = False
     shuffle_seed: int = Field(default=0, ge=0)
+    eligible_outcome_families: tuple[TasteOutcomeFamily, ...] = (
+        TasteOutcomeFamily.HYPOTHESIS,
+        TasteOutcomeFamily.DESIGN,
+        TasteOutcomeFamily.ADAPTATION,
+        TasteOutcomeFamily.CLAIM,
+        TasteOutcomeFamily.REVIEW,
+        TasteOutcomeFamily.COMMUNICATION,
+    )
+    training_partitions: tuple[TasteEpisodePartition, ...] = (
+        TasteEpisodePartition.DEVELOPMENT,
+        TasteEpisodePartition.CALIBRATION,
+    )
 
     @model_validator(mode="after")
     def control_parameters_match_mode(self) -> LifecycleTastePolicyConfig:
         if self.update_mode is not LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT:
             if self.shuffle_seed != 0:
                 raise ValueError("shuffle_seed is reserved for shuffled-credit control")
+        if not self.eligible_outcome_families:
+            raise ValueError("lifecycle Taste policy requires an eligible outcome family")
+        if len(self.eligible_outcome_families) != len(set(self.eligible_outcome_families)):
+            raise ValueError("lifecycle Taste outcome families must be unique")
+        if not self.training_partitions:
+            raise ValueError("lifecycle Taste policy requires a training partition")
+        if len(self.training_partitions) != len(set(self.training_partitions)):
+            raise ValueError("lifecycle Taste training partitions must be unique")
+        if TasteEpisodePartition.FORMAL_HELDOUT in self.training_partitions:
+            raise ValueError("formal-heldout Taste episodes can never train a policy")
         return self
 
     @property
@@ -466,7 +502,7 @@ class LifecycleTastePolicyModel(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     policy_id: str
     config: LifecycleTastePolicyConfig
     source_episode_ids: tuple[str, ...]
@@ -474,6 +510,9 @@ class LifecycleTastePolicyModel(BaseModel):
     training_episode_ids: tuple[str, ...]
     training_episode_sha256: tuple[str, ...]
     training_episode_count: int = Field(ge=0)
+    training_source_group_keys: tuple[str, ...] = ()
+    training_source_group_count: int = Field(default=0, ge=0)
+    effective_training_weight: float = Field(default=0.0, ge=0.0)
     pairwise_comparison_count: int = Field(ge=0)
     trained_stages: tuple[str, ...]
     trained_domain_tags: tuple[str, ...]
@@ -490,6 +529,14 @@ class LifecycleTastePolicyModel(BaseModel):
             raise ValueError("lifecycle Taste source episode IDs must be unique")
         if len(self.training_episode_ids) != self.training_episode_count:
             raise ValueError("lifecycle Taste training episode count differs")
+        if self.training_source_group_count != len(self.training_source_group_keys):
+            raise ValueError("lifecycle Taste training source-group count differs")
+        if list(self.training_source_group_keys) != sorted(self.training_source_group_keys):
+            raise ValueError("lifecycle Taste training source groups must be sorted")
+        if len(self.training_source_group_keys) != len(set(self.training_source_group_keys)):
+            raise ValueError("lifecycle Taste training source groups must be unique")
+        if self.effective_training_weight > self.training_source_group_count + 1e-9:
+            raise ValueError("lifecycle Taste effective weight exceeds independent source groups")
         if len(self.training_episode_ids) != len(self.training_episode_sha256):
             raise ValueError("lifecycle Taste training episode hashes do not close")
         if len(self.source_episode_ids) != len(self.source_episode_sha256):
@@ -510,7 +557,10 @@ class LifecycleTastePolicyModel(BaseModel):
         if features != sorted(features) or len(features) != len(set(features)):
             raise ValueError("lifecycle Taste posterior features must be sorted and unique")
         if self.config.update_mode is LifecycleTastePolicyUpdateMode.NO_UPDATE and (
-            self.training_episode_count or self.feature_posteriors
+            self.training_episode_count
+            or self.training_source_group_count
+            or self.effective_training_weight
+            or self.feature_posteriors
         ):
             raise ValueError("no-update control cannot estimate episode posteriors")
         if any(
@@ -519,14 +569,26 @@ class LifecycleTastePolicyModel(BaseModel):
             for item in self.feature_posteriors
         ):
             raise ValueError("lifecycle Taste posteriors differ from the configured prior")
+        if self.schema_version == "1.1" and any(
+            item.support > self.effective_training_weight + 1e-9 for item in self.feature_posteriors
+        ):
+            raise ValueError("lifecycle Taste feature support exceeds source-group weight")
         expected = content_sha256(self.model_dump(mode="json", exclude={"policy_sha256"}))
-        if self.policy_sha256 != expected:
+        legacy_payload = self.model_dump(mode="json", exclude={"policy_sha256"})
+        for field in (
+            "training_source_group_keys",
+            "training_source_group_count",
+            "effective_training_weight",
+        ):
+            legacy_payload.pop(field)
+        legacy_expected = content_sha256(legacy_payload) if self.schema_version == "1.0" else None
+        if self.policy_sha256 not in {expected, legacy_expected}:
             raise ValueError("lifecycle Taste policy hash mismatch")
         return self
 
     @classmethod
     def create(cls, **values: object) -> LifecycleTastePolicyModel:
-        payload = {"schema_version": "1.0", **values}
+        payload = {"schema_version": "1.1", **values}
         payload.pop("policy_sha256", None)
         unsigned = cls.model_construct(policy_sha256="0" * 64, **payload)
         return cls(
@@ -633,15 +695,40 @@ def fit_lifecycle_taste_policy(
             config.idea_revision,
         ):
             raise ValueError("lifecycle Taste episode belongs to another Idea revision")
-    selected = _select_training_episodes(episodes, config.update_mode)
+        if (
+            episode.candidate.schema_version != "1.2"
+            or episode.candidate.source_group_id is None
+            or episode.candidate.dataset_partition is None
+        ):
+            raise ValueError("lifecycle Taste update requires a frozen sampling unit")
+        if episode.candidate.dataset_partition not in config.training_partitions:
+            raise ValueError("lifecycle Taste episode belongs to a non-training partition")
+    group_partitions: dict[str, TasteEpisodePartition] = {}
+    for episode in episodes:
+        assert episode.candidate.dataset_partition is not None
+        group_key = _source_group_key(episode)
+        existing = group_partitions.setdefault(
+            group_key,
+            episode.candidate.dataset_partition,
+        )
+        if existing is not episode.candidate.dataset_partition:
+            raise ValueError("lifecycle Taste source group crosses dataset partitions")
+    selected = _select_training_episodes(episodes, config)
+    group_counts: dict[str, int] = defaultdict(int)
+    for episode in selected:
+        group_counts[_source_group_key(episode)] += 1
     observations: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
     comparisons = 0
+    effective_weight = 0.0
     for episode in selected:
+        group_key = _source_group_key(episode)
         alternatives = episode.candidate.alternatives
         preferred_id = _training_preference(episode, config)
         preferred = next(item for item in alternatives if item.action_id == preferred_id)
         competitors = tuple(item for item in alternatives if item.action_id != preferred_id)
-        weight = episode.training_weight / len(competitors)
+        episode_weight = episode.training_weight / group_counts[group_key]
+        effective_weight += episode_weight
+        weight = episode_weight / len(competitors)
         preferred_features = set(_episode_action_features(episode, preferred))
         for competitor in competitors:
             competitor_features = set(_episode_action_features(episode, competitor))
@@ -675,6 +762,9 @@ def fit_lifecycle_taste_policy(
         training_episode_ids=tuple(item.admission_id for item in selected),
         training_episode_sha256=tuple(item.admission_sha256 for item in selected),
         training_episode_count=len(selected),
+        training_source_group_keys=tuple(sorted(group_counts)),
+        training_source_group_count=len(group_counts),
+        effective_training_weight=_rounded(effective_weight),
         pairwise_comparison_count=comparisons,
         trained_stages=tuple(sorted({item.candidate.stage for item in selected})),
         trained_domain_tags=tuple(
@@ -825,25 +915,61 @@ def assess_lifecycle_taste_policy(
 
 def _select_training_episodes(
     episodes: tuple[AdmittedTasteEpisode, ...],
-    mode: LifecycleTastePolicyUpdateMode,
+    config: LifecycleTastePolicyConfig,
 ) -> tuple[AdmittedTasteEpisode, ...]:
-    if mode is LifecycleTastePolicyUpdateMode.NO_UPDATE:
+    if config.update_mode is LifecycleTastePolicyUpdateMode.NO_UPDATE:
         return ()
-    if mode in {
+    eligible = tuple(
+        episode for episode in episodes if _has_eligible_policy_credit(episode, config)
+    )
+    if config.update_mode in {
         LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
         LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT,
     }:
-        return episodes
+        return eligible
     target = (
         TasteOutcomePolarity.SUPPORTS
-        if mode is LifecycleTastePolicyUpdateMode.SUCCESS_ONLY
+        if config.update_mode is LifecycleTastePolicyUpdateMode.SUCCESS_ONLY
         else TasteOutcomePolarity.CHALLENGES
     )
-    return tuple(episode for episode in episodes if _unambiguous_outcome(episode) is target)
+    return tuple(episode for episode in eligible if _unambiguous_outcome(episode, config) is target)
 
 
-def _unambiguous_outcome(episode: AdmittedTasteEpisode) -> TasteOutcomePolarity | None:
-    polarities = {item.polarity for item in episode.candidate.outcomes}
+def _source_group_key(episode: AdmittedTasteEpisode) -> str:
+    candidate = episode.candidate
+    assert candidate.source_group_id is not None
+    assert candidate.source_relationship is not None
+    source_identity = candidate.source_project_id or "external-record"
+    return f"{candidate.source_relationship.value}:{source_identity}:{candidate.source_group_id}"
+
+
+def _has_eligible_policy_credit(
+    episode: AdmittedTasteEpisode,
+    config: LifecycleTastePolicyConfig,
+) -> bool:
+    credit_by_id = {item.credit_id: item for item in episode.candidate.credit_assignments}
+    return any(
+        credit_by_id[credit_id].family in config.eligible_outcome_families
+        for credit_id in episode.supported_credit_ids
+    )
+
+
+def _unambiguous_outcome(
+    episode: AdmittedTasteEpisode,
+    config: LifecycleTastePolicyConfig,
+) -> TasteOutcomePolarity | None:
+    credit_by_id = {item.credit_id: item for item in episode.candidate.credit_assignments}
+    relevant_outcome_ids = {
+        outcome_id
+        for credit_id in episode.supported_credit_ids
+        if credit_by_id[credit_id].family in config.eligible_outcome_families
+        for outcome_id in credit_by_id[credit_id].outcome_ids
+    }
+    polarities = {
+        item.polarity
+        for item in episode.candidate.outcomes
+        if item.outcome_id in relevant_outcome_ids
+    }
     if polarities == {TasteOutcomePolarity.SUPPORTS}:
         return TasteOutcomePolarity.SUPPORTS
     if polarities == {TasteOutcomePolarity.CHALLENGES}:

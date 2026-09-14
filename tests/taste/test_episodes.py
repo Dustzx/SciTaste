@@ -13,6 +13,7 @@ from scitaste.taste import (
     TasteEpisodeEvidence,
     TasteEpisodeEvidenceRole,
     TasteEpisodeOutcome,
+    TasteEpisodePartition,
     TasteInterventionOperation,
     TasteOutcomeFamily,
     TasteOutcomePolarity,
@@ -119,6 +120,9 @@ def test_process_taste_candidate_is_reviewable_but_cannot_update_policy(
         _decision(),
         candidate_id="process-episode-01",
         project_id="episode-project",
+        source_project_id="episode-project",
+        source_group_id="process-source-group-01",
+        dataset_partition=TasteEpisodePartition.DEVELOPMENT,
         source_project_revision=4,
         source_project_snapshot_sha256="4" * 64,
         idea_revision=binding,
@@ -162,6 +166,9 @@ def test_changed_idea_revision_makes_process_episode_stale(tmp_path: Path) -> No
         _decision(),
         candidate_id="process-episode-01",
         project_id="episode-project",
+        source_project_id="episode-project",
+        source_group_id="process-source-group-01",
+        dataset_partition=TasteEpisodePartition.DEVELOPMENT,
         source_project_revision=4,
         source_project_snapshot_sha256="4" * 64,
         idea_revision=_idea_binding(),
@@ -203,6 +210,9 @@ def test_gac_intervention_waits_for_outcome_and_stays_project_scoped(tmp_path: P
         _decision(executed=False),
         candidate_id="human-episode-01",
         project_id="episode-project",
+        source_project_id="episode-project",
+        source_group_id="human-source-group-01",
+        dataset_partition=TasteEpisodePartition.DEVELOPMENT,
         source_project_revision=4,
         source_project_snapshot_sha256="4" * 64,
         idea_revision=binding,
@@ -239,6 +249,9 @@ def test_process_miner_joins_outcome_to_human_intervention(tmp_path: Path) -> No
         _decision(executed=False),
         candidate_id="human-episode-01",
         project_id="episode-project",
+        source_project_id="episode-project",
+        source_group_id="human-source-group-01",
+        dataset_partition=TasteEpisodePartition.DEVELOPMENT,
         source_project_revision=4,
         source_project_snapshot_sha256="4" * 64,
         idea_revision=binding,
@@ -295,7 +308,7 @@ def test_process_miner_joins_outcome_to_human_intervention(tmp_path: Path) -> No
         current_idea_revision=binding,
     )
 
-    assert joined.schema_version == "1.1"
+    assert joined.schema_version == "1.2"
     assert joined.producer_id == "generation-as-content-turn-01"
     assert joined.attribution_producer_id == "process-taste-miner-01"
     assert report.ready_for_independent_review is True
@@ -315,6 +328,9 @@ def test_schema_10_episode_replays_but_cannot_enter_new_training(tmp_path: Path)
         _decision(),
         candidate_id="legacy-process-episode-01",
         project_id="episode-project",
+        source_project_id="episode-project",
+        source_group_id="legacy-source-group-01",
+        dataset_partition=TasteEpisodePartition.DEVELOPMENT,
         source_project_revision=4,
         source_project_snapshot_sha256="4" * 64,
         idea_revision=_idea_binding(),
@@ -341,6 +357,10 @@ def test_schema_10_episode_replays_but_cannot_enter_new_training(tmp_path: Path)
     payload = current.model_dump(mode="json", exclude={"candidate_sha256"})
     payload["schema_version"] = "1.0"
     for field in (
+        "source_project_id",
+        "source_group_id",
+        "dataset_partition",
+        "source_relationship",
         "attribution_producer_role",
         "attribution_producer_id",
         "domain_tags",
