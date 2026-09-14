@@ -1,0 +1,167 @@
+schema_version: "1.1"
+protocol_id: scitastebench-segmentation-prospective-calibration-v2
+project_id: scitaste-self-development
+protocol_created_at: 2026-09-15T04:45:42+08:00
+protocol_status: candidate-awaiting-git-freeze-receipt
+purpose: >-
+  Test whether a fixed AI panel can reproducibly recover atomic scientific
+  decisions on unseen records with explicit outcome fields withheld before any larger
+  SciTasteBench preprocessing run.
+claim_boundary: >-
+  This is an engineering calibration of an AI annotation pipeline. Passing it
+  cannot establish human agreement, benchmark validity, Scientific Taste
+  effectiveness, or ICLR-level evidence.
+sample:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v1.yaml
+  file_sha256: 77d6a74690ee11200c6f2099e2eb078e919216bc82af1cf3a57246870f161a41
+  sample_sha256: 83abf856f011835714ee0cb2c9629584d55b402bbed82effb0d08fa7014c46cc
+  item_count: 24
+  prior_items_excluded: 12
+  source_balanced: true
+segmentation_rubric:
+  locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_v1.yaml
+  file_sha256: f92e90ade1e40cab98c56706337613d269f473dd19031a5a3d91c40eb4b07c6d
+adjudication_rubric:
+  locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_adjudication_v1.yaml
+  file_sha256: b9fea8c1c9e52c3131892bf5ba833e20c9b314cf0dd6e74aa1b665000617cd23
+panel:
+  segmenter_count: 2
+  adjudicator_count: 1
+  same_model_condition_for_segmenters: true
+  distinct_invocations_required: true
+  cross_output_blinding_required: true
+  adjudicator_must_not_be_a_segmenter_invocation: true
+  reviewer_kind: ai
+  human_review_claim_allowed: false
+model_condition:
+  state: selected-for-calibration-not-yet-authenticated
+  provider_id: zhipu
+  resource_id: zhipu-glm53-flash
+  resource_locator: configs/resources/api/zhipu_glm53_flash_v3.yaml
+  resource_file_sha256: 0810d7b015a6d4d3de3572e1a47689221410096ec0bd4ec061b087ac67d5373a
+  requested_model_id: glm-5.3-flash
+  identity_mode: temporal_window_only
+  identity_protocol_locator: configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml
+  identity_protocol_file_sha256: 237f79c76b873a32b2c2b06f510aef5179e16bdace9b9de2af4ad56257db9fac
+  returned_model_allowlist: [glm-5.3-flash]
+  maximum_window_hours: 12
+  start_and_end_sentinels_required: true
+  exact_runtime_receipt_required: true
+  fallback_model_allowed: false
+generation:
+  response_format: json_object
+  thinking: enabled
+  reasoning_effort: low
+  temperature: 0.2
+  maximum_output_tokens_per_call: 8192
+  items_per_shard: 6
+  segmenter_shards: 4
+  segmenter_total_requests: 8
+  maximum_adjudication_shards: 4
+  identity_sentinel_requests: 2
+  maximum_total_requests: 14
+  retry_count: 0
+input_firewall:
+  allowed:
+    - frozen segmentation rubric
+    - assigned scientific item abstract
+    - assigned scientific item review comment
+    - opaque campaign and review item identifiers
+  forbidden:
+    - private item map
+    - publisher or source identity
+    - recommendation
+    - author response
+    - later revision
+    - population outcome
+    - another segmenter output
+    - arbitrary tools
+    - web search
+  request_payload_must_be_persisted_before_provider_contact: true
+  no_provider_tools_exposed: true
+  explicit_source_identity_withheld: true
+  explicit_outcome_fields_withheld: true
+  parametric_source_recognition_ruled_out: false
+  boundary_statement: >-
+    This boundary applies only to segmenter A/B calls. The runner can prove that
+    structured publisher, source-identity, delayed-outcome, and peer-output fields
+    were absent. It cannot rule out parametric memory of public text.
+adjudication_input_firewall:
+  allowed:
+    - frozen adjudication rubric
+    - assigned disputed item abstract and review comment
+    - typed agreement blockers
+    - two anonymous segmenter candidates in hash-randomized order
+    - opaque campaign and review item identifiers
+  forbidden:
+    - private item map
+    - publisher or source identity
+    - recommendation
+    - author response
+    - later revision
+    - population outcome
+    - non-disputed items
+    - segmenter slot identities
+    - arbitrary tools
+    - web search
+  disputed_items_only: true
+  exact_agreement_items_copied_deterministically: true
+  candidate_order_anonymized_and_hash_randomized: true
+  no_provider_tools_exposed: true
+  explicit_source_identity_withheld: true
+  explicit_outcome_fields_withheld: true
+  parametric_source_recognition_ruled_out: false
+  boundary_statement: >-
+    The adjudicator receives only disputed item text, typed blockers, and two
+    anonymous candidates whose left/right placement is fixed by a precommitted
+    hash. Exact agreements are copied by code. No private map or outcome field is
+    supplied, but parametric memory of public text cannot be ruled out.
+metrics:
+  exact_span_f1:
+    role: conservative-routing-diagnostic
+    threshold: null
+  overlap_span_f1:
+    matching: deterministic-maximum-cardinality-interval-iou
+    iou_threshold: 0.5
+    pass_threshold: 0.80
+  overlap_matched_family_agreement:
+    pass_threshold: 0.80
+  adjudication_item_rate:
+    pass_threshold_maximum: 0.50
+  residual_risk_item_rate_after_adjudication:
+    pass_threshold_maximum: 0.0
+  thresholds_frozen_before_execution: true
+failure_policy:
+  malformed_or_truncated_output: fail-run-no-retry
+  missing_usage_or_request_identity: fail-run-no-retry
+  returned_model_outside_allowlist: close-window-and-fail
+  input_firewall_violation: invalidate-run
+  threshold_failure: revise-rubric-and-freeze-new-protocol-version
+  same_sample_recalibration_allowed: false
+budget:
+  maximum_provider_requests: 14
+  maximum_input_tokens: 300000
+  maximum_output_tokens: 120000
+  maximum_api_cost_usd: 10.0
+  price_unknown_action: require-cost-receipt-before-first-task-call
+scale_gate:
+  target_population_item_count: 273
+  calibration_must_pass_all_frozen_metrics: true
+  authenticated_model_window_required: true
+  runtime_identity_required: true
+  input_firewall_receipt_required: true
+  raw_requests_and_responses_required: true
+  scale_requires_separate_content-addressed_execution_manifest: true
+authority:
+  sample_preregistered: true
+  protocol_preregistered: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+next_gate: >-
+  Freeze this corrected protocol and its runner in Git, compile a v4 request pack,
+  bind a current conservative price-liability receipt and one-time execution
+  authorization, then open one authenticated temporal identity window. Do not
+  execute the 273-item population without a separate post-calibration manifest.

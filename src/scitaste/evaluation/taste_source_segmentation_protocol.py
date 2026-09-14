@@ -145,8 +145,14 @@ class SegmentationProtocolInputFirewall(BaseModel):
 
     @model_validator(mode="after")
     def firewall_is_closed(self) -> SegmentationProtocolInputFirewall:
-        required_allowed = {
+        legacy_allowed = {
             "frozen segmentation or adjudication rubric",
+            "assigned scientific item abstract",
+            "assigned scientific item review comment",
+            "opaque campaign and review item identifiers",
+        }
+        segmenter_allowed = {
+            "frozen segmentation rubric",
             "assigned scientific item abstract",
             "assigned scientific item review comment",
             "opaque campaign and review item identifiers",
@@ -162,7 +168,7 @@ class SegmentationProtocolInputFirewall(BaseModel):
             "arbitrary tools",
             "web search",
         }
-        if set(self.allowed) != required_allowed:
+        if set(self.allowed) not in (legacy_allowed, segmenter_allowed):
             raise ValueError("Segmentation input allowlist drifted")
         if not required_forbidden.issubset(self.forbidden):
             raise ValueError("Segmentation input firewall is incomplete")
@@ -351,6 +357,13 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             raise ValueError("Schema 1.0 cannot carry a separate adjudication firewall")
         if self.schema_version == "1.1" and self.adjudication_input_firewall is None:
             raise ValueError("Schema 1.1 requires a separate adjudication firewall")
+        expected_rubric_scope = (
+            "frozen segmentation or adjudication rubric"
+            if self.schema_version == "1.0"
+            else "frozen segmentation rubric"
+        )
+        if expected_rubric_scope not in self.input_firewall.allowed:
+            raise ValueError("Segmentation firewall rubric scope differs from schema version")
         return self
 
 
@@ -379,6 +392,8 @@ class SegmentationFreezeImplementation(BaseModel):
 
     segmentation_module: SegmentationProtocolFileBinding
     cli: SegmentationProtocolFileBinding
+    protocol_module: SegmentationProtocolFileBinding | None = None
+    execution_module: SegmentationProtocolFileBinding | None = None
 
 
 class SegmentationFreezeAttestation(BaseModel):
@@ -408,7 +423,7 @@ class SegmentationFreezeAuthority(BaseModel):
 class TasteSourceSegmentationFreezeReceipt(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     freeze_receipt_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     frozen_at: datetime
@@ -423,6 +438,14 @@ class TasteSourceSegmentationFreezeReceipt(BaseModel):
     def freeze_is_timestamped(self) -> TasteSourceSegmentationFreezeReceipt:
         if self.frozen_at.utcoffset() is None:
             raise ValueError("Segmentation freeze time must include a timezone")
+        extended = (
+            self.implementation.protocol_module,
+            self.implementation.execution_module,
+        )
+        if self.schema_version == "1.0" and any(item is not None for item in extended):
+            raise ValueError("Schema 1.0 cannot bind prospective execution modules")
+        if self.schema_version == "1.1" and any(item is None for item in extended):
+            raise ValueError("Schema 1.1 must bind protocol and execution modules")
         return self
 
 
@@ -661,6 +684,14 @@ def inspect_taste_source_segmentation_protocol(
         raise ValueError("Segmentation protocol sample binding drifted")
 
     _verify_git_commit(root, freeze.git.commit)
+    implementation_bindings = [
+        freeze.implementation.segmentation_module,
+        freeze.implementation.cli,
+    ]
+    if freeze.implementation.protocol_module is not None:
+        implementation_bindings.append(freeze.implementation.protocol_module)
+    if freeze.implementation.execution_module is not None:
+        implementation_bindings.append(freeze.implementation.execution_module)
     for binding in (
         freeze.bindings.protocol,
         freeze.bindings.sample,
@@ -668,8 +699,7 @@ def inspect_taste_source_segmentation_protocol(
         freeze.bindings.adjudication_rubric,
         freeze.bindings.provider_resource,
         freeze.bindings.identity_policy,
-        freeze.implementation.segmentation_module,
-        freeze.implementation.cli,
+        *implementation_bindings,
     ):
         if _git_blob_sha256(root, freeze.git.commit, binding.locator) != binding.file_sha256:
             raise ValueError("Segmentation freeze implementation Git blob drifted")

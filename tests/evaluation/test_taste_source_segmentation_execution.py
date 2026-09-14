@@ -133,6 +133,7 @@ def test_live_protocol_requires_a_distinct_disputed_only_adjudication_firewall()
     with pytest.raises(ValidationError, match="requires a separate adjudication firewall"):
         TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
 
+    payload["input_firewall"]["allowed"][0] = "frozen segmentation rubric"
     payload["adjudication_input_firewall"] = {
         "allowed": [
             "frozen adjudication rubric",
