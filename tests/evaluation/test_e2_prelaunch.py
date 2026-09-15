@@ -9,6 +9,9 @@ from pydantic import ValidationError
 from scitaste.evaluation.e2_prelaunch import E2PrelaunchManifest, load_e2_prelaunch_manifest
 
 MANIFEST_PATH = Path("configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v1.yaml")
+RELATED_WORK_MANIFEST_PATH = Path(
+    "configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml"
+)
 
 
 def _payload() -> dict[str, object]:
@@ -33,6 +36,18 @@ def test_production_e2_manifest_closes_minimal_title_relevant_pair() -> None:
     assert manifest.model_selection.b1_agent_model_id is None
     assert manifest.resources.available_gpu_devices == 8
     assert manifest.authorizes_gpu_work is False
+
+
+def test_related_work_e2_manifest_does_not_require_an_available_checkpoint() -> None:
+    manifest, _ = load_e2_prelaunch_manifest(RELATED_WORK_MANIFEST_PATH)
+
+    assert (
+        manifest.model_selection.candidate_universe_authority
+        == "recent-related-work-and-idea-task-fit-first"
+    )
+    assert manifest.model_selection.scientific_agent_and_task_model_separate is True
+    assert all("2b" not in item.model_id.casefold() for item in manifest.model_selection.candidates)
+    assert manifest.workload.architecture == "LocPointTransformer"
 
 
 def test_e2_rejects_qwen3_vl_2b_as_primary_candidate() -> None:

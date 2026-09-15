@@ -112,3 +112,9 @@ The immediate critical path is therefore:
 5. run the smallest complete E1/E3/E4 block and scale only effects that need
    power.
 
+The current no-run E2 handoff is
+[`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
+SHA-256 `3c77c8e94eed8e4dd6cbd465129ec99a6eca6aa78a086437a43674417d0244a6`.
+Its ten static scientific and execution boundaries pass. It is deliberately not
+launchable while the independent judge panel, development-only full-loop receipt,
+actual GPU baseline, final role/budget freeze, and owner approval remain open.

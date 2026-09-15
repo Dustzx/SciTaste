@@ -1,0 +1,369 @@
+schema_version: "1.0"
+manifest_id: mlrc-perception-native-pair-e2-v2
+study_id: E2
+inference_role: title-critical-confirmatory
+endpoint: paired-hidden-objective-progress-all-failures-retained
+
+project:
+  project_id: scitaste-self-development
+  outputs_root: outputs
+  program_id: scitaste-iclr2027-capability-driven-autoresearch-program-v7
+  program:
+    locator: configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml
+    sha256: 5c27721ab923516129de8b6ea9c40ddc20a82fab668190b2df2d6980a0ebec41
+  implementation_commit: 0069d424807be0c264054c4354e5cad5aa2ab888
+  controller_run_id: scitaste-iclr2027-capability-driven-autoresearch-program-v7
+  minimum_project_revision: 615
+  require_current_controller: true
+
+workload:
+  benchmark_id: mlrc-bench
+  task_id: perception-temporal-action-loc
+  runtime:
+    locator: configs/evaluation/task_runtime/mlrc_perception_temporal_action_loc_v2.yaml
+    sha256: 2c9c5393078c32827b059c291bb1b85ac51a3903bc50c1acd76cc52d8b78020d
+  runtime_receipt:
+    locator: outputs/projects/scitaste-self-development/evaluations/runtime-views/mlrc-perception-temporal-action-loc-v2/RUNTIME_RECEIPT.json
+    sha256: f9dbce61ca20a20375e668eb43faa8c648d55d42d86abb2a86c09ceabb7211d4
+  scorer_parity_receipt:
+    locator: outputs/projects/scitaste-self-development/evaluations/runtime-environments/mlrc-perception-python312-v1/SCORER_PARITY_RECEIPT.json
+    sha256: efb16ab4ff22b382532c128533c9b89215a7f7deb647345aff86d09b14c0b80a
+  task_config:
+    locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-bench-source-v1/checkout/MLAgentBench/benchmarks_base/perception_temporal_action_loc/env/configs/core_configs.yaml
+    sha256: 77e182b5309a3dca9bec1cab70657778bccb99f7122f4ab4168ba6290e4e6ae6
+  task_default_config:
+    locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-bench-source-v1/checkout/MLAgentBench/benchmarks_base/perception_temporal_action_loc/env/libs/core/config.py
+    sha256: 6f0a2c836c9d10d6a5a26f31a845a511d7758a724df7fbe0e004337d6072d380
+  task_method:
+    locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-bench-source-v1/checkout/MLAgentBench/benchmarks_base/perception_temporal_action_loc/env/methods/MyMethod.py
+    sha256: 76e633cfc43a4d1496095de5369e740cadcc7048ea14ad6a5662c4f86db4f761
+  development_view_file_count: 4286
+  development_view_bytes: 305450877
+  scorer_heldout_view_file_count: 10719
+  scorer_heldout_view_bytes: 761837149
+  inference_projection_file_count: 10719
+  inference_projection_bytes: 749807339
+  python_package_file_count: 1168
+  python_package_bytes: 69020952
+  architecture: LocPointTransformer
+  input_feature_dimension: 768
+  class_count: 63
+  training_epochs: 50
+  warmup_epochs: 5
+  batch_size: 16
+  initialization: deterministic-random-from-scratch
+  initial_task_weights: none
+  initialization_seed: 1234567891
+  task_checkpoint_role: cell-produced-candidate-only
+  primary_metric: mean_average_precision
+  tiou_thresholds: [0.1, 0.2, 0.3, 0.4, 0.5]
+
+model_selection:
+  inventory:
+    locator: configs/resources/assets/model_role_inventory_v2.yaml
+    sha256: 4b7ceaa3038acf2c1d45d37d1116a67a41a6c97bce1f66399d042058906f3e63
+  candidates:
+    - candidate_id: zhipu-glm53-flash
+      model_id: glm-5.3-flash
+      source_kind: hosted-api
+      eligible_roles: [research_agent, code_agent]
+      inventory_id: zhipu-glm53-flash
+      resource_manifest:
+        locator: configs/resources/api/zhipu_glm53_flash_v3.yaml
+        sha256: 0810d7b015a6d4d3de3572e1a47689221410096ec0bd4ec061b087ac67d5373a
+      checkpoint_sha256: null
+      checkpoint_bytes: null
+      status: b0-provisional-exact-candidate
+    - candidate_id: deepseek-v41-flash
+      model_id: deepseek-flash
+      source_kind: hosted-api
+      eligible_roles: [research_agent, code_agent]
+      inventory_id: deepseek-v41-flash
+      resource_manifest:
+        locator: configs/resources/api/deepseek_v41_flash_v4.yaml
+        sha256: b97802546f5b2e5501fbb79a5ad5492ace4cd3bab7556b447060e81d47e733dc
+      checkpoint_sha256: null
+      checkpoint_bytes: null
+      status: task-excluded-conformance-candidate
+    - candidate_id: bailian-qwen38-max
+      model_id: qwen3.8-max
+      source_kind: hosted-api
+      eligible_roles: [research_agent, code_agent]
+      inventory_id: bailian-qwen38-max
+      resource_manifest:
+        locator: configs/resources/api/bailian_qwen38_max_v2.yaml
+        sha256: f7d88f2e4df92265ee7be69e949fc425589fa2255a1ccefd1a925220aca696ce
+      checkpoint_sha256: null
+      checkpoint_bytes: null
+      status: task-excluded-conformance-candidate
+    - candidate_id: local-open-weight-robustness
+      model_id: Qwen/Qwen3-VL-8B-Instruct
+      source_kind: inventory-candidate
+      eligible_roles: [research_agent, code_agent]
+      inventory_id: qwen3-vl-8b-instruct-local
+      resource_manifest: null
+      checkpoint_sha256: null
+      checkpoint_bytes: null
+      status: task-excluded-conformance-candidate
+    - candidate_id: related-work-qualified-new-model
+      model_id: unresolved-related-work-qualified-model
+      source_kind: download-candidate
+      eligible_roles: [research_agent, code_agent]
+      inventory_id: null
+      resource_manifest: null
+      checkpoint_sha256: null
+      checkpoint_bytes: null
+      status: download-only-if-role-gap-remains
+  b0_agent_candidate_id: zhipu-glm53-flash
+  b1_agent_model_id: null
+  selection_data: task-excluded-conformance-only
+  candidate_universe_authority: recent-related-work-and-idea-task-fit-first
+  related_work_anchor_ids:
+    - mlr-bench
+    - ai-scientist-v2
+    - scinav
+    - deep-scientist
+    - autoresearchclaw
+    - sage-mhfa
+    - sgha
+  available_inventory_role: execution-cost-optimization-only-after-scientific-fit
+  scientific_agent_and_task_model_separate: true
+  required_capabilities:
+    - scientific-reasoning-over-code-and-results
+    - repository-scale-python-editing
+    - schema-constrained-structured-output
+    - bounded-tool-use-and-error-recovery
+    - long-context-evidence-citation
+    - stable-local-or-version-observed-serving-identity
+    - enough-throughput-for-two-matched-sequential-arms
+  selection_order:
+    - derive-required-model-strata-from-idea-neighboring-recent-work
+    - preserve-comparability-with-selected-benchmark-and-method-baselines
+    - minimum-role-capability-pass
+    - exact-identity-license-and-runtime-pass
+    - task-fit-on-source-disjoint-conformance
+    - reliability-under-fixed-tool-and-schema-contract
+    - cost-throughput-and-existing-asset-preference
+  automatic_download_max_bytes_per_resource: 10737418240
+  larger_download_requires_owner_notice: true
+  replacement_rule: replace-only-after-task-excluded-role-failure-or-resource-infeasibility
+  minimum_usable_vram_bytes_per_agent_device: 21474836480
+  qwen3_vl_2b_headline_default: false
+
+comparison:
+  condition_matrix:
+    locator: configs/evaluation/native_lifecycle_taste_h4_matrix_v1.yaml
+    sha256: 79ad519ffc17fb94fb6b1de04ffdefa2ab413f5eedd7d55bb22bd5a0677fb698
+  arms:
+    - system_id: scitaste-native
+      internal_condition_id: full-scitaste-learned-policy
+      lifecycle_policy_weight: 1.0
+    - system_id: native-base
+      internal_condition_id: native-base-without-learned-taste
+      lifecycle_policy_weight: 0.0
+  changed_axis: learned-lifecycle-scientific-taste-policy-weight
+  fixed_axes:
+    - agent-model-and-revision
+    - agent-prompt-and-inference-parameters
+    - task-source-bytes
+    - task-model-architecture
+    - task-model-random-initialization-and-seed
+    - development-data-and-visible-information
+    - candidate-action-set-and-editable-surface
+    - tools-and-network-policy
+    - wall-time-and-token-budget
+    - gpu-device-pair-and-active-gpu-time
+    - cpu-ram-and-disk
+    - repair-and-stop-policy
+    - objective-scorer-bytes
+  execution_order: seeded-counterbalanced-sequential-on-same-device-pair
+  failures_retained: true
+  retry_count: 0
+
+resources:
+  gpu_host:
+    locator: configs/resources/gpu/hosts/remote_3090_2_verified_20260912.yaml
+    sha256: 9ce8d2e4d97a8361c0ae7dd0471bcf772aacfc3d13877290bc154684c3d8089c
+  available_gpu_devices: 8
+  device_name: NVIDIA GeForce RTX 3090
+  agent_device_role: hosted-api-or-separately-accounted-qualified-local-agent
+  task_device_role: candidate-training-and-inference
+  blocks:
+    - block_id: B0
+      formal_evidence: false
+      cell_count: 2
+      allocated_gpu_devices_per_cell: 2
+      maximum_concurrent_cells: 1
+      maximum_wall_hours_per_cell: 1.0
+      maximum_aggregate_gpu_hours: 4.0
+      maximum_disk_bytes: 32212254720
+      hidden_labels_allowed: false
+      hidden_score_authority: false
+      scope: development-only-complete-shape
+    - block_id: B1
+      formal_evidence: true
+      cell_count: 2
+      allocated_gpu_devices_per_cell: 2
+      maximum_concurrent_cells: 1
+      maximum_wall_hours_per_cell: 4.0
+      maximum_aggregate_gpu_hours: 16.0
+      maximum_disk_bytes: 107374182400
+      hidden_labels_allowed: true
+      hidden_score_authority: true
+      scope: formal-heldout-paired-effect
+
+hidden_scoring:
+  labels_visible_to: isolated-scorer-process-only
+  candidate_freeze_precedes_inference: true
+  exact_prediction_sha256_required: true
+  inference_projection_contains_labels: false
+  scorer_mounted_in_candidate_sandbox: false
+  post_freeze_model_calls_allowed: false
+  scorer_network_access: false
+  formal_score_open_count_per_candidate: 1
+  score_feedback_to_current_policy_allowed: false
+
+workflow:
+  - phase_id: task-acquisition-proposed
+    interface: scitaste-evaluation-acquisition-request
+    authority: project-artifact-attestation
+    required_outputs: [resource-pin, license-scope, task-purpose, no-action-approval-request]
+  - phase_id: acquired-quarantined
+    interface: scitaste-evaluation-acquisition-content-audit
+    authority: external-executor-attestation
+    required_outputs: [byte-hashes, provenance, asset-inventory, quarantine-receipt]
+  - phase_id: task-admitted-and-split-frozen
+    interface: scitaste-evaluation-task-package
+    authority: project-artifact-attestation
+    required_outputs: [source-groups, pilot-formal-split, hidden-scorer-firewall, exclusion-ledger]
+  - phase_id: models-and-systems-frozen
+    interface: scitaste-model-role-conformance-campaign
+    authority: task-excluded-selection-attestation
+    required_outputs: [task-excluded-model-selection, exact-model-identities, adapter-attestations, budgets]
+  - phase_id: idea-candidates-generated
+    interface: scitaste-project-discovery-advance
+    authority: external-executor-attestation
+    required_outputs: [task-state, closed-candidate-set, candidate-provenance]
+  - phase_id: idea-decision-locked
+    interface: scitaste-taste-lock-prospective-decision-v2
+    authority: project-artifact-attestation
+    required_outputs: [selected-idea, selection-rationale, rejected-alternatives, pre-execution-timestamp]
+  - phase_id: experiment-plan-frozen
+    interface: scitaste-evaluation-cell-plan-and-activation-plan
+    authority: project-artifact-attestation
+    required_outputs: [hypotheses, metrics, development-plan, hidden-evaluation-plan, stop-policy]
+  - phase_id: development-execution
+    interface: scitaste-project-evaluation-run-campaign
+    authority: external-executor-attestation
+    required_outputs: [immutable-command-log, API-ledger, compute-ledger, failures-and-retries]
+  - phase_id: candidate-frozen
+    interface: scitaste-evaluation-executable-candidate
+    authority: project-artifact-attestation
+    required_outputs: [code-hash, environment-lock, checkpoint-hashes, no-more-development-attestation]
+  - phase_id: hidden-scoring
+    interface: mlrc-isolated-inference-and-objective-scorer
+    authority: scorer-only-attestation
+    required_outputs: [isolated-inference-receipt, scorer-version, score-output, firewall-report]
+  - phase_id: evidence-admission
+    interface: scitaste-project-evaluation-register-result
+    authority: project-artifact-attestation
+    required_outputs: [claim-result-links, validity-findings, failure-retention, contradiction-ledger]
+  - phase_id: paper-assembly
+    interface: scitaste-project-paper-build-draft
+    authority: external-executor-attestation
+    required_outputs: [evidence-linked-draft, limitation-disclosures, resource-accounting]
+  - phase_id: dual-ai-review
+    interface: scitaste-project-paper-review
+    authority: external-executor-attestation
+    required_outputs: [two-distinct-reviewer-identities, two-raw-reviews, disagreement-map]
+  - phase_id: ai-adjudication
+    interface: scitaste-project-paper-review-adjudication
+    authority: external-executor-attestation
+    required_outputs: [distinct-adjudicator-identity, adjudication-response, resolution-map]
+  - phase_id: review-driven-revision
+    interface: scitaste-project-paper-build-revision
+    authority: external-executor-attestation
+    required_outputs: [review-action-ledger, revised-draft, unchanged-evidence-attestation]
+  - phase_id: final-ai-review-and-package-freeze
+    interface: scitaste-evaluation-review-finality
+    authority: project-artifact-attestation
+    required_outputs: [final-dual-ai-disposition, unresolved-objections, immutable-package-manifest]
+  - phase_id: complete
+    interface: scitaste-project-program-status
+    authority: project-artifact-attestation
+    required_outputs: [trajectory-manifest, endpoint-summary, cost-summary]
+
+commands:
+  - command_id: e2-prelaunch-inspect
+    stage: inspect
+    argv: [python, -m, scitaste.evaluation.e2_prelaunch, --manifest, configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml, --manifest-sha256, "<approved-e2-manifest-sha256>", --workspace-root, .]
+    execution_authority_required: false
+  - command_id: project-program-initialize
+    stage: prepare
+    argv: [scitaste, project, program, initialize, --project-id, scitaste-self-development, --expected-revision, "<project-revision>", --program, configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml, --model-inventory, configs/resources/assets/model_role_inventory_v2.yaml, --outputs-root, outputs]
+    execution_authority_required: false
+  - command_id: project-native-h4-prepare
+    stage: prepare
+    argv: [scitaste, project, evaluation, prepare-native-h4, --request, "<project-relative-h4-request>", --repository-root, ., --preparation-output, "<project-relative-preparation-output>", --launch-config-output, "<project-relative-launch-config-output>", --outputs-root, outputs]
+    execution_authority_required: false
+  - command_id: mlrc-development
+    stage: execute
+    argv: [python, /scitaste/runtime/mlrc_objective_entrypoint.py, --task, perception_temporal_action_loc, --result-task-id, perception-temporal-action-loc, --method, my_method, --phase, dev]
+    execution_authority_required: true
+  - command_id: project-campaign-execute
+    stage: execute
+    argv: [scitaste, project, evaluation, run-campaign, --project-id, scitaste-self-development, --evaluation-id, mlrc-perception-native-pair-e2-v2, --run-id, "<run-id>", --launch-config, "<project-relative-launch-config>", --activation, "<approved-activation>", --max-cells, "2", --allow-execution, --outputs-root, outputs]
+    execution_authority_required: true
+  - command_id: mlrc-hidden-inference
+    stage: execute
+    argv: [python, /scitaste/runtime/mlrc_perception_heldout_inference.py, --result-task-id, perception-temporal-action-loc, --method, my_method]
+    execution_authority_required: true
+  - command_id: mlrc-hidden-score
+    stage: score
+    argv: [python, /scitaste/scorer/mlrc_perception_objective_scorer.py, --ground-truth, /scorer/challenge_action_localisation_test.json, --ground-truth-sha256, bab04d7562b2d69eba8702e16aa18d2e441df156cad495deff685dc32e82c508, --predictions, /candidate/predictions.json, --predictions-sha256, "<frozen-prediction-sha256>", --task-id, perception-temporal-action-loc, --method, my_method]
+    execution_authority_required: true
+  - command_id: project-result-admit
+    stage: admit
+    argv: [scitaste, project, evaluation, register-result, --project-id, scitaste-self-development, --evaluation-id, mlrc-perception-native-pair-e2-v2, --result-id, "<result-id>", --result-set, "<project-relative-result-set>", --expected-revision, "<project-revision>", --select, --outputs-root, outputs]
+    execution_authority_required: false
+  - command_id: project-paper-build
+    stage: write
+    argv: [scitaste, project, paper, build-draft, --project-id, scitaste-self-development, --directory-name, scitaste-iclr2027-submission, --run-id, "<paper-run-id>", --invocation-id, "<invocation-id>", --bibliography, "<project-relative-bibliography>", --evaluation-result-id, "<result-id>", --expected-revision, "<project-revision>", --select, --outputs-root, outputs]
+    execution_authority_required: true
+  - command_id: project-dual-ai-review
+    stage: review
+    argv: [scitaste, project, paper, review, prepare, --project-id, scitaste-self-development, --paper-directory, "<project-relative-paper-directory>", --review-id, "<review-id>", --scope, independent_pre_submission, --expected-revision, "<project-revision>", --select, --outputs-root, outputs]
+    execution_authority_required: true
+  - command_id: project-review-driven-revision
+    stage: write
+    argv: [scitaste, project, paper, build-revision, --project-id, scitaste-self-development, --directory-name, scitaste-iclr2027-submission-revision, --review-id, "<review-id>", --run-id, "<revision-run-id>", --invocation-id, "<revision-invocation-id>", --bibliography, "<project-relative-bibliography>", --evaluation-result-id, "<result-id>", --expected-revision, "<project-revision>", --select, --outputs-root, outputs]
+    execution_authority_required: true
+
+stop_rules:
+  - Stop on any bound-file, source-commit, package-version, or checkpoint identity mismatch.
+  - Stop before B0 until the task-excluded role gate selects one exact agent model and that model completes one bounded structured generation on its allocated route.
+  - Stop before B1 until task-excluded role conformance selects and freezes the exact agent model for both arms.
+  - Stop before B1 until the exact B0 two-arm development-only loop completes without opening real held-out labels or scores.
+  - Stop on any held-out-label mount, scorer mount, network route, or score feedback visible to the candidate process.
+  - Stop if code, environment, task checkpoint, or inference parameters change after candidate freeze.
+  - Stop a cell at its wall-time, token, active-GPU-time, RAM, or disk ceiling and retain it as an intention-to-run failure.
+  - Stop rather than retry, replace, or manually repair a failed formal cell; retry count is zero.
+  - Stop both arms on model/provider drift or loss of exact matched-model identity.
+  - Stop on license, safety, storage-isolation, or scorer-parity failure.
+  - Stop before any GPU/API/benchmark execution until the exact manifest hash and activation are owner approved.
+  - Do not inspect unblinded arm effects to decide early stopping, model replacement, or B2 scale-out.
+
+gates:
+  b0_agent_load_generation_preflight: verified
+  b0_exact_model_role_attestation: pending
+  b0_owner_hash_approval: pending
+  b0_complete: pending
+  actual_gpu_baseline_reproduction: pending
+  b1_task_excluded_role_selection: pending
+  b1_exact_model_and_budget_freeze: pending
+  b1_owner_hash_approval: pending
+
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_benchmark_execution: false
