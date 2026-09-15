@@ -376,7 +376,10 @@ class E2ResourcePlan(BaseModel):
     gpu_host: E2FileBinding
     available_gpu_devices: Literal[8]
     device_name: Literal["NVIDIA GeForce RTX 3090"]
-    agent_device_role: Literal["resident-research-and-code-agent"]
+    agent_device_role: Literal[
+        "resident-research-and-code-agent",
+        "hosted-api-or-separately-accounted-qualified-local-agent",
+    ]
     task_device_role: Literal["candidate-training-and-inference"]
     blocks: tuple[E2BlockBudget, E2BlockBudget]
 
@@ -743,6 +746,16 @@ def _program_semantics_match(path: Path, manifest: E2PrelaunchManifest) -> bool:
         and model.get("owner_download_authority", {}).get("automatic_single_resource_max_bytes")
         == 10737418240
         and model.get("available_candidates_are_a_floor_not_a_ceiling") is True
+        and (
+            manifest.model_selection.candidate_universe_authority
+            != "recent-related-work-and-idea-task-fit-first"
+            or (
+                model.get("candidate_universe_authority")
+                == "recent-related-work-and-idea-task-fit-first"
+                and model.get("available_inventory_role")
+                == "execution-cost-optimization-only-after-scientific-fit"
+            )
+        )
     )
 
 
