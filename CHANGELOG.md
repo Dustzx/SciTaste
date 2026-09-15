@@ -35,6 +35,10 @@ semantic versioning.
   response selected the correct family but copied the Idea-binding digest into
   `packet_sha256`. Prompt v2 distinguishes all visible hash fields explicitly;
   the invalid v1 call remains rejected in the immutable ledger.
+- Corrected family-policy CLI reporting so an observed decision family with no
+  eligible or sufficiently supported training episode is no longer described
+  as learned. The output now separates observed, training-eligible, and
+  support-sufficient families and exposes `policy_effect_ready` explicitly.
 - Added the missing production bridge from project-owned Taste episodes to a
   disclosed cross-model AI attribution panel. One shared, condition- and
   claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and

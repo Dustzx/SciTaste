@@ -6372,6 +6372,20 @@ def _handle_taste_family_policy_fit(args: argparse.Namespace) -> int:
         policy_id=args.policy_id,
     )
     output = save_family_conditioned_lifecycle_taste_policy(model, args.output)
+    training_families = [
+        family.value
+        for family, head in model.family_heads.items()
+        if head.training_episode_count > 0
+    ]
+    supported_families = [
+        family.value
+        for family, head in model.family_heads.items()
+        if head.feature_posteriors
+        and any(
+            item.support >= head.config.minimum_feature_support
+            for item in head.feature_posteriors
+        )
+    ]
     print(
         json.dumps(
             {
@@ -6380,7 +6394,10 @@ def _handle_taste_family_policy_fit(args: argparse.Namespace) -> int:
                 "policy_id": model.policy_id,
                 "policy_sha256": model.policy_sha256,
                 "source_episode_count": len(model.source_episode_ids),
-                "learned_decision_families": [family.value for family in model.family_heads],
+                "observed_decision_families": [family.value for family in model.family_heads],
+                "training_eligible_decision_families": training_families,
+                "support_sufficient_decision_families": supported_families,
+                "policy_effect_ready": bool(supported_families),
                 "empty_decision_families": [family.value for family in model.empty_families],
                 "reviewer_kind": model.reviewer_kind,
                 "not_human_review": model.not_human_review,
