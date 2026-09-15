@@ -1,0 +1,76 @@
+schema_version: "1.0"
+protocol_id: scitastebench-track-a-codex-agent-abstraction-review-v1
+primary_reviewers:
+  - reviewer_id: track-a-abstraction-primary-codex-agent-a-v1
+    role: primary-a
+    provider: codex-agent-primary-a
+    model: codex-collaboration-agent
+    model_revision: 2026-09-15-primary-a-session-unverified
+    identity_sha256: 62dc88f84a8c6788668e7f24159da5ef76c5dc5f80ab8f29d7152738797d72a2
+    reviewer_kind: ai
+    not_human_review: true
+    human_identity_verified: false
+    human_qualification_verified: false
+  - reviewer_id: track-a-abstraction-primary-codex-agent-b-v1
+    role: primary-b
+    provider: codex-agent-primary-b
+    model: codex-collaboration-agent
+    model_revision: 2026-09-15-primary-b-session-unverified
+    identity_sha256: 1560430fa890feaefdd91e31abf49868ea1e383f96a45c58fbb03d2de2767941
+    reviewer_kind: ai
+    not_human_review: true
+    human_identity_verified: false
+    human_qualification_verified: false
+adjudicator:
+  reviewer_id: track-a-abstraction-adjudicator-codex-agent-v1
+  role: adjudicator
+  provider: codex-agent-adjudicator
+  model: codex-collaboration-agent
+  model_revision: 2026-09-15-adjudicator-session-unverified
+  identity_sha256: fdd7f036eee2022b4382935479a098139646f7527b196af9b69c3bcbff4115d3
+  reviewer_kind: ai
+  not_human_review: true
+  human_identity_verified: false
+  human_qualification_verified: false
+review_question: >-
+  Does this proposed Scientific Taste abstraction faithfully reconstruct one closed,
+  source-grounded decision and state a useful but bounded transfer principle, without adding
+  claims unsupported by the exact source projection?
+criterion_instructions:
+  grounding-sufficiency: >-
+    Verify that the exact excerpts jointly support the context, evidence state, alternatives,
+    choice, principle, and any available outcome; do not reward merely extractive overlap.
+  closed-alternatives: >-
+    Verify that the candidate set states the live decision tension, that the preferred action is
+    one candidate, and that every other candidate is explicitly and coherently rejected.
+  transfer-boundary-quality: >-
+    Verify that applicability and failure conditions are concrete, the counterfactual could
+    change the action, and discarded source details prevent unjustified universalization.
+  unsupported-claims: >-
+    Check every abstraction statement against the exact source projection, including synthesis
+    prose not quoted as grounding; mark present when an external fact or stronger claim is added.
+accept_rule: >-
+  Accept only when grounding is sufficient, alternatives are closed, the transfer boundary is
+  sufficient, unsupported claims are absent, and there are no issue codes.
+reject_rule: >-
+  Reject when at least one criterion is substantively deficient and identify the deficiency with
+  a stable issue code and concise rationale.
+dispute_rule: >-
+  Return needs-dispute only for a concrete ambiguity that prevents a decisive accept or reject;
+  identify that ambiguity with a stable issue code. The controller, not the reviewer, decides
+  whether a third model is called.
+maximum_rationale_characters: 6000
+generation_provider_and_model_hidden: true
+source_condition_hidden: true
+primary_reviewers_blinded_to_each_other: true
+adjudicator_sees_disputed_items_only: true
+adjudicator_sees_no_primary_outputs: true
+reviewer_kind: ai
+not_human_review: true
+no_human_or_expert_validity_claim: true
+human_review_replacement_claim_allowed: false
+authorizes_model_calls: false
+authorizes_api_spend: false
+authorizes_gpu_work: false
+authorizes_human_recruitment: false
+authorizes_experiment: false
