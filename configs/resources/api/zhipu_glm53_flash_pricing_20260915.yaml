@@ -1,0 +1,29 @@
+schema_version: "1.0"
+snapshot_id: zhipu-glm53-flash-pricing-20260915
+provider_id: zhipu
+model_id: glm-5.3-flash
+observed_model_name: GLM-5.3-Flash
+observed_at: 2026-09-15T09:04:00+08:00
+source_url: https://docs.bigmodel.cn/cn/guide/start/pricing
+source_kind: official-provider-pricing-page
+currency: CNY
+unit: per-million-tokens
+official_row:
+  context_window: 1M
+  input_cache_miss: 0.8
+  output: 2.8
+  input_cache_hit: 0.23
+  cache_storage: limited-time-free
+observation_method: >-
+  Direct HTTPS retrieval of the official pricing page. The rendered source row
+  listed GLM-5.3-Flash, 1M context, 0.8 input cache miss, 2.8 output,
+  limited-time-free cache storage, and 0.23 input cache hit.
+budget_projection:
+  maximum_input_tokens: 300000
+  maximum_output_tokens: 140000
+  assumes_all_input_cache_miss: true
+  maximum_estimated_cost_cny: 0.632
+claim_boundary: >-
+  This is a point-in-time observation, not an invoice or a guarantee of future
+  price. The live authorization retains an independent 10 USD owner-liability
+  ceiling and does not claim a foreign-exchange conversion.

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 amendment_id: scitastebench-segmentation-prospective-v6-routing-amendment-v1
 project_id: scitaste-self-development
-amended_at: 2026-09-15T09:20:00+08:00
+amended_at: 2026-09-15T09:03:00+08:00
 reason: >-
   A precontact AI red-team found that literal differences in explanatory prose
   would route otherwise identical decision boundaries to adjudication. The

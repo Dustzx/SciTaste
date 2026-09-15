@@ -101,10 +101,27 @@ class SegmentationExecutionRunnerBinding(SegmentationExecutionFileBinding):
     git_commit: str = Field(pattern=_COMMIT)
     cli_locator: str = Field(min_length=1, max_length=2_000)
     cli_file_sha256: str = Field(pattern=_SHA256)
+    runtime_modules: tuple[SegmentationExecutionFileBinding, ...] = Field(
+        min_length=7, max_length=12
+    )
 
     @model_validator(mode="after")
     def cli_locator_is_safe(self) -> SegmentationExecutionRunnerBinding:
         _safe_locator(self.cli_locator)
+        required = {
+            "src/scitaste/evaluation/taste_source_segmentation.py",
+            "src/scitaste/evaluation/taste_source_segmentation_protocol.py",
+            "src/scitaste/evaluation/taste_source_segmentation_post_audit.py",
+            "src/scitaste/evaluation/model_identity.py",
+            "src/scitaste/project/models.py",
+            "src/scitaste/resources/__init__.py",
+            "src/scitaste/resources/registry.py",
+        }
+        locators = {item.locator for item in self.runtime_modules}
+        if locators != required or len(locators) != len(self.runtime_modules):
+            raise ValueError("Segmentation runner runtime-module manifest is incomplete")
+        if self.locator in locators or self.cli_locator in locators:
+            raise ValueError("Segmentation runner bindings must be distinct")
         return self
 
 
@@ -304,10 +321,7 @@ class SegmentationProviderSegment(BaseModel):
                 raise ValueError("Segmentation provider context ranges are unordered or repeated")
             if any(first[1] > second[0] for first, second in pairwise(intervals)):
                 raise ValueError("Segmentation provider context ranges overlap")
-            if any(
-                start < self.end_char and end > self.start_char
-                for start, end in intervals
-            ):
+            if any(start < self.end_char and end > self.start_char for start, end in intervals):
                 raise ValueError("Segmentation provider context overlaps its trigger")
         return self
 
@@ -356,9 +370,7 @@ class SegmentationAnchoredProviderItem(BaseModel):
 
     campaign_token: str = Field(pattern=_ID)
     review_item_id: str = Field(pattern=_ID)
-    segments: tuple[SegmentationAnchoredProviderSegment, ...] = Field(
-        min_length=1, max_length=128
-    )
+    segments: tuple[SegmentationAnchoredProviderSegment, ...] = Field(min_length=1, max_length=128)
     residual_decision_bearing_text_possible: bool
 
 
@@ -402,9 +414,7 @@ class SegmentationAnchoredAdjudicationProviderOutput(BaseModel):
     items: tuple[SegmentationAnchoredAdjudicationProviderItem, ...] = Field(min_length=1)
 
 
-class SegmentationAnchoredAdjudicationProviderItemV15(
-    SegmentationAnchoredProviderItemV15
-):
+class SegmentationAnchoredAdjudicationProviderItemV15(SegmentationAnchoredProviderItemV15):
     resolution_rationale: str = Field(min_length=1, max_length=4_000)
 
 
@@ -514,9 +524,7 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
     returned_models: tuple[str, ...] = Field(min_length=1)
     identity_attestation: SegmentationRunArtifactBinding
     identity_report: ApiIdentityWindowReport
-    call_receipts: tuple[SegmentationProviderCallReceipt, ...] = Field(
-        min_length=6, max_length=100
-    )
+    call_receipts: tuple[SegmentationProviderCallReceipt, ...] = Field(min_length=6, max_length=100)
     segmenter_firewall_receipts: tuple[SegmentationInputFirewallReceipt, ...] = Field(
         min_length=4, max_length=96
     )
@@ -566,9 +574,7 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
         if (self.schema_version == "1.1") != (self.group_uncertainty is not None):
             raise ValueError("Segmentation calibration schema differs from group uncertainty")
         workload_calls = tuple(
-            item
-            for item in self.call_receipts
-            if item.call.role is ApiIdentityCallRole.WORKLOAD
+            item for item in self.call_receipts if item.call.role is ApiIdentityCallRole.WORKLOAD
         )
         sentinel_calls = tuple(
             item
@@ -580,10 +586,8 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
         if (
             tuple(item.call.sequence for item in self.call_receipts)
             != tuple(range(1, len(self.call_receipts) + 1))
-            or self.call_receipts[0].call.role
-            is not ApiIdentityCallRole.START_SENTINEL
-            or self.call_receipts[-1].call.role
-            is not ApiIdentityCallRole.END_SENTINEL
+            or self.call_receipts[0].call.role is not ApiIdentityCallRole.START_SENTINEL
+            or self.call_receipts[-1].call.role is not ApiIdentityCallRole.END_SENTINEL
             or any(
                 item.call.role is not ApiIdentityCallRole.WORKLOAD
                 for item in self.call_receipts[1:-1]
@@ -627,8 +631,7 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
         )
         if (
             not self.identity_report.admitted
-            or self.identity_report.attestation_sha256
-            != self.identity_attestation.semantic_sha256
+            or self.identity_report.attestation_sha256 != self.identity_attestation.semantic_sha256
             or self.identity_report.call_count != len(self.call_receipts)
             or self.identity_report.sentinel_count != len(sentinel_calls)
             or self.identity_report.returned_model_ids != observed_returned_models
@@ -846,9 +849,7 @@ class SegmentationProviderTransportReceipt(BaseModel):
             or self.response_completed_at < self.request_started_at
         ):
             raise ValueError("Segmentation transport receipt times are invalid")
-        if self.request_id_echo_passed != (
-            self.client_request_id == self.echoed_request_id
-        ):
+        if self.request_id_echo_passed != (self.client_request_id == self.echoed_request_id):
             raise ValueError("Segmentation transport request-ID result drifted")
         if self.cached_input_tokens > self.input_tokens:
             raise ValueError("Segmentation transport cached input exceeds total input")
@@ -877,9 +878,7 @@ class SegmentationProviderCallReceipt(BaseModel):
     total_tokens: int = Field(ge=0)
     estimated_cost_cny: float = Field(ge=0, allow_inf_nan=False)
     span_reconstruction_receipts: tuple[SegmentationSpanReconstructionReceipt, ...] = ()
-    evidence_unit_selection_receipts: tuple[
-        SegmentationEvidenceUnitSelectionReceipt, ...
-    ] = ()
+    evidence_unit_selection_receipts: tuple[SegmentationEvidenceUnitSelectionReceipt, ...] = ()
     evidence_unit_item_receipts: tuple[SegmentationEvidenceUnitItemReceipt, ...] = Field(
         default=(), exclude_if=lambda value: not value
     )
@@ -924,10 +923,7 @@ class SegmentationProviderCallReceipt(BaseModel):
                 or self.evidence_unit_item_receipts
             ):
                 raise ValueError("Segmentation sentinel cannot claim source-range validation")
-            if (
-                self.schema_version == "1.1"
-                and self.identity_sentinel_output_verified is not True
-            ):
+            if self.schema_version == "1.1" and self.identity_sentinel_output_verified is not True:
                 raise ValueError("Segmentation sentinel lacks exact-output verification")
             return self
         if self.identity_sentinel_output_verified is not None:
@@ -941,9 +937,7 @@ class SegmentationProviderCallReceipt(BaseModel):
                 (item.campaign_token, item.review_item_id): item
                 for item in self.evidence_unit_item_receipts
             }
-            if not item_receipts or len(item_receipts) != len(
-                self.evidence_unit_item_receipts
-            ):
+            if not item_receipts or len(item_receipts) != len(self.evidence_unit_item_receipts):
                 raise ValueError("Segmentation anchored workload item receipts are incomplete")
             if self.assigned_item_count != len(item_receipts):
                 raise ValueError("Segmentation anchored assigned-item count drifted")
@@ -956,10 +950,8 @@ class SegmentationProviderCallReceipt(BaseModel):
                     raise ValueError("Segmentation range receipt names an unreceipted item")
                 item_receipt = item_receipts[key]
                 if (
-                    receipt.source_comment_sha256
-                    != item_receipt.source_comment_sha256
-                    or receipt.evidence_unit_table_sha256
-                    != item_receipt.evidence_unit_table_sha256
+                    receipt.source_comment_sha256 != item_receipt.source_comment_sha256
+                    or receipt.evidence_unit_table_sha256 != item_receipt.evidence_unit_table_sha256
                 ):
                     raise ValueError("Segmentation range and item receipts bind different sources")
                 ranges_by_item[key].append(receipt)
@@ -976,8 +968,7 @@ class SegmentationProviderCallReceipt(BaseModel):
                     contexts = [
                         item
                         for item in ranges
-                        if item.range_role == "context"
-                        and item.segment_ordinal == segment_ordinal
+                        if item.range_role == "context" and item.segment_ordinal == segment_ordinal
                     ]
                     if [item.context_ordinal for item in contexts] != list(
                         range(1, len(contexts) + 1)
@@ -1149,8 +1140,7 @@ def _verify_precontact_execution_gate(
         or amendment.get("base_protocol") != authorization.protocol.model_dump(mode="json")
         or amendment.get("base_freeze_receipt")
         != authorization.freeze_receipt.model_dump(mode="json")
-        or amendment.get("request_pack")
-        != authorization.request_pack.model_dump(mode="json")
+        or amendment.get("request_pack") != authorization.request_pack.model_dump(mode="json")
         or amendment.get("adjudication_blocker_fields")
         != [
             "decision-presence",
@@ -1187,16 +1177,12 @@ def _verify_precontact_execution_gate(
     seal = _yaml_mapping(seal_path, "segmentation precontact audit seal")
     if (
         seal.get("schema_version") != "1.0"
-        or seal.get("seal_id")
-        != "scitastebench-segmentation-precontact-audit-seal-v2"
+        or seal.get("seal_id") != "scitastebench-segmentation-precontact-audit-seal-v2"
         or seal.get("project_id") != authorization.project_id
         or seal.get("protocol") != authorization.protocol.model_dump(mode="json")
-        or seal.get("freeze_receipt")
-        != authorization.freeze_receipt.model_dump(mode="json")
-        or seal.get("request_pack")
-        != authorization.request_pack.model_dump(mode="json")
-        or seal.get("routing_amendment")
-        != authorization.routing_amendment.model_dump(mode="json")
+        or seal.get("freeze_receipt") != authorization.freeze_receipt.model_dump(mode="json")
+        or seal.get("request_pack") != authorization.request_pack.model_dump(mode="json")
+        or seal.get("routing_amendment") != authorization.routing_amendment.model_dump(mode="json")
         or seal.get("execution_runner") != authorization.runner.model_dump(mode="json")
     ):
         raise ValueError("Segmentation precontact seal differs from execution authority")
@@ -1218,9 +1204,7 @@ def _verify_precontact_execution_gate(
         seal.get("ai_e_authority_review")
     )
     authority_review_path = _bound_path(root, authority_review_binding)
-    authority_review = _yaml_mapping(
-        authority_review_path, "segmentation AI-E authority review"
-    )
+    authority_review = _yaml_mapping(authority_review_path, "segmentation AI-E authority review")
     exact_inputs = authority_review.get("exact_input_hashes")
     if (
         authority_review.get("role_id") != "ai-e-execution-authority"
@@ -1235,8 +1219,7 @@ def _verify_precontact_execution_gate(
         or authority_review.get("formal_evidence_eligible") is not False
         or authority_review.get("human_review_claim_allowed") is not False
         or not isinstance(exact_inputs, dict)
-        or exact_inputs.get("predecessor_seal")
-        != predecessor_binding.model_dump(mode="json")
+        or exact_inputs.get("predecessor_seal") != predecessor_binding.model_dump(mode="json")
         or exact_inputs.get("routing_amendment")
         != authorization.routing_amendment.model_dump(mode="json")
         or exact_inputs.get("execution_runner") != authorization.runner.model_dump(mode="json")
@@ -1244,18 +1227,22 @@ def _verify_precontact_execution_gate(
         raise ValueError("Segmentation AI-E authority review is not a bound pass")
 
     boundary = seal.get("execution_boundary")
-    if not isinstance(boundary, dict) or any(
-        boundary.get(field) is not False
-        for field in (
-            "provider_contact_performed",
-            "api_calls_authorized",
-            "calibration_execution_authorized",
-            "scaled_execution_authorized",
-            "benchmark_admission_authorized",
-            "formal_evidence_eligible",
-            "human_review_claim_allowed",
+    if (
+        not isinstance(boundary, dict)
+        or any(
+            boundary.get(field) is not False
+            for field in (
+                "provider_contact_performed",
+                "api_calls_authorized",
+                "calibration_execution_authorized",
+                "scaled_execution_authorized",
+                "benchmark_admission_authorized",
+                "formal_evidence_eligible",
+                "human_review_claim_allowed",
+            )
         )
-    ) or boundary.get("fresh_exact_owner_authorization_required") is not True:
+        or boundary.get("fresh_exact_owner_authorization_required") is not True
+    ):
         raise ValueError("Segmentation precontact seal execution boundary is invalid")
     scope = seal.get("required_authorization_scope")
     generation = protocol.protocol.generation
@@ -1271,9 +1258,7 @@ def _verify_precontact_execution_gate(
         "maximum_input_tokens": limits.maximum_input_tokens,
         "maximum_output_tokens": limits.maximum_output_tokens,
         "retry_count": limits.retry_count,
-        "owner_maximum_liability_usd": (
-            authorization.price_ceiling.owner_maximum_liability_usd
-        ),
+        "owner_maximum_liability_usd": (authorization.price_ceiling.owner_maximum_liability_usd),
     }:
         raise ValueError("Segmentation precontact seal scope differs from authorization")
 
@@ -1290,16 +1275,39 @@ def _verify_predecessor_precontact_seal(
 
     if (
         predecessor.get("schema_version") != "1.0"
-        or predecessor.get("seal_id")
-        != "scitastebench-segmentation-precontact-audit-seal-v1"
+        or predecessor.get("seal_id") != "scitastebench-segmentation-precontact-audit-seal-v1"
         or predecessor.get("project_id") != authorization.project_id
         or predecessor.get("protocol") != authorization.protocol.model_dump(mode="json")
-        or predecessor.get("freeze_receipt")
-        != authorization.freeze_receipt.model_dump(mode="json")
-        or predecessor.get("request_pack")
-        != authorization.request_pack.model_dump(mode="json")
+        or predecessor.get("freeze_receipt") != authorization.freeze_receipt.model_dump(mode="json")
+        or predecessor.get("request_pack") != authorization.request_pack.model_dump(mode="json")
     ):
         raise ValueError("Segmentation predecessor seal differs from frozen inputs")
+
+    deterministic_audit = predecessor.get("deterministic_audit_implementation")
+    audit_module = next(
+        (
+            item
+            for item in authorization.runner.runtime_modules
+            if item.locator == "src/scitaste/evaluation/taste_source_segmentation_post_audit.py"
+        ),
+        None,
+    )
+    if (
+        not isinstance(deterministic_audit, dict)
+        or audit_module is None
+        or deterministic_audit.get("locator") != audit_module.locator
+        or deterministic_audit.get("file_sha256") != audit_module.file_sha256
+        or not isinstance(deterministic_audit.get("git_commit"), str)
+        or len(str(deterministic_audit["git_commit"])) != 40
+        or not set(str(deterministic_audit["git_commit"])).issubset(set("0123456789abcdef"))
+        or _git_blob_sha256(
+            root,
+            str(deterministic_audit["git_commit"]),
+            audit_module.locator,
+        )
+        != audit_module.file_sha256
+    ):
+        raise ValueError("Segmentation sealed replay implementation drifted")
 
     ai_d = predecessor.get("ai_d_attempt_v2")
     if not isinstance(ai_d, dict) or (
@@ -1382,7 +1390,8 @@ def _verify_predecessor_precontact_seal(
         or ai_e_report.get("provider_contact_performed") is not False
         or ai_e_report.get("external_api_calls_performed") is not False
         or not isinstance(inputs, dict)
-        or inputs.get("protocol") != {
+        or inputs.get("protocol")
+        != {
             **authorization.protocol.model_dump(mode="json"),
             "protocol_id": protocol.protocol.protocol_id,
             "schema_version": protocol.protocol.schema_version,
@@ -1404,9 +1413,7 @@ def _verify_predecessor_precontact_seal(
 
 
 def _yaml_mapping(path: Path, label: str) -> dict[str, object]:
-    payload = yaml.safe_load(
-        _bounded_file(path, _MAX_PACKET_BYTES).read_text(encoding="utf-8")
-    )
+    payload = yaml.safe_load(_bounded_file(path, _MAX_PACKET_BYTES).read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"{label} must contain a YAML mapping")
     return payload
@@ -1518,6 +1525,14 @@ def inspect_taste_source_segmentation_execution_authorization(
         or _sha256_file(runner_path) != authorization.runner.file_sha256
     ):
         raise ValueError("Segmentation execution runner Git binding drifted")
+    for module in authorization.runner.runtime_modules:
+        module_path = _bound_path(root, module)
+        if (
+            _git_blob_sha256(root, authorization.runner.git_commit, module.locator)
+            != module.file_sha256
+            or _sha256_file(module_path) != module.file_sha256
+        ):
+            raise ValueError("Segmentation execution runtime-module binding drifted")
 
     limits = authorization.limits
     frozen_budget = protocol.protocol.budget
@@ -1625,9 +1640,7 @@ def build_segmentation_provider_request(
 
     user_payload = {
         "rubric": packet.rubric,
-        "items": [
-            item.model_dump(mode="json", exclude_none=True) for item in packet.items
-        ],
+        "items": [item.model_dump(mode="json", exclude_none=True) for item in packet.items],
         "output_contract": packet.output_contract,
     }
     return {
@@ -1685,21 +1698,16 @@ def validate_segmentation_provider_output(
         if protocol.schema_version == "1.5":
             anchored_output_v15 = SegmentationAnchoredProviderOutputV15.model_validate(payload)
             observed_v15 = [
-                (item.campaign_token, item.review_item_id)
-                for item in anchored_output_v15.items
+                (item.campaign_token, item.review_item_id) for item in anchored_output_v15.items
             ]
-            if len(observed_v15) != len(set(observed_v15)) or set(observed_v15) != set(
-                expected
-            ):
+            if len(observed_v15) != len(set(observed_v15)) or set(observed_v15) != set(expected):
                 raise ValueError("Segmentation provider output item coverage drifted")
             return _resolve_anchored_provider_output_v15(
                 anchored_output_v15,
                 packet=packet,
             )
         anchored_output = SegmentationAnchoredProviderOutput.model_validate(payload)
-        observed = [
-            (item.campaign_token, item.review_item_id) for item in anchored_output.items
-        ]
+        observed = [(item.campaign_token, item.review_item_id) for item in anchored_output.items]
         if len(observed) != len(set(observed)) or set(observed) != set(expected):
             raise ValueError("Segmentation provider output item coverage drifted")
         return _resolve_anchored_provider_output(anchored_output, packet=packet)
@@ -1742,12 +1750,11 @@ def validate_adjudication_provider_output(
         raise ValueError("Segmentation adjudication output is not valid JSON") from error
     if protocol is not None and protocol.evidence_unit_selection is not None:
         if protocol.schema_version == "1.5":
-            anchored_output_v15 = (
-                SegmentationAnchoredAdjudicationProviderOutputV15.model_validate(payload)
+            anchored_output_v15 = SegmentationAnchoredAdjudicationProviderOutputV15.model_validate(
+                payload
             )
             observed_v15 = [
-                (item.campaign_token, item.review_item_id)
-                for item in anchored_output_v15.items
+                (item.campaign_token, item.review_item_id) for item in anchored_output_v15.items
             ]
             if len(observed_v15) != len(set(observed_v15)) or set(observed_v15) != set(
                 expected_items
@@ -1758,9 +1765,7 @@ def validate_adjudication_provider_output(
                 expected_items=expected_items,
             )
         anchored_output = SegmentationAnchoredAdjudicationProviderOutput.model_validate(payload)
-        observed = [
-            (item.campaign_token, item.review_item_id) for item in anchored_output.items
-        ]
+        observed = [(item.campaign_token, item.review_item_id) for item in anchored_output.items]
         if len(observed) != len(set(observed)) or set(observed) != set(expected_items):
             raise ValueError("Segmentation adjudication output item coverage drifted")
         return _resolve_anchored_adjudication_output(
@@ -1810,23 +1815,27 @@ def build_segmentation_adjudication_request(
             else "verbatim_decision_text"
         )
     )
-    required_segment_fields = [
-        *(
-            ("trigger_range", "context_ranges")
-            if nested_anchor_contract
-            else ("start_unit_id", "end_unit_id")
-        ),
-        "primary_decision_family",
-        "atomic_decision_statement",
-        "rationale",
-        "uncertainty",
-    ] if anchored else [
-        str(reported_text_field),
-        "primary_decision_family",
-        "atomic_decision_statement",
-        "rationale",
-        "uncertainty",
-    ]
+    required_segment_fields = (
+        [
+            *(
+                ("trigger_range", "context_ranges")
+                if nested_anchor_contract
+                else ("start_unit_id", "end_unit_id")
+            ),
+            "primary_decision_family",
+            "atomic_decision_statement",
+            "rationale",
+            "uncertainty",
+        ]
+        if anchored
+        else [
+            str(reported_text_field),
+            "primary_decision_family",
+            "atomic_decision_statement",
+            "rationale",
+            "uncertainty",
+        ]
+    )
     segment_properties: dict[str, JsonValue] = {
         "primary_decision_family": {
             "type": "string",
@@ -1930,14 +1939,10 @@ def build_segmentation_adjudication_request(
                                 {
                                     "if": {"properties": {"segments": {"maxItems": 0}}},
                                     "then": {
-                                        "properties": {
-                                            "no_decision_rationale": {"type": "string"}
-                                        }
+                                        "properties": {"no_decision_rationale": {"type": "string"}}
                                     },
                                     "else": {
-                                        "properties": {
-                                            "no_decision_rationale": {"type": "null"}
-                                        }
+                                        "properties": {"no_decision_rationale": {"type": "null"}}
                                     },
                                 }
                             ]
@@ -2090,8 +2095,7 @@ def verify_persisted_segmentation_adjudication_request(
         "tool_choice",
     }
     anchored = any(
-        isinstance(item, dict) and "evidence_units" in item
-        for item in content.get("items", [])
+        isinstance(item, dict) and "evidence_units" in item for item in content.get("items", [])
     )
     if anchored:
         forbidden_keys.update(
@@ -2417,15 +2421,18 @@ def run_taste_source_segmentation_calibration(
                 output_root / "calls" / call_name / "TRANSPORT_RECEIPT.json",
                 transport_receipt.model_dump(mode="json"),
             )
-            projected_input = sum(
-                item.call.input_tokens for item in call_receipts
-            ) + transport_receipt.input_tokens
-            projected_output = sum(
-                item.call.output_tokens for item in call_receipts
-            ) + transport_receipt.output_tokens
-            projected_cost = sum(
-                item.estimated_cost_cny for item in call_receipts
-            ) + transport_receipt.estimated_cost_cny
+            projected_input = (
+                sum(item.call.input_tokens for item in call_receipts)
+                + transport_receipt.input_tokens
+            )
+            projected_output = (
+                sum(item.call.output_tokens for item in call_receipts)
+                + transport_receipt.output_tokens
+            )
+            projected_cost = (
+                sum(item.estimated_cost_cny for item in call_receipts)
+                + transport_receipt.estimated_cost_cny
+            )
             if (
                 projected_input > authorization.limits.maximum_input_tokens
                 or projected_output > authorization.limits.maximum_output_tokens
@@ -2479,9 +2486,7 @@ def run_taste_source_segmentation_calibration(
                 task_or_benchmark_content_present=role is ApiIdentityCallRole.WORKLOAD,
             )
             receipt = SegmentationProviderCallReceipt(
-                schema_version=(
-                    "1.1" if protocol.schema_version == "1.5" else "1.0"
-                ),
+                schema_version=("1.1" if protocol.schema_version == "1.5" else "1.0"),
                 call=identity_call,
                 packet_id=packet_id,
                 packet_sha256=packet_sha256,
@@ -2538,8 +2543,7 @@ def run_taste_source_segmentation_calibration(
                             else adjudication_expected
                         ),
                     )
-                    if protocol.schema_version == "1.5"
-                    and role is ApiIdentityCallRole.WORKLOAD
+                    if protocol.schema_version == "1.5" and role is ApiIdentityCallRole.WORKLOAD
                     else ()
                 ),
                 assigned_item_count=(
@@ -2548,20 +2552,17 @@ def run_taste_source_segmentation_calibration(
                     and role is ApiIdentityCallRole.WORKLOAD
                     and packet is not None
                     else len(adjudication_expected or {})
-                    if protocol.schema_version == "1.5"
-                    and role is ApiIdentityCallRole.WORKLOAD
+                    if protocol.schema_version == "1.5" and role is ApiIdentityCallRole.WORKLOAD
                     else None
                 ),
                 verbatim_spans_verified=(
                     None
-                    if protocol.schema_version == "1.5"
-                    or role is not ApiIdentityCallRole.WORKLOAD
+                    if protocol.schema_version == "1.5" or role is not ApiIdentityCallRole.WORKLOAD
                     else True
                 ),
                 anchor_ranges_verified=(
                     True
-                    if protocol.schema_version == "1.5"
-                    and role is ApiIdentityCallRole.WORKLOAD
+                    if protocol.schema_version == "1.5" and role is ApiIdentityCallRole.WORKLOAD
                     else None
                 ),
                 identity_sentinel_output_verified=(
@@ -2791,8 +2792,7 @@ def run_taste_source_segmentation_calibration(
                         **(
                             {
                                 "evidence_units": [
-                                    unit.model_dump(mode="json")
-                                    for unit in evidence_units or ()
+                                    unit.model_dump(mode="json") for unit in evidence_units or ()
                                 ]
                             }
                             if evidence_units is not None
@@ -2921,13 +2921,9 @@ def run_taste_source_segmentation_calibration(
                 resolution.residual_risk_item_count * 1_000_000 // item_count
             ),
             decision_presence_agreement_micros=(
-                decision_presence_agreement_micros
-                if protocol.schema_version == "1.5"
-                else None
+                decision_presence_agreement_micros if protocol.schema_version == "1.5" else None
             ),
-            exact_trigger_context_set_agreement_micros=(
-                exact_trigger_context_set_agreement_micros
-            ),
+            exact_trigger_context_set_agreement_micros=(exact_trigger_context_set_agreement_micros),
             all_frozen_thresholds_passed=(
                 agreement.overlap_span_f1_micros >= 800_000
                 and agreement.overlap_matched_family_agreement_micros >= 800_000
@@ -3128,9 +3124,7 @@ def _resolve_anchored_segments_v15(
                 context_end,
             ) = resolve_range(context)
             context_intervals.append((context_start, context_end))
-            context_unit_intervals.append(
-                (context_start_ordinal, context_end_ordinal)
-            )
+            context_unit_intervals.append((context_start_ordinal, context_end_ordinal))
             contexts.append(
                 SegmentationProviderContextRange(
                     verbatim_context_text=source[context_start:context_end],
@@ -3425,9 +3419,7 @@ def _compile_evidence_unit_selection_receipts(
             if isinstance(output, SegmentationAdjudicationProviderOutput)
             else SegmentationAnchoredProviderOutput.model_validate(payload)
         )
-    anchored_items = {
-        (item.campaign_token, item.review_item_id): item for item in anchored.items
-    }
+    anchored_items = {(item.campaign_token, item.review_item_id): item for item in anchored.items}
     receipts = []
     for item in output.items:
         key = (item.campaign_token, item.review_item_id)

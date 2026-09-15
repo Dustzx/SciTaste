@@ -105,9 +105,7 @@ def _v4_protocol():
         "insertion_or_deletion_repair_allowed": False,
         "overlapping_ranges_allowed": False,
     }
-    payload["input_firewall"]["allowed"].append(
-        "deterministic source evidence-unit table"
-    )
+    payload["input_firewall"]["allowed"].append("deterministic source evidence-unit table")
     payload["adjudication_input_firewall"]["allowed"].append(
         "deterministic source evidence-unit table"
     )
@@ -130,9 +128,7 @@ def _v15_protocol():
                 "aries-taste-source-review-v1": 1_000_000,
                 "f1000-multidomain-taste-source-review-v1": 1_000_000,
             },
-            "uncertainty_estimand": (
-                "descriptive-calibration-superpopulation-work-model"
-            ),
+            "uncertainty_estimand": ("descriptive-calibration-superpopulation-work-model"),
         }
     )
     payload["evidence_unit_selection"].update(
@@ -151,9 +147,7 @@ def _v15_protocol():
     payload["authority_gate"] = {"locator": "authority.yaml", "file_sha256": _SHA}
     payload["model_condition"].update(
         {
-            "identity_claim_scope": (
-                "provider-reported-rolling-alias-envelope-continuity-only"
-            ),
+            "identity_claim_scope": ("provider-reported-rolling-alias-envelope-continuity-only"),
             "backend_revision_identified": False,
         }
     )
@@ -262,6 +256,18 @@ def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
             git_commit="b" * 40,
             cli_locator="src/cli.py",
             cli_file_sha256=_SHA,
+            runtime_modules=tuple(
+                SegmentationExecutionFileBinding(locator=locator, file_sha256=_SHA)
+                for locator in (
+                    "src/scitaste/evaluation/taste_source_segmentation.py",
+                    "src/scitaste/evaluation/taste_source_segmentation_protocol.py",
+                    "src/scitaste/evaluation/taste_source_segmentation_post_audit.py",
+                    "src/scitaste/evaluation/model_identity.py",
+                    "src/scitaste/project/models.py",
+                    "src/scitaste/resources/__init__.py",
+                    "src/scitaste/resources/registry.py",
+                )
+            ),
         ),
         requested_provider="zhipu",
         requested_model="glm-5.3-flash",
@@ -303,6 +309,13 @@ def test_authorization_is_self_hashed_and_cannot_overclaim() -> None:
     payload["requested_model"] = "another-model"
     with pytest.raises(ValidationError, match="authorization hash mismatch"):
         TasteSourceSegmentationExecutionAuthorization.model_validate(payload)
+
+    incomplete = authorization.model_dump(mode="json")
+    incomplete["runner"]["runtime_modules"][-1] = incomplete["runner"][
+        "runtime_modules"
+    ][0]
+    with pytest.raises(ValidationError, match="runtime-module manifest is incomplete"):
+        TasteSourceSegmentationExecutionAuthorization.model_validate(incomplete)
 
 
 def test_decision_boundary_routing_does_not_adjudicate_free_text_differences() -> None:
@@ -662,8 +675,7 @@ def test_v15_preserves_shared_context_separately_from_ordered_triggers() -> None
         "preserve",
     ]
     assert [
-        segment.context_ranges[0].verbatim_context_text
-        for segment in output.items[0].segments
+        segment.context_ranges[0].verbatim_context_text for segment in output.items[0].segments
     ] == ["A-B", "A-B"]
 
     segments[0]["context_ranges"] = [segments[0]["trigger_range"]]
@@ -875,9 +887,7 @@ def test_v4_adjudicator_can_reselect_units_without_returning_source_text() -> No
         items=[visible],
     )
     contract = json.loads(request["messages"][1]["content"])["output_contract"]
-    segment_contract = contract["properties"]["items"]["items"]["properties"][
-        "segments"
-    ]["items"]
+    segment_contract = contract["properties"]["items"]["items"]["properties"]["segments"]["items"]
     assert "start_unit_id" in segment_contract["required"]
     assert "verbatim_decision_text" not in segment_contract["properties"]
 
