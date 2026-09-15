@@ -377,7 +377,10 @@ class TasteSourceDecisionSegment(BaseModel):
         max_length=8,
         exclude_if=lambda value: not value,
     )
-    own_trigger_context_overlap_allowed: bool = False
+    own_trigger_context_overlap_allowed: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+    )
 
     @model_validator(mode="after")
     def span_is_well_formed(self) -> TasteSourceDecisionSegment:
