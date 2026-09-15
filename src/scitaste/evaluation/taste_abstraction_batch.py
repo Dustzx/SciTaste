@@ -200,7 +200,9 @@ def compile_taste_abstraction_runtime_batch(
         items: list[TasteAbstractionBatchItem] = []
         for ordinal, record in enumerate(plan.abstraction_inputs, 1):
             abstraction_input = _load_abstraction_input(plan_file.parent, record)
-            invocation_id = f"track-a-abstraction-{ordinal:02d}-{record.input_id}"
+            invocation_id = (
+                f"track-a-{plan.plan_sha256[:10]}-abstraction-{ordinal:02d}-{record.input_id}"
+            )
             runtime_config = ModelNodeRuntimeConfig(
                 node_name=GROUNDED_TASTE_ABSTRACTION_NODE,
                 node_input=abstraction_input.model_dump(mode="json"),
