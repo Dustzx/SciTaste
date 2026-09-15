@@ -375,7 +375,7 @@ The model-backed native path has an additional implementation-level preflight:
 
 ```bash
 .venv/bin/scitaste evaluation native-condition-preflight \
-  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml \
+  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v5.yaml \
   --source-root .
 ```
 
@@ -384,7 +384,8 @@ directly from the pinned Git commit. A dirty or newer worktree therefore cannot
 silently stand in for the claimed implementation. The current report verifies
 the closed six-condition runtime, hard-feasible fixed-candidate selection,
 provider/model/checkpoint identity checks, and durable decision telemetry at
-the pinned `772cbf0...` implementation. It deliberately remains not
+the pinned `52c2294...` implementation. The earlier v4 proof remains an immutable
+history artifact and now fails closed against the changed implementation. V5 deliberately remains not
 experiment-ready: bounded model candidate generation is statically verified, but
 the exact checkpoint has not executed this path under an approved preflight and
 no task-specific matched/placebo corpus pair exists. Corpus admission requires
@@ -399,7 +400,7 @@ attestation:
 
 ```bash
 .venv/bin/scitaste evaluation native-condition-attest \
-  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml \
+  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v5.yaml \
   --fixture-workflow configs/workflows/full_offline_native_conditions_v1.yaml \
   --source-root . \
   --workspace-root . \
