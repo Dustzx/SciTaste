@@ -1,10 +1,10 @@
 schema_version: '1.0'
 project_id: scitaste-self-development
-paper_id: scitaste-iclr2027-submission-draft-v9
+paper_id: scitaste-iclr2027-submission-draft-v10
 archetype: empirical-method
 central_question: Can outcome-attributed scientific decisions support a bounded, uncertainty-aware lifecycle policy for autonomous research, and does that policy improve held-out objective progress?
 central_answer: SciTaste implements the decision, attribution, estimation, and abstention operators on authored fixtures, while natural-case proxy validity and held-out objective-progress effects remain open prospective questions.
-manuscript_sha256: f045bb67c7eab63109050bc10c63424e780f8163adad598ce40d4150864262e6
+manuscript_sha256: 881a5803fa94f36c57fc8eb3bebdb353f49b0c2c6e6c4f5bb0e8921c6faadc43
 required_entry_points:
 - title
 - abstract
@@ -144,7 +144,7 @@ sections:
   primary_carrier_ids:
   - carrier-contract-suite
 - section_id: evaluation-results
-  heading: Evaluation Protocol and Results
+  heading: Evaluation Protocol and Implementation Evidence
   question_answered: Which implementation and bounded completion claims do the registered artifacts support, and which effectiveness inference remains excluded?
   claim_ids:
   - claim-decision-ownership
@@ -187,4 +187,4 @@ material_limitations:
   - claim-bounded-completion
   disclosed_in:
   - Limitations
-contract_sha256: e91ed29d7f7269c7a7af03bcb8890206c240a93ac8dbbc1bdb736f3a159252de
+contract_sha256: ffe50f9540ded2d5a8b39fd646bc72e8308dc4bba93fce65c5a661c7929cb657

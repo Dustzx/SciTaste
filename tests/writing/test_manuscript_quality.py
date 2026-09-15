@@ -70,6 +70,26 @@ def test_substantive_research_draft_requires_length_structure_and_no_placeholder
     assert assessment.missing_research_sections == ()
 
 
+def test_implementation_evidence_is_an_honest_results_section_for_pre_result_draft() -> None:
+    manuscript = "## Title\nSciTaste\n\n" + "\n\n".join(
+        f"# {section}\n\n" + "evidence " * 370
+        for section in (
+            "Abstract",
+            "Introduction",
+            "Method",
+            "Evaluation Protocol",
+            "Implementation Evidence: Registered Empirical Questions",
+            "Limitations",
+            "Conclusion",
+        )
+    )
+
+    assessment = assess_manuscript(manuscript, requested_role="research-working-draft")
+
+    assert assessment.substantive_research_draft is True
+    assert assessment.missing_research_sections == ()
+
+
 def test_placeholder_blocks_research_working_draft() -> None:
     manuscript = SHORT_FIXTURE + "\n" + "evidence " * 2600 + "\nTODO\n"
     assessment = assess_manuscript(manuscript, requested_role="research-working-draft")

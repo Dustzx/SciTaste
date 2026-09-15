@@ -32,7 +32,12 @@ _SECTION_ALIASES = {
         "experimental setup",
         "experiments",
     ),
-    "results": ("results", "evaluation results", "experimental results"),
+    "results": (
+        "results",
+        "evaluation results",
+        "experimental results",
+        "implementation evidence",
+    ),
     "limitations": ("limitations", "limitations and risks"),
     "conclusion": ("conclusion", "conclusions"),
 }

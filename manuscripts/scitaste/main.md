@@ -9,13 +9,15 @@ which operationalizes scientific taste as an outcome-attributed policy over
 consequential decisions across a research trajectory. A candidate episode binds
 the pre-decision state, feasible alternatives, grounding evidence, delayed
 outcomes, causal-credit hypotheses, and transfer and reversal conditions. Under
-the current AI-only study protocol, two conflict-screened AI reviewers with
-distinct model, run, and response identities must agree before an episode can
-update a content-addressed factorized-Beta pairwise policy; disagreements invoke
-a third AI adjudicator. Source-group weighting, partition isolation, bounded
-adjustments, and support and uncertainty gates make the policy abstain outside
-registered scope, while deterministic runtime gates retain execution and
-evidence-admission authority. We implement these operators on authored fixtures
+the current AI-only protocol, two conflict-screened reviewers with distinct
+reviewer, model, run, and raw-response identities independently assess the same
+hash-bound packet. Exact agreement, or protocol-valid adjudication by a third AI
+reviewer after disagreement, permits a policy update only after deterministic
+receipt, normalization, firewall, identity, and artifact-hash checks pass.
+Source-group weighting, partition isolation, bounded adjustments, and support
+and uncertainty gates make the policy abstain outside registered scope, while
+deterministic runtime gates retain execution and evidence-admission authority.
+We implement these operators on authored fixtures
 and register matched tests of episode abstraction, contextual transfer,
 delayed-credit updating, and scorer-owned objective progress under a fixed native
 executor. No formal natural-case effectiveness result or human-expert validation
@@ -184,12 +186,13 @@ $C_i$ proposes causal credit and confounders, and $G_i$ records applicability,
 failure, and reversal conditions. The episode also freezes Idea revision,
 source relationship, natural source group, and dataset partition before review.
 Executor success is one observation inside $O_i$ and is not automatically a
-scientific label. Under the current AI-only protocol, two primary reviewers with
-distinct model, reviewer, run, and raw-response identities must agree on the
-preferred action and supported credit; a substantive split invokes a third AI
-adjudicator. This produces an AI-panel proxy label, not human preference or
-expert agreement. Formal-held-out episodes and self-effectiveness records cannot
-train the policy.
+scientific label. Two identity-distinct AI reviewers independently assess the
+same hash-bound packet. Exact agreement, or a protocol-valid third-reviewer
+adjudication after disagreement, makes an episode eligible for deterministic
+admission; it does not bypass receipt, normalization, firewall, identity, split,
+provenance, or artifact-hash checks, and it does not create human-expert ground
+truth. Formal-held-out episodes and self-effectiveness records cannot train the
+policy.
 
 For each admitted episode, the preferred action is compared with every recorded
 alternative. Confidence weight is divided across alternatives and then across
@@ -272,17 +275,18 @@ credit, confounders, applicability and failure conditions, and a reversal probe.
 A typed user intervention may remain in an awaiting-outcome state until later
 evidence is joined by a different attribution producer. Candidate inspection
 rehashes every bound artifact and verifies the current Idea revision before
-independent review.
+identity-distinct AI review.
 
-Admission is separate from production. In the current experiment, exactly two
-conflict-cleared AI reviewers with distinct model and execution identities assess
-the same hash-bound decision trace, outcome trace, alternatives, credit, transfer
-scope, and reversal packet. Agreement admits an immutable AI-supervised episode
-at the lower confidence; disagreement requires a third independent AI
-adjudicator. This route does not authorize a human-validity claim. Source group
-and split are frozen before review, all decisions from one source trajectory
-share a unit weight ceiling, and formal-held-out records are excluded from
-training.
+Admission is separate from production. Two conflict-cleared AI reviewers with
+distinct reviewer, model, run, and raw-response identities assess the same
+hash-bound decision trace, outcome trace, alternatives, credit, transfer scope,
+and reversal packet. Exact agreement, or protocol-valid third-reviewer
+adjudication after disagreement, makes the candidate eligible for deterministic
+admission; it does not bypass receipt, normalization, firewall, identity, split,
+provenance, or artifact-hash checks. This route does not authorize a
+human-validity claim. Source group and split are frozen before review, all
+decisions from one source trajectory share a unit weight ceiling, and
+formal-held-out records are excluded from training.
 
 The first estimator is a transparent factorized Beta pairwise policy. Its
 registered update modes are outcome-updated, no-update, success-only,
@@ -406,8 +410,9 @@ information, tools, repair rules, and budget fixed. It uses independently
 qualified executable tasks with scorer-owned held-out data and retains every
 failure. The primary endpoint is paired task-level objective progress; valid
 experiment rate, unsupported claims, pivots, cost, and intervention burden are
-secondary. This answers whether better local decisions change research outcomes
-rather than merely sounding more persuasive.
+secondary. A completed matched comparison would test whether a learned local
+decision policy changes objective research outcomes rather than merely producing
+more persuasive decisions.
 
 **Ecological comparison.** A separate supporting lane will compare complete
 SciTaste packages with admitted, unchanged implementations of accepted
@@ -425,7 +430,7 @@ task-population qualification, backbone selection, power analysis, and owner
 execution authorization remain incomplete. No formal API or GPU effectiveness
 run is reported.
 
-# Results: Current Evidence and Open Questions
+# Implementation Evidence: Registered Empirical Questions
 
 The main evidence carriers and their interpretation boundaries are summarized
 below. This table is a map to the detailed results, not an aggregation into a
@@ -438,7 +443,7 @@ single quality score.
 | Contract and integration suite | Control, provenance, recovery, execution, and paper paths are exercised; scientific decisions are not thereby better |
 | Native Full Workflow fixture | The bounded experiment-to-paper path runs with provenance; general research yield is untested |
 | RTX 3090 Qwen3-VL-2B acceptance | One registered local-model execution boundary works; model quality and cross-host portability are untested |
-| Registered causal program | Representation, specificity, delayed credit, objective progress, and ecological comparison are separated; no formal result exists before execution and independent review |
+| Registered causal program | Representation, specificity, delayed credit, objective progress, and ecological comparison are separated; no formal result exists before authorized execution and identity-bound AI-panel admission |
 
 ## RQ1: Are the lifecycle-policy operators executable?
 
@@ -507,8 +512,9 @@ blinded, held-out comparisons above.
 The most important limitation is empirical completeness. Authored policy
 fixtures and retrospective project traces cannot establish broad scientific
 judgment. Natural episodes must be sampled before outcomes are known, their
-hidden alternatives and causal credit must survive conflict-cleared independent
-review, and their source groups must remain disjoint from evaluation. The matched
+hidden alternatives and causal credit must survive the registered
+conflict-cleared AI-panel and deterministic admission checks, and their source
+groups must remain disjoint from evaluation. The matched
 native objective-progress lane and accepted-system ecological lane must then run
 without manual continuation. Until those studies close, any estimate of research
 yield would mix framework effects with task, model, adapter, and judge effects.
