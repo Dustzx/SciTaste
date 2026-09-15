@@ -14,10 +14,11 @@ from random import Random
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, model_validator
 
 from scitaste.evaluation.natural_taste_review import (
     ScientificTasteSourceReviewItem,
+    TasteSourceReviewCampaign,
     TasteSourceReviewRole,
     load_taste_source_review_campaign,
     load_taste_source_review_items,
@@ -271,6 +272,37 @@ class TasteSourceSegmentationSampleInspection(BaseModel):
     path: Path
     file_sha256: str = Field(pattern=_SHA256)
     sample: TasteSourceSegmentationSampleManifest
+
+
+class TasteSourceSegmentationRubricSnapshot(BaseModel):
+    """One verified rubric payload retained in memory for a live execution window."""
+
+    model_config = _EXACT_CONFIG
+
+    locator: str = Field(min_length=1, max_length=2_000)
+    file_sha256: str = Field(pattern=_SHA256)
+    payload: dict[str, JsonValue]
+
+
+class TasteSourceSegmentationCampaignSnapshot(BaseModel):
+    """Immutable campaign material needed after the live-execution authority check."""
+
+    model_config = _EXACT_CONFIG
+
+    locator: str = Field(min_length=1, max_length=2_000)
+    file_sha256: str = Field(pattern=_SHA256)
+    campaign: TasteSourceReviewCampaign
+    scientific_items_file_sha256: str = Field(pattern=_SHA256)
+    scientific_items: tuple[ScientificTasteSourceReviewItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def snapshot_is_self_consistent(self) -> TasteSourceSegmentationCampaignSnapshot:
+        if self.campaign.scientific_items.sha256 != self.scientific_items_file_sha256:
+            raise ValueError("Segmentation campaign snapshot scientific-item hash differs")
+        item_ids = [item.review_item_id for item in self.scientific_items]
+        if len(item_ids) != len(set(item_ids)):
+            raise ValueError("Segmentation campaign snapshot contains duplicate items")
+        return self
 
 
 class TasteSourceDecisionContextSpan(BaseModel):
@@ -1067,6 +1099,68 @@ def load_taste_source_segmentation_sample_manifest(
     )
 
 
+def snapshot_taste_source_segmentation_rubric(
+    path: str | Path,
+    *,
+    locator_root: str | Path,
+) -> TasteSourceSegmentationRubricSnapshot:
+    """Read a rubric exactly once and retain the verified payload for live use."""
+
+    root = Path(locator_root).resolve(strict=True)
+    source = _bounded_file(Path(path), _MAX_INPUT_BYTES)
+    raw = source.read_bytes()
+    payload = yaml.safe_load(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("Taste source segmentation rubric must contain a mapping")
+    return TasteSourceSegmentationRubricSnapshot(
+        locator=_relative(source, root),
+        file_sha256=hashlib.sha256(raw).hexdigest(),
+        payload=payload,
+    )
+
+
+def snapshot_taste_source_segmentation_campaign(
+    path: str | Path,
+    *,
+    locator_root: str | Path,
+) -> TasteSourceSegmentationCampaignSnapshot:
+    """Read the campaign and scientific projection once for a live execution window."""
+
+    root = Path(locator_root).resolve(strict=True)
+    source = _bounded_file(Path(path), _MAX_ARTIFACT_BYTES)
+    campaign_raw = source.read_bytes()
+    campaign = TasteSourceReviewCampaign.model_validate_json(campaign_raw)
+    scientific_path = _bounded_file(
+        source.parent.joinpath(*PurePosixPath(campaign.scientific_items.locator).parts),
+        _MAX_ARTIFACT_BYTES,
+    )
+    scientific_raw = scientific_path.read_bytes()
+    if (
+        len(scientific_raw) != campaign.scientific_items.bytes
+        or hashlib.sha256(scientific_raw).hexdigest() != campaign.scientific_items.sha256
+    ):
+        raise ValueError("Segmentation campaign scientific projection differs from binding")
+    scientific_items: list[ScientificTasteSourceReviewItem] = []
+    for line_number, line in enumerate(scientific_raw.splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            scientific_items.append(ScientificTasteSourceReviewItem.model_validate_json(line))
+        except (ValueError, json.JSONDecodeError) as error:
+            raise ValueError(
+                f"Segmentation campaign scientific JSONL line {line_number} is invalid"
+            ) from error
+    if not scientific_items:
+        raise ValueError("Segmentation campaign scientific projection is empty")
+    return TasteSourceSegmentationCampaignSnapshot(
+        locator=_relative(source, root),
+        file_sha256=hashlib.sha256(campaign_raw).hexdigest(),
+        campaign=campaign,
+        scientific_items_file_sha256=hashlib.sha256(scientific_raw).hexdigest(),
+        scientific_items=tuple(scientific_items),
+    )
+
+
 def plan_taste_source_segmentation_sample(
     *,
     sample_id: str,
@@ -1524,20 +1618,39 @@ def normalize_taste_source_decision_segmentation(
     runtime_identity_sha256: str | None,
     completed_at: datetime,
     locator_root: str | Path,
+    prevalidated_rubric_snapshot: TasteSourceSegmentationRubricSnapshot | None = None,
+    prevalidated_sample_inspection: TasteSourceSegmentationSampleInspection | None = None,
+    prevalidated_sample_manifest_locator: str | None = None,
+    prevalidated_campaign_snapshots: (
+        tuple[TasteSourceSegmentationCampaignSnapshot, ...] | None
+    ) = None,
 ) -> TasteSourceDecisionSegmentationRun:
     """Bind model-proposed verbatim spans to immutable scientific review items."""
 
     root = Path(locator_root).resolve(strict=True)
     raw_path = _bounded_file(Path(raw_segmentation_path), _MAX_INPUT_BYTES)
-    rubric = _bounded_file(Path(rubric_path), _MAX_INPUT_BYTES)
-    sample_inspection = load_taste_source_segmentation_sample_manifest(sample_manifest_path)
-    if sample_inspection.sample.schema_version in {"1.1", "1.2"}:
-        sample_inspection = verify_taste_source_segmentation_sample_bindings(
-            sample_manifest_path,
+    if prevalidated_rubric_snapshot is None:
+        rubric_snapshot = snapshot_taste_source_segmentation_rubric(
+            rubric_path,
             locator_root=root,
         )
+    else:
+        rubric_snapshot = prevalidated_rubric_snapshot
+    if prevalidated_sample_inspection is None:
+        sample_inspection = load_taste_source_segmentation_sample_manifest(sample_manifest_path)
+        if sample_inspection.sample.schema_version in {"1.1", "1.2"}:
+            sample_inspection = verify_taste_source_segmentation_sample_bindings(
+                sample_manifest_path,
+                locator_root=root,
+            )
+        sample_manifest_locator = _relative(sample_inspection.path, root)
+    else:
+        if prevalidated_sample_manifest_locator is None:
+            raise ValueError("Prevalidated segmentation sample requires its frozen locator")
+        sample_inspection = prevalidated_sample_inspection
+        sample_manifest_locator = prevalidated_sample_manifest_locator
     sample = sample_inspection.sample
-    rubric_file_sha256 = _sha256_file(rubric)
+    rubric_file_sha256 = rubric_snapshot.file_sha256
     raw = json.loads(raw_path.read_bytes())
     if not isinstance(raw, dict) or not isinstance(raw.get("items"), list):
         raise ValueError("Taste source segmentation must contain an items list")
@@ -1559,28 +1672,38 @@ def normalize_taste_source_decision_segmentation(
     ):
         raise ValueError("Taste source segmentation lacks exact rubric/sample attestation")
 
-    campaigns: dict[str, tuple[Path, object, dict[str, ScientificTasteSourceReviewItem]]] = {}
+    if prevalidated_campaign_snapshots is None:
+        campaign_snapshots = tuple(
+            snapshot_taste_source_segmentation_campaign(path, locator_root=root)
+            for path in campaign_paths
+        )
+    else:
+        campaign_snapshots = prevalidated_campaign_snapshots
+    campaigns: dict[str, TasteSourceSegmentationCampaignSnapshot] = {}
+    campaign_items: dict[str, dict[str, ScientificTasteSourceReviewItem]] = {}
     projects: set[str] = set()
-    for campaign_path in campaign_paths:
-        path = _bounded_file(Path(campaign_path), _MAX_ARTIFACT_BYTES)
-        campaign = load_taste_source_review_campaign(path)
-        loaded = load_taste_source_review_items(path, TasteSourceReviewRole.SCIENTIFIC)
-        scientific_items = {
-            item.review_item_id: item
-            for item in loaded
-            if isinstance(item, ScientificTasteSourceReviewItem)
+    for snapshot in campaign_snapshots:
+        campaign = snapshot.campaign
+        if campaign.campaign_id in campaigns:
+            raise ValueError("Segmentation campaign snapshot IDs must be unique")
+        campaigns[campaign.campaign_id] = snapshot
+        campaign_items[campaign.campaign_id] = {
+            item.review_item_id: item for item in snapshot.scientific_items
         }
-        campaigns[campaign.campaign_id] = (path, campaign, scientific_items)
         projects.add(campaign.project_id)
     if sample.schema_version in {"1.1", "1.2"}:
         expected_campaigns = set(sample.source_campaign_locators or {})
         if set(campaigns) != expected_campaigns:
             raise ValueError("Segmentation campaigns differ from the prospective sample")
-        for campaign_id, (path, campaign, _) in campaigns.items():
+        for campaign_id, snapshot in campaigns.items():
+            campaign = snapshot.campaign
             if (
-                _relative(path, root) != (sample.source_campaign_locators or {})[campaign_id]
-                or _sha256_file(path) != (sample.source_campaign_file_sha256s or {})[campaign_id]
+                snapshot.locator != (sample.source_campaign_locators or {})[campaign_id]
+                or snapshot.file_sha256
+                != (sample.source_campaign_file_sha256s or {})[campaign_id]
                 or campaign.campaign_sha256 != (sample.source_campaign_sha256s or {})[campaign_id]
+                or snapshot.scientific_items_file_sha256
+                != (sample.source_scientific_items_sha256s or {})[campaign_id]
             ):
                 raise ValueError("Segmentation campaign differs from the prospective binding")
     if len(projects) != 1:
@@ -1601,7 +1724,7 @@ def normalize_taste_source_decision_segmentation(
         if campaign_id not in campaigns:
             raise ValueError("Taste source segmentation alias targets an unavailable campaign")
         review_item_id = raw_item.get("review_item_id")
-        source = campaigns[campaign_id][2].get(review_item_id)
+        source = campaign_items[campaign_id].get(review_item_id)
         if source is None:
             raise ValueError("Taste source segmentation item is outside its campaign")
         segments = list(
@@ -1630,11 +1753,10 @@ def normalize_taste_source_decision_segmentation(
     campaign_locators: dict[str, str] = {}
     campaign_file_sha256s: dict[str, str] = {}
     campaign_sha256s: dict[str, str] = {}
-    for campaign_id, (path, untyped_campaign, _) in sorted(campaigns.items()):
-        campaign = load_taste_source_review_campaign(path)
-        assert campaign == untyped_campaign
-        campaign_locators[campaign_id] = _relative(path, root)
-        campaign_file_sha256s[campaign_id] = _sha256_file(path)
+    for campaign_id, snapshot in sorted(campaigns.items()):
+        campaign = snapshot.campaign
+        campaign_locators[campaign_id] = snapshot.locator
+        campaign_file_sha256s[campaign_id] = snapshot.file_sha256
         campaign_sha256s[campaign_id] = campaign.campaign_sha256
     ordered_items = tuple(sorted(items, key=lambda item: (item.campaign_id, item.review_item_id)))
     if {(item.campaign_id, item.review_item_id) for item in ordered_items} != {
@@ -1651,7 +1773,7 @@ def normalize_taste_source_decision_segmentation(
         model_identifier=model_identifier,
         model_revision=model_revision,
         exact_model_identity_bound=exact_model_identity_bound,
-        rubric_locator=_relative(rubric, root),
+        rubric_locator=rubric_snapshot.locator,
         rubric_file_sha256=rubric_file_sha256,
         task_instruction_sha256=rubric_file_sha256,
         runtime_identity_sha256=runtime_identity_sha256,
@@ -1661,7 +1783,7 @@ def normalize_taste_source_decision_segmentation(
         completed_at=completed_at,
         source_agent_output_locator=_relative(raw_path, root),
         source_agent_output_file_sha256=_sha256_file(raw_path),
-        sample_manifest_locator=_relative(sample_inspection.path, root),
+        sample_manifest_locator=sample_manifest_locator,
         sample_manifest_file_sha256=sample_inspection.file_sha256,
         sample_sha256=sample.sample_sha256,
         sample_selection_timing=sample.selection_timing,
@@ -1981,13 +2103,23 @@ def normalize_taste_source_segmentation_resolution(
     runtime_identity_sha256: str | None,
     completed_at: datetime,
     locator_root: str | Path,
+    prevalidated_rubric_snapshot: TasteSourceSegmentationRubricSnapshot | None = None,
+    prevalidated_campaign_snapshots: (
+        tuple[TasteSourceSegmentationCampaignSnapshot, ...] | None
+    ) = None,
 ) -> TasteSourceSegmentationResolutionRun:
     """Bind one AI adjudication to its dual-agent report and immutable sources."""
 
     root = Path(locator_root).resolve(strict=True)
     raw_path = _bounded_file(Path(raw_resolution_path), _MAX_INPUT_BYTES)
-    rubric = _bounded_file(Path(rubric_path), _MAX_INPUT_BYTES)
-    rubric_file_sha256 = _sha256_file(rubric)
+    if prevalidated_rubric_snapshot is None:
+        rubric_snapshot = snapshot_taste_source_segmentation_rubric(
+            rubric_path,
+            locator_root=root,
+        )
+    else:
+        rubric_snapshot = prevalidated_rubric_snapshot
+    rubric_file_sha256 = rubric_snapshot.file_sha256
     raw = json.loads(raw_path.read_bytes())
     if not isinstance(raw, dict) or not isinstance(raw.get("items"), list):
         raise ValueError("Taste source segmentation resolution must contain an items list")
@@ -2017,16 +2149,31 @@ def normalize_taste_source_segmentation_resolution(
             raise ValueError("Segmentation resolution source artifact drifted")
     source_run = segmentation_inspections[0].run
     scientific_items: dict[tuple[str, str], ScientificTasteSourceReviewItem] = {}
+    if prevalidated_campaign_snapshots is None:
+        campaign_snapshots = tuple(
+            snapshot_taste_source_segmentation_campaign(root / locator, locator_root=root)
+            for locator in source_run.campaign_locators.values()
+        )
+    else:
+        campaign_snapshots = prevalidated_campaign_snapshots
+    snapshots_by_id = {
+        snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots
+    }
+    if len(snapshots_by_id) != len(campaign_snapshots) or set(snapshots_by_id) != set(
+        source_run.campaign_locators
+    ):
+        raise ValueError("Segmentation resolution campaign snapshot coverage drifted")
     for campaign_id, locator in source_run.campaign_locators.items():
-        campaign_path = _bounded_file(root / locator, _MAX_ARTIFACT_BYTES)
-        if _sha256_file(campaign_path) != source_run.campaign_file_sha256s[campaign_id]:
-            raise ValueError("Segmentation resolution campaign file drifted")
-        campaign = load_taste_source_review_campaign(campaign_path)
-        if campaign.campaign_sha256 != source_run.campaign_sha256s[campaign_id]:
-            raise ValueError("Segmentation resolution campaign content drifted")
-        for item in load_taste_source_review_items(campaign_path, TasteSourceReviewRole.SCIENTIFIC):
-            if isinstance(item, ScientificTasteSourceReviewItem):
-                scientific_items[(campaign_id, item.review_item_id)] = item
+        snapshot = snapshots_by_id[campaign_id]
+        campaign = snapshot.campaign
+        if (
+            snapshot.locator != locator
+            or snapshot.file_sha256 != source_run.campaign_file_sha256s[campaign_id]
+            or campaign.campaign_sha256 != source_run.campaign_sha256s[campaign_id]
+        ):
+            raise ValueError("Segmentation resolution campaign snapshot drifted")
+        for item in snapshot.scientific_items:
+            scientific_items[(campaign_id, item.review_item_id)] = item
 
     agreement_items = {(item.campaign_id, item.review_item_id): item for item in agreement.items}
     first_items = {(item.campaign_id, item.review_item_id): item for item in source_run.items}
@@ -2125,7 +2272,7 @@ def normalize_taste_source_segmentation_resolution(
         model_identifier=model_identifier,
         model_revision=model_revision,
         exact_model_identity_bound=exact_model_identity_bound,
-        rubric_locator=_relative(rubric, root),
+        rubric_locator=rubric_snapshot.locator,
         rubric_file_sha256=rubric_file_sha256,
         task_instruction_sha256=rubric_file_sha256,
         runtime_identity_sha256=runtime_identity_sha256,

@@ -43,13 +43,18 @@ from scitaste.evaluation.model_identity import (
 from scitaste.evaluation.taste_source_segmentation import (
     TasteSourceDecisionSegmentationRun,
     TasteSourceSegmentationAgreementReport,
+    TasteSourceSegmentationCampaignSnapshot,
     TasteSourceSegmentationGroupUncertainty,
+    TasteSourceSegmentationRubricSnapshot,
+    TasteSourceSegmentationSampleInspection,
     compile_taste_source_segmentation_agreement,
     normalize_taste_source_decision_segmentation,
     normalize_taste_source_segmentation_resolution,
     save_taste_source_decision_segmentation_run,
     save_taste_source_segmentation_agreement_report,
     save_taste_source_segmentation_resolution_run,
+    snapshot_taste_source_segmentation_campaign,
+    snapshot_taste_source_segmentation_rubric,
 )
 from scitaste.evaluation.taste_source_segmentation_protocol import (
     TasteSourceSegmentationProspectiveProtocol,
@@ -250,6 +255,11 @@ class TasteSourceSegmentationExecutionInspection(BaseModel):
     request_pack: TasteSourceSegmentationRequestPack
     identity_protocol: ApiIdentityProtocolInspection
     provider_resource: ApiModelDefinition
+    sample: TasteSourceSegmentationSampleInspection = Field(exclude=True)
+    packets: tuple[TasteSourceSegmentationRequestPacket, ...] = Field(exclude=True)
+    segmentation_rubric: TasteSourceSegmentationRubricSnapshot = Field(exclude=True)
+    adjudication_rubric: TasteSourceSegmentationRubricSnapshot = Field(exclude=True)
+    campaigns: tuple[TasteSourceSegmentationCampaignSnapshot, ...] = Field(exclude=True)
     packet_count: int = Field(gt=0)
     unique_item_count: int = Field(gt=0)
     runner_git_binding_verified: Literal[True] = True
@@ -1641,23 +1651,78 @@ def inspect_taste_source_segmentation_execution_authorization(
         request_pack=pack,
     )
 
-    pack_root = pack_path.parent
-    rubric_path = _bounded_file(
+    # Freeze every externally mutable execution input in memory before any ledger
+    # claim.  The live runner must not reopen ignored output/config files after this
+    # point: authorization applies to these exact bytes, not merely their paths.
+    segmentation_rubric = snapshot_taste_source_segmentation_rubric(
         root / _safe_locator(protocol.protocol.segmentation_rubric.locator),
-        _MAX_PACKET_BYTES,
+        locator_root=root,
     )
-    frozen_rubric = yaml.safe_load(rubric_path.read_text(encoding="utf-8"))
-    if not isinstance(frozen_rubric, dict):
-        raise ValueError("Segmentation rubric must contain a YAML mapping")
+    adjudication_rubric = snapshot_taste_source_segmentation_rubric(
+        root / _safe_locator(protocol.protocol.adjudication_rubric.locator),
+        locator_root=root,
+    )
+    if (
+        segmentation_rubric.locator != protocol.protocol.segmentation_rubric.locator
+        or segmentation_rubric.file_sha256
+        != protocol.protocol.segmentation_rubric.file_sha256
+        or adjudication_rubric.locator != protocol.protocol.adjudication_rubric.locator
+        or adjudication_rubric.file_sha256
+        != protocol.protocol.adjudication_rubric.file_sha256
+    ):
+        raise ValueError("Segmentation execution rubric snapshot drifted")
+
+    sample_inspection = TasteSourceSegmentationSampleInspection(
+        path=root / protocol.protocol.sample.locator,
+        file_sha256=protocol.protocol.sample.file_sha256,
+        sample=protocol.sample,
+    )
+    sample = sample_inspection.sample
+    campaign_snapshots = tuple(
+        snapshot_taste_source_segmentation_campaign(root / locator, locator_root=root)
+        for locator in sorted((sample.source_campaign_locators or {}).values())
+    )
+    campaigns_by_id = {
+        snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots
+    }
+    if len(campaigns_by_id) != len(campaign_snapshots) or set(campaigns_by_id) != set(
+        sample.source_campaign_locators or {}
+    ):
+        raise ValueError("Segmentation execution campaign snapshot coverage drifted")
+    scientific_by_campaign: dict[str, dict[str, object]] = {}
+    for campaign_id, snapshot in campaigns_by_id.items():
+        campaign = snapshot.campaign
+        if (
+            snapshot.locator != (sample.source_campaign_locators or {})[campaign_id]
+            or snapshot.file_sha256
+            != (sample.source_campaign_file_sha256s or {})[campaign_id]
+            or campaign.campaign_sha256
+            != (sample.source_campaign_sha256s or {})[campaign_id]
+            or snapshot.scientific_items_file_sha256
+            != (sample.source_scientific_items_sha256s or {})[campaign_id]
+        ):
+            raise ValueError("Segmentation execution campaign snapshot drifted")
+        scientific_by_campaign[campaign_id] = {
+            item.review_item_id: item for item in snapshot.scientific_items
+        }
+
+    pack_root = pack_path.parent
     packets = []
     for binding in pack.requests:
-        packet = load_taste_source_segmentation_request_packet(pack_root / binding.locator)
+        packet_path = _bounded_file(pack_root / binding.locator, _MAX_PACKET_BYTES)
+        if _sha256_file(packet_path) != binding.file_sha256:
+            raise ValueError("Segmentation execution packet file binding drifted")
+        packet = load_taste_source_segmentation_request_packet(packet_path)
         if (
-            packet.protocol_id != protocol.protocol.protocol_id
+            packet.packet_sha256 != binding.packet_sha256
+            or packet.segmenter_slot != binding.segmenter_slot
+            or packet.shard_index != binding.shard_index
+            or len(packet.items) != binding.item_count
+            or packet.protocol_id != protocol.protocol.protocol_id
             or packet.requested_provider != authorization.requested_provider
             or packet.requested_model != authorization.requested_model
             or packet.rubric_file_sha256 != protocol.protocol.segmentation_rubric.file_sha256
-            or packet.rubric != frozen_rubric
+            or packet.rubric != segmentation_rubric.payload
             or packet.shard_count != protocol.protocol.generation.segmenter_shards
             or len(packet.items) != protocol.protocol.generation.items_per_shard
             or packet.provider_tools_allowed
@@ -1685,6 +1750,33 @@ def inspect_taste_source_segmentation_execution_authorization(
     }
     if {(item.segmenter_slot, item.shard_index) for item in packets} != expected_pairs:
         raise ValueError("Segmentation execution packet coverage drifted")
+    token_to_campaign = {
+        segmentation_campaign_token(pack.pack_id, campaign_id): campaign_id
+        for campaign_id in campaigns_by_id
+    }
+    sample_keys = {(item.campaign_id, item.review_item_id) for item in sample.items}
+    observed_by_slot: dict[str, set[tuple[str, str]]] = {
+        "segmenter-a": set(),
+        "segmenter-b": set(),
+    }
+    for packet in packets:
+        for item in packet.items:
+            campaign_id = token_to_campaign.get(item.campaign_token)
+            source = (
+                scientific_by_campaign.get(campaign_id, {}).get(item.review_item_id)
+                if campaign_id is not None
+                else None
+            )
+            if (
+                source is None
+                or (campaign_id, item.review_item_id) not in sample_keys
+                or item.reviewed_abstract != source.reviewed_abstract
+                or item.review_comment != source.review_comment
+            ):
+                raise ValueError("Segmentation packet source differs from campaign snapshot")
+            observed_by_slot[packet.segmenter_slot].add((campaign_id, item.review_item_id))
+    if any(keys != sample_keys for keys in observed_by_slot.values()):
+        raise ValueError("Segmentation packet sample coverage drifted")
     return TasteSourceSegmentationExecutionInspection(
         authorization_path=source,
         authorization_file_sha256=_sha256_file(source),
@@ -1693,6 +1785,11 @@ def inspect_taste_source_segmentation_execution_authorization(
         request_pack=pack,
         identity_protocol=identity,
         provider_resource=resource,
+        sample=sample_inspection,
+        packets=tuple(packets),
+        segmentation_rubric=segmentation_rubric,
+        adjudication_rubric=adjudication_rubric,
+        campaigns=campaign_snapshots,
         packet_count=len(packets),
         unique_item_count=pack.unique_item_count,
     )
@@ -2335,6 +2432,20 @@ def run_taste_source_segmentation_calibration(
     ledger_path = (root / _safe_locator(authorization.execution_ledger_locator)).resolve()
     if output_root.exists() or output_root.is_symlink():
         raise FileExistsError(output_root)
+    active_transport = transport or LiveProviderHTTPTransport()
+    protocol = inspection.protocol.protocol
+    identity_protocol = inspection.identity_protocol.protocol
+    provider = inspection.provider_resource
+    packets = {
+        (packet.segmenter_slot, packet.shard_index): packet for packet in inspection.packets
+    }
+    if len(packets) != len(inspection.packets):
+        raise ValueError("Segmentation in-memory packet snapshot contains duplicate slots")
+    token_to_campaign = _campaign_token_map(inspection)
+    adjudication_rubric = inspection.adjudication_rubric.payload
+    credential = os.environ.get(authorization.credential_env)
+    if not credential:
+        raise ValueError(f"Credential environment {authorization.credential_env} is unavailable")
     started_at = datetime.now(UTC)
     ledger = SegmentationExecutionLedger(
         authorization_sha256=authorization.authorization_sha256,
@@ -2348,16 +2459,6 @@ def run_taste_source_segmentation_calibration(
     _claim_execution_ledger(ledger_path, ledger)
     output_root.mkdir(parents=True, mode=0o700)
     os.chmod(output_root, 0o700)
-    active_transport = transport or LiveProviderHTTPTransport()
-    protocol = inspection.protocol.protocol
-    identity_protocol = inspection.identity_protocol.protocol
-    provider = inspection.provider_resource
-    pack_root = (root / _safe_locator(authorization.request_pack.locator)).parent
-    packets = {
-        (packet.segmenter_slot, packet.shard_index): packet
-        for binding in inspection.request_pack.requests
-        for packet in (load_taste_source_segmentation_request_packet(pack_root / binding.locator),)
-    }
     segmenter_outputs: dict[str, list[SegmentationProviderItem]] = {
         "segmenter-a": [],
         "segmenter-b": [],
@@ -2365,16 +2466,6 @@ def run_taste_source_segmentation_calibration(
     call_receipts: list[SegmentationProviderCallReceipt] = []
     firewall_receipts: list[SegmentationInputFirewallReceipt] = []
     adjudication_firewall_receipts: list[SegmentationAdjudicationInputFirewallReceipt] = []
-    credential = os.environ.get(authorization.credential_env)
-    if not credential:
-        _fail_execution_ledger(
-            ledger_path,
-            ledger,
-            output_root,
-            ValueError(f"Credential environment {authorization.credential_env} is unavailable"),
-        )
-        raise ValueError(f"Credential environment {authorization.credential_env} is unavailable")
-
     def execute_call(
         *,
         role: ApiIdentityCallRole,
@@ -2722,7 +2813,6 @@ def run_taste_source_segmentation_calibration(
                 assert isinstance(output, SegmentationProviderOutput)
                 segmenter_outputs[slot].extend(output.items)
 
-        token_to_campaign = _campaign_token_map(inspection, root=root)
         raw_segmenter_paths: dict[str, Path] = {}
         for slot in ("segmenter-a", "segmenter-b"):
             raw_path = output_root / "derived" / f"{slot}-provider-output.json"
@@ -2738,16 +2828,12 @@ def run_taste_source_segmentation_calibration(
                 ),
             )
             raw_segmenter_paths[slot] = raw_path
-        campaign_paths = tuple(
-            root / locator
-            for locator in sorted(_sample_source_campaign_locators(protocol, root).values())
-        )
         normalized_paths: dict[str, Path] = {}
         normalized_runs: dict[str, TasteSourceDecisionSegmentationRun] = {}
         for slot in ("segmenter-a", "segmenter-b"):
             normalized = normalize_taste_source_decision_segmentation(
                 raw_segmentation_path=raw_segmenter_paths[slot],
-                campaign_paths=campaign_paths,
+                campaign_paths=(),
                 campaign_aliases=token_to_campaign,
                 run_id=f"{authorization.run_id}-{slot}",
                 screener_id=f"{slot}-glm53-flash",
@@ -2761,6 +2847,10 @@ def run_taste_source_segmentation_calibration(
                 runtime_identity_sha256=None,
                 completed_at=datetime.now(UTC),
                 locator_root=root,
+                prevalidated_rubric_snapshot=inspection.segmentation_rubric,
+                prevalidated_sample_inspection=inspection.sample,
+                prevalidated_sample_manifest_locator=protocol.sample.locator,
+                prevalidated_campaign_snapshots=inspection.campaigns,
             )
             normalized_path = output_root / "derived" / f"{slot}.json"
             save_taste_source_decision_segmentation_run(normalized, normalized_path)
@@ -2797,10 +2887,6 @@ def run_taste_source_segmentation_calibration(
                 agreement_by_shard.setdefault(shard, []).append(item)
         adjudicated: dict[tuple[str, str], SegmentationAdjudicationProviderItem] = {}
         candidate_order_records: list[dict[str, JsonValue]] = []
-        adjudication_rubric_path = root / protocol.adjudication_rubric.locator
-        adjudication_rubric = yaml.safe_load(adjudication_rubric_path.read_text(encoding="utf-8"))
-        if not isinstance(adjudication_rubric, dict):
-            raise ValueError("Segmentation adjudication rubric is not a mapping")
         for adjudication_index, shard in enumerate(sorted(agreement_by_shard), 1):
             visible_items: list[dict[str, JsonValue]] = []
             expected: dict[tuple[str, str], str] = {}
@@ -2939,7 +3025,7 @@ def run_taste_source_segmentation_calibration(
             segmenter_a=normalized_runs["segmenter-a"],
             campaign_to_token=campaign_to_token,
             adjudicated=adjudicated,
-            rubric_file_sha256=_sha256_file(adjudication_rubric_path),
+            rubric_file_sha256=inspection.adjudication_rubric.file_sha256,
             authorization_sha256=authorization.authorization_sha256,
         )
         raw_resolution_path = output_root / "derived" / "adjudicator-provider-output.json"
@@ -2954,10 +3040,12 @@ def run_taste_source_segmentation_calibration(
             model_identifier=provider.model_id,
             model_revision=None,
             exact_model_identity_bound=False,
-            rubric_path=adjudication_rubric_path,
+            rubric_path=root / protocol.adjudication_rubric.locator,
             runtime_identity_sha256=None,
             completed_at=completed_at,
             locator_root=root,
+            prevalidated_rubric_snapshot=inspection.adjudication_rubric,
+            prevalidated_campaign_snapshots=inspection.campaigns,
         )
         resolution_path = output_root / "derived" / "resolution.json"
         save_taste_source_segmentation_resolution_run(resolution, resolution_path)
@@ -3610,41 +3698,22 @@ def _compile_evidence_unit_item_receipts(
 
 def _campaign_token_map(
     inspection: TasteSourceSegmentationExecutionInspection,
-    *,
-    root: Path,
 ) -> dict[str, str]:
-    campaigns = _sample_source_campaign_locators(inspection.protocol.protocol, root)
     mapping = {
-        segmentation_campaign_token(inspection.request_pack.pack_id, campaign_id): campaign_id
-        for campaign_id in campaigns
+        segmentation_campaign_token(
+            inspection.request_pack.pack_id,
+            snapshot.campaign.campaign_id,
+        ): snapshot.campaign.campaign_id
+        for snapshot in inspection.campaigns
     }
     observed_tokens = {
         item.campaign_token
-        for binding in inspection.request_pack.requests
-        for packet in (
-            load_taste_source_segmentation_request_packet(
-                (root / inspection.authorization.request_pack.locator).parent / binding.locator
-            ),
-        )
+        for packet in inspection.packets
         for item in packet.items
     }
     if set(mapping) != observed_tokens:
         raise ValueError("Segmentation campaign token map differs from the request pack")
     return mapping
-
-
-def _sample_source_campaign_locators(
-    protocol: TasteSourceSegmentationProspectiveProtocol,
-    root: Path,
-) -> dict[str, str]:
-    path = _bounded_file(root / _safe_locator(protocol.sample.locator), _MAX_PACKET_BYTES)
-    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    locators = payload.get("source_campaign_locators") if isinstance(payload, dict) else None
-    if not isinstance(locators, dict) or not all(
-        isinstance(key, str) and isinstance(value, str) for key, value in locators.items()
-    ):
-        raise ValueError("Prospective sample lacks source campaign locators")
-    return dict(locators)
 
 
 def _packet_item_sources(
