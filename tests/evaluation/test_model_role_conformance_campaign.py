@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from scitaste.evaluation.model_role_conformance_campaign import (
     CampaignReadiness,
     ConformanceRunnerKind,
+    import_model_node_runtime_receipts,
     inspect_bytebound_conformance_campaign,
     load_bytebound_campaign_plan,
     materialize_conformance_executor_bindings,
     prepare_bytebound_conformance_campaign,
 )
 from scitaste.model_nodes.profiles import load_model_node_profile_set
+from scitaste.model_nodes.runtime import RuntimeInvocationIntent, RuntimeLedgerEntry, RuntimeOutcome
 from scitaste.model_nodes.runtime_config import load_model_node_runtime_config
 from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
@@ -152,6 +156,101 @@ def test_materialize_produces_real_existing_runtime_bindings_without_execution(
     assert plan.model_selection_guard.default_model_candidate_id is None
     assert plan.model_selection_guard.qwen3_vl_2b_role == "low-cost-lower-bound-only"
     assert plan.model_selection_guard.external_candidate_max_download_bytes == 10_000_000_000
+
+    request = api_requests[0]
+    binding = request.existing_runner_binding
+    assert binding is not None and binding.profile_set_ref is not None
+    profile = load_model_node_profile_set(
+        plan_path.parent / binding.profile_set_ref
+    ).profiles[request.candidate.profile.profile_id]
+    runtime = load_model_node_runtime_config(
+        plan_path.parent / str(binding.runtime_config_ref)
+    ).config
+    result = {
+        "schema_version": "1.0",
+        "status": "accepted",
+        "node_name": "role-conformance",
+        "policy_id": runtime.policy.policy_id,
+        "request": {},
+        "response": {},
+        "proposal": {
+            "schema_version": "1.0",
+            "case_id": request.case_id,
+            "response": {"selection": "intentionally-wrong"},
+            "evidence_refs": [],
+            "proposed_tools": [],
+            "abstained": False,
+        },
+        "untrusted_proposal": None,
+        "rejection_reasons": [],
+        "advisory_only": True,
+        "executable": False,
+    }
+    canonical_result = json.dumps(
+        result,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    recording = b'{"request":{},"response":{}}\n'
+    intent = RuntimeInvocationIntent(
+        invocation_id=request.request_id,
+        request_id=request.request_id,
+        project_id=request.project_id,
+        run_id=request.project_run_id,
+        project_revision=runtime.state_projection.state_revision,
+        state_revision=runtime.state_projection.state_revision,
+        node_name="role-conformance",
+        node_input=runtime.node_input,
+        context=runtime.state_projection.to_node_context(),
+        trigger=runtime.trigger,
+        profile=profile,
+        policy=runtime.policy,
+        backend_mode=runtime.backend_mode,
+        seed=request.repetition,
+        expected_request_fingerprint="1" * 64,
+        predecessor_sha256="2" * 64,
+    )
+    entry = RuntimeLedgerEntry.create(
+        index=0,
+        completed_at=datetime.now(UTC),
+        intent=intent,
+        outcome=RuntimeOutcome.ACCEPTED,
+        result=result,
+        result_sha256=hashlib.sha256(canonical_result).hexdigest(),
+        request_fingerprint="1" * 64,
+        recording_sha256=hashlib.sha256(recording).hexdigest(),
+        input_tokens=10,
+        output_tokens=5,
+        token_effect=15,
+        cost_effect_usd=0.0001,
+        latency_ms=10.0,
+    )
+    stage = outputs_root / "projects/campaign-test/runs/b0-role-selection/model_nodes"
+    (stage / "ledger").mkdir(parents=True)
+    (stage / "recordings").mkdir()
+    (stage / "ledger" / f"00000000__{request.request_id}.json").write_text(
+        entry.model_dump_json(exclude_computed_fields=True), encoding="utf-8"
+    )
+    (stage / "recordings" / f"{request.request_id}.jsonl").write_bytes(recording)
+
+    imported = import_model_node_runtime_receipts(
+        plan_path, request_ids=(request.request_id,)
+    )
+    assert imported.imported_entries == 1
+    assert imported.accepted_entries == 1
+    assert imported.task_succeeded_entries == 0
+    case_results = json.loads(
+        (
+            plan_path.parent
+            / "receipts"
+            / request.request_id
+            / "CASE_RESULTS.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert case_results["cases"][0]["succeeded"] is False
+
     for request in api_requests:
         binding = request.existing_runner_binding
         assert binding is not None and binding.materialized

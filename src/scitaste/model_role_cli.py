@@ -14,6 +14,7 @@ from scitaste.evaluation.model_role_conformance import (
     save_model_role_document,
 )
 from scitaste.evaluation.model_role_conformance_campaign import (
+    import_model_node_runtime_receipts,
     inspect_bytebound_conformance_campaign,
     load_bytebound_campaign_plan,
     materialize_conformance_executor_bindings,
@@ -99,6 +100,15 @@ def register_model_role_cli(
     materialize_bindings.add_argument("--repository-root", type=Path, default=Path("."))
     _add_log_level_option(materialize_bindings)
     materialize_bindings.set_defaults(handler=_handle_materialize_bindings)
+
+    import_receipts = subcommands.add_parser(
+        "import-runtime-receipts",
+        help="Verify durable model-node entries and adapt them into campaign receipts",
+    )
+    import_receipts.add_argument("--plan", type=Path, required=True)
+    import_receipts.add_argument("--request-id", action="append", default=[])
+    _add_log_level_option(import_receipts)
+    import_receipts.set_defaults(handler=_handle_import_runtime_receipts)
 
 
 def _add_log_level_option(parser: argparse.ArgumentParser) -> None:
@@ -192,6 +202,15 @@ def _handle_materialize_bindings(args: argparse.Namespace) -> int:
     status = inspect_bytebound_conformance_campaign(path)
     print(status.model_dump_json(indent=2))
     return 0 if status.launch_ready_requests else 1
+
+
+def _handle_import_runtime_receipts(args: argparse.Namespace) -> int:
+    status = import_model_node_runtime_receipts(
+        args.plan,
+        request_ids=tuple(args.request_id),
+    )
+    print(status.model_dump_json(indent=2))
+    return 0
 
 
 __all__ = ["register_model_role_cli"]

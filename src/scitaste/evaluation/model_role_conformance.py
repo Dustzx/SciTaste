@@ -63,6 +63,7 @@ class EvidenceKind(StrEnum):
 
 class EvidenceValidator(StrEnum):
     MODEL_NODE_RUNTIME_V1 = "scitaste-model-node-runtime-v1"
+    MODEL_NODE_LEDGER_ENTRY_V1 = "scitaste-model-node-ledger-entry-v1"
     BENCHMARK_DEVELOPMENT_V1 = "scitaste-benchmark-development-v1"
     CONFORMANCE_EXECUTION_V1 = "scitaste-conformance-execution-v1"
     CASE_MANIFEST_V1 = "scitaste-model-role-case-manifest-v1"
@@ -169,9 +170,10 @@ class TaskExclusionContract(BaseModel):
             )
         task_ids = set(self.conformance_task_ids)
         if self.conformance_task_bytes_bound:
-            if set(self.conformance_case_input_sha256) != task_ids or set(
-                self.conformance_source_group_by_task
-            ) != task_ids:
+            if (
+                set(self.conformance_case_input_sha256) != task_ids
+                or set(self.conformance_source_group_by_task) != task_ids
+            ):
                 raise ValueError("byte-bound conformance tasks require a hash and source group")
             if any(
                 not isinstance(value, str) or not re.fullmatch(_SHA256, value)
@@ -365,11 +367,15 @@ class ModelRoleConformanceSuite(BaseModel):
                 raise ValueError("candidate role/profile binding is invalid")
             if candidate.budget_id not in budget_ids:
                 raise ValueError("candidate references an unknown role budget")
-            if candidate.role in {
-                ModelRole.RESEARCH_AGENT,
-                ModelRole.CODE_AGENT,
-                ModelRole.JUDGE,
-            } and candidate.selection_scope_id != "agent-global":
+            if (
+                candidate.role
+                in {
+                    ModelRole.RESEARCH_AGENT,
+                    ModelRole.CODE_AGENT,
+                    ModelRole.JUDGE,
+                }
+                and candidate.selection_scope_id != "agent-global"
+            ):
                 raise ValueError("agent and judge candidates must use the agent-global scope")
             if (
                 candidate.role is ModelRole.TASK_TRAINING
@@ -426,6 +432,7 @@ class EvidenceArtifact(BaseModel):
         allowed = {
             EvidenceKind.EXECUTOR_RECEIPT: {
                 EvidenceValidator.MODEL_NODE_RUNTIME_V1,
+                EvidenceValidator.MODEL_NODE_LEDGER_ENTRY_V1,
                 EvidenceValidator.BENCHMARK_DEVELOPMENT_V1,
                 EvidenceValidator.CONFORMANCE_EXECUTION_V1,
             },
@@ -652,9 +659,7 @@ class ModelRoleSelectionManifest(BaseModel):
             "selected role/scope bindings",
         )
         _require_unique(list(self.missing_selection_scopes), "missing role/scope bindings")
-        if set(_scope_key(*item) for item in selection_keys) & set(
-            self.missing_selection_scopes
-        ):
+        if set(_scope_key(*item) for item in selection_keys) & set(self.missing_selection_scopes):
             raise ValueError("a role/scope cannot be both selected and missing")
         if self.headline_eligible:
             if self.status is not SelectionStatus.COMPLETE or self.missing_selection_scopes:
@@ -1096,6 +1101,21 @@ def _verify_receipt_evidence(
             or executor.budget_sha256 != receipt.budget_sha256
         ):
             raise ValueError("conformance executor receipt differs from the role run result")
+    else:
+        from scitaste.model_nodes.runtime import RuntimeLedgerEntry
+
+        if isinstance(executor, RuntimeLedgerEntry):
+            expected_model = receipt.exact_identity.model_id
+            if receipt.exact_identity.revision is not None:
+                expected_model = f"{expected_model}@{receipt.exact_identity.revision}"
+            if (
+                executor.intent.request_id != receipt.run_id
+                or executor.intent.invocation_id != receipt.run_id
+                or executor.intent.profile.provider != receipt.exact_identity.provider
+                or executor.intent.profile.model != expected_model
+                or executor.intent.node_name != "role-conformance"
+            ):
+                raise ValueError("model-node ledger entry differs from the role run result")
 
     case_manifest = parsed[EvidenceKind.CASE_MANIFEST]
     case_results = parsed[EvidenceKind.CASE_RESULTS]
@@ -1112,17 +1132,32 @@ def _verify_receipt_evidence(
             raise ValueError("case manifest input bytes differ from the frozen task binding")
         if exclusions.conformance_source_group_by_task[case.task_id] != case.source_group_id:
             raise ValueError("case manifest source group differs from the frozen task binding")
+    from scitaste.model_nodes.runtime import RuntimeLedgerEntry
+
+    if isinstance(executor, RuntimeLedgerEntry):
+        manifest_case = case_manifest.cases[0]
+        node_input = executor.intent.node_input
+        if (
+            node_input.get("case_id") != manifest_case.case_id
+            or node_input.get("task_id") != manifest_case.task_id
+            or node_input.get("source_group_id") != manifest_case.source_group_id
+            or executor.intent.context.state_snapshot_id != manifest_case.input_sha256
+        ):
+            raise ValueError("model-node ledger case binding differs from the case manifest")
     if case_results.case_manifest_sha256 != case_manifest.manifest_sha256:
         raise ValueError("case results differ from the case-manifest identity")
-    if (
-        case_results.executor_receipt_file_sha256
-        != file_hashes[EvidenceKind.EXECUTOR_RECEIPT]
-    ):
+    if case_results.executor_receipt_file_sha256 != file_hashes[EvidenceKind.EXECUTOR_RECEIPT]:
         raise ValueError("case results differ from the executor-receipt bytes")
     if {item.case_id for item in case_results.cases} != {
         item.case_id for item in case_manifest.cases
     }:
         raise ValueError("case results do not cover exactly the frozen case manifest")
+    if isinstance(executor, RuntimeLedgerEntry):
+        if len(case_results.cases) != 1:
+            raise ValueError("one model-node ledger entry must evidence exactly one case")
+        expected_output_sha256 = executor.result_sha256 or executor.entry_sha256
+        if expected_output_sha256 != case_results.cases[0].output_sha256:
+            raise ValueError("case output hash differs from the model-node ledger result")
     succeeded = sum(item.succeeded for item in case_results.cases)
     if (
         receipt.measurements.total_cases != len(case_results.cases)
@@ -1146,6 +1181,28 @@ def _validate_evidence(validator: EvidenceValidator, path: Path) -> BaseModel:
             or document.recording_locator is None
         ):
             raise ValueError("model-node evidence is not an actual accepted generation")
+        return document
+    if validator is EvidenceValidator.MODEL_NODE_LEDGER_ENTRY_V1:
+        from scitaste.model_nodes.runtime import RuntimeLedgerEntry, RuntimeOutcome
+
+        document = _load_json_model(path, RuntimeLedgerEntry, "model-node ledger entry")
+        allowed = {
+            RuntimeOutcome.ACCEPTED,
+            RuntimeOutcome.REJECTED,
+            RuntimeOutcome.FAILED,
+        }
+        if (
+            document.outcome not in allowed
+            or document.cached
+            or document.replayed
+            or document.recording_sha256 is None
+        ):
+            raise ValueError("model-node ledger evidence is not an actual generation attempt")
+        recording_path = path.parent / "RUNTIME_RECORDING.jsonl"
+        if _file_sha256(_regular_file(recording_path, "model-node recording")) != (
+            document.recording_sha256
+        ):
+            raise ValueError("model-node ledger recording hash mismatch")
         return document
     if validator is EvidenceValidator.BENCHMARK_DEVELOPMENT_V1:
         from scitaste.evaluation.task_execution import BenchmarkDevelopmentExecutionReceipt

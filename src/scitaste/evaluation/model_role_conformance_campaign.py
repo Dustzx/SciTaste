@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import math
 import os
 import shlex
 import tempfile
@@ -30,9 +31,18 @@ from scitaste.backends.local_transformers import LocalTransformersConfig
 from scitaste.evaluation.model_role_conformance import (
     ConformanceCase,
     ConformanceCaseManifest,
+    ConformanceCaseResult,
+    ConformanceCaseResults,
+    ConformanceMeasurements,
+    EvidenceArtifact,
+    EvidenceKind,
+    EvidenceValidator,
+    ExactModelIdentity,
     ExecutionKind,
+    IdentityScope,
     ModelRole,
     ModelRoleConformancePlan,
+    ModelRoleConformanceRunResult,
     PlannedModelRoleCandidate,
     SelectionStatus,
     TaskExclusionContract,
@@ -56,6 +66,7 @@ from scitaste.model_nodes.profiles import (
     load_model_node_profile_set,
 )
 from scitaste.model_nodes.role_conformance import RoleConformanceInput
+from scitaste.model_nodes.runtime import RuntimeLedgerEntry, RuntimeOutcome
 from scitaste.model_nodes.runtime_config import (
     LiveRuntimeBackend,
     LocalRuntimeBackend,
@@ -434,6 +445,21 @@ class ByteBoundCampaignStatus(BaseModel):
     next_action: str
 
 
+class RuntimeReceiptImportStatus(BaseModel):
+    model_config = _CONFIG
+
+    campaign_id: str
+    imported_request_ids: tuple[str, ...]
+    imported_entries: int = Field(ge=0)
+    accepted_entries: int = Field(ge=0)
+    unsuccessful_entries: int = Field(ge=0)
+    task_succeeded_entries: int = Field(ge=0)
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    cost_usd: float = Field(ge=0.0)
+    no_failure_promoted: Literal[True] = True
+
+
 def prepare_bytebound_conformance_campaign(
     spec_path: str | Path,
     *,
@@ -641,13 +667,9 @@ def inspect_bytebound_conformance_campaign(
         campaign_id=plan.campaign_id,
         campaign_plan_sha256=plan.campaign_plan_sha256,
         readiness=readiness,
-        request_prepared_requests=sum(
-            item.readiness is CampaignReadiness.REQUEST_PREPARED for item in plan.requests
-        ),
-        launch_ready_requests=sum(
-            item.readiness is CampaignReadiness.LAUNCH_READY for item in plan.requests
-        ),
-        blocked_requests=sum(item.readiness is CampaignReadiness.BLOCKED for item in plan.requests),
+        request_prepared_requests=len(prepared),
+        launch_ready_requests=len(launch_ready),
+        blocked_requests=len(blocked),
         completed_requests=len(completed_ids),
         request_prepared_ids=prepared,
         launch_ready_request_ids=launch_ready,
@@ -762,6 +784,350 @@ def materialize_conformance_executor_bindings(
     for request in materialized.requests:
         _save_document(request, request_root / f"{request.request_id}.json")
     return materialized, materialized_path
+
+
+def import_model_node_runtime_receipts(
+    plan_path: str | Path,
+    *,
+    request_ids: tuple[str, ...] = (),
+) -> RuntimeReceiptImportStatus:
+    """Adapt actual durable ledger entries into model-role evidence packages."""
+
+    source = _regular_file(plan_path, "byte-bound campaign plan")
+    campaign_root = source.parent
+    plan = _load_json_model(source, ByteBoundConformanceCampaignPlan, "campaign plan")
+    role_plan = _load_json_model(
+        campaign_root / plan.model_role_plan_ref,
+        ModelRoleConformancePlan,
+        "campaign model-role plan",
+    )
+    outputs_root = _outputs_root_from_campaign(campaign_root, plan)
+    request_by_id = {item.request_id: item for item in plan.requests}
+    unknown = set(request_ids) - set(request_by_id)
+    if unknown:
+        raise ValueError(f"unknown campaign request IDs: {sorted(unknown)!r}")
+    ledger_root = (
+        outputs_root
+        / "projects"
+        / plan.project_id
+        / "runs"
+        / plan.project_run_id
+        / "model_nodes"
+        / "ledger"
+    )
+    entries: dict[str, tuple[RuntimeLedgerEntry, Path, bytes]] = {}
+    if ledger_root.is_dir():
+        for path in sorted(ledger_root.glob("*.json")):
+            entry = _load_json_model(path, RuntimeLedgerEntry, "model-node ledger entry")
+            invocation_id = entry.intent.invocation_id
+            if invocation_id in request_by_id:
+                if invocation_id in entries:
+                    raise ValueError(f"duplicate runtime entry for {invocation_id}")
+                entries[invocation_id] = (entry, path, path.read_bytes())
+    selected_ids = tuple(request_ids) if request_ids else tuple(sorted(entries))
+    missing = set(selected_ids) - set(entries)
+    if missing:
+        raise ValueError(f"runtime entries are missing: {sorted(missing)!r}")
+    if not selected_ids:
+        raise ValueError("no campaign runtime entries are available to import")
+
+    validated: dict[str, tuple[ConformanceDispatchRequest, RuntimeLedgerEntry, bytes, bytes]] = {}
+    success_by_group: dict[tuple[str, str], list[bool]] = {}
+    for request_id in selected_ids:
+        request = request_by_id[request_id]
+        entry, _, ledger_bytes = entries[request_id]
+        recording_path = (
+            outputs_root
+            / "projects"
+            / plan.project_id
+            / "runs"
+            / plan.project_run_id
+            / "model_nodes"
+            / "recordings"
+            / f"{request_id}.jsonl"
+        )
+        recording_bytes = _validate_runtime_entry(
+            request,
+            entry,
+            recording_path=recording_path,
+            campaign_root=campaign_root,
+        )
+        succeeded = _runtime_task_succeeded(request, entry)
+        group = (request.candidate.candidate.candidate_id, request.case_id)
+        success_by_group.setdefault(group, []).append(succeeded)
+        validated[request_id] = (request, entry, ledger_bytes, recording_bytes)
+
+    packages = []
+    for request_id in selected_ids:
+        request, entry, ledger_bytes, recording_bytes = validated[request_id]
+        group = (request.candidate.candidate.candidate_id, request.case_id)
+        reproducible = len(success_by_group[group]) >= 2 and len(set(success_by_group[group])) == 1
+        packages.append(
+            _runtime_receipt_package(
+                request,
+                entry,
+                ledger_bytes=ledger_bytes,
+                recording_bytes=recording_bytes,
+                reproducible=reproducible,
+                suite_id=role_plan.suite_id,
+            )
+        )
+
+    for request_id, files in packages:
+        receipt_root = campaign_root / "receipts" / request_id
+        for name, payload in files.items():
+            _save_bytes(payload, receipt_root / name)
+    return RuntimeReceiptImportStatus(
+        campaign_id=plan.campaign_id,
+        imported_request_ids=selected_ids,
+        imported_entries=len(selected_ids),
+        accepted_entries=sum(
+            entry.outcome is RuntimeOutcome.ACCEPTED for _, entry, _, _ in validated.values()
+        ),
+        unsuccessful_entries=sum(
+            entry.outcome is not RuntimeOutcome.ACCEPTED for _, entry, _, _ in validated.values()
+        ),
+        task_succeeded_entries=sum(
+            _runtime_task_succeeded(request, entry) for request, entry, _, _ in validated.values()
+        ),
+        input_tokens=sum(entry.input_tokens for _, entry, _, _ in validated.values()),
+        output_tokens=sum(entry.output_tokens for _, entry, _, _ in validated.values()),
+        cost_usd=sum(float(entry.cost_effect_usd or 0.0) for _, entry, _, _ in validated.values()),
+    )
+
+
+def _validate_runtime_entry(
+    request: ConformanceDispatchRequest,
+    entry: RuntimeLedgerEntry,
+    *,
+    recording_path: Path,
+    campaign_root: Path,
+) -> bytes:
+    if request.readiness is not CampaignReadiness.LAUNCH_READY:
+        raise ValueError(f"request {request.request_id} was not launch-ready")
+    binding = request.existing_runner_binding
+    if binding is None:
+        raise ValueError("runtime entry request has no executor binding")
+    _verify_launch_binding(request, campaign_root=campaign_root)
+    intent = entry.intent
+    expected_input = {
+        **request.case_payload.model_dump(mode="json", exclude={"expected"}),
+        "case_id": request.case_id,
+    }
+    if (
+        intent.project_id != request.project_id
+        or intent.run_id != request.project_run_id
+        or intent.invocation_id != request.request_id
+        or intent.request_id != request.request_id
+        or intent.node_name != "role-conformance"
+        or intent.seed != request.repetition
+        or intent.node_input != expected_input
+        or intent.context.state_snapshot_id != request.case_sha256
+        or intent.context.metadata.get("execution_payload_sha256")
+        != request.execution_payload_sha256
+    ):
+        raise ValueError(f"runtime entry identity drift for {request.request_id}")
+    expected_mode = "live" if request.resource.execution_kind is ExecutionKind.API else "local"
+    if intent.backend_mode.value != expected_mode:
+        raise ValueError("runtime entry backend mode differs from the dispatch request")
+    assert binding.profile_set_ref is not None
+    profiles = load_model_node_profile_set(
+        _resolve_owned_file(campaign_root, binding.profile_set_ref, "profile-set binding")
+    )
+    profile = profiles.profiles[request.candidate.profile.profile_id]
+    if intent.profile != profile or (
+        intent.profile.provider,
+        intent.profile.model,
+    ) != (
+        request.resource.provider,
+        _exact_dispatch_model(request.resource),
+    ):
+        raise ValueError("runtime entry model/profile differs from its binding")
+    if (
+        entry.input_tokens > request.max_input_tokens
+        or entry.output_tokens > request.max_output_tokens
+        or entry.latency_ms > request.candidate.budget.max_latency_ms
+        or (entry.cost_effect_usd is not None and entry.cost_effect_usd > request.max_api_cost_usd)
+    ):
+        raise ValueError("runtime entry exceeds its frozen request budget")
+    if request.resource.execution_kind is ExecutionKind.API and entry.cost_effect_usd is None:
+        raise ValueError("API runtime entry has unknown cost")
+    if entry.cached or entry.replayed or entry.recording_sha256 is None:
+        raise ValueError("runtime entry is not an actual recorded generation")
+    recording = _regular_file(recording_path, "model-node runtime recording").read_bytes()
+    if hashlib.sha256(recording).hexdigest() != entry.recording_sha256:
+        raise ValueError("runtime recording hash differs from its ledger entry")
+    if entry.outcome is RuntimeOutcome.ACCEPTED:
+        if entry.result is None or entry.result.get("status") != "accepted":
+            raise ValueError("accepted runtime entry omits its accepted result")
+    elif entry.result is not None and entry.result.get("status") == "accepted":
+        raise ValueError("unsuccessful runtime entry cannot contain an accepted result")
+    return recording
+
+
+def _runtime_receipt_package(
+    request: ConformanceDispatchRequest,
+    entry: RuntimeLedgerEntry,
+    *,
+    ledger_bytes: bytes,
+    recording_bytes: bytes,
+    reproducible: bool,
+    suite_id: str,
+) -> tuple[str, dict[str, bytes]]:
+    executor_file_sha256 = hashlib.sha256(ledger_bytes).hexdigest()
+    case_manifest = ConformanceCaseManifest.create(
+        manifest_id=f"{request.request_id}-case",
+        cases=(
+            ConformanceCase(
+                case_id=request.case_id,
+                task_id=request.case_payload.task_id,
+                source_group_id=request.case_payload.source_group_id,
+                input_sha256=request.case_sha256,
+            ),
+        ),
+        formal_or_heldout_content_present=False,
+    )
+    case_manifest_bytes = _document_bytes(case_manifest)
+    succeeded = _runtime_task_succeeded(request, entry)
+    output_sha256 = entry.result_sha256 or entry.entry_sha256
+    case_results = ConformanceCaseResults.create(
+        case_manifest_sha256=case_manifest.manifest_sha256,
+        executor_receipt_file_sha256=executor_file_sha256,
+        cases=(
+            ConformanceCaseResult(
+                case_id=request.case_id,
+                succeeded=succeeded,
+                output_sha256=output_sha256,
+            ),
+        ),
+    )
+    case_results_bytes = _document_bytes(case_results)
+    accepted = entry.outcome is RuntimeOutcome.ACCEPTED
+    known_cost = float(entry.cost_effect_usd or 0.0)
+    within_budget = (
+        entry.input_tokens <= request.max_input_tokens
+        and entry.output_tokens <= request.max_output_tokens
+        and entry.latency_ms <= request.candidate.budget.max_latency_ms
+        and known_cost <= request.max_api_cost_usd
+    )
+    exact_identity = ExactModelIdentity(
+        execution_kind=request.resource.execution_kind,
+        provider=request.resource.provider,
+        model_id=request.resource.model_id,
+        revision=request.resource.local_revision,
+        route=(
+            f"hosted:{request.resource.provider}"
+            if request.resource.execution_kind is ExecutionKind.API
+            else str(request.resource.local_model_path)
+        ),
+        scope=(
+            IdentityScope.HOSTED_TEMPORAL_WINDOW
+            if request.resource.execution_kind is ExecutionKind.API
+            else IdentityScope.IMMUTABLE_CHECKPOINT
+        ),
+        artifact_sha256=(
+            request.resource.local_checkpoint_sha256
+            if request.resource.execution_kind is ExecutionKind.LOCAL
+            else None
+        ),
+        temporal_window_id=(
+            f"{request.campaign_id}-{entry.completed_at:%Y%m%d}"
+            if request.resource.execution_kind is ExecutionKind.API
+            else None
+        ),
+        identity_evidence_sha256=executor_file_sha256,
+    )
+    receipt = ModelRoleConformanceRunResult(
+        suite_id=suite_id,
+        plan_sha256=request.model_role_plan_sha256,
+        run_id=request.request_id,
+        candidate_id=request.candidate.candidate.candidate_id,
+        role=request.candidate.candidate.role,
+        selection_scope_id=request.candidate.candidate.selection_scope_id,
+        exact_identity=exact_identity,
+        profile_sha256=request.candidate.profile.profile_sha256,
+        budget_sha256=request.candidate.budget.budget_sha256,
+        task_ids=(request.case_payload.task_id,),
+        source_group_ids=(request.case_payload.source_group_id,),
+        measurements=ConformanceMeasurements(
+            schema_adherence=1.0 if accepted else 0.0,
+            tool_adherence=1.0 if accepted else 0.0,
+            success=1.0 if succeeded else 0.0,
+            context=1.0,
+            latency_cost=1.0 if within_budget else 0.0,
+            reproducibility=1.0 if reproducible else 0.0,
+            task_fit=1.0 if succeeded else 0.0,
+            successful_cases=int(succeeded),
+            total_cases=1,
+            latency_p95_ms=math.ceil(entry.latency_ms),
+            cost_usd=float(entry.cost_effect_usd or 0.0),
+        ),
+        evidence_artifacts=(
+            EvidenceArtifact(
+                kind=EvidenceKind.EXECUTOR_RECEIPT,
+                validator=EvidenceValidator.MODEL_NODE_LEDGER_ENTRY_V1,
+                locator=f"receipts/{request.request_id}/RUNTIME_LEDGER_ENTRY.json",
+                sha256=executor_file_sha256,
+            ),
+            EvidenceArtifact(
+                kind=EvidenceKind.CASE_MANIFEST,
+                validator=EvidenceValidator.CASE_MANIFEST_V1,
+                locator=f"receipts/{request.request_id}/CASE_MANIFEST.json",
+                sha256=hashlib.sha256(case_manifest_bytes).hexdigest(),
+            ),
+            EvidenceArtifact(
+                kind=EvidenceKind.CASE_RESULTS,
+                validator=EvidenceValidator.CASE_RESULTS_V1,
+                locator=f"receipts/{request.request_id}/CASE_RESULTS.json",
+                sha256=hashlib.sha256(case_results_bytes).hexdigest(),
+            ),
+        ),
+        actual_execution=True,
+        inventory_presence_was_not_used_as_result=True,
+        formal_or_heldout_content_used=False,
+    )
+    return request.request_id, {
+        "RUNTIME_LEDGER_ENTRY.json": ledger_bytes,
+        "RUNTIME_RECORDING.jsonl": recording_bytes,
+        "CASE_MANIFEST.json": case_manifest_bytes,
+        "CASE_RESULTS.json": case_results_bytes,
+        "RUN_RESULT.json": _document_bytes(receipt),
+    }
+
+
+def _runtime_task_succeeded(
+    request: ConformanceDispatchRequest,
+    entry: RuntimeLedgerEntry,
+) -> bool:
+    if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
+        return False
+    proposal = entry.result.get("proposal")
+    if not isinstance(proposal, dict) or proposal.get("abstained") is True:
+        return False
+    response = proposal.get("response")
+    if not isinstance(response, dict):
+        return False
+    expected = request.case_payload.expected
+    for key, value in expected.items():
+        if key == "replacement_contains":
+            replacement = response.get("replacement")
+            if not isinstance(replacement, str) or str(value) not in replacement:
+                return False
+        elif key == "first_tool":
+            sequence = response.get("tool_sequence")
+            if not isinstance(sequence, list) or not sequence or sequence[0] != value:
+                return False
+        elif key == "top_document_indices":
+            ranking = response.get("ranking")
+            if (
+                not isinstance(value, list)
+                or not isinstance(ranking, list)
+                or ranking[: len(value)] != value
+            ):
+                return False
+        elif response.get(key) != value:
+            return False
+    return True
 
 
 def _materialize_model_node_binding(
@@ -1260,6 +1626,37 @@ def _save_config_document(document: BaseModel, path: Path) -> Path:
     return path
 
 
+def _document_bytes(document: BaseModel) -> bytes:
+    return (document.model_dump_json(indent=2) + "\n").encode("utf-8")
+
+
+def _save_bytes(payload: bytes, path: Path) -> Path:
+    if path.is_symlink():
+        raise ValueError("campaign evidence output cannot be a symlink")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return path
+
+
+def _exact_dispatch_model(resource: DispatchResource) -> str:
+    if resource.execution_kind is ExecutionKind.API:
+        return resource.model_id
+    if resource.local_revision is None:
+        raise ValueError("local dispatch model has no exact revision")
+    return f"{resource.model_id}@{resource.local_revision}"
+
+
 def _outputs_root_from_campaign(
     campaign_root: Path,
     plan: ByteBoundConformanceCampaignPlan,
@@ -1422,6 +1819,8 @@ __all__ = [
     "ConformanceDispatchRequest",
     "ConformanceRunnerKind",
     "ExistingRunnerBinding",
+    "RuntimeReceiptImportStatus",
+    "import_model_node_runtime_receipts",
     "inspect_bytebound_conformance_campaign",
     "load_bytebound_campaign_plan",
     "materialize_conformance_executor_bindings",
