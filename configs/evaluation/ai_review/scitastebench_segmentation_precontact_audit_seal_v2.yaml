@@ -1,0 +1,80 @@
+schema_version: "1.0"
+seal_id: scitastebench-segmentation-precontact-audit-seal-v2
+project_id: scitaste-self-development
+sealed_at: "2026-09-15T09:42:08+08:00"
+purpose: >-
+  Bind the frozen v6 calibration inputs, the routing amendment, the complete
+  runtime source closure, and two independent AI/nonhuman launch red-teams
+  before requesting any fresh exact owner authorization.
+
+protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v6.yaml
+  file_sha256: 9211b5e5c72b9b21e980cca6b4a5cec783d9ab6fbd3768cd400ab15581d15a77
+freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v8.yaml
+  file_sha256: 1deac153e20c694c87ed6acdc6c5755125ce6e9fd9446b846d37febc5f17878e
+request_pack:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/request-pack-v8/REQUEST_PACK.json
+  file_sha256: 944e772246051a892551dafd933ba43d9c0ce35e6914fed4d0d16f5c4d6b251e
+  pack_sha256: 97b3d673a054aba1fcaab856626b4b9fd9b99bb839872a8c95d6d9713cdc21e8
+routing_amendment:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v6_routing_amendment_v1.yaml
+  file_sha256: 072b916fe38bd81509b9662ed0de73ebf5b14dc4bfcc74ca55a0965c5e3f639c
+predecessor_seal:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_precontact_audit_seal_v1.yaml
+  file_sha256: a858d0bbb827318e5c021e5423a6348f69a9490566022eee179d054a927b5e1a
+
+execution_runner:
+  locator: src/scitaste/evaluation/taste_source_segmentation_execution.py
+  file_sha256: ad052d5660f09da97dec5919ff97bff7e3c32454303ce28cf8ba83bd8f9f8abe
+  git_commit: 3190a7afadce7f86604ae118d6f7efefc8a4878c
+  cli_locator: src/scitaste/cli.py
+  cli_file_sha256: e96fc71981cb9c2e35ba7bd3bb588163855ab501747a4e9cfc9d7719bfe6fe74
+  runtime_modules:
+    - locator: src/scitaste/evaluation/taste_source_segmentation.py
+      file_sha256: 699a88699c112132b6d3197ff20c2c0d1fdd750656a50a0ec47fe1d1cfe1d45d
+    - locator: src/scitaste/evaluation/taste_source_segmentation_protocol.py
+      file_sha256: 5e3911087bab981c7cb93e9dbdf872a9c4db9b2301169342f1ad86c276f909a9
+    - locator: src/scitaste/evaluation/taste_source_segmentation_post_audit.py
+      file_sha256: 861c8fe773e5e05151d70101a9f93067959803ffa6f520e21c1dd71c47cdeaf9
+    - locator: src/scitaste/evaluation/model_identity.py
+      file_sha256: 5acf2d5187075c6812b8b0985b17b3db4cb84491033594e6ebdac2a412e68c9e
+    - locator: src/scitaste/project/models.py
+      file_sha256: 9edc0775f03e54addf0c2dc9ef0a2c64db21ff288b20c64ba5c18425493fb7be
+    - locator: src/scitaste/resources/__init__.py
+      file_sha256: 8cfc2f4cb8ea464515b6c1b70445f2d45f00ad6e4a432b0fbf0deb2b15d88571
+    - locator: src/scitaste/resources/registry.py
+      file_sha256: dd2d5788efa9d04144eda670f7f89e2b3a0163bc5e89b1405401f48335b53fec
+
+ai_e_authority_review:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-e-execution-authority-v3-pass/REPORT.yaml
+  file_sha256: 452cb5e1f433a05aad52a942baa7ce689d0a001c3e56be722919d2bd01bb4f60
+
+execution_boundary:
+  provider_contact_performed: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+  human_review_claim_allowed: false
+  fresh_exact_owner_authorization_required: true
+
+required_authorization_scope:
+  provider: zhipu
+  model: glm-5.3-flash
+  unique_item_count: 20
+  segmenter_requests: 10
+  maximum_adjudication_requests: 5
+  identity_sentinel_requests: 2
+  maximum_provider_requests: 17
+  maximum_input_tokens: 300000
+  maximum_output_tokens: 140000
+  retry_count: 0
+  owner_maximum_liability_usd: 10.0
+
+claim_boundary: >-
+  This seal is AI/nonhuman process evidence only. It permits preparation of one
+  exact owner-authorization candidate, but it does not itself authorize provider
+  contact, API spend, scaled execution, benchmark admission, formal scientific
+  evidence, human-review validity, or any strong paper claim.
