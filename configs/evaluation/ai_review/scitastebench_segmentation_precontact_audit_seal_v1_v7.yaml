@@ -1,0 +1,80 @@
+schema_version: "1.0"
+seal_id: scitastebench-segmentation-precontact-audit-seal-v1
+project_id: scitaste-self-development
+sealed_at: "2026-09-15T19:21:15+08:00"
+purpose: >-
+  Bind the immutable prospective-v7 request pack, the AI-only content inventory,
+  the independent AI-only protocol review, and the deterministic audit
+  implementation before any prospective-v7 provider call.
+
+protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v7.yaml
+  file_sha256: 2b7edbb706cc071bc2bfbddae3a9496fe1de9b15e2659e4847d764b8a4b8f68d
+freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v10.yaml
+  file_sha256: 57a5e5264b7f25e26b953caae7b45b85960ec6b9d7fa6dcb6963b18f24496e66
+request_pack:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/request-pack-v10/REQUEST_PACK.json
+  file_sha256: 47b018c5ca798b5226b7aad74469dd9c9b7d5c2aa2c187337104b4fca690d98e
+  pack_sha256: 9043a80b2b51b3c790d51f46f45a273e7d94211e01a21635a83a41f3b94c42c6
+
+deterministic_audit_implementation:
+  git_commit: 0f608726cae35263b91b2fd355744ab122b874ca
+  locator: src/scitaste/evaluation/taste_source_segmentation_post_audit.py
+  file_sha256: 2ea282430a7564169bd5369365252cf9bc93b0b6a8ef2bfba820678d18a52f55
+
+ai_d_attempt_v2:
+  reviewer_kind: ai
+  not_human_review: true
+  verdict: inventory-complete
+  item_count: 20
+  decision_count: 179
+  residual_risk_item_count: 0
+  raw_inventory:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/ai-d-sealed-inventory-v1/RAW_INVENTORY.json
+    file_sha256: c9a1481e80b028f23a7325453b33307eab88121e2ed45d3d35b6e946cb17e194
+    semantic_sha256: 069d28a009f9df5822eb84c8f7d5dfae8b1483064cac7771350dd69d29627949
+  review_receipt:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/ai-d-sealed-inventory-v1/REVIEW_RECEIPT.yaml
+    file_sha256: 40c36b6be2fb409e799f2cea2b5c2967379c0d5ab1ca7af6504a95c72f88c440
+    receipt_sha256: eff35ec2d0946eb15dbb2bb3399dbeb575013307b9de718d3c3eac3c6623c144
+  normalized_inventory:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/ai-d-sealed-inventory-v1/SEALED_INVENTORY.json
+    file_sha256: cec5a07664ddc548e3845cd796d8a11108ee651bde24e559c083c8d890c6e2d4
+    inventory_sha256: ec387e9e61fe36d58122cb2a3faff6c5afd9fd7cb84602caf0af8c707a8908cb
+
+ai_e_preexecution_review:
+  reviewer_kind: ai
+  not_human_review: true
+  decision: pass
+  blocker_codes: []
+  report:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/ai-e-preexecution-replay-v1/REPORT.yaml
+    file_sha256: d5e5e04156a678b45ef45e157b6098a0772271b73506a5d6bfc3c4d92ce4ae84
+
+execution_boundary:
+  provider_contact_performed: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+  human_review_claim_allowed: false
+  fresh_exact_owner_authorization_required: true
+  required_authorization_scope:
+    provider: zhipu
+    model: glm-5.3-flash
+    unique_item_count: 20
+    segmenter_requests: 10
+    maximum_adjudication_requests: 5
+    identity_sentinel_requests: 2
+    maximum_provider_requests: 17
+    maximum_input_tokens: 300000
+    maximum_output_tokens: 140000
+    retry_count: 0
+    owner_maximum_liability_usd: 10.0
+
+claim_boundary: >-
+  This seal records only AI/non-human calibration prerequisites. It is not human
+  validity evidence, benchmark admission, formal effectiveness evidence, scale
+  authorization, or permission to contact the provider.
