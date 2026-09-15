@@ -1,0 +1,39 @@
+schema_version: "1.0"
+program_id: newtonbench-taste-development-v9
+project_id: scitaste-self-development
+supersedes_for_new_attempts: newtonbench-taste-development-v8
+purpose: stop from scientific coverage rather than phase or turn quotas
+unified_scitaste_system: true
+research_workload_paradigm: training-free-research
+taste_mechanism: frozen-backbone-outcome-updated-controller-state
+formal_evidence: false
+policy_update_authorized_before_review: false
+controller_repair:
+  retained_failure: 2026-09-16__zhipu-glm53__newton-gravity-dev-v6__seed-17
+  observed_failure: >-
+    controller rejected a supported stop request after one six-point controlled
+    factorial probe because an arbitrary two-turn quota remained
+  stop_policy: structured-belief-plus-experimental-coverage-v3
+  structured_requirements:
+    evidence_status: candidate-supported
+    minimum_evidence_confidence: 0.9
+    maximum_next_experiment_value: 0.1
+  experimental_coverage_requirements:
+    minimum_experiments: 6
+    minimum_distinct_experiments: 6
+    varied_parameters: at-least-two-when-the-task-exposes-two-or-more
+    complete_observation_coverage: true
+  removed_requirements: [minimum-turn-count, named-phase-coverage]
+  correctness_rule: hidden-objective-score-remains-outcome-not-controller-input
+resource_ceiling:
+  api_calls_per_task: 9
+  maximum_total_tokens_per_task: 120000
+  maximum_output_tokens_per_call: 32768
+  gpu_hours: 0
+  provider_retries_inside_trajectory: 0
+review_contract:
+  development_candidates_remain_quarantined: true
+  independent_attribution_review_required: true
+claim_boundary:
+  establishes: development-only-evidence-sensitive-control-trajectories
+  does_not_establish: [SciTaste-effectiveness, formal-NewtonBench-performance, human-validity]

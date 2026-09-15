@@ -270,7 +270,7 @@ def test_development_stop_gate_requires_belief_and_observed_coverage() -> None:
     assert rejected["checks"]["structured_support"] is False
 
 
-def test_development_stop_gate_does_not_force_a_redundant_third_evidence_turn() -> None:
+def test_development_stop_gate_does_not_force_redundant_evidence_turns() -> None:
     context = _stop_gate_context().model_copy(
         update={
             "turn": 3,
@@ -291,8 +291,6 @@ def test_development_stop_gate_does_not_force_a_redundant_third_evidence_turn() 
     gate = interactive_development_module._development_submission_stop_gate(context, proposal)
 
     assert gate["approved"] is False  # the synthetic two-turn fixture has only four experiments
-    assert gate["checks"]["minimum_completed_evidence_turns"] is True
-    assert gate["checks"]["phase_coverage"] is True
 
     nine_experiment_history = tuple(
         {
@@ -316,6 +314,34 @@ def test_development_stop_gate_does_not_force_a_redundant_third_evidence_turn() 
     )
     assert approved["approved"] is True
     assert approved["experiment_count"] == 9
+
+    single_turn = covered.model_copy(
+        update={
+            "turn": 2,
+            "remaining_turns": 7,
+            "history": covered.history[:1],
+        }
+    )
+    six_experiment_history = (
+        {
+            **single_turn.history[0],
+            "model_action": {
+                **single_turn.history[0]["model_action"],
+                "experiments": [
+                    {"parameters": {"mass": mass, "distance": distance}}
+                    for mass, distance in ((1, 1), (2, 1), (3, 1), (1, 2), (1, 3), (4, 4))
+                ],
+            },
+            "observation": {"results": [1, 2, 3, 0.5, 0.3, 1]},
+        },
+    )
+    single_turn = single_turn.model_copy(update={"history": six_experiment_history})
+    one_turn_gate = interactive_development_module._development_submission_stop_gate(
+        single_turn,
+        proposal,
+    )
+    assert one_turn_gate["approved"] is True
+    assert one_turn_gate["varied_parameter_count"] == 2
 
 
 class _RandomNewtonModule:

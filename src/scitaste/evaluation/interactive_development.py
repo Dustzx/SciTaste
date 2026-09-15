@@ -1034,6 +1034,7 @@ def _development_submission_stop_gate(
     phases: list[str] = []
     experiment_count = 0
     distinct_experiments: set[str] = set()
+    parameter_values: dict[str, set[str]] = {}
     observation_count = 0
     for item in context.history:
         phase = item.get("high_level_action")
@@ -1045,6 +1046,15 @@ def _development_submission_stop_gate(
             if isinstance(experiments, list):
                 experiment_count += len(experiments)
                 distinct_experiments.update(content_sha256(value) for value in experiments)
+                for experiment in experiments:
+                    if not isinstance(experiment, dict):
+                        continue
+                    parameters = experiment.get("parameters")
+                    if not isinstance(parameters, dict):
+                        continue
+                    for name, value in parameters.items():
+                        if isinstance(name, str):
+                            parameter_values.setdefault(name, set()).add(content_sha256(value))
         observation = item.get("observation")
         if isinstance(observation, dict):
             results = observation.get("results")
@@ -1052,22 +1062,22 @@ def _development_submission_stop_gate(
                 observation_count += len(results)
             elif results is not None:
                 observation_count += 1
-    required_phases = ("PROBE", "ANALYZE")
-    phase_coverage = tuple(phases[: len(required_phases)]) == required_phases
+    varied_parameter_count = sum(len(values) >= 2 for values in parameter_values.values())
+    required_varied_parameters = min(2, len(parameter_values))
     checks = {
         "submission_action": proposal.action == "submit_hypothesis",
         "structured_support": proposal.evidence_status == "candidate-supported",
         "confidence_threshold": proposal.evidence_confidence >= 0.9,
         "low_next_experiment_value": proposal.next_experiment_value <= 0.1,
-        "minimum_turn": context.turn >= 3,
-        "minimum_completed_evidence_turns": len(phases) >= 2,
-        "phase_coverage": phase_coverage,
         "minimum_experiment_count": experiment_count >= 6,
         "minimum_distinct_experiments": len(distinct_experiments) >= 6,
+        "parameter_variation": (
+            required_varied_parameters >= 1 and varied_parameter_count >= required_varied_parameters
+        ),
         "complete_observation_coverage": observation_count >= experiment_count > 0,
     }
     return {
-        "policy": "structured-belief-plus-observed-coverage-v2",
+        "policy": "structured-belief-plus-experimental-coverage-v3",
         "approved": all(checks.values()),
         "checks": checks,
         "evidence_status": proposal.evidence_status,
@@ -1076,6 +1086,9 @@ def _development_submission_stop_gate(
         "completed_phases": phases,
         "experiment_count": experiment_count,
         "distinct_experiment_count": len(distinct_experiments),
+        "parameter_count": len(parameter_values),
+        "varied_parameter_count": varied_parameter_count,
+        "required_varied_parameter_count": required_varied_parameters,
         "observation_count": observation_count,
     }
 
