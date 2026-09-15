@@ -354,6 +354,7 @@ from scitaste.model_nodes.openai_compatible import load_structured_openai_compat
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.schemas import VenuePaperReviewProposal
 from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
+from scitaste.model_role_cli import register_model_role_cli
 from scitaste.project import (
     PaperManifest,
     ProjectIdeaRevisionArtifact,
@@ -598,6 +599,7 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     add_ui_commands(commands)
     register_resource_cli(commands)
+    register_model_role_cli(commands)
 
     baseline = commands.add_parser("baseline", help="Execution-substrate baseline commands")
     baseline_commands = baseline.add_subparsers(dest="baseline_command", required=True)
