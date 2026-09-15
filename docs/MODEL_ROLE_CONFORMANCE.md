@@ -95,7 +95,16 @@ the runtime config/profile-set files and pass the indicated `--allow-live` or
 real local dispatcher emits `scitaste-conformance-execution-v1`; no synthetic
 or test receipt is substituted. `campaign-status` discovers only
 `receipts/<request-id>/RUN_RESULT.json`, validates those bytes through the
-normal compiler, and reports `ready`, `blocked`, or `complete`.
+normal compiler, and reports `request-prepared`, `launch-ready`, `blocked`, or
+`complete`.
+
+Campaign status distinguishes `request-prepared` from `launch-ready`. A request
+with `<RUNTIME_CONFIG_JSON>` / `<PROFILE_SET_YAML>` placeholders remains only
+`request-prepared`; a local request additionally requires a resolved immutable
+checkpoint hash and revision. Only a request with materialized, hash-bound
+runtime/profile files and (for local models) exact checkpoint identity may be
+reported as `launch-ready`. Consequently the initial dry plan's next action is
+to materialize executor bindings, never to dispatch a model directly.
 
 An empty receipt set is valid for planning/status and reports all role/scope
 bindings missing;

@@ -149,7 +149,16 @@ def _handle_prepare_campaign(args: argparse.Namespace) -> int:
 def _handle_campaign_status(args: argparse.Namespace) -> int:
     status = inspect_bytebound_conformance_campaign(args.plan)
     print(status.model_dump_json(indent=2))
-    return 0 if status.readiness.value in {"ready", "complete"} else 1
+    return (
+        0
+        if status.readiness.value
+        in {
+            "request-prepared",
+            "launch-ready",
+            "complete",
+        }
+        else 1
+    )
 
 
 def _handle_campaign_request(args: argparse.Namespace) -> int:

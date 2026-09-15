@@ -42,7 +42,8 @@ _MAX_BYTES = 8 * 1024 * 1024
 
 
 class CampaignReadiness(StrEnum):
-    READY = "ready"
+    REQUEST_PREPARED = "request-prepared"
+    LAUNCH_READY = "launch-ready"
     BLOCKED = "blocked"
     COMPLETE = "complete"
 
@@ -146,17 +147,29 @@ class DispatchResource(BaseModel):
     backend_config_sha256: str | None = Field(default=None, pattern=_SHA256)
     local_model_path: str | None = None
     local_architecture: str | None = None
-    exact_checkpoint_hash_resolved: Literal[False] = False
+    exact_checkpoint_hash_resolved: bool = False
+    local_checkpoint_sha256: str | None = Field(default=None, pattern=_SHA256)
+    local_revision: str | None = None
 
     @model_validator(mode="after")
     def resource_route_is_atomic(self) -> DispatchResource:
         api = (self.backend_config_ref, self.backend_config_sha256)
         local = (self.local_model_path, self.local_architecture)
         if self.execution_kind is ExecutionKind.API:
-            if (any(api) and not all(api)) or any(value is not None for value in local):
+            if (
+                (any(api) and not all(api))
+                or any(value is not None for value in local)
+                or self.local_checkpoint_sha256 is not None
+                or self.local_revision is not None
+                or self.exact_checkpoint_hash_resolved
+            ):
                 raise ValueError("API dispatch requires an atomic backend config binding")
-        elif not all(local) or any(value is not None for value in api):
-            raise ValueError("local dispatch requires only a local checkpoint binding")
+        else:
+            if not all(local) or any(value is not None for value in api):
+                raise ValueError("local dispatch requires only a local checkpoint binding")
+            exact = (self.local_checkpoint_sha256, self.local_revision)
+            if self.exact_checkpoint_hash_resolved != all(exact):
+                raise ValueError("local exact-identity status differs from its bindings")
         return self
 
 
@@ -170,8 +183,33 @@ class ExistingRunnerBinding(BaseModel):
     invocation_id: str = Field(pattern=_ID)
     runtime_config_required: Literal[True] = True
     profile_set_required: Literal[True] = True
+    runtime_config_ref: str | None = None
+    runtime_config_sha256: str | None = Field(default=None, pattern=_SHA256)
+    profile_set_ref: str | None = None
+    profile_set_sha256: str | None = Field(default=None, pattern=_SHA256)
     executor_receipt_contract: Literal["scitaste-model-node-runtime-v1"]
     next_command: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def materialized_files_are_atomic(self) -> ExistingRunnerBinding:
+        runtime = (self.runtime_config_ref, self.runtime_config_sha256)
+        profile = (self.profile_set_ref, self.profile_set_sha256)
+        if any(runtime) != all(runtime) or any(profile) != all(profile):
+            raise ValueError("executor binding files require atomic ref/hash pairs")
+        if bool(all(runtime)) != bool(all(profile)):
+            raise ValueError("runtime config and profile set must be materialized together")
+        return self
+
+    @property
+    def materialized(self) -> bool:
+        return all(
+            (
+                self.runtime_config_ref,
+                self.runtime_config_sha256,
+                self.profile_set_ref,
+                self.profile_set_sha256,
+            )
+        )
 
 
 class ConformanceDispatchRequest(BaseModel):
@@ -207,8 +245,8 @@ class ConformanceDispatchRequest(BaseModel):
 
     @model_validator(mode="after")
     def readiness_matches_blockers(self) -> ConformanceDispatchRequest:
-        if (self.readiness is CampaignReadiness.READY) == bool(self.blockers):
-            raise ValueError("dispatch readiness must equal the absence of blockers")
+        if (self.readiness is CampaignReadiness.BLOCKED) != bool(self.blockers):
+            raise ValueError("blocked dispatch state must equal the presence of blockers")
         if self.candidate.candidate.role is ModelRole.EMBEDDING:
             if self.runner_kind is not ConformanceRunnerKind.EMBEDDING_LOCAL:
                 raise ValueError("embedding dispatch requires the embedding runner")
@@ -230,6 +268,16 @@ class ConformanceDispatchRequest(BaseModel):
                 raise ValueError("model-node dispatch requires an existing-runner binding")
         elif self.existing_runner_binding is not None:
             raise ValueError("embedding dispatch cannot claim a model-node binding")
+        launch_bound = bool(
+            self.existing_runner_binding is not None
+            and self.existing_runner_binding.materialized
+            and (
+                self.resource.execution_kind is ExecutionKind.API
+                or self.resource.exact_checkpoint_hash_resolved
+            )
+        )
+        if (self.readiness is CampaignReadiness.LAUNCH_READY) != launch_bound:
+            raise ValueError("launch-ready requires materialized executor and exact identity")
         return self
 
     @property
@@ -302,10 +350,12 @@ class ByteBoundCampaignStatus(BaseModel):
     campaign_id: str
     campaign_plan_sha256: str = Field(pattern=_SHA256)
     readiness: CampaignReadiness
-    ready_requests: int = Field(ge=0)
+    request_prepared_requests: int = Field(ge=0)
+    launch_ready_requests: int = Field(ge=0)
     blocked_requests: int = Field(ge=0)
     completed_requests: int = Field(ge=0)
-    pending_request_ids: tuple[str, ...]
+    request_prepared_ids: tuple[str, ...]
+    launch_ready_request_ids: tuple[str, ...]
     blocked_request_ids: tuple[str, ...]
     receipt_paths: tuple[str, ...]
     selection_status: SelectionStatus
@@ -487,17 +537,28 @@ def inspect_bytebound_conformance_campaign(
         for item in plan.requests
         if item.readiness is CampaignReadiness.BLOCKED and item.request_id not in completed_ids
     )
-    pending = tuple(
+    prepared = tuple(
         item.request_id
         for item in plan.requests
-        if item.readiness is CampaignReadiness.READY and item.request_id not in completed_ids
+        if item.readiness is CampaignReadiness.REQUEST_PREPARED
+        and item.request_id not in completed_ids
+    )
+    launch_ready = tuple(
+        item.request_id
+        for item in plan.requests
+        if item.readiness is CampaignReadiness.LAUNCH_READY and item.request_id not in completed_ids
     )
     if selection.status is SelectionStatus.COMPLETE:
         readiness = CampaignReadiness.COMPLETE
         next_action = "bind SELECTION.json to the project research-program controller"
-    elif pending:
-        readiness = CampaignReadiness.READY
-        next_action = f"dispatch {pending[0]} with its explicit execution flag"
+    elif launch_ready:
+        readiness = CampaignReadiness.LAUNCH_READY
+        next_action = f"dispatch {launch_ready[0]} with its explicit execution flag"
+    elif prepared:
+        readiness = CampaignReadiness.REQUEST_PREPARED
+        next_action = (
+            "materialize executor bindings and resolve exact local identities before dispatch"
+        )
     else:
         readiness = CampaignReadiness.BLOCKED
         next_action = "resolve blocked runner or resource bindings"
@@ -505,10 +566,16 @@ def inspect_bytebound_conformance_campaign(
         campaign_id=plan.campaign_id,
         campaign_plan_sha256=plan.campaign_plan_sha256,
         readiness=readiness,
-        ready_requests=sum(item.readiness is CampaignReadiness.READY for item in plan.requests),
+        request_prepared_requests=sum(
+            item.readiness is CampaignReadiness.REQUEST_PREPARED for item in plan.requests
+        ),
+        launch_ready_requests=sum(
+            item.readiness is CampaignReadiness.LAUNCH_READY for item in plan.requests
+        ),
         blocked_requests=sum(item.readiness is CampaignReadiness.BLOCKED for item in plan.requests),
         completed_requests=len(completed_ids),
-        pending_request_ids=pending,
+        request_prepared_ids=prepared,
+        launch_ready_request_ids=launch_ready,
         blocked_request_ids=blocked,
         receipt_paths=tuple(path.relative_to(campaign_root).as_posix() for path in receipt_paths),
         selection_status=selection.status,
@@ -618,7 +685,7 @@ def _build_requests(
                         readiness=(
                             CampaignReadiness.BLOCKED
                             if runner_blockers
-                            else CampaignReadiness.READY
+                            else CampaignReadiness.REQUEST_PREPARED
                         ),
                         blockers=tuple(runner_blockers),
                         expected_executor_receipt=(

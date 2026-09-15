@@ -77,7 +77,12 @@ def test_prepare_builds_project_owned_exact_request_pack_without_execution(
         assert request_file.is_file()
         if request.runner_kind is ConformanceRunnerKind.MODEL_NODE_RUNTIME:
             assert request.existing_runner_binding is not None
+            assert request.existing_runner_binding.materialized is False
+            assert request.readiness is CampaignReadiness.REQUEST_PREPARED
             assert "model-node runtime execute" in (request.existing_runner_binding.next_command)
+            assert "<RUNTIME_CONFIG_JSON>" in request.existing_runner_binding.next_command
+            if request.resource.execution_kind.value == "local":
+                assert request.resource.exact_checkpoint_hash_resolved is False
         else:
             assert request.existing_runner_binding is None
             assert request.readiness is CampaignReadiness.BLOCKED
@@ -107,8 +112,10 @@ def test_status_compiles_no_receipts_as_incomplete_and_names_next_action(
     assert status.selection_status.value == "incomplete"
     assert status.selection_ref is None
     assert status.headline_eligible is False
-    if status.readiness is CampaignReadiness.READY:
-        assert status.pending_request_ids
-        assert status.next_action.startswith("dispatch ")
+    if status.readiness is CampaignReadiness.REQUEST_PREPARED:
+        assert status.request_prepared_ids
+        assert status.launch_ready_requests == 0
+        assert status.launch_ready_request_ids == ()
+        assert status.next_action.startswith("materialize executor bindings")
     else:
         assert status.blocked_request_ids
