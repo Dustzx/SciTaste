@@ -124,7 +124,7 @@ class ScientificDecisionFamilyReviewNode(
     """Assign one decision to exactly one scientific-judgment family."""
 
     node_name = SCIENTIFIC_DECISION_FAMILY_REVIEW_NODE
-    prompt_version = "scientific-decision-family-review-v1"
+    prompt_version = "scientific-decision-family-review-v2"
     system_instruction = (
         "Assign the supplied research decision to exactly one member of the fixed Scientific "
         "Taste decision-family ontology. Use only the decision-time state, alternatives, selected "
@@ -132,7 +132,9 @@ class ScientificDecisionFamilyReviewNode(
         "experiment conditions, paper claims, and other reviews are deliberately unavailable; do "
         "not infer them. Choose the family describing the primary judgment exercised by this "
         "decision, not its lifecycle stage or eventual result. This is isolated AI review, not "
-        "human validation, and it cannot change the episode or policy."
+        "human validation, and it cannot change the episode or policy. In the response, copy "
+        "packet_sha256 exactly from the top-level input field named packet_sha256; do not copy "
+        "admission_sha256, idea_revision_binding_sha256, ontology_sha256, or any other hash."
     )
     input_model = ScientificDecisionFamilyReviewInput
     output_model = ScientificDecisionFamilyReviewProposal

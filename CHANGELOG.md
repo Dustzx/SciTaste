@@ -31,6 +31,10 @@ semantic versioning.
   credential is not bound. Provider, current model ID, 1M context envelope,
   pricing ceiling, invocation, raw response, and nonhuman-review status remain
   explicit rather than treating two calls to one model as independent.
+- Tightened the outcome-blind family-review prompt after a real Qwen3.8-Max
+  response selected the correct family but copied the Idea-binding digest into
+  `packet_sha256`. Prompt v2 distinguishes all visible hash fields explicitly;
+  the invalid v1 call remains rejected in the immutable ledger.
 - Added the missing production bridge from project-owned Taste episodes to a
   disclosed cross-model AI attribution panel. One shared, condition- and
   claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and
