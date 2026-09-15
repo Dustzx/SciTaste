@@ -252,7 +252,9 @@ def validate_grounded_abstraction_against_projection(
     principle_roles: set[str] = set()
     target_roles = {
         TasteGroundingTarget.CONTEXT: {"problem_context", "source_metadata"},
-        TasteGroundingTarget.EVIDENCE_STATE: {"evidence", "limitation"},
+        # An observed outcome is part of the evidence state; it remains separately
+        # required under OUTCOME when outcome information is available.
+        TasteGroundingTarget.EVIDENCE_STATE: {"evidence", "limitation", "outcome"},
         TasteGroundingTarget.ALTERNATIVES: {"alternative"},
         TasteGroundingTarget.CHOICE: {"scientific_action"},
         TasteGroundingTarget.OUTCOME: {"outcome"},
