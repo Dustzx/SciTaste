@@ -300,6 +300,171 @@ class TasteProspectiveDecisionCaptureReceipt(BaseModel):
         )
 
 
+class TasteProspectiveDecisionLockReceipt(BaseModel):
+    """Write-once proof that a complete action menu was fixed before execution."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["2.0"] = "2.0"
+    plan_id: str = Field(pattern=_ID)
+    plan_sha256: str = Field(pattern=_SHA256)
+    source_project_id: str
+    source_run_id: str = Field(pattern=_ID)
+    observed_project_revision: int = Field(ge=0)
+    observed_project_snapshot_sha256: str = Field(pattern=_SHA256)
+    decision_id: str
+    decision_sha256: str = Field(pattern=_SHA256)
+    decision_timestamp: datetime
+    decision_log_locator: str
+    decision_line_number: int = Field(ge=1)
+    decision_line_sha256: str = Field(pattern=_SHA256)
+    immutable_decision_locator: str
+    immutable_decision_file_sha256: str = Field(pattern=_SHA256)
+    state_snapshot_id: str = Field(pattern=_STATE_ID)
+    state_snapshot_locator: str
+    state_file_sha256: str = Field(pattern=_SHA256)
+    candidate_set_sha256: str = Field(pattern=_SHA256)
+    selected_action_id: str
+    selected_action_sha256: str = Field(pattern=_SHA256)
+    rationale_sha256: str = Field(pattern=_SHA256)
+    alternative_count: int = Field(ge=2)
+    captured_at: datetime
+    executor_result_id: Literal[None] = None
+    actual_outcome: Literal[None] = None
+    outcome_attachment_required: Literal[True] = True
+    policy_training_authorized: Literal[False] = False
+    lock_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def lock_is_closed(self) -> TasteProspectiveDecisionLockReceipt:
+        validate_project_id(self.source_project_id)
+        for locator in (
+            self.decision_log_locator,
+            self.immutable_decision_locator,
+            self.state_snapshot_locator,
+        ):
+            validate_relative_locator(locator, field_name="prospective lock locator")
+        if self.decision_timestamp.utcoffset() is None or self.captured_at.utcoffset() is None:
+            raise ValueError("prospective lock times must include a timezone")
+        if self.captured_at < self.decision_timestamp:
+            raise ValueError("prospective lock capture predates the decision timestamp")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"lock_sha256"}))
+        if self.lock_sha256 != expected:
+            raise ValueError("prospective decision lock hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TasteProspectiveDecisionLockReceipt:
+        payload = {"schema_version": "2.0", **values}
+        payload.pop("lock_sha256", None)
+        unsigned = cls.model_construct(lock_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            lock_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"lock_sha256"})),
+        )
+
+
+class TasteProspectiveOutcomeAttachmentReceipt(BaseModel):
+    """Append-only outcome evidence bound to one predecision lock."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["2.0"] = "2.0"
+    plan_id: str = Field(pattern=_ID)
+    plan_sha256: str = Field(pattern=_SHA256)
+    lock_sha256: str = Field(pattern=_SHA256)
+    decision_id: str
+    predecision_sha256: str = Field(pattern=_SHA256)
+    executor_result_id: str = Field(min_length=1, max_length=1_000)
+    observed_at: datetime
+    actual_outcome: dict[str, object]
+    actual_outcome_sha256: str = Field(pattern=_SHA256)
+    evidence: tuple[TasteEpisodeEvidence, ...] = Field(min_length=1, max_length=200)
+    attached_at: datetime
+    predecision_mutation_allowed: Literal[False] = False
+    policy_training_authorized: Literal[False] = False
+    attachment_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def attachment_is_closed(self) -> TasteProspectiveOutcomeAttachmentReceipt:
+        if self.observed_at.utcoffset() is None or self.attached_at.utcoffset() is None:
+            raise ValueError("outcome attachment times must include a timezone")
+        if self.attached_at < self.observed_at:
+            raise ValueError("outcome attachment predates outcome observation")
+        if not self.actual_outcome:
+            raise ValueError("outcome attachment cannot be empty")
+        if self.actual_outcome_sha256 != content_sha256(self.actual_outcome):
+            raise ValueError("attached outcome hash differs")
+        if any(item.role is not TasteEpisodeEvidenceRole.OUTCOME for item in self.evidence):
+            raise ValueError("outcome attachment evidence must use the outcome role")
+        if len({item.evidence_id for item in self.evidence}) != len(self.evidence):
+            raise ValueError("outcome attachment evidence IDs must be unique")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"attachment_sha256"}))
+        if self.attachment_sha256 != expected:
+            raise ValueError("prospective outcome attachment hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TasteProspectiveOutcomeAttachmentReceipt:
+        payload = {"schema_version": "2.0", **values}
+        payload.pop("attachment_sha256", None)
+        unsigned = cls.model_construct(attachment_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            attachment_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"attachment_sha256"})
+            ),
+        )
+
+
+class TasteProspectiveDecisionCompletionProjection(BaseModel):
+    """Replayable completed decision assembled without changing predecision bytes."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["2.0"] = "2.0"
+    plan_id: str = Field(pattern=_ID)
+    plan_sha256: str = Field(pattern=_SHA256)
+    lock_sha256: str = Field(pattern=_SHA256)
+    attachment_sha256: str = Field(pattern=_SHA256)
+    predecision_sha256: str = Field(pattern=_SHA256)
+    completed_decision: ResearchDecision
+    completed_decision_sha256: str = Field(pattern=_SHA256)
+    projected_at: datetime
+    source_predecision_bytes_rewritten: Literal[False] = False
+    policy_training_authorized: Literal[False] = False
+    projection_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def projection_is_closed(self) -> TasteProspectiveDecisionCompletionProjection:
+        if self.projected_at.utcoffset() is None:
+            raise ValueError("completion projection time must include a timezone")
+        if (
+            self.completed_decision.executor_result_id is None
+            or self.completed_decision.actual_outcome is None
+        ):
+            raise ValueError("completion projection lacks its outcome binding")
+        expected_decision = content_sha256(self.completed_decision.model_dump(mode="json"))
+        if self.completed_decision_sha256 != expected_decision:
+            raise ValueError("completed decision hash differs")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"projection_sha256"}))
+        if self.projection_sha256 != expected:
+            raise ValueError("prospective completion projection hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TasteProspectiveDecisionCompletionProjection:
+        payload = {"schema_version": "2.0", **values}
+        payload.pop("projection_sha256", None)
+        unsigned = cls.model_construct(projection_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            projection_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"projection_sha256"})
+            ),
+        )
+
+
 class TasteProcessEvidenceBinding(BaseModel):
     """A declared run-owned input whose digest is computed during compilation."""
 
@@ -468,6 +633,208 @@ def capture_prospective_taste_decision(
     return receipt
 
 
+def lock_prospective_taste_decision(
+    plan: TasteTrajectorySamplingPlan,
+    *,
+    runtime: ProjectRuntime,
+    state: ResearchState,
+    decision: ResearchDecision,
+    current_idea_revision: ProjectIdeaRevisionBinding,
+    expected_project_revision: int,
+    output: str | Path,
+    captured_at: datetime | None = None,
+) -> TasteProspectiveDecisionLockReceipt:
+    """Persist a state and outcome-free decision before any execution can occur."""
+
+    if plan.assignment_timing is not TasteTrajectoryAssignmentTiming.PROSPECTIVE:
+        raise ValueError("predecision lock requires a prospective sampling plan")
+    if not idea_binding_matches_current(plan.idea_revision, current_idea_revision):
+        raise ValueError("predecision lock plan belongs to a stale Idea revision")
+    snapshot = runtime.open(plan.source_project_id)
+    if snapshot.revision != expected_project_revision:
+        raise ValueError(
+            f"stale project revision {expected_project_revision}; current is {snapshot.revision}"
+        )
+    if plan.source_run_id not in {item.run_id for item in snapshot.manifest.runs}:
+        raise ValueError("prospective source run is not registered")
+    if state.project_id != plan.source_project_id:
+        raise ValueError("predecision research state belongs to another project")
+    identifier = snapshot_id(state)
+    if decision.state_snapshot_id != identifier:
+        raise ValueError("predecision does not bind the supplied research state")
+    if decision.stage != state.current_stage.value:
+        raise ValueError("predecision stage differs from the supplied research state")
+    if decision.executor_result_id is not None or decision.actual_outcome is not None:
+        raise ValueError("predecision lock rejects executor results and actual outcomes")
+    if decision.timestamp.utcoffset() is None:
+        raise ValueError("predecision timestamp must include a timezone")
+    actions = tuple(decision.candidate_actions)
+    action_ids = tuple(item.action_id for item in actions)
+    action_hashes = tuple(content_sha256(item.model_dump(mode="json")) for item in actions)
+    if len(actions) < 2:
+        raise ValueError("predecision lock requires at least two alternatives")
+    if len(set(action_ids)) != len(action_ids) or len(set(action_hashes)) != len(action_hashes):
+        raise ValueError("predecision alternatives must be non-duplicate")
+    selected_matches = [item for item in actions if item == decision.selected_action]
+    if len(selected_matches) != 1:
+        raise ValueError("selected action must exactly match one predecision alternative")
+    capture_time = captured_at or datetime.now(UTC)
+    if capture_time.utcoffset() is None or capture_time < decision.timestamp:
+        raise ValueError("predecision lock capture cannot predate the decision")
+
+    run_root = runtime.projects_root / plan.source_project_id / "runs" / plan.source_run_id
+    decision_log = run_root / PurePosixPath(plan.decision_log_locator)
+    logger = DecisionLogger(decision_log)
+    existing = logger.read_all()
+    matches = [item for item in existing if item.decision_id == decision.decision_id]
+    if matches and matches != [decision]:
+        raise ValueError("predecision ID already binds different bytes")
+
+    state_store = StateStore(run_root / PurePosixPath(plan.state_snapshot_root_locator))
+    saved_identifier = state_store.save(state)
+    if saved_identifier != identifier:
+        raise ValueError("predecision state identity changed during persistence")
+    state_path = state_store.snapshot_dir / f"{identifier}.json"
+    state_locator = state_path.relative_to(run_root).as_posix()
+
+    decision_sha256 = content_sha256(decision.model_dump(mode="json"))
+    immutable_path = decision_log.parent / "predecision_locks" / f"{decision_sha256}.json"
+    immutable_locator = immutable_path.relative_to(run_root).as_posix()
+    serialized_decision = decision.model_dump_json() + "\n"
+    _write_or_verify_immutable(immutable_path, serialized_decision.encode("utf-8"))
+
+    if not matches:
+        logger.append(decision)
+        line_number = len(existing) + 1
+    else:
+        line_number = next(index for index, item in enumerate(existing, 1) if item == decision)
+    raw_lines = decision_log.read_bytes().splitlines(keepends=True)
+    raw_line = raw_lines[line_number - 1]
+    if raw_line != serialized_decision.encode("utf-8"):
+        raise ValueError("predecision log serialization differs from the immutable record")
+
+    receipt = TasteProspectiveDecisionLockReceipt.create(
+        plan_id=plan.plan_id,
+        plan_sha256=plan.plan_sha256,
+        source_project_id=plan.source_project_id,
+        source_run_id=plan.source_run_id,
+        observed_project_revision=snapshot.revision,
+        observed_project_snapshot_sha256=snapshot.snapshot_sha256,
+        decision_id=decision.decision_id,
+        decision_sha256=decision_sha256,
+        decision_timestamp=decision.timestamp,
+        decision_log_locator=plan.decision_log_locator,
+        decision_line_number=line_number,
+        decision_line_sha256=hashlib.sha256(raw_line).hexdigest(),
+        immutable_decision_locator=immutable_locator,
+        immutable_decision_file_sha256=hashlib.sha256(immutable_path.read_bytes()).hexdigest(),
+        state_snapshot_id=identifier,
+        state_snapshot_locator=state_locator,
+        state_file_sha256=hashlib.sha256(state_path.read_bytes()).hexdigest(),
+        candidate_set_sha256=content_sha256(
+            tuple(item.model_dump(mode="json") for item in actions)
+        ),
+        selected_action_id=decision.selected_action.action_id,
+        selected_action_sha256=content_sha256(decision.selected_action.model_dump(mode="json")),
+        rationale_sha256=content_sha256(decision.rationale),
+        alternative_count=len(actions),
+        captured_at=capture_time,
+    )
+    _write_new_json(output, receipt.model_dump_json(indent=2) + "\n")
+    return receipt
+
+
+def attach_prospective_taste_outcome(
+    plan: TasteTrajectorySamplingPlan,
+    lock: TasteProspectiveDecisionLockReceipt,
+    *,
+    source_root: str | Path,
+    executor_result_id: str,
+    observed_at: datetime,
+    actual_outcome: dict[str, object],
+    evidence: tuple[TasteProcessEvidenceBinding, ...],
+    output: str | Path,
+    projection_output: str | Path,
+    attached_at: datetime | None = None,
+) -> tuple[
+    TasteProspectiveOutcomeAttachmentReceipt,
+    TasteProspectiveDecisionCompletionProjection,
+]:
+    """Attach a later outcome while proving that the locked decision stayed unchanged."""
+
+    if lock.plan_id != plan.plan_id or lock.plan_sha256 != plan.plan_sha256:
+        raise ValueError("outcome attachment binds a lock from another sampling plan")
+    if lock.source_project_id != plan.source_project_id or lock.source_run_id != plan.source_run_id:
+        raise ValueError("outcome attachment source differs from the sampling plan")
+    if observed_at.utcoffset() is None or observed_at <= lock.captured_at:
+        raise ValueError("outcome observation must be strictly later than the predecision lock")
+    attachment_time = attached_at or datetime.now(UTC)
+    if attachment_time.utcoffset() is None or attachment_time <= lock.captured_at:
+        raise ValueError("outcome attachment must be strictly later than the predecision lock")
+    if attachment_time < observed_at:
+        raise ValueError("outcome attachment cannot predate outcome observation")
+    if not executor_result_id.strip():
+        raise ValueError("outcome attachment requires an executor result ID")
+    if not actual_outcome:
+        raise ValueError("outcome attachment requires a non-empty actual outcome")
+    if not evidence:
+        raise ValueError("outcome attachment requires outcome evidence")
+
+    root = _canonical_root(source_root)
+    decision = _load_and_verify_locked_predecision(root, lock)
+    outcome_evidence = tuple(
+        TasteEpisodeEvidence(
+            evidence_id=item.evidence_id,
+            role=item.role,
+            locator=item.locator,
+            sha256=hashlib.sha256(
+                _owned_file(root, item.locator, max_bytes=_MAX_EVIDENCE_BYTES).read_bytes()
+            ).hexdigest(),
+        )
+        for item in evidence
+    )
+    if any(item.role is not TasteEpisodeEvidenceRole.OUTCOME for item in outcome_evidence):
+        raise ValueError("outcome attachment accepts outcome evidence only")
+    attachment = TasteProspectiveOutcomeAttachmentReceipt.create(
+        plan_id=plan.plan_id,
+        plan_sha256=plan.plan_sha256,
+        lock_sha256=lock.lock_sha256,
+        decision_id=lock.decision_id,
+        predecision_sha256=lock.decision_sha256,
+        executor_result_id=executor_result_id,
+        observed_at=observed_at,
+        actual_outcome=actual_outcome,
+        actual_outcome_sha256=content_sha256(actual_outcome),
+        evidence=outcome_evidence,
+        attached_at=attachment_time,
+    )
+    completed = decision.model_copy(
+        deep=True,
+        update={
+            "executor_result_id": executor_result_id,
+            "actual_outcome": actual_outcome,
+        },
+    )
+    projection = TasteProspectiveDecisionCompletionProjection.create(
+        plan_id=plan.plan_id,
+        plan_sha256=plan.plan_sha256,
+        lock_sha256=lock.lock_sha256,
+        attachment_sha256=attachment.attachment_sha256,
+        predecision_sha256=lock.decision_sha256,
+        completed_decision=completed,
+        completed_decision_sha256=content_sha256(completed.model_dump(mode="json")),
+        projected_at=attachment_time,
+    )
+    _write_new_json(output, attachment.model_dump_json(indent=2) + "\n")
+    try:
+        _write_new_json(projection_output, projection.model_dump_json(indent=2) + "\n")
+    except BaseException:
+        Path(output).unlink(missing_ok=True)
+        raise
+    _load_and_verify_locked_predecision(root, lock)
+    return attachment, projection
+
+
 def compile_prospective_taste_episode(
     plan: TasteTrajectorySamplingPlan,
     capture: TasteProspectiveDecisionCaptureReceipt,
@@ -581,6 +948,145 @@ def compile_prospective_taste_episode(
     return candidate
 
 
+def compile_prospective_taste_episode_v2(
+    plan: TasteTrajectorySamplingPlan,
+    lock: TasteProspectiveDecisionLockReceipt,
+    attachment: TasteProspectiveOutcomeAttachmentReceipt,
+    projection: TasteProspectiveDecisionCompletionProjection,
+    proposal: TasteProcessEpisodeProposal,
+    *,
+    runtime: ProjectRuntime,
+    current_idea_revision: ProjectIdeaRevisionBinding,
+    expected_project_revision: int,
+    output: str | Path,
+) -> TasteEpisodeCandidate:
+    """Compile attribution against a two-phase decision/outcome foundation."""
+
+    if plan.assignment_timing is not TasteTrajectoryAssignmentTiming.PROSPECTIVE:
+        raise ValueError("process episode compilation requires a prospective plan")
+    if not idea_binding_matches_current(plan.idea_revision, current_idea_revision):
+        raise ValueError("process episode plan belongs to a stale Idea revision")
+    if any(
+        (
+            lock.plan_id != plan.plan_id,
+            lock.plan_sha256 != plan.plan_sha256,
+            attachment.plan_id != plan.plan_id,
+            attachment.plan_sha256 != plan.plan_sha256,
+            projection.plan_id != plan.plan_id,
+            projection.plan_sha256 != plan.plan_sha256,
+        )
+    ):
+        raise ValueError("process episode v2 artifacts bind different sampling plans")
+    if (
+        attachment.lock_sha256 != lock.lock_sha256
+        or attachment.decision_id != lock.decision_id
+        or attachment.predecision_sha256 != lock.decision_sha256
+        or projection.lock_sha256 != lock.lock_sha256
+        or projection.attachment_sha256 != attachment.attachment_sha256
+        or projection.predecision_sha256 != lock.decision_sha256
+    ):
+        raise ValueError("process episode v2 lock/outcome/projection chain differs")
+    if (
+        lock.decision_timestamp < plan.frozen_at
+        or lock.captured_at < plan.frozen_at
+        or attachment.observed_at <= lock.captured_at
+        or attachment.attached_at <= lock.captured_at
+        or projection.projected_at < attachment.attached_at
+    ):
+        raise ValueError("process episode v2 temporal ordering differs")
+    if (
+        proposal.capture_sha256 != attachment.attachment_sha256
+        or proposal.inventory_sha256 != projection.projection_sha256
+        or proposal.decision_id != lock.decision_id
+    ):
+        raise ValueError("process episode proposal binds another v2 completion")
+    if proposal.observed_at < attachment.observed_at:
+        raise ValueError("process episode proposal predates its attached outcome")
+
+    snapshot = runtime.open(plan.source_project_id)
+    if snapshot.revision != expected_project_revision:
+        raise ValueError(
+            f"stale project revision {expected_project_revision}; current is {snapshot.revision}"
+        )
+    run_root = runtime.projects_root / plan.source_project_id / "runs" / plan.source_run_id
+    locked_decision = _load_and_verify_locked_predecision(run_root, lock)
+    decision = projection.completed_decision
+    restored_predecision = decision.model_copy(
+        deep=True,
+        update={"executor_result_id": None, "actual_outcome": None},
+    )
+    if restored_predecision != locked_decision:
+        raise ValueError("completion projection changed predecision content")
+    if (
+        decision.executor_result_id != attachment.executor_result_id
+        or decision.actual_outcome != attachment.actual_outcome
+    ):
+        raise ValueError("completion projection differs from the outcome attachment")
+
+    required_bindings = {
+        (TasteEpisodeEvidenceRole.DECISION, lock.immutable_decision_locator),
+        (TasteEpisodeEvidenceRole.DECISION_STATE, lock.state_snapshot_locator),
+    }
+    observed_bindings = {(item.role, item.locator) for item in proposal.evidence}
+    if not required_bindings.issubset(observed_bindings):
+        raise ValueError("v2 proposal does not bind the immutable decision and state")
+    attached_evidence = {
+        (item.evidence_id, item.locator, item.sha256) for item in attachment.evidence
+    }
+    proposed_outcomes = {
+        (
+            item.evidence_id,
+            item.locator,
+            hashlib.sha256(
+                _owned_file(run_root, item.locator, max_bytes=_MAX_EVIDENCE_BYTES).read_bytes()
+            ).hexdigest(),
+        )
+        for item in proposal.evidence
+        if item.role is TasteEpisodeEvidenceRole.OUTCOME
+    }
+    if not attached_evidence.issubset(proposed_outcomes):
+        raise ValueError("v2 proposal omits outcome evidence from the attachment")
+    compiled_evidence = tuple(
+        TasteEpisodeEvidence(
+            evidence_id=item.evidence_id,
+            role=item.role,
+            locator=item.locator,
+            sha256=hashlib.sha256(
+                _owned_file(run_root, item.locator, max_bytes=_MAX_EVIDENCE_BYTES).read_bytes()
+            ).hexdigest(),
+        )
+        for item in proposal.evidence
+    )
+    candidate = compile_process_taste_episode_candidate(
+        decision,
+        candidate_id=proposal.candidate_id,
+        project_id=plan.project_id,
+        source_project_id=plan.source_project_id,
+        source_group_id=plan.source_group_id,
+        dataset_partition=plan.dataset_partition,
+        source_project_revision=lock.observed_project_revision,
+        source_project_snapshot_sha256=lock.observed_project_snapshot_sha256,
+        idea_revision=plan.idea_revision,
+        producer_id=proposal.producer_id,
+        state_summary=proposal.state_summary,
+        decision_context=proposal.decision_context,
+        decision_principle=proposal.decision_principle,
+        why_preferred=proposal.why_preferred,
+        outcomes=proposal.outcomes,
+        credit_assignments=proposal.credit_assignments,
+        applicability_conditions=proposal.applicability_conditions,
+        failure_conditions=proposal.failure_conditions,
+        counterfactual_probe=proposal.counterfactual_probe,
+        evidence=compiled_evidence,
+        domain_tags=proposal.domain_tags,
+        venue_tags=proposal.venue_tags,
+        confounders=proposal.confounders,
+        missing_evidence_questions=proposal.missing_evidence_questions,
+    )
+    _write_new_json(output, candidate.model_dump_json(indent=2) + "\n")
+    return candidate
+
+
 def reconstruct_taste_trajectory(
     plan: TasteTrajectorySamplingPlan,
     *,
@@ -639,6 +1145,27 @@ def load_taste_prospective_capture(
 ) -> TasteProspectiveDecisionCaptureReceipt:
     source = _bounded_input_file(path, max_bytes=_MAX_CONTRACT_BYTES)
     return TasteProspectiveDecisionCaptureReceipt.model_validate_json(source.read_bytes())
+
+
+def load_taste_prospective_decision_lock(
+    path: str | Path,
+) -> TasteProspectiveDecisionLockReceipt:
+    source = _bounded_input_file(path, max_bytes=_MAX_CONTRACT_BYTES)
+    return TasteProspectiveDecisionLockReceipt.model_validate_json(source.read_bytes())
+
+
+def load_taste_prospective_outcome_attachment(
+    path: str | Path,
+) -> TasteProspectiveOutcomeAttachmentReceipt:
+    source = _bounded_input_file(path, max_bytes=_MAX_CONTRACT_BYTES)
+    return TasteProspectiveOutcomeAttachmentReceipt.model_validate_json(source.read_bytes())
+
+
+def load_taste_prospective_completion_projection(
+    path: str | Path,
+) -> TasteProspectiveDecisionCompletionProjection:
+    source = _bounded_input_file(path, max_bytes=_MAX_CONTRACT_BYTES)
+    return TasteProspectiveDecisionCompletionProjection.model_validate_json(source.read_bytes())
 
 
 def load_taste_trajectory_inventory(path: str | Path) -> TasteTrajectoryInventory:
@@ -755,6 +1282,62 @@ def _reconstruct_decision(
     )
 
 
+def _load_and_verify_locked_predecision(
+    root: Path,
+    lock: TasteProspectiveDecisionLockReceipt,
+) -> ResearchDecision:
+    immutable_path = _owned_file(
+        root,
+        lock.immutable_decision_locator,
+        max_bytes=_MAX_DECISION_LINE_BYTES,
+    )
+    immutable_bytes = immutable_path.read_bytes()
+    if hashlib.sha256(immutable_bytes).hexdigest() != lock.immutable_decision_file_sha256:
+        raise ValueError("immutable predecision record drifted")
+    decision = ResearchDecision.model_validate_json(immutable_bytes)
+    if decision.executor_result_id is not None or decision.actual_outcome is not None:
+        raise ValueError("immutable predecision record contains post-execution fields")
+    if decision.decision_id != lock.decision_id:
+        raise ValueError("immutable predecision identity drifted")
+    if content_sha256(decision.model_dump(mode="json")) != lock.decision_sha256:
+        raise ValueError("immutable predecision semantic hash drifted")
+    if decision.timestamp != lock.decision_timestamp:
+        raise ValueError("immutable predecision timestamp drifted")
+    actions = tuple(decision.candidate_actions)
+    if len(actions) != lock.alternative_count:
+        raise ValueError("immutable predecision alternative count drifted")
+    if content_sha256(tuple(item.model_dump(mode="json") for item in actions)) != (
+        lock.candidate_set_sha256
+    ):
+        raise ValueError("immutable predecision action menu drifted")
+    if (
+        decision.selected_action.action_id != lock.selected_action_id
+        or content_sha256(decision.selected_action.model_dump(mode="json"))
+        != lock.selected_action_sha256
+        or content_sha256(decision.rationale) != lock.rationale_sha256
+    ):
+        raise ValueError("immutable predecision selection or rationale drifted")
+
+    decision_log = _owned_file(root, lock.decision_log_locator, max_bytes=_MAX_DECISION_LOG_BYTES)
+    lines = decision_log.read_bytes().splitlines(keepends=True)
+    if lock.decision_line_number > len(lines):
+        raise ValueError("locked predecision line is missing")
+    line = lines[lock.decision_line_number - 1]
+    if hashlib.sha256(line).hexdigest() != lock.decision_line_sha256 or line != immutable_bytes:
+        raise ValueError("locked predecision log line drifted")
+
+    state_path = _owned_file(root, lock.state_snapshot_locator, max_bytes=_MAX_STATE_BYTES)
+    state_bytes = state_path.read_bytes()
+    if hashlib.sha256(state_bytes).hexdigest() != lock.state_file_sha256:
+        raise ValueError("locked state snapshot bytes drifted")
+    state = ResearchState.model_validate_json(state_bytes)
+    if snapshot_id(state) != lock.state_snapshot_id:
+        raise ValueError("locked state snapshot identity drifted")
+    if decision.state_snapshot_id != lock.state_snapshot_id:
+        raise ValueError("locked decision no longer binds its state")
+    return decision
+
+
 def _canonical_root(value: str | Path) -> Path:
     root = Path(value).expanduser()
     if root.is_symlink():
@@ -852,21 +1435,38 @@ def _write_new_json(value: str | Path, contents: str) -> Path:
     return path
 
 
+def _write_or_verify_immutable(path: Path, contents: bytes) -> None:
+    if path.exists() or path.is_symlink():
+        if path.is_symlink() or not path.is_file() or path.read_bytes() != contents:
+            raise ValueError("immutable predecision record already binds different bytes")
+        return
+    _write_new_json(path, contents.decode("utf-8"))
+
+
 __all__ = [
     "TasteProcessEpisodeProposal",
     "TasteProcessEvidenceBinding",
     "TasteProspectiveDecisionCaptureReceipt",
+    "TasteProspectiveDecisionCompletionProjection",
+    "TasteProspectiveDecisionLockReceipt",
+    "TasteProspectiveOutcomeAttachmentReceipt",
     "TasteTrajectoryAssignmentTiming",
     "TasteTrajectoryDecisionSeed",
     "TasteTrajectoryFollowup",
     "TasteTrajectoryInventory",
     "TasteTrajectorySamplingPlan",
+    "attach_prospective_taste_outcome",
     "capture_prospective_taste_decision",
     "compile_prospective_taste_episode",
+    "compile_prospective_taste_episode_v2",
     "load_taste_process_episode_proposal",
     "load_taste_prospective_capture",
+    "load_taste_prospective_completion_projection",
+    "load_taste_prospective_decision_lock",
+    "load_taste_prospective_outcome_attachment",
     "load_taste_trajectory_inventory",
     "load_taste_trajectory_sampling_plan",
+    "lock_prospective_taste_decision",
     "reconstruct_taste_trajectory",
     "save_taste_process_episode_proposal",
     "save_taste_trajectory_inventory",

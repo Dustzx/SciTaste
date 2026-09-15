@@ -491,14 +491,18 @@ from scitaste.taste.semantic import (
 )
 from scitaste.taste.trajectory_reconstruction import (
     TasteProcessEpisodeProposal,
+    TasteProcessEvidenceBinding,
     TasteTrajectoryAssignmentTiming,
     TasteTrajectorySamplingPlan,
+    attach_prospective_taste_outcome,
     capture_prospective_taste_decision,
     compile_prospective_taste_episode,
     load_taste_process_episode_proposal,
     load_taste_prospective_capture,
+    load_taste_prospective_decision_lock,
     load_taste_trajectory_inventory,
     load_taste_trajectory_sampling_plan,
+    lock_prospective_taste_decision,
     reconstruct_taste_trajectory,
     save_taste_process_episode_proposal,
     save_taste_trajectory_inventory,
@@ -1676,6 +1680,31 @@ def build_parser() -> argparse.ArgumentParser:
     trajectory_capture.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(trajectory_capture)
     trajectory_capture.set_defaults(handler=_handle_taste_capture_prospective_decision)
+    trajectory_lock_v2 = taste_commands.add_parser(
+        "lock-prospective-decision-v2",
+        help="Atomically lock a state and outcome-free decision before execution",
+    )
+    trajectory_lock_v2.add_argument("--plan", type=Path, required=True)
+    trajectory_lock_v2.add_argument("--state", type=Path, required=True)
+    trajectory_lock_v2.add_argument("--decision", type=Path, required=True)
+    trajectory_lock_v2.add_argument("--expected-revision", type=int, required=True)
+    trajectory_lock_v2.add_argument("--output", type=Path, required=True)
+    trajectory_lock_v2.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(trajectory_lock_v2)
+    trajectory_lock_v2.set_defaults(handler=_handle_taste_lock_prospective_decision_v2)
+    trajectory_attach_v2 = taste_commands.add_parser(
+        "attach-prospective-outcome-v2",
+        help="Attach delayed outcome evidence without rewriting locked decision bytes",
+    )
+    trajectory_attach_v2.add_argument("--plan", type=Path, required=True)
+    trajectory_attach_v2.add_argument("--lock", type=Path, required=True)
+    trajectory_attach_v2.add_argument("--draft", type=Path, required=True)
+    trajectory_attach_v2.add_argument("--source-root", type=Path, default=None)
+    trajectory_attach_v2.add_argument("--output", type=Path, required=True)
+    trajectory_attach_v2.add_argument("--projection-output", type=Path, required=True)
+    trajectory_attach_v2.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(trajectory_attach_v2)
+    trajectory_attach_v2.set_defaults(handler=_handle_taste_attach_prospective_outcome_v2)
     process_proposal = taste_commands.add_parser(
         "seal-process-episode-proposal",
         help="Seal one delayed-outcome proposal before independent AI review",
@@ -6488,6 +6517,105 @@ def _handle_taste_capture_prospective_decision(args: argparse.Namespace) -> int:
                 "alternative_count": receipt.alternative_count,
                 "awaiting_delayed_scientific_outcome": True,
                 "scientific_outcome_labels_created": False,
+                "policy_training_authorized": False,
+                "no_model_calls_performed": True,
+                "no_api_calls_performed": True,
+                "no_gpu_work_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_lock_prospective_decision_v2(args: argparse.Namespace) -> int:
+    plan = load_taste_trajectory_sampling_plan(args.plan)
+    state = ResearchState.model_validate_json(
+        _bounded_regular_input(args.state, label="prospective research state"),
+        strict=True,
+    )
+    decision = ResearchDecision.model_validate_json(
+        _bounded_regular_input(args.decision, label="outcome-free prospective decision"),
+        strict=True,
+    )
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, plan.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"prospective lock requires a verified current Idea: {codes}")
+    receipt = lock_prospective_taste_decision(
+        plan,
+        runtime=runtime,
+        state=state,
+        decision=decision,
+        current_idea_revision=idea_report.current_binding,
+        expected_project_revision=args.expected_revision,
+        output=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "prospective-predecision-locked-v2",
+                "lock": str(args.output),
+                "lock_sha256": receipt.lock_sha256,
+                "decision_id": receipt.decision_id,
+                "state_snapshot_id": receipt.state_snapshot_id,
+                "alternative_count": receipt.alternative_count,
+                "outcome_attachment_required": True,
+                "policy_training_authorized": False,
+                "no_model_calls_performed": True,
+                "no_api_calls_performed": True,
+                "no_gpu_work_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_attach_prospective_outcome_v2(args: argparse.Namespace) -> int:
+    plan = load_taste_trajectory_sampling_plan(args.plan)
+    lock = load_taste_prospective_decision_lock(args.lock)
+    raw = _bounded_regular_input(args.draft, label="prospective outcome attachment draft")
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("prospective outcome attachment draft must be a JSON object")
+    allowed = {"executor_result_id", "observed_at", "actual_outcome", "evidence"}
+    if set(payload) != allowed:
+        raise ValueError("outcome attachment draft fields must be exact")
+    evidence_payload = payload["evidence"]
+    if not isinstance(evidence_payload, list):
+        raise ValueError("outcome attachment evidence must be a list")
+    evidence = tuple(TasteProcessEvidenceBinding.model_validate(item) for item in evidence_payload)
+    actual_outcome = payload["actual_outcome"]
+    if not isinstance(actual_outcome, dict):
+        raise ValueError("prospective actual outcome must be a JSON object")
+    source_root = args.source_root or (
+        Path(args.outputs_root) / "projects" / plan.source_project_id / "runs" / plan.source_run_id
+    )
+    attachment, projection = attach_prospective_taste_outcome(
+        plan,
+        lock,
+        source_root=source_root,
+        executor_result_id=str(payload["executor_result_id"]),
+        observed_at=datetime.fromisoformat(str(payload["observed_at"])),
+        actual_outcome=actual_outcome,
+        evidence=evidence,
+        output=args.output,
+        projection_output=args.projection_output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "prospective-outcome-attached-v2",
+                "attachment": str(args.output),
+                "attachment_sha256": attachment.attachment_sha256,
+                "projection": str(args.projection_output),
+                "projection_sha256": projection.projection_sha256,
+                "predecision_sha256": attachment.predecision_sha256,
+                "source_predecision_bytes_rewritten": False,
                 "policy_training_authorized": False,
                 "no_model_calls_performed": True,
                 "no_api_calls_performed": True,

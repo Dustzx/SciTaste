@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Replaced prospective decision capture authority with a backward-compatible
+  two-phase v2 chain. The first command locks an outcome-free state, complete
+  non-duplicate action menu, selection, rationale, timestamp, immutable decision
+  record, and append-only log line before execution. A separate command can only
+  attach a strictly later executor outcome and hashed outcome evidence, producing
+  a completed projection without rewriting the predecision bytes. SciTasteBench
+  now leaves every legacy one-phase capture pending as
+  `legacy-temporal-unverified`; only a complete v2 chain can become eligible.
 - Added a label-isolated MLRC Perception runtime. It binds the fixed upstream
   commit and existing materialized views, builds a metadata-only held-out
   inference projection, freezes exact prediction bytes before a separate

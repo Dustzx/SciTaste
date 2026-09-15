@@ -4084,6 +4084,17 @@ It cannot label delayed scientific success or make the record training-eligible;
 those authorities remain in the independent outcome-attribution and admission
 stages.
 
+That original command remains replayable as schema v1, but it cannot establish
+temporal separation because its decision line already contains the executor
+outcome. Schema v2 therefore uses `taste lock-prospective-decision-v2` before
+execution. The lock rejects either post-execution field, requires at least two
+non-duplicate candidates, and hashes the full menu, exact selection, rationale,
+decision time, state snapshot, append-only line, and a separate write-once record.
+Only `taste attach-prospective-outcome-v2` may later bind an executor result,
+strictly later observation time, and run-owned outcome evidence. It emits a
+self-hashed attachment and completed projection while replaying the unchanged
+predecision bytes. Neither artifact grants policy authority.
+
 Once a downstream observation exists, the process miner seals a proposal that
 names its outcomes, causal-credit hypothesis, confounders, applicability and
 failure boundaries, and run-owned evidence locators. The compiler replays the
@@ -4469,14 +4480,21 @@ counts.
 Status: accepted and implemented for self-development diagnostics; formal external
 cohort construction remains open.
 
-Track-A source construction consumes the existing prospective Taste chain:
-sampling plan, exact decision/state capture, reconstruction inventory, delayed
-outcome proposal, compiled episode, and completed cross-model AI admission. The
-compiler proves that all alternatives and the selected action came from the
+Track-A source construction consumes the two-phase prospective Taste chain:
+sampling plan, exact outcome-free decision/state lock, later outcome attachment,
+completed projection, delayed outcome proposal, compiled episode, and completed
+cross-model AI admission. The compiler proves that all alternatives and the
+selected action came from the
 recorded predecision `ResearchDecision`; postdecision prose, scores, replies, or
 revisions cannot add an alternative. Missing outcomes remain pending, incomplete
 joins or byte drift are quarantined, and attribution must retain confidence,
 confounders, unresolved outcomes, or explicit missing-evidence questions.
+
+Legacy schema-v1 capture and reconstruction artifacts remain loadable for audit
+and historical replay, but receive the explicit pending finding
+`legacy-temporal-unverified`. They cannot enter the label-hidden source pool,
+even when later attribution and AI admission were completed. Prospective
+eligibility begins only with a complete, byte-consistent v2 temporal chain.
 
 The materialized source pool separates target-visible context from a scoring-only
 label vault. Held-out targets contain no selected action, outcome, or attribution;

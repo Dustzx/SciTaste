@@ -42,6 +42,7 @@ from scitaste.taste.episode_learning import (
 )
 from scitaste.taste.episodes import (
     TasteEpisodeCandidate,
+    TasteEpisodeEvidenceRole,
     TasteEpisodeMaturity,
     TasteEpisodePartition,
     TasteEpisodeSourceRelationship,
@@ -50,6 +51,9 @@ from scitaste.taste.episodes import (
 from scitaste.taste.trajectory_reconstruction import (
     TasteProcessEpisodeProposal,
     TasteProspectiveDecisionCaptureReceipt,
+    TasteProspectiveDecisionCompletionProjection,
+    TasteProspectiveDecisionLockReceipt,
+    TasteProspectiveOutcomeAttachmentReceipt,
     TasteTrajectoryAssignmentTiming,
     TasteTrajectoryInventory,
     TasteTrajectorySamplingPlan,
@@ -109,6 +113,9 @@ class ProspectiveDecisionSourceSpec(BaseModel):
     sampling_plan_locator: str | None = None
     capture_receipt_locator: str | None = None
     trajectory_inventory_locator: str | None = None
+    predecision_lock_locator: str | None = None
+    outcome_attachment_locator: str | None = None
+    completion_projection_locator: str | None = None
     process_episode_proposal_locator: str | None = None
     episode_candidate_locator: str | None = None
     admitted_episode_locator: str | None = None
@@ -124,6 +131,9 @@ class ProspectiveDecisionSourceSpec(BaseModel):
             self.sampling_plan_locator,
             self.capture_receipt_locator,
             self.trajectory_inventory_locator,
+            self.predecision_lock_locator,
+            self.outcome_attachment_locator,
+            self.completion_projection_locator,
             self.process_episode_proposal_locator,
             self.episode_candidate_locator,
             self.admitted_episode_locator,
@@ -134,21 +144,38 @@ class ProspectiveDecisionSourceSpec(BaseModel):
         ):
             if locator is not None:
                 validate_relative_locator(locator, field_name="decision episode source locator")
-        prospective = (
+        legacy_prospective = (
             self.sampling_plan_locator,
             self.capture_receipt_locator,
             self.trajectory_inventory_locator,
         )
+        prospective_v2 = (
+            self.sampling_plan_locator,
+            self.predecision_lock_locator,
+            self.outcome_attachment_locator,
+            self.completion_projection_locator,
+        )
         h4 = (self.h4_state_locator, self.h4_decision_locator)
         if self.source_kind is DecisionEpisodeSourceKind.PROSPECTIVE_TASTE_EPISODE:
-            if any(item is None for item in prospective):
-                raise ValueError("prospective Taste ingress requires plan, capture, and inventory")
+            legacy_complete = all(item is not None for item in legacy_prospective)
+            v2_complete = all(item is not None for item in prospective_v2)
+            if legacy_complete == v2_complete:
+                raise ValueError(
+                    "prospective Taste ingress requires exactly one complete v1 or v2 chain"
+                )
+            if legacy_complete and any(item is not None for item in prospective_v2[1:]):
+                raise ValueError("legacy prospective ingress cannot mix v2 artifacts")
+            if v2_complete and any(
+                item is not None
+                for item in (self.capture_receipt_locator, self.trajectory_inventory_locator)
+            ):
+                raise ValueError("prospective v2 ingress cannot mix legacy artifacts")
             if any(item is not None for item in h4):
                 raise ValueError("prospective Taste ingress cannot claim H4 foundation locators")
         else:
             if any(item is None for item in h4):
                 raise ValueError("H4 ingress requires pre-patch state and action decision locators")
-            if any(item is not None for item in prospective):
+            if any(item is not None for item in (*legacy_prospective, *prospective_v2[1:])):
                 raise ValueError("H4 ingress cannot claim a prospective Taste sampling chain")
             if any(
                 item is not None
@@ -167,7 +194,7 @@ class ProspectiveDecisionCohortPlan(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     cohort_id: str = Field(pattern=_ID)
     project_id: str
     prepared_at: datetime
@@ -194,14 +221,27 @@ class ProspectiveDecisionCohortPlan(BaseModel):
         source_ids = [item.source_id for item in self.sources]
         if len(source_ids) != len(set(source_ids)):
             raise ValueError("cohort source IDs must be unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"plan_sha256"}))
+        if self.schema_version == "1.0" and any(
+            source.predecision_lock_locator is not None for source in self.sources
+        ):
+            raise ValueError("prospective v2 sources require cohort schema 1.1")
+        hash_payload = self.model_dump(mode="json", exclude={"plan_sha256"})
+        if self.schema_version == "1.0":
+            for source in hash_payload["sources"]:
+                for field in (
+                    "predecision_lock_locator",
+                    "outcome_attachment_locator",
+                    "completion_projection_locator",
+                ):
+                    source.pop(field, None)
+        expected = content_sha256(hash_payload)
         if self.plan_sha256 != expected:
             raise ValueError("prospective decision cohort plan hash mismatch")
         return self
 
     @classmethod
     def create(cls, **values: object) -> ProspectiveDecisionCohortPlan:
-        payload = {"schema_version": "1.0", **values}
+        payload = {"schema_version": "1.1", **values}
         payload.pop("plan_sha256", None)
         source_values = payload.get("sources", ())
         if not isinstance(source_values, (list, tuple)):
@@ -990,8 +1030,19 @@ def _audit_prospective_source(
     DecisionEpisodeSourcePoolEntry | None,
     DecisionEpisodeLabelRecord | None,
 ]:
+    if spec.predecision_lock_locator is not None:
+        return _audit_prospective_source_v2(root, cohort, spec)
     artifacts: list[DecisionEpisodeArtifactBinding] = []
-    findings: list[DecisionEpisodeFinding] = []
+    findings: list[DecisionEpisodeFinding] = [
+        DecisionEpisodeFinding(
+            code="legacy-temporal-unverified",
+            severity=DecisionEpisodeFindingSeverity.PENDING,
+            message=(
+                "The legacy one-phase capture includes an outcome in the decision line, so "
+                "its pre-execution action menu cannot receive prospective eligibility."
+            ),
+        )
+    ]
     candidate_set_verified = False
     selected_verified = False
     outcome_bound = False
@@ -1141,6 +1192,181 @@ def _audit_prospective_source(
     )
 
 
+def _audit_prospective_source_v2(
+    root: Path,
+    cohort: ProspectiveDecisionCohortPlan,
+    spec: ProspectiveDecisionSourceSpec,
+) -> tuple[
+    DecisionEpisodeSourceAudit,
+    DecisionEpisodeSourcePoolEntry | None,
+    DecisionEpisodeLabelRecord | None,
+]:
+    artifacts: list[DecisionEpisodeArtifactBinding] = []
+    findings: list[DecisionEpisodeFinding] = []
+    candidate_set_verified = False
+    selected_verified = False
+    outcome_bound = False
+    uncertainty_preserved = False
+    ai_review_count = 0
+    target_projection: DecisionEpisodeSourcePoolEntry | None = None
+    label: DecisionEpisodeLabelRecord | None = None
+    try:
+        trajectory_root = _within_root(root, spec.trajectory_root_locator, must_exist=True)
+        plan_path = _source_artifact(root, spec.sampling_plan_locator)
+        lock_path = _source_artifact(root, spec.predecision_lock_locator)
+        attachment_path = _source_artifact(root, spec.outcome_attachment_locator)
+        completion_path = _source_artifact(root, spec.completion_projection_locator)
+        plan = TasteTrajectorySamplingPlan.model_validate_json(plan_path.read_bytes())
+        lock = TasteProspectiveDecisionLockReceipt.model_validate_json(lock_path.read_bytes())
+        attachment = TasteProspectiveOutcomeAttachmentReceipt.model_validate_json(
+            attachment_path.read_bytes()
+        )
+        completion = TasteProspectiveDecisionCompletionProjection.model_validate_json(
+            completion_path.read_bytes()
+        )
+        artifacts.extend(
+            (
+                _artifact("sampling-plan", plan_path, root, plan.plan_sha256),
+                _artifact("predecision-lock", lock_path, root, lock.lock_sha256),
+                _artifact(
+                    "outcome-attachment",
+                    attachment_path,
+                    root,
+                    attachment.attachment_sha256,
+                ),
+                _artifact(
+                    "completion-projection",
+                    completion_path,
+                    root,
+                    completion.projection_sha256,
+                ),
+            )
+        )
+        decision = _verify_foundation_v2(
+            root=trajectory_root,
+            cohort=cohort,
+            spec=spec,
+            plan=plan,
+            lock=lock,
+            attachment=attachment,
+            completion=completion,
+        )
+        candidate_set_verified = True
+        selected_verified = True
+        outcome_bound = True
+
+        if spec.process_episode_proposal_locator is None:
+            findings.append(
+                DecisionEpisodeFinding(
+                    code="delayed-scientific-attribution-pending",
+                    severity=DecisionEpisodeFindingSeverity.PENDING,
+                    message="The v2 outcome is attached, but attribution has not been proposed.",
+                )
+            )
+            raise _ExpectedIncomplete
+        proposal_path = _source_artifact(root, spec.process_episode_proposal_locator)
+        proposal = TasteProcessEpisodeProposal.model_validate_json(proposal_path.read_bytes())
+        artifacts.append(
+            _artifact("outcome-proposal", proposal_path, root, proposal.proposal_sha256)
+        )
+        if spec.episode_candidate_locator is None:
+            findings.append(
+                DecisionEpisodeFinding(
+                    code="compiled-episode-missing",
+                    severity=DecisionEpisodeFindingSeverity.QUARANTINE,
+                    message="A v2 outcome proposal exists without its compiled episode.",
+                )
+            )
+            raise _ExpectedIncomplete
+        candidate_path = _source_artifact(root, spec.episode_candidate_locator)
+        candidate = TasteEpisodeCandidate.model_validate_json(candidate_path.read_bytes())
+        artifacts.append(
+            _artifact("episode-candidate", candidate_path, root, candidate.candidate_sha256)
+        )
+        _verify_candidate_v2(
+            trajectory_root,
+            plan,
+            lock,
+            attachment,
+            completion,
+            proposal,
+            candidate,
+            decision,
+        )
+        uncertainty_preserved = _uncertainty_is_explicit(candidate)
+        if not uncertainty_preserved:
+            findings.append(
+                DecisionEpisodeFinding(
+                    code="outcome-attribution-uncertainty-unbound",
+                    severity=DecisionEpisodeFindingSeverity.QUARANTINE,
+                    message="The v2 attribution lacks an explicit uncertainty signal.",
+                )
+            )
+            raise _ExpectedIncomplete
+        if spec.admitted_episode_locator is None:
+            findings.append(
+                DecisionEpisodeFinding(
+                    code="independent-ai-review-pending",
+                    severity=DecisionEpisodeFindingSeverity.PENDING,
+                    message="The attributed episode still needs two independent AI reviews.",
+                )
+            )
+            raise _ExpectedIncomplete
+        admission_path = _source_artifact(root, spec.admitted_episode_locator)
+        admission = AdmittedTasteEpisode.model_validate_json(admission_path.read_bytes())
+        artifacts.append(
+            _artifact("ai-reviewed-admission", admission_path, root, admission.admission_sha256)
+        )
+        ai_review_count = _verify_ai_admission(trajectory_root, candidate, admission)
+        target_projection, label = _build_projection(spec, decision, candidate, admission)
+    except _ExpectedIncomplete:
+        pass
+    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError) as exc:
+        findings.append(
+            DecisionEpisodeFinding(
+                code="trajectory-v2-binding-quarantined",
+                severity=DecisionEpisodeFindingSeverity.QUARANTINE,
+                message=str(exc),
+            )
+        )
+        target_projection = None
+        label = None
+
+    status = _status(findings)
+    formal = (
+        status is DecisionEpisodeIngressStatus.ELIGIBLE
+        and spec.evidence_tier is DecisionEpisodeEvidenceTier.FORMAL_EXTERNAL
+        and spec.track_a_role is not DecisionEpisodeTrackARole.DIAGNOSTIC
+    )
+    audit = DecisionEpisodeSourceAudit.create(
+        source_id=spec.source_id,
+        source_kind=spec.source_kind,
+        evidence_tier=spec.evidence_tier,
+        track_a_role=spec.track_a_role,
+        source_group_id=spec.source_group_id,
+        dataset_partition=spec.dataset_partition,
+        status=status,
+        findings=tuple(findings),
+        artifacts=tuple(artifacts),
+        predecision_candidate_set_verified=candidate_set_verified,
+        selected_action_binding_verified=selected_verified,
+        delayed_scientific_outcome_bound=outcome_bound,
+        attribution_uncertainty_preserved=uncertainty_preserved,
+        ai_review_count=ai_review_count,
+        self_dogfood_only=(spec.evidence_tier is DecisionEpisodeEvidenceTier.SELF_DOGFOOD),
+        formal_external_validity_eligible=formal,
+    )
+    if target_projection is not None:
+        target_projection = target_projection.model_copy(
+            update={"source_audit_sha256": audit.source_audit_sha256}
+        )
+    return (
+        audit,
+        target_projection if status is DecisionEpisodeIngressStatus.ELIGIBLE else None,
+        label if status is DecisionEpisodeIngressStatus.ELIGIBLE else None,
+    )
+
+
 def _verify_foundation(
     cohort: ProspectiveDecisionCohortPlan,
     spec: ProspectiveDecisionSourceSpec,
@@ -1211,6 +1437,164 @@ def _verify_foundation(
         or seed.executor_outcome_sha256 != capture.executor_outcome_sha256
     ):
         raise ValueError("capture differs from the reconstruction inventory")
+
+
+def _verify_foundation_v2(
+    *,
+    root: Path,
+    cohort: ProspectiveDecisionCohortPlan,
+    spec: ProspectiveDecisionSourceSpec,
+    plan: TasteTrajectorySamplingPlan,
+    lock: TasteProspectiveDecisionLockReceipt,
+    attachment: TasteProspectiveOutcomeAttachmentReceipt,
+    completion: TasteProspectiveDecisionCompletionProjection,
+) -> ResearchDecision:
+    if plan.assignment_timing is not TasteTrajectoryAssignmentTiming.PROSPECTIVE:
+        raise ValueError("cohort accepts only genuinely prospective sampling plans")
+    if not plan.source_absent_when_frozen:
+        raise ValueError("prospective source existed before its sampling freeze")
+    if plan.project_id != cohort.project_id:
+        raise ValueError("trajectory sampling plan belongs to another evaluation project")
+    if (
+        plan.source_group_id != spec.source_group_id
+        or plan.dataset_partition is not spec.dataset_partition
+    ):
+        raise ValueError("declared source group or split differs from the frozen plan")
+    expected_relationship = {
+        DecisionEpisodeEvidenceTier.SELF_DOGFOOD: TasteEpisodeSourceRelationship.SELF_PROJECT,
+        DecisionEpisodeEvidenceTier.FORMAL_EXTERNAL: (
+            TasteEpisodeSourceRelationship.INDEPENDENT_PROJECT
+        ),
+    }[spec.evidence_tier]
+    if plan.source_relationship is not expected_relationship:
+        raise ValueError("evidence tier differs from the frozen source relationship")
+    if spec.evidence_tier is DecisionEpisodeEvidenceTier.SELF_DOGFOOD:
+        if (
+            plan.source_project_id != cohort.project_id
+            or spec.dataset_partition is not TasteEpisodePartition.DEVELOPMENT
+            or spec.track_a_role is not DecisionEpisodeTrackARole.DIAGNOSTIC
+        ):
+            raise ValueError("self-dogfood sources are development diagnostics only")
+    else:
+        if plan.source_project_id == cohort.project_id:
+            raise ValueError("formal external evidence cannot use the evaluation project")
+        allowed = {
+            DecisionEpisodeTrackARole.PRECEDENT: {
+                TasteEpisodePartition.DEVELOPMENT,
+                TasteEpisodePartition.CALIBRATION,
+            },
+            DecisionEpisodeTrackARole.HELDOUT_TARGET: {TasteEpisodePartition.FORMAL_HELDOUT},
+            DecisionEpisodeTrackARole.DIAGNOSTIC: {TasteEpisodePartition.PILOT},
+        }[spec.track_a_role]
+        if spec.dataset_partition not in allowed:
+            raise ValueError("formal external split is incompatible with its Track-A role")
+    if any(
+        (
+            lock.plan_id != plan.plan_id,
+            lock.plan_sha256 != plan.plan_sha256,
+            attachment.plan_id != plan.plan_id,
+            attachment.plan_sha256 != plan.plan_sha256,
+            completion.plan_id != plan.plan_id,
+            completion.plan_sha256 != plan.plan_sha256,
+        )
+    ):
+        raise ValueError("prospective v2 artifacts bind different plans")
+    if lock.source_project_id != plan.source_project_id or lock.source_run_id != plan.source_run_id:
+        raise ValueError("prospective v2 lock source differs from its plan")
+    if lock.captured_at < plan.frozen_at or lock.decision_timestamp < plan.frozen_at:
+        raise ValueError("prospective v2 decision predates the sampling freeze")
+    if attachment.observed_at <= lock.captured_at or attachment.attached_at <= lock.captured_at:
+        raise ValueError("prospective v2 outcome is not strictly later than its lock")
+    if attachment.attached_at < attachment.observed_at:
+        raise ValueError("prospective v2 attachment predates outcome observation")
+    if (
+        attachment.lock_sha256 != lock.lock_sha256
+        or attachment.decision_id != lock.decision_id
+        or attachment.predecision_sha256 != lock.decision_sha256
+        or completion.lock_sha256 != lock.lock_sha256
+        or completion.attachment_sha256 != attachment.attachment_sha256
+        or completion.predecision_sha256 != lock.decision_sha256
+    ):
+        raise ValueError("prospective v2 temporal chain identity differs")
+    if completion.projected_at < attachment.attached_at:
+        raise ValueError("prospective completion projection predates outcome attachment")
+
+    immutable_path = _source_owned_file(
+        root,
+        lock.immutable_decision_locator,
+        _MAX_EVIDENCE_BYTES,
+    )
+    immutable_bytes = immutable_path.read_bytes()
+    if _sha256_file(immutable_path) != lock.immutable_decision_file_sha256:
+        raise ValueError("v2 immutable predecision bytes drifted")
+    locked = ResearchDecision.model_validate_json(immutable_bytes)
+    if locked.executor_result_id is not None or locked.actual_outcome is not None:
+        raise ValueError("v2 immutable predecision contains an outcome")
+    if (
+        locked.decision_id != lock.decision_id
+        or content_sha256(locked.model_dump(mode="json")) != lock.decision_sha256
+        or locked.timestamp != lock.decision_timestamp
+    ):
+        raise ValueError("v2 immutable predecision identity drifted")
+    if len(locked.candidate_actions) != lock.alternative_count:
+        raise ValueError("v2 immutable action menu count drifted")
+    action_ids = tuple(item.action_id for item in locked.candidate_actions)
+    action_hashes = tuple(
+        content_sha256(item.model_dump(mode="json")) for item in locked.candidate_actions
+    )
+    if (
+        len(action_ids) < 2
+        or len(set(action_ids)) != len(action_ids)
+        or len(set(action_hashes)) != len(action_hashes)
+        or content_sha256(tuple(item.model_dump(mode="json") for item in locked.candidate_actions))
+        != lock.candidate_set_sha256
+    ):
+        raise ValueError("v2 immutable action menu is incomplete or drifted")
+    if (
+        locked.selected_action.action_id != lock.selected_action_id
+        or content_sha256(locked.selected_action.model_dump(mode="json"))
+        != lock.selected_action_sha256
+        or content_sha256(locked.rationale) != lock.rationale_sha256
+        or sum(item == locked.selected_action for item in locked.candidate_actions) != 1
+    ):
+        raise ValueError("v2 immutable selected action or rationale drifted")
+
+    log_path = _source_owned_file(root, lock.decision_log_locator, _MAX_EVIDENCE_BYTES)
+    lines = log_path.read_bytes().splitlines(keepends=True)
+    if lock.decision_line_number > len(lines):
+        raise ValueError("v2 locked decision line is missing")
+    line = lines[lock.decision_line_number - 1]
+    if hashlib.sha256(line).hexdigest() != lock.decision_line_sha256 or line != immutable_bytes:
+        raise ValueError("v2 locked decision log line drifted")
+    state_path = _source_owned_file(root, lock.state_snapshot_locator, _MAX_EVIDENCE_BYTES)
+    if _sha256_file(state_path) != lock.state_file_sha256:
+        raise ValueError("v2 locked state bytes drifted")
+    state = ResearchState.model_validate_json(state_path.read_bytes())
+    if (
+        snapshot_id(state) != lock.state_snapshot_id
+        or state.project_id != plan.source_project_id
+        or locked.state_snapshot_id != lock.state_snapshot_id
+        or locked.stage != state.current_stage.value
+    ):
+        raise ValueError("v2 locked state identity drifted")
+
+    for item in attachment.evidence:
+        path = _source_owned_file(root, item.locator, _MAX_EVIDENCE_BYTES)
+        if _sha256_file(path) != item.sha256:
+            raise ValueError(f"v2 outcome evidence bytes drifted: {item.evidence_id}")
+    completed = completion.completed_decision
+    restored = completed.model_copy(
+        deep=True,
+        update={"executor_result_id": None, "actual_outcome": None},
+    )
+    if restored != locked:
+        raise ValueError("v2 completion projection changed predecision content")
+    if (
+        completed.executor_result_id != attachment.executor_result_id
+        or completed.actual_outcome != attachment.actual_outcome
+    ):
+        raise ValueError("v2 completion projection differs from its attachment")
+    return completed
 
 
 def _load_captured_decision(
@@ -1324,6 +1708,104 @@ def _verify_candidate(
     }
     if not outcome_locators or outcome_locators.intersection(decision_locators):
         raise ValueError("postdecision outcome evidence is missing or backfills decision material")
+
+
+def _verify_candidate_v2(
+    trajectory_root: Path,
+    plan: TasteTrajectorySamplingPlan,
+    lock: TasteProspectiveDecisionLockReceipt,
+    attachment: TasteProspectiveOutcomeAttachmentReceipt,
+    completion: TasteProspectiveDecisionCompletionProjection,
+    proposal: TasteProcessEpisodeProposal,
+    candidate: TasteEpisodeCandidate,
+    decision: ResearchDecision,
+) -> None:
+    if (
+        proposal.plan_id != plan.plan_id
+        or proposal.plan_sha256 != plan.plan_sha256
+        or proposal.capture_sha256 != attachment.attachment_sha256
+        or proposal.inventory_sha256 != completion.projection_sha256
+        or proposal.decision_id != lock.decision_id
+    ):
+        raise ValueError("v2 outcome proposal differs from the temporal foundation")
+    if proposal.observed_at < attachment.observed_at:
+        raise ValueError("v2 delayed attribution predates its outcome attachment")
+    if (
+        candidate.project_id != plan.project_id
+        or candidate.source_project_id != plan.source_project_id
+        or candidate.source_group_id != plan.source_group_id
+        or candidate.dataset_partition is not plan.dataset_partition
+        or candidate.source_relationship is not plan.source_relationship
+        or candidate.idea_revision != plan.idea_revision
+        or candidate.source_project_revision != lock.observed_project_revision
+        or candidate.source_project_snapshot_sha256 != lock.observed_project_snapshot_sha256
+        or candidate.decision_id != decision.decision_id
+        or candidate.channel is not TasteSupervisionChannel.INTERNAL_OUTCOME
+        or candidate.maturity is not TasteEpisodeMaturity.ATTRIBUTION_PROPOSED
+    ):
+        raise ValueError("compiled v2 episode differs from its prospective source identity")
+    expected_actions = tuple(
+        {
+            "action_id": item.action_id,
+            "action_type": item.type.value,
+            "summary": item.description,
+            "tags": tuple(item.tags),
+            "expected_value": dict(item.expected_value),
+            "expected_cost": dict(item.expected_cost),
+            "selected": item.action_id == decision.selected_action.action_id,
+        }
+        for item in decision.candidate_actions
+    )
+    observed_actions = tuple(item.model_dump(mode="python") for item in candidate.alternatives)
+    if observed_actions != expected_actions:
+        raise ValueError("v2 episode alternatives differ from the locked action menu")
+    if candidate.selected_action_id != lock.selected_action_id:
+        raise ValueError("v2 episode selection differs from the predecision lock")
+    proposal_fields = (
+        "candidate_id",
+        "producer_id",
+        "state_summary",
+        "decision_context",
+        "decision_principle",
+        "why_preferred",
+        "outcomes",
+        "credit_assignments",
+        "applicability_conditions",
+        "failure_conditions",
+        "counterfactual_probe",
+        "domain_tags",
+        "venue_tags",
+        "confounders",
+        "missing_evidence_questions",
+    )
+    if any(getattr(proposal, field) != getattr(candidate, field) for field in proposal_fields):
+        raise ValueError("compiled v2 episode content differs from its sealed proposal")
+    expected_bindings = {(item.evidence_id, item.role, item.locator) for item in proposal.evidence}
+    observed_bindings = {(item.evidence_id, item.role, item.locator) for item in candidate.evidence}
+    if expected_bindings != observed_bindings:
+        raise ValueError("compiled v2 episode evidence differs from its proposal")
+    for evidence in candidate.evidence:
+        path = _source_owned_file(trajectory_root, evidence.locator, _MAX_EVIDENCE_BYTES)
+        if _sha256_file(path) != evidence.sha256:
+            raise ValueError(f"v2 episode evidence bytes drifted: {evidence.evidence_id}")
+    attachment_bindings = {
+        (item.evidence_id, item.locator, item.sha256) for item in attachment.evidence
+    }
+    candidate_outcomes = {
+        (item.evidence_id, item.locator, item.sha256)
+        for item in candidate.evidence
+        if item.role is TasteEpisodeEvidenceRole.OUTCOME
+    }
+    if not attachment_bindings.issubset(candidate_outcomes):
+        raise ValueError("compiled v2 episode omits attached outcome evidence")
+    outcome_locators = {item.locator for item in candidate.evidence if item.role.value == "outcome"}
+    decision_locators = {
+        item.locator
+        for item in candidate.evidence
+        if item.role.value in {"decision", "decision-state"}
+    }
+    if not outcome_locators or outcome_locators.intersection(decision_locators):
+        raise ValueError("v2 outcome evidence is missing or backfills predecision material")
 
 
 def _verify_ai_admission(
