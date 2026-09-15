@@ -11,10 +11,14 @@ project:
   program:
     locator: configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml
     sha256: 5c27721ab923516129de8b6ea9c40ddc20a82fab668190b2df2d6980a0ebec41
-  implementation_commit: 0069d424807be0c264054c4354e5cad5aa2ab888
+  implementation_commit: 41c8da3ab43e8e3e66d83e3ef6dd9344d547822c
   controller_run_id: scitaste-iclr2027-capability-driven-autoresearch-program-v7
   minimum_project_revision: 615
   require_current_controller: true
+  idea_revision_id: outcome-calibrated-scientific-taste-policy-v2
+  idea_revision:
+    locator: outputs/projects/scitaste-self-development/runs/2026-09-15__scitaste-native__outcome-calibrated-taste-idea-v2__seed-00/idea_refinement/REVISION.json
+    sha256: 4b592572eb58236def8d273329995472b9f05ce0435fa16b7b551d758b13a765
 
 workload:
   benchmark_id: mlrc-bench

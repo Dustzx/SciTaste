@@ -114,7 +114,9 @@ The immediate critical path is therefore:
 
 The current no-run E2 handoff is
 [`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
-SHA-256 `3c77c8e94eed8e4dd6cbd465129ec99a6eca6aa78a086437a43674417d0244a6`.
-Its ten static scientific and execution boundaries pass. It is deliberately not
+SHA-256 `efff263d10bb614440819d8e3f59a88a589fb3328cfc2aaa379716cc8d7ba52a`.
+Its eleven static scientific and execution boundaries pass, including an exact
+binding to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`.
+It is deliberately not
 launchable while the independent judge panel, development-only full-loop receipt,
 actual GPU baseline, final role/budget freeze, and owner approval remain open.

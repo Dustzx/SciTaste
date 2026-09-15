@@ -47,6 +47,8 @@ def test_related_work_e2_manifest_does_not_require_an_available_checkpoint() -> 
     )
     assert manifest.model_selection.scientific_agent_and_task_model_separate is True
     assert all("2b" not in item.model_id.casefold() for item in manifest.model_selection.candidates)
+    assert manifest.project.idea_revision_id == "outcome-calibrated-scientific-taste-policy-v2"
+    assert manifest.project.idea_revision is not None
     assert manifest.workload.architecture == "LocPointTransformer"
 
 
