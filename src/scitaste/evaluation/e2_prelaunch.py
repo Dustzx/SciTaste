@@ -85,6 +85,8 @@ class E2ProjectBinding(BaseModel):
     controller_run_id: str
     minimum_project_revision: int = Field(ge=1)
     require_current_controller: Literal[True] = True
+    idea_revision_id: str | None = None
+    idea_revision: E2FileBinding | None = None
 
     @field_validator("project_id")
     @classmethod
@@ -96,6 +98,15 @@ class E2ProjectBinding(BaseModel):
     def ids_are_safe(cls, value: str, info: object) -> str:
         return validate_entry_id(value, field_name=str(getattr(info, "field_name", "id")))
 
+    @field_validator("idea_revision_id")
+    @classmethod
+    def idea_id_is_safe(cls, value: str | None) -> str | None:
+        return (
+            None
+            if value is None
+            else validate_entry_id(value, field_name="idea_revision_id")
+        )
+
     @field_validator("outputs_root")
     @classmethod
     def outputs_root_is_safe(cls, value: str) -> str:
@@ -103,6 +114,12 @@ class E2ProjectBinding(BaseModel):
         if path.is_absolute() or ".." in path.parts or value in {"", "."}:
             raise ValueError("E2 outputs root must be repository relative")
         return path.as_posix()
+
+    @model_validator(mode="after")
+    def idea_binding_is_complete(self) -> E2ProjectBinding:
+        if (self.idea_revision_id is None) != (self.idea_revision is None):
+            raise ValueError("E2 Idea revision ID and byte binding must be supplied together")
+        return self
 
 
 class E2TaskWorkload(BaseModel):
@@ -514,6 +531,7 @@ class E2PrelaunchInspection(BaseModel):
     manifest_sha256: str = Field(pattern=_SHA256)
     manifest_fingerprint: str = Field(pattern=_SHA256)
     exact_bytes_ready: bool
+    idea_contract_ready: bool
     program_semantics_ready: bool
     project_controller_ready: bool
     workload_runtime_ready: bool
@@ -561,6 +579,10 @@ def inspect_e2_prelaunch_manifest(
         if not _binding_matches(root, binding):
             blockers.append(f"binding-mismatch:{label}")
     exact_bytes_ready = not any(item.startswith("binding-mismatch:") for item in blockers)
+
+    idea_contract_ready = _idea_contract_matches(root, manifest)
+    if not idea_contract_ready:
+        blockers.append("idea-contract-not-bound-or-not-accepted")
 
     program_semantics_ready = False
     program_path = _under(root, manifest.project.program.locator)
@@ -634,6 +656,7 @@ def inspect_e2_prelaunch_manifest(
     static_ready = all(
         (
             exact_bytes_ready,
+            idea_contract_ready,
             program_semantics_ready,
             project_controller_ready,
             workload_runtime_ready,
@@ -677,6 +700,7 @@ def inspect_e2_prelaunch_manifest(
         manifest_sha256=manifest_sha256,
         manifest_fingerprint=manifest.fingerprint,
         exact_bytes_ready=exact_bytes_ready,
+        idea_contract_ready=idea_contract_ready,
         program_semantics_ready=program_semantics_ready,
         project_controller_ready=project_controller_ready,
         workload_runtime_ready=workload_runtime_ready,
@@ -706,12 +730,41 @@ def _all_bindings(manifest: E2PrelaunchManifest) -> tuple[tuple[str, E2FileBindi
         ("condition-matrix", manifest.comparison.condition_matrix),
         ("gpu-host", manifest.resources.gpu_host),
     ]
+    if manifest.project.idea_revision is not None:
+        values.append(("idea-revision", manifest.project.idea_revision))
     values.extend(
         (f"model-resource:{item.candidate_id}", item.resource_manifest)
         for item in manifest.model_selection.candidates
         if item.resource_manifest is not None
     )
     return tuple(values)
+
+
+def _idea_contract_matches(root: Path, manifest: E2PrelaunchManifest) -> bool:
+    related_work_driven = (
+        manifest.model_selection.candidate_universe_authority
+        == "recent-related-work-and-idea-task-fit-first"
+    )
+    if not related_work_driven:
+        return True
+    binding = manifest.project.idea_revision
+    revision_id = manifest.project.idea_revision_id
+    if binding is None or revision_id is None:
+        return False
+    try:
+        payload = json.loads(_bound_bytes(root, binding))
+    except (OSError, ValueError):
+        return False
+    hypotheses = payload.get("falsifiable_hypotheses", [])
+    return bool(
+        payload.get("revision_id") == revision_id
+        and payload.get("status") == "accepted"
+        and payload.get("novelty_review_complete") is True
+        and payload.get("scientific_effectiveness_established") is False
+        and isinstance(hypotheses, list)
+        and len(hypotheses) == 5
+        and tuple(item.split(":", 1)[0] for item in hypotheses) == ("H0", "H1", "H2", "H3", "H4")
+    )
 
 
 def _program_semantics_match(path: Path, manifest: E2PrelaunchManifest) -> bool:
