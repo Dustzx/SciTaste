@@ -74,9 +74,7 @@ def _contract(
 ) -> TasteInterventionContract:
     actions = _actions()
     policy_source_groups = (
-        ()
-        if hypothesis is TasteInterventionHypothesis.TASTE_SELECTION
-        else ("source-train",)
+        () if hypothesis is TasteInterventionHypothesis.TASTE_SELECTION else ("source-train",)
     )
     precedent_source_groups = (
         () if selector is TasteSelectorMode.DISABLED else ("source-precedent",)
@@ -91,9 +89,7 @@ def _contract(
         task_id="decision-case-001",
         benchmark_local_state_sha256=snapshot_id(state).removeprefix("state-"),
         action_menu=tuple(TasteInterventionActionBinding.from_action(item) for item in actions),
-        precedent_pool_sha256=(
-            precedent_pool_sha256 or taste_precedent_pool_sha256(())
-        ),
+        precedent_pool_sha256=(precedent_pool_sha256 or taste_precedent_pool_sha256(())),
         selector_runtime_sha256=selector_runtime_sha256,
         controller_backbone_sha256=controller_backbone_sha256,
         source_identity_registry_sha256="5" * 64,

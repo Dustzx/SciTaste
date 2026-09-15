@@ -65,9 +65,7 @@ _H2B_CONDITIONS = {
 _H3_CONDITIONS = {
     TasteInterventionCondition.OUTCOME_UPDATED: LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
     TasteInterventionCondition.NO_UPDATE: LifecycleTastePolicyUpdateMode.NO_UPDATE,
-    TasteInterventionCondition.SHUFFLED_CREDIT: (
-        LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT
-    ),
+    TasteInterventionCondition.SHUFFLED_CREDIT: (LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT),
     TasteInterventionCondition.SUCCESS_ONLY: LifecycleTastePolicyUpdateMode.SUCCESS_ONLY,
     TasteInterventionCondition.FAILURE_ONLY: LifecycleTastePolicyUpdateMode.FAILURE_ONLY,
 }
@@ -178,9 +176,7 @@ class TasteInterventionContract(BaseModel):
             for right in source_partitions[index + 1 :]
         ):
             raise ValueError("Taste intervention source-group partitions overlap")
-        if set(self.canonical_source_group_ids) != (
-            set().union(*source_partitions)
-        ):
+        if set(self.canonical_source_group_ids) != (set().union(*source_partitions)):
             raise ValueError("Taste intervention canonical source-group coverage differs")
         if (self.selector_mode is TasteSelectorMode.DISABLED) != (
             not self.precedent_source_group_ids
@@ -199,15 +195,18 @@ class TasteInterventionContract(BaseModel):
             expected_selector = _H2B_CONDITIONS.get(self.condition)
             if expected_selector is None or self.selector_mode is not expected_selector:
                 raise ValueError("H2b condition and selector mode differ")
-            if any(
-                value is not None
-                for value in (
-                    self.lifecycle_update_mode,
-                    self.lifecycle_policy_sha256,
-                    self.policy_training_corpus_sha256,
-                    self.credit_assignment_schedule_sha256,
+            if (
+                any(
+                    value is not None
+                    for value in (
+                        self.lifecycle_update_mode,
+                        self.lifecycle_policy_sha256,
+                        self.policy_training_corpus_sha256,
+                        self.credit_assignment_schedule_sha256,
+                    )
                 )
-            ) or self.lifecycle_policy_weight != 0:
+                or self.lifecycle_policy_weight != 0
+            ):
                 raise ValueError("H2b cannot carry a lifecycle policy intervention")
             if not self.precedent_source_group_ids:
                 raise ValueError("H2b requires a source-identified precedent pool")
@@ -306,17 +305,14 @@ class TasteInterventionContract(BaseModel):
                 self.precedent_source_group_ids == precedent_source_group_ids
             ),
             "selector runtime": self.selector_runtime_sha256 == selector_runtime_sha256,
-            "controller backbone": (
-                self.controller_backbone_sha256 == controller_backbone_sha256
-            ),
+            "controller backbone": (self.controller_backbone_sha256 == controller_backbone_sha256),
             "decision provider": self.decision_provider == decision_provider,
             "decision model": self.decision_model == decision_model,
             "prompt version": self.prompt_version == prompt_version,
             "seed": self.seed == seed,
             "Idea revision": idea_revision is not None
             and self.idea_revision_binding_sha256 == idea_revision.binding_sha256,
-            "lifecycle policy weight": self.lifecycle_policy_weight
-            == lifecycle_policy_weight,
+            "lifecycle policy weight": self.lifecycle_policy_weight == lifecycle_policy_weight,
         }
         observed_policy_sha = lifecycle_policy.policy_sha256 if lifecycle_policy else None
         observed_update = lifecycle_policy.config.update_mode if lifecycle_policy else None
@@ -333,8 +329,7 @@ class TasteInterventionContract(BaseModel):
                 and lifecycle_policy.source_group_ids == self.policy_source_group_ids
             )
             checks["credit assignment schedule"] = (
-                self.credit_assignment_schedule_sha256
-                == lifecycle_policy.shuffle_assignment_sha256
+                self.credit_assignment_schedule_sha256 == lifecycle_policy.shuffle_assignment_sha256
             )
             checks["policy Idea revision"] = (
                 idea_revision is not None
@@ -375,18 +370,10 @@ class TasteInterventionContract(BaseModel):
             lifecycle_policy_weight=self.lifecycle_policy_weight,
             action_menu_sha256=self.action_menu_sha256,
             precedent_pool_sha256=self.precedent_pool_sha256,
-            policy_source_groups_sha256=content_sha256(
-                self.policy_source_group_ids
-            ),
-            precedent_source_groups_sha256=content_sha256(
-                self.precedent_source_group_ids
-            ),
-            heldout_source_groups_sha256=content_sha256(
-                self.heldout_source_group_ids
-            ),
-            credit_assignment_schedule_sha256=(
-                self.credit_assignment_schedule_sha256
-            ),
+            policy_source_groups_sha256=content_sha256(self.policy_source_group_ids),
+            precedent_source_groups_sha256=content_sha256(self.precedent_source_group_ids),
+            heldout_source_groups_sha256=content_sha256(self.heldout_source_group_ids),
+            credit_assignment_schedule_sha256=(self.credit_assignment_schedule_sha256),
             selector_runtime_sha256=self.selector_runtime_sha256,
             controller_backbone_sha256=self.controller_backbone_sha256,
             state_snapshot_id=snapshot_id(state),
@@ -518,9 +505,7 @@ class TasteInterventionComparison(BaseModel):
         drift = tuple(key for key in sorted(left) if key not in ignored and left[key] != right[key])
         if drift:
             raise ValueError("Taste intervention changes non-target factors: " + ", ".join(drift))
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"comparison_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"comparison_sha256"}))
         if self.comparison_sha256 != expected:
             raise ValueError("Taste intervention comparison hash differs")
         return self

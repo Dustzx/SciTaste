@@ -243,8 +243,7 @@ def freeze_benchmark_candidate(
         raise ValueError("the selected development result is not successful")
     if (
         development_receipt.spec_fingerprint != spec.fingerprint
-        or development_receipt.workspace_receipt_sha256
-        != prepared_workspace.receipt_sha256
+        or development_receipt.workspace_receipt_sha256 != prepared_workspace.receipt_sha256
     ):
         raise ValueError("selected development receipt belongs to another task workspace")
     if development_receipt.objective.phase != "dev":

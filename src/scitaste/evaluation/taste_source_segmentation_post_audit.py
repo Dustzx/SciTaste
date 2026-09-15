@@ -235,9 +235,7 @@ class TasteSourceIntegrityInventory(BaseModel):
     @computed_field
     @property
     def inventory_sha256(self) -> str:
-        return _canonical_sha256(
-            self.model_dump(mode="json", exclude={"inventory_sha256"})
-        )
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"inventory_sha256"}))
 
 
 class TasteSourceIntegrityAuditItemFinding(BaseModel):
@@ -289,12 +287,8 @@ class TasteSourceSegmentationIntegrityAuditReport(BaseModel):
         keys = [(item.campaign_id, item.review_item_id) for item in self.items]
         if keys != sorted(set(keys)):
             raise ValueError("AI-D integrity findings are not sorted and unique")
-        expected = tuple(
-            sorted({code for item in self.items for code in item.blocker_codes})
-        )
-        if self.blocker_codes != expected or self.decision != (
-            "veto" if expected else "pass"
-        ):
+        expected = tuple(sorted({code for item in self.items for code in item.blocker_codes}))
+        if self.blocker_codes != expected or self.decision != ("veto" if expected else "pass"):
             raise ValueError("AI-D veto decision differs from deterministic blockers")
         return self
 
@@ -420,8 +414,7 @@ def _verify_and_replay_inventory(
     if (
         gate.gate.role_id != "ai-d-content-integrity"
         or gate.file_sha256 != inventory.gate.file_sha256
-        or _canonical_sha256(gate.gate.model_dump(mode="json"))
-        != inventory.gate.semantic_sha256
+        or _canonical_sha256(gate.gate.model_dump(mode="json")) != inventory.gate.semantic_sha256
     ):
         raise ValueError("AI-D integrity-gate binding drifted")
     raw_source = _resolve_locator(root, inventory.raw_output.locator)
@@ -487,9 +480,7 @@ def compile_taste_source_segmentation_integrity_audit(
     calibration = TasteSourceSegmentationCalibrationReceipt.model_validate(
         json.loads(calibration_source.read_bytes())
     )
-    resolution_inspection = load_taste_source_segmentation_resolution_run(
-        resolution_source
-    )
+    resolution_inspection = load_taste_source_segmentation_resolution_run(resolution_source)
     resolution = resolution_inspection.run
     if (
         calibration.request_pack_sha256 != pack.pack_sha256
@@ -524,8 +515,7 @@ def compile_taste_source_segmentation_integrity_audit(
         if (
             inventory_item.source_comment_sha256
             != hashlib.sha256(request_item.review_comment.encode()).hexdigest()
-            or inventory_item.evidence_unit_table_sha256
-            != request_item.evidence_unit_table_sha256
+            or inventory_item.evidence_unit_table_sha256 != request_item.evidence_unit_table_sha256
         ):
             raise ValueError("AI-D source-item binding drifted")
         _verify_resolution_source_slices(final_item, request_item.review_comment)
@@ -643,8 +633,7 @@ def _normalize_inventory_item(
 ) -> TasteSourceIntegrityInventoryItem:
     rows = taste_source_comment_unit_offsets(source_item.review_comment)
     units = {
-        unit_id: (ordinal, start, end)
-        for ordinal, (unit_id, _, start, end) in enumerate(rows, 1)
+        unit_id: (ordinal, start, end) for ordinal, (unit_id, _, start, end) in enumerate(rows, 1)
     }
 
     def resolve(selected: IntegrityInventoryAnchorRange) -> tuple[int, int, int, int]:
@@ -676,9 +665,7 @@ def _normalize_inventory_item(
                     ordinal=context_ordinal,
                     start_char=context_start,
                     end_char=context_end,
-                    verbatim_context_text=source_item.review_comment[
-                        context_start:context_end
-                    ],
+                    verbatim_context_text=source_item.review_comment[context_start:context_end],
                 )
             )
         if context_units != sorted(set(context_units)) or any(
@@ -691,9 +678,7 @@ def _normalize_inventory_item(
             for context_start, context_end in context_units
         ):
             raise ValueError("AI-D context overlaps its own trigger")
-        identity = _canonical_sha256(
-            [raw.campaign_token, raw.review_item_id, start_char, end_char]
-        )
+        identity = _canonical_sha256([raw.campaign_token, raw.review_item_id, start_char, end_char])
         decisions.append(
             TasteSourceDecisionSegment(
                 segment_id=f"segment-{identity[:24]}",
@@ -709,22 +694,17 @@ def _normalize_inventory_item(
             )
         )
     if trigger_units != sorted(trigger_units) or any(
-        first_end >= second_start
-        for (_, first_end), (second_start, _) in pairwise(trigger_units)
+        first_end >= second_start for (_, first_end), (second_start, _) in pairwise(trigger_units)
     ):
         raise ValueError("AI-D trigger ranges are overlapping or unordered")
     return TasteSourceIntegrityInventoryItem(
         campaign_token=raw.campaign_token,
         review_item_id=raw.review_item_id,
-        source_comment_sha256=hashlib.sha256(
-            source_item.review_comment.encode()
-        ).hexdigest(),
+        source_comment_sha256=hashlib.sha256(source_item.review_comment.encode()).hexdigest(),
         evidence_unit_table_sha256=source_item.evidence_unit_table_sha256 or "",
         decisions=tuple(decisions),
         no_decision_rationale=raw.no_decision_rationale,
-        residual_decision_bearing_text_possible=(
-            raw.residual_decision_bearing_text_possible
-        ),
+        residual_decision_bearing_text_possible=(raw.residual_decision_bearing_text_possible),
     )
 
 
@@ -741,14 +721,10 @@ def _verify_resolution_source_slices(
     item: TasteSourceSegmentationResolutionItem, review_comment: str
 ) -> None:
     def exact(start: int, end: int, verbatim: str) -> bool:
-        return 0 <= start < end <= len(review_comment) and (
-            review_comment[start:end] == verbatim
-        )
+        return 0 <= start < end <= len(review_comment) and (review_comment[start:end] == verbatim)
 
     for segment in item.segments:
-        if not exact(
-            segment.start_char, segment.end_char, segment.verbatim_decision_text
-        ):
+        if not exact(segment.start_char, segment.end_char, segment.verbatim_decision_text):
             raise ValueError("Final segmentation trigger differs from request source bytes")
         if any(
             not exact(context.start_char, context.end_char, context.verbatim_context_text)
@@ -777,11 +753,7 @@ def _bounded_file(path: Path) -> Path:
 
 def _safe_locator(locator: str) -> Path:
     pure = PurePosixPath(locator)
-    if (
-        "\\" in locator
-        or pure.is_absolute()
-        or any(part in {"", ".", ".."} for part in pure.parts)
-    ):
+    if "\\" in locator or pure.is_absolute() or any(part in {"", ".", ".."} for part in pure.parts):
         raise ValueError("Segmentation post-audit locator is unsafe")
     return Path(*pure.parts)
 
@@ -817,9 +789,7 @@ def _write_json_new(path: Path, payload: object) -> Path:
         with path.open("x", encoding="utf-8") as handle:
             handle.write(data)
     except FileExistsError as error:
-        raise FileExistsError(
-            f"Segmentation post-audit artifact already exists: {path}"
-        ) from error
+        raise FileExistsError(f"Segmentation post-audit artifact already exists: {path}") from error
     return path.resolve(strict=True)
 
 

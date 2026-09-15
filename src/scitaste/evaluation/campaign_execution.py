@@ -832,9 +832,7 @@ class ProjectEvaluationCampaignRunner:
             recovery_elapsed = 0.0
             if cell.lane_kind is ExecutionLaneKind.GPU:
                 recovery_elapsed = (
-                    float(cell.resource.max_gpu_hours or 0.0)
-                    * 3600
-                    / launcher.gpu_count
+                    float(cell.resource.max_gpu_hours or 0.0) * 3600 / launcher.gpu_count
                 )
             record = self._h4_process_failure_record(
                 project_id,

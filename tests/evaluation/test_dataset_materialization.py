@@ -365,9 +365,7 @@ def test_materialization_gate_rejects_heldout_path_drift(tmp_path: Path) -> None
     inspection = load_dataset_materialization_request(request_path)
     gate = inspect_dataset_materialization_request(inspection, workspace_root=tmp_path)
     assert not gate.ready_for_owner_approval
-    assert [item.code for item in gate.blockers] == [
-        "task-spec:heldout-projection-mismatch"
-    ]
+    assert [item.code for item in gate.blockers] == ["task-spec:heldout-projection-mismatch"]
     with pytest.raises(ValueError, match="not owner-approval-ready"):
         approve_dataset_materialization(
             inspection,

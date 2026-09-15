@@ -771,9 +771,7 @@ class WorkspaceSurfaceFactory:
                     "population_id": population.population_id,
                     "report_file_sha256": report_file_sha256,
                     "report_sha256": population.report_sha256,
-                    "compiler_implementation_sha256": (
-                        population.compiler_implementation_sha256
-                    ),
+                    "compiler_implementation_sha256": (population.compiler_implementation_sha256),
                     "candidate_count": population.candidate_count,
                     "source_group_count": population.source_group_count,
                     "target_population_floor": population.target_population_floor,
@@ -782,9 +780,7 @@ class WorkspaceSurfaceFactory:
                     "target_domain_count": population.target_domain_count,
                     "target_domain_floor_met": population.target_domain_floor_met,
                     "alignment_agreement_count": population.alignment_agreement_count,
-                    "alignment_disagreement_count": (
-                        population.alignment_disagreement_count
-                    ),
+                    "alignment_disagreement_count": (population.alignment_disagreement_count),
                     "no_aligned_edit_count": population.no_aligned_edit_count,
                     "synthetic_review_row_count_excluded": (
                         population.synthetic_review_row_count_excluded
@@ -792,14 +788,10 @@ class WorkspaceSurfaceFactory:
                     "ready_for_taste_abstraction_review": (
                         population.ready_for_taste_abstraction_review
                     ),
-                    "ready_for_benchmark_admission": (
-                        population.ready_for_benchmark_admission
-                    ),
+                    "ready_for_benchmark_admission": (population.ready_for_benchmark_admission),
                     "blocker_codes": [item.code for item in population.blockers],
                     "verification_route": population.verification.route.value,
-                    "standalone_preflight_performed": (
-                        population.standalone_preflight_performed
-                    ),
+                    "standalone_preflight_performed": (population.standalone_preflight_performed),
                     "inline_integrity_guards_performed": (
                         population.inline_integrity_guards_performed
                     ),
@@ -841,16 +833,10 @@ class WorkspaceSurfaceFactory:
                     "population_id": expansion.population_id,
                     "report_file_sha256": report_file_sha256,
                     "report_sha256": expansion.report_sha256,
-                    "acquisition_receipt_sha256": (
-                        expansion.acquisition_receipt_sha256
-                    ),
-                    "compiler_implementation_sha256": (
-                        expansion.compiler_implementation_sha256
-                    ),
+                    "acquisition_receipt_sha256": (expansion.acquisition_receipt_sha256),
+                    "compiler_implementation_sha256": (expansion.compiler_implementation_sha256),
                     "selected_source_group_count": expansion.selected_source_group_count,
-                    "candidate_source_group_count": (
-                        expansion.candidate_source_group_count
-                    ),
+                    "candidate_source_group_count": (expansion.candidate_source_group_count),
                     "candidate_count": expansion.candidate_count,
                     "response_observed_count": expansion.response_observed_count,
                     "domain_source_group_counts": {
@@ -864,12 +850,8 @@ class WorkspaceSurfaceFactory:
                     "observed_domain_count": expansion.observed_domain_count,
                     "target_domain_count": expansion.target_domain_count,
                     "observed_domain_floor_met": expansion.observed_domain_floor_met,
-                    "minimum_groups_per_added_domain": (
-                        expansion.minimum_groups_per_added_domain
-                    ),
-                    "added_domain_group_floor_met": (
-                        expansion.added_domain_group_floor_met
-                    ),
+                    "minimum_groups_per_added_domain": (expansion.minimum_groups_per_added_domain),
+                    "added_domain_group_floor_met": (expansion.added_domain_group_floor_met),
                     "independent_domain_review_complete": (
                         expansion.independent_domain_review_complete
                     ),
@@ -883,14 +865,10 @@ class WorkspaceSurfaceFactory:
                     "ready_for_taste_abstraction_review": (
                         expansion.ready_for_taste_abstraction_review
                     ),
-                    "ready_for_benchmark_admission": (
-                        expansion.ready_for_benchmark_admission
-                    ),
+                    "ready_for_benchmark_admission": (expansion.ready_for_benchmark_admission),
                     "blocker_codes": [item.code for item in expansion.blockers],
                     "verification_route": expansion.verification.route.value,
-                    "standalone_preflight_performed": (
-                        expansion.standalone_preflight_performed
-                    ),
+                    "standalone_preflight_performed": (expansion.standalone_preflight_performed),
                     "inline_integrity_guards_performed": (
                         expansion.inline_integrity_guards_performed
                     ),
@@ -954,20 +932,12 @@ class WorkspaceSurfaceFactory:
                         key.replace("-", "_"): value
                         for key, value in campaign.publisher_subject_group_counts.items()
                     },
-                    "scientific_reviewer_count": (
-                        campaign.required_scientific_reviewer_count
-                    ),
+                    "scientific_reviewer_count": (campaign.required_scientific_reviewer_count),
                     "privacy_reviewer_count": campaign.required_privacy_reviewer_count,
-                    "scientific_assessment_count": (
-                        campaign.required_scientific_assessment_count
-                    ),
-                    "privacy_assessment_count": (
-                        campaign.required_privacy_assessment_count
-                    ),
+                    "scientific_assessment_count": (campaign.required_scientific_assessment_count),
+                    "privacy_assessment_count": (campaign.required_privacy_assessment_count),
                     "reviewer_sessions_prepared": control.reviewer_sessions_prepared,
-                    "reviewer_submissions_collected": (
-                        control.reviewer_submissions_collected
-                    ),
+                    "reviewer_submissions_collected": (control.reviewer_submissions_collected),
                     "review_collection_status": control.status,
                     "recruitment_status": (
                         "authorized-sessions-prepared-no-contact"
@@ -998,13 +968,11 @@ class WorkspaceSurfaceFactory:
                         else []
                     ),
                     "collected_submission_locators": [
-                        f"{PurePosixPath(run.artifact).parent.as_posix()}/"
-                        f"{item.submission_locator}"
+                        f"{PurePosixPath(run.artifact).parent.as_posix()}/{item.submission_locator}"
                         for item in control.collected_submissions
                     ],
                     "result_locator": (
-                        f"{PurePosixPath(run.artifact).parent.as_posix()}/"
-                        f"{control.result_locator}"
+                        f"{PurePosixPath(run.artifact).parent.as_posix()}/{control.result_locator}"
                         if control.result_locator is not None
                         else None
                     ),
@@ -1018,22 +986,14 @@ class WorkspaceSurfaceFactory:
                         if control.abstraction_plan_locator is not None
                         else None
                     ),
-                    "abstraction_plan_file_sha256": (
-                        control.abstraction_plan_file_sha256
-                    ),
+                    "abstraction_plan_file_sha256": (control.abstraction_plan_file_sha256),
                     "abstraction_plan_sha256": control.abstraction_plan_sha256,
                     "abstraction_input_count": control.abstraction_input_count,
-                    "abstraction_candidate_ceiling": (
-                        control.abstraction_candidate_ceiling
-                    ),
+                    "abstraction_candidate_ceiling": (control.abstraction_candidate_ceiling),
                     "abstraction_capacity_basis": control.abstraction_capacity_basis,
                     "abstraction_profile_ids": list(control.abstraction_profile_ids),
-                    "abstraction_profile_capacity": (
-                        control.abstraction_profile_capacity
-                    ),
-                    "abstraction_profile_capacity_gap": (
-                        control.abstraction_profile_capacity_gap
-                    ),
+                    "abstraction_profile_capacity": (control.abstraction_profile_capacity),
+                    "abstraction_profile_capacity_gap": (control.abstraction_profile_capacity_gap),
                     "ready_for_abstraction_model_authorization": (
                         control.ready_for_abstraction_model_authorization
                     ),
@@ -1065,9 +1025,7 @@ class WorkspaceSurfaceFactory:
                     "recruitment_reason_codes": (
                         list(campaign.recruitment_verification.reason_codes)
                     ),
-                    "submission_verification_route": (
-                        control.submission_verification_route.value
-                    ),
+                    "submission_verification_route": (control.submission_verification_route.value),
                     "submission_verification_reason_codes": (
                         list(control.submission_verification_reason_codes)
                     ),
@@ -1077,18 +1035,12 @@ class WorkspaceSurfaceFactory:
                     "ready_for_taste_abstraction_review": (
                         control.ready_for_taste_abstraction_review
                     ),
-                    "ready_for_benchmark_admission": (
-                        campaign.ready_for_benchmark_admission
-                    ),
-                    "standalone_preflight_performed": (
-                        campaign.standalone_preflight_performed
-                    ),
+                    "ready_for_benchmark_admission": (campaign.ready_for_benchmark_admission),
+                    "standalone_preflight_performed": (campaign.standalone_preflight_performed),
                     "model_calls_performed": campaign.model_calls_performed,
                     "api_spend_performed": campaign.api_spend_performed,
                     "gpu_work_performed": campaign.gpu_work_performed,
-                    "human_recruitment_performed": (
-                        campaign.human_recruitment_performed
-                    ),
+                    "human_recruitment_performed": (campaign.human_recruitment_performed),
                     "experiment_performed": campaign.experiment_performed,
                     "support_ref_ids": [
                         project_ref.evidence_id,
@@ -1740,10 +1692,10 @@ class WorkspaceSurfaceFactory:
                 raise ProjectSurfaceChangedError(
                     "registered license coverage has no dataset package request"
                 )
-            if (
-                report.proposal_sha256 != row["proposal_sha256"]
-                or report.archive_qualification_sha256
-                != row.get("archive_qualification_report_sha256")
+            if report.proposal_sha256 != row[
+                "proposal_sha256"
+            ] or report.archive_qualification_sha256 != row.get(
+                "archive_qualification_report_sha256"
             ):
                 raise ProjectSurfaceChangedError(
                     "registered license coverage differs from its dataset package"
@@ -2340,43 +2292,19 @@ class WorkspaceSurfaceFactory:
                         dict.fromkeys(
                             [
                                 project_ref.evidence_id,
-                                *(
-                                    item["run_ref_id"]
-                                    for item in taste_population_rows
-                                ),
-                                *(
-                                    item["artifact_ref_id"]
-                                    for item in taste_population_rows
-                                ),
-                                *(
-                                    item["run_ref_id"]
-                                    for item in taste_domain_expansion_rows
-                                ),
-                                *(
-                                    item["artifact_ref_id"]
-                                    for item in taste_domain_expansion_rows
-                                ),
-                                *(
-                                    item["run_ref_id"]
-                                    for item in taste_source_review_rows
-                                ),
-                                *(
-                                    item["artifact_ref_id"]
-                                    for item in taste_source_review_rows
-                                ),
+                                *(item["run_ref_id"] for item in taste_population_rows),
+                                *(item["artifact_ref_id"] for item in taste_population_rows),
+                                *(item["run_ref_id"] for item in taste_domain_expansion_rows),
+                                *(item["artifact_ref_id"] for item in taste_domain_expansion_rows),
+                                *(item["run_ref_id"] for item in taste_source_review_rows),
+                                *(item["artifact_ref_id"] for item in taste_source_review_rows),
                             ]
                         )
                     ),
                     "target_ids": [
                         *(item["population_id"] for item in taste_population_rows),
-                        *(
-                            item["population_id"]
-                            for item in taste_domain_expansion_rows
-                        ),
-                        *(
-                            item["campaign_id"]
-                            for item in taste_source_review_rows
-                        ),
+                        *(item["population_id"] for item in taste_domain_expansion_rows),
+                        *(item["campaign_id"] for item in taste_source_review_rows),
                     ],
                 }
             )
@@ -3495,10 +3423,9 @@ def _aries_taste_population_for_run(
     """Load only the canonical project-owned natural Taste population."""
 
     expected = f"runs/{run.run_id}/taste_candidate_population/REPORT.json"
-    if (
-        (run.model_extra or {}).get("generative_ui_projection")
-        != "aries-taste-candidate-population-v1"
-    ):
+    if (run.model_extra or {}).get(
+        "generative_ui_projection"
+    ) != "aries-taste-candidate-population-v1":
         return None
     if run.stage_path != "taste_candidate_population" or run.artifact != expected:
         raise ProjectSurfaceChangedError("registered ARIES Taste population path is invalid")
@@ -3529,10 +3456,9 @@ def _f1000_taste_population_for_run(
     """Load only the registered publisher-stratified domain-expansion report."""
 
     expected = f"runs/{run.run_id}/taste_candidate_population/REPORT.json"
-    if (
-        (run.model_extra or {}).get("generative_ui_projection")
-        != "f1000-multidomain-taste-population-v1"
-    ):
+    if (run.model_extra or {}).get(
+        "generative_ui_projection"
+    ) != "f1000-multidomain-taste-population-v1":
         return None
     if run.stage_path != "taste_candidate_population" or run.artifact != expected:
         raise ProjectSurfaceChangedError("registered F1000 Taste population path is invalid")
@@ -3552,8 +3478,7 @@ def _f1000_taste_population_for_run(
         candidate_file.is_symlink()
         or not candidate_file.is_file()
         or not candidate_file.resolve(strict=True).is_relative_to(root)
-        or hashlib.sha256(candidate_file.read_bytes()).hexdigest()
-        != report.candidate_file_sha256
+        or hashlib.sha256(candidate_file.read_bytes()).hexdigest() != report.candidate_file_sha256
     ):
         raise ProjectSurfaceChangedError("registered F1000 Taste candidates are invalid")
     if (
@@ -3572,21 +3497,16 @@ def _taste_source_review_campaign_for_run(
     """Load only a registered self-contained natural-source review campaign."""
 
     expected = f"runs/{run.run_id}/taste_source_review_campaign/CAMPAIGN.json"
-    if (
-        (run.model_extra or {}).get("generative_ui_projection")
-        != "natural-taste-source-review-campaign-v1"
-    ):
+    if (run.model_extra or {}).get(
+        "generative_ui_projection"
+    ) != "natural-taste-source-review-campaign-v1":
         return None
     if run.stage_path != "taste_source_review_campaign" or run.artifact != expected:
-        raise ProjectSurfaceChangedError(
-            "registered natural Taste review campaign path is invalid"
-        )
+        raise ProjectSurfaceChangedError("registered natural Taste review campaign path is invalid")
     root = project_root.resolve(strict=True)
     candidate = root.joinpath(*PurePosixPath(expected).parts)
     if candidate.is_symlink() or not candidate.is_file():
-        raise ProjectSurfaceChangedError(
-            "registered natural Taste review campaign is unavailable"
-        )
+        raise ProjectSurfaceChangedError("registered natural Taste review campaign is unavailable")
     resolved = candidate.resolve(strict=True)
     if not resolved.is_relative_to(root):
         raise ProjectSurfaceChangedError(

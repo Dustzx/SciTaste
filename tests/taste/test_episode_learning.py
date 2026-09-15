@@ -946,8 +946,7 @@ def test_family_conditioned_policy_keeps_h4_adaptive_head_isolated(
 ) -> None:
     episodes = tuple(_admitted(tmp_path, ordinal) for ordinal in range(1, 4))
     assignments = tuple(
-        _family_assignment(episode, ordinal)
-        for ordinal, episode in enumerate(episodes, start=1)
+        _family_assignment(episode, ordinal) for ordinal, episode in enumerate(episodes, start=1)
     )
     model = fit_family_conditioned_lifecycle_taste_policy(
         episodes,

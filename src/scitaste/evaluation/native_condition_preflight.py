@@ -30,6 +30,7 @@ _COMMIT = r"^[0-9a-f]{40}$"
 _MAX_MANIFEST_BYTES = 1_048_576
 _MAX_GIT_OBJECT_BYTES = 2 * 1_048_576
 _IMPLEMENTATION_EVIDENCE_PATHS = (
+    "src/scitaste/evaluation/native_condition_preflight.py",
     "src/scitaste/full_workflow.py",
     "src/scitaste/taste/conditions.py",
     "src/scitaste/taste/controller.py",
@@ -200,13 +201,15 @@ class NativeConditionPreflightReport(BaseModel):
 
 
 class NativeImplementationEvidenceFile(BaseModel):
-    """One implementation object proved identical at the pinned source and HEAD."""
+    """One implementation object proved identical at source, HEAD, and worktree."""
 
     model_config = _CONFIG
 
     path: str = Field(min_length=1, max_length=1_000)
     source_sha256: str = Field(pattern=_SHA256)
     head_sha256: str = Field(pattern=_SHA256)
+    worktree_sha256: str | None = Field(default=None, pattern=_SHA256)
+    worktree_matches_head: bool | None = None
     unchanged: bool
 
 
@@ -258,7 +261,7 @@ class NativeConditionImplementationAttestation(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     attestation_id: str = Field(pattern=_ID)
     preflight_id: str = Field(pattern=_ID)
     preflight_proposal_sha256: str = Field(pattern=_SHA256)
@@ -608,7 +611,8 @@ def attest_native_condition_implementations(
         and all_evidence_unchanged
     )
     return NativeConditionImplementationAttestation(
-        attestation_id=f"{full.preflight_id}-behavioral-v1",
+        schema_version="1.1",
+        attestation_id=f"{full.preflight_id}-behavioral-v2",
         preflight_id=full.preflight_id,
         preflight_proposal_sha256=full.proposal_sha256,
         source_commit=full.source_commit,
@@ -671,6 +675,7 @@ def _inspect_head_implementation_evidence(
                 manifest.workflow_config_ref,
                 manifest.condition_matrix_ref,
                 fixture_locator,
+                *(item.evidence_ref for item in manifest.requirements.values()),
                 *_IMPLEMENTATION_EVIDENCE_PATHS,
             )
         )
@@ -681,20 +686,50 @@ def _inspect_head_implementation_evidence(
         head_bytes = _git_object(root, head, locator, findings)
         if source_bytes is None or head_bytes is None:
             continue
+        worktree_path = root.joinpath(*PurePosixPath(locator).parts)
+        try:
+            if worktree_path.is_symlink():
+                raise ValueError("symbolic link")
+            resolved_worktree = worktree_path.resolve(strict=True)
+            if not resolved_worktree.is_relative_to(root) or not resolved_worktree.is_file():
+                raise ValueError("outside source root or not a regular file")
+            if resolved_worktree.stat().st_size > _MAX_GIT_OBJECT_BYTES:
+                raise ValueError("exceeds implementation evidence byte ceiling")
+            worktree_bytes = resolved_worktree.read_bytes()
+        except (OSError, ValueError) as exc:
+            _add(
+                findings,
+                "implementation_worktree_unavailable",
+                f"native condition worktree evidence is unavailable: {locator}: {exc}",
+            )
+            worktree_bytes = None
         source_sha256 = hashlib.sha256(source_bytes).hexdigest()
         head_sha256 = hashlib.sha256(head_bytes).hexdigest()
-        unchanged = source_sha256 == head_sha256
-        if not unchanged:
+        worktree_sha256 = (
+            hashlib.sha256(worktree_bytes).hexdigest() if worktree_bytes is not None else None
+        )
+        head_unchanged = source_sha256 == head_sha256
+        worktree_matches_head = worktree_sha256 == head_sha256
+        unchanged = head_unchanged and worktree_matches_head
+        if not head_unchanged:
             _add(
                 findings,
                 "implementation_evidence_drift",
                 f"native condition implementation changed after the pinned source: {locator}",
+            )
+        if worktree_sha256 is not None and not worktree_matches_head:
+            _add(
+                findings,
+                "implementation_worktree_drift",
+                f"native condition worktree differs from HEAD: {locator}",
             )
         result.append(
             NativeImplementationEvidenceFile(
                 path=locator,
                 source_sha256=source_sha256,
                 head_sha256=head_sha256,
+                worktree_sha256=worktree_sha256,
+                worktree_matches_head=worktree_matches_head,
                 unchanged=unchanged,
             )
         )

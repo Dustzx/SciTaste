@@ -170,9 +170,7 @@ class LifecycleTastePolicyTrace(BaseModel):
             raise ValueError("family-conditioned lifecycle Taste identity is incomplete")
         if self.schema_version == "1.0" and any(item is not None for item in family_values):
             raise ValueError("legacy lifecycle Taste trace cannot claim family conditioning")
-        if self.schema_version == "1.1" and not all(
-            item is not None for item in family_values
-        ):
+        if self.schema_version == "1.1" and not all(item is not None for item in family_values):
             raise ValueError("schema-1.1 lifecycle Taste trace requires family conditioning")
         if self.recommended_action_id is not None and (
             self.recommended_action_id not in self.action_adjustments
@@ -247,9 +245,7 @@ class TasteInterventionTrace(BaseModel):
         unsigned = cls.model_construct(trace_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            trace_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"trace_sha256"})
-            ),
+            trace_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"trace_sha256"})),
         )
 
 
@@ -335,8 +331,7 @@ class ResearchDecision(BaseModel):
             if lifecycle_required != (self.lifecycle_taste_policy is not None):
                 raise ValueError("Taste intervention and lifecycle policy trace differ")
             if self.lifecycle_taste_policy is not None and (
-                self.lifecycle_taste_policy.policy_sha256
-                != intervention.lifecycle_policy_sha256
+                self.lifecycle_taste_policy.policy_sha256 != intervention.lifecycle_policy_sha256
             ):
                 raise ValueError("Taste intervention lifecycle policy identity differs")
             if self.model_decision is not None and (

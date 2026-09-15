@@ -508,10 +508,7 @@ class ProjectTasteSourceReviewControlService:
         record = self._load_control(campaign_path, run, campaign)
         if record is None:
             raise ValueError("Taste review submissions require owner-authorized sessions")
-        if (
-            record.control_id != parsed.control_id
-            or record.control_sha256 != parsed.control_sha256
-        ):
+        if record.control_id != parsed.control_id or record.control_sha256 != parsed.control_sha256:
             raise ValueError("Taste review submission targets another review control")
 
         binding, session = self._submission_session(campaign_path, record, parsed.submission)
@@ -548,18 +545,12 @@ class ProjectTasteSourceReviewControlService:
                 output_path=root / _CONTROL_DIRECTORY / _RESULT_FILE,
             )
         plan = self._load_abstraction_plan(campaign_path, campaign, result)
-        if (
-            result is not None
-            and result.ready_for_taste_abstraction_review
-            and plan is None
-        ):
+        if result is not None and result.ready_for_taste_abstraction_review and plan is None:
             plan = prepare_natural_taste_abstraction_plan(
                 campaign_path=campaign_path,
                 review_result_path=root / _CONTROL_DIRECTORY / _RESULT_FILE,
                 profile_set_path=_grounded_abstraction_profile_set(),
-                output_dir=(
-                    root / _CONTROL_DIRECTORY / _ABSTRACTION_PLAN_DIRECTORY
-                ),
+                output_dir=(root / _CONTROL_DIRECTORY / _ABSTRACTION_PLAN_DIRECTORY),
             )
 
         result_sha256 = result.result_sha256 if result is not None else None
@@ -594,19 +585,13 @@ class ProjectTasteSourceReviewControlService:
                     result.ready_for_taste_abstraction_review if result is not None else False
                 ),
                 ready_for_benchmark_admission=False,
-                abstraction_plan_sha256=(
-                    plan.plan_sha256 if plan is not None else None
-                ),
-                abstraction_input_count=(
-                    plan.eligible_source_count if plan is not None else 0
-                ),
+                abstraction_plan_sha256=(plan.plan_sha256 if plan is not None else None),
+                abstraction_input_count=(plan.eligible_source_count if plan is not None else 0),
                 abstraction_profile_capacity_gap=(
                     plan.profile_capacity_gap if plan is not None else 0
                 ),
                 ready_for_abstraction_model_authorization=(
-                    plan.ready_for_model_execution_authorization
-                    if plan is not None
-                    else False
+                    plan.ready_for_model_execution_authorization if plan is not None else False
                 ),
                 submission_verification_route=VerificationRoute.DIRECT_PATH.value,
                 standalone_preflight_performed=False,
@@ -649,18 +634,14 @@ class ProjectTasteSourceReviewControlService:
                 prepare_taste_source_review_session(
                     campaign_path=campaign_path,
                     role=TasteSourceReviewRole.SCIENTIFIC,
-                    reviewer_identity_sha256=(
-                        activation.scientific_reviewer_identity_sha256s[0]
-                    ),
+                    reviewer_identity_sha256=(activation.scientific_reviewer_identity_sha256s[0]),
                     output_dir=staging / "scientific-1",
                     prepared_at=prepared_at,
                 ),
                 prepare_taste_source_review_session(
                     campaign_path=campaign_path,
                     role=TasteSourceReviewRole.SCIENTIFIC,
-                    reviewer_identity_sha256=(
-                        activation.scientific_reviewer_identity_sha256s[1]
-                    ),
+                    reviewer_identity_sha256=(activation.scientific_reviewer_identity_sha256s[1]),
                     output_dir=staging / "scientific-2",
                     prepared_at=prepared_at,
                 ),
@@ -677,9 +658,7 @@ class ProjectTasteSourceReviewControlService:
                 TasteSourceReviewSessionBinding(
                     role=session.role,
                     ordinal=index if session.role is TasteSourceReviewRole.SCIENTIFIC else 1,
-                    session_locator=(
-                        f"{_CONTROL_DIRECTORY}/{name}/session.json"
-                    ),
+                    session_locator=(f"{_CONTROL_DIRECTORY}/{name}/session.json"),
                     session_file_sha256=_sha256_file(staging / name / "session.json"),
                     session_sha256=session.session_sha256,
                     reviewer_identity_sha256=session.reviewer_identity_sha256,
@@ -706,9 +685,7 @@ class ProjectTasteSourceReviewControlService:
                 prepared_at=prepared_at,
                 sessions=bindings,
                 verification_route=campaign.recruitment_verification.route,
-                verification_reason_codes=(
-                    campaign.recruitment_verification.reason_codes
-                ),
+                verification_reason_codes=(campaign.recruitment_verification.reason_codes),
             )
             _write_new(
                 staging / _CONTROL_FILE,
@@ -874,12 +851,7 @@ class ProjectTasteSourceReviewControlService:
         result: TasteSourceReviewResult | None,
     ) -> NaturalTasteAbstractionPlan | None:
         root = campaign_path.parent.resolve(strict=True)
-        plan_path = (
-            root
-            / _CONTROL_DIRECTORY
-            / _ABSTRACTION_PLAN_DIRECTORY
-            / _ABSTRACTION_PLAN_FILE
-        )
+        plan_path = root / _CONTROL_DIRECTORY / _ABSTRACTION_PLAN_DIRECTORY / _ABSTRACTION_PLAN_FILE
         if not plan_path.exists() and not plan_path.is_symlink():
             return None
         if result is None:
@@ -1004,13 +976,9 @@ class ProjectTasteSourceReviewControlService:
             reviewer_sessions_prepared=3 if ready else 0,
             reviewer_submissions_collected=count,
             collected_submissions=collected,
-            result_locator=(
-                f"{_CONTROL_DIRECTORY}/{_RESULT_FILE}" if result is not None else None
-            ),
+            result_locator=(f"{_CONTROL_DIRECTORY}/{_RESULT_FILE}" if result is not None else None),
             result_file_sha256=(
-                hashlib.sha256(
-                    _canonical_json(result.model_dump(mode="json")) + b"\n"
-                ).hexdigest()
+                hashlib.sha256(_canonical_json(result.model_dump(mode="json")) + b"\n").hexdigest()
                 if result is not None
                 else None
             ),
@@ -1031,9 +999,7 @@ class ProjectTasteSourceReviewControlService:
             ),
             abstraction_plan_file_sha256=(
                 hashlib.sha256(
-                    _canonical_json(
-                        plan.model_dump(mode="json", exclude_computed_fields=True)
-                    )
+                    _canonical_json(plan.model_dump(mode="json", exclude_computed_fields=True))
                     + b"\n"
                 ).hexdigest()
                 if plan is not None
@@ -1047,9 +1013,7 @@ class ProjectTasteSourceReviewControlService:
             ),
             abstraction_profile_ids=profile_ids,
             abstraction_profile_capacity=(
-                plan.maximum_single_profile_invocations
-                if plan is not None
-                else profile_capacity
+                plan.maximum_single_profile_invocations if plan is not None else profile_capacity
             ),
             abstraction_profile_capacity_gap=(
                 plan.profile_capacity_gap

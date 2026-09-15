@@ -545,11 +545,7 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 ),
             )
             return
-        if (
-            len(parts) == 8
-            and resource == "taste-source-reviews"
-            and parts[7] == "authorize"
-        ):
+        if len(parts) == 8 and resource == "taste-source-reviews" and parts[7] == "authorize":
             if method != "POST":
                 raise _method_not_allowed("POST")
             view = self.server.application.authorize_taste_source_review(
@@ -559,11 +555,7 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             )
             self._send_model(HTTPStatus.CREATED, view)
             return
-        if (
-            len(parts) == 8
-            and resource == "taste-source-reviews"
-            and parts[7] == "submissions"
-        ):
+        if len(parts) == 8 and resource == "taste-source-reviews" and parts[7] == "submissions":
             if method != "POST":
                 raise _method_not_allowed("POST")
             view = self.server.application.collect_taste_source_review_submission(

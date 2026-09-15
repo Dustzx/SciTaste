@@ -267,9 +267,10 @@ def materialize_aries_taste_population(
     human_labels = _load_jsonl(paths["alignment_human_eval"])
     split_rows = _load_json(paths["split_ids"])
     split_groups = _split_groups(split_rows)
-    if any(split_groups[left] & split_groups[right] for left, right in (
-        ("train", "dev"), ("train", "test"), ("dev", "test")
-    )):
+    if any(
+        split_groups[left] & split_groups[right]
+        for left, right in (("train", "dev"), ("train", "test"), ("dev", "test"))
+    ):
         raise ValueError("ARIES source groups overlap across upstream splits")
 
     natural_reviews, synthetic_count = _natural_reviews(reviews)

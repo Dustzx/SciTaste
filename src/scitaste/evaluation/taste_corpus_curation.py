@@ -277,9 +277,7 @@ class TasteCorpusCurationPackage(BaseModel):
                 "1.3": TasteAbstractionReviewerKind.AI,
             }[self.schema_version]
             if self.curation_tier != expected_tier or review_kinds != {expected_kind}:
-                raise ValueError(
-                    "Taste curation schema, tier, and reviewer provenance differ"
-                )
+                raise ValueError("Taste curation schema, tier, and reviewer provenance differ")
             if any(
                 not isinstance(candidate.abstraction, GroundedTasteCaseAbstraction)
                 for candidate in self.candidates
@@ -319,11 +317,7 @@ class TasteCorpusCurationPackage(BaseModel):
                 "raw_review_sha256",
             }
             payload["reviews"] = [
-                {
-                    key: value
-                    for key, value in review.items()
-                    if key not in legacy_only_fields
-                }
+                {key: value for key, value in review.items() if key not in legacy_only_fields}
                 for review in payload["reviews"]
             ]
         return _canonical_sha256(payload)
@@ -644,9 +638,7 @@ def inspect_taste_corpus_curation(
             review_verified and reviewer_kind is TasteAbstractionReviewerKind.AI
         ),
         reviewer_kind=reviewer_kind,
-        human_validity_claim_allowed=(
-            reviewer_kind is TasteAbstractionReviewerKind.HUMAN
-        ),
+        human_validity_claim_allowed=(reviewer_kind is TasteAbstractionReviewerKind.HUMAN),
         accepted_candidate_ids=tuple(sorted(accepted)),
         ready_to_materialize=ready,
         ready_for_formal_taste_method=formal_method_ready and ready,

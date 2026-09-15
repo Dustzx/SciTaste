@@ -848,9 +848,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="project-relative path for the immutable request JSON",
     )
-    project_evaluation_h4_plan.add_argument(
-        "--repository-root", type=Path, default=Path(".")
-    )
+    project_evaluation_h4_plan.add_argument("--repository-root", type=Path, default=Path("."))
     _add_project_options(project_evaluation_h4_plan)
     project_evaluation_h4_plan.set_defaults(handler=_handle_project_evaluation_h4_plan)
     project_evaluation_h4_prepare = project_evaluation_commands.add_parser(
@@ -858,9 +856,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Compile and replay a no-execution formal native H4 launch bundle",
     )
     project_evaluation_h4_prepare.add_argument("--request", type=Path, required=True)
-    project_evaluation_h4_prepare.add_argument(
-        "--repository-root", type=Path, default=Path(".")
-    )
+    project_evaluation_h4_prepare.add_argument("--repository-root", type=Path, default=Path("."))
     project_evaluation_h4_prepare.add_argument(
         "--preparation-output",
         required=True,
@@ -872,9 +868,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="project-relative immutable LAUNCH_CONFIG.json locator",
     )
     _add_project_options(project_evaluation_h4_prepare)
-    project_evaluation_h4_prepare.set_defaults(
-        handler=_handle_project_evaluation_h4_prepare
-    )
+    project_evaluation_h4_prepare.set_defaults(handler=_handle_project_evaluation_h4_prepare)
     project_evaluation_campaign = project_evaluation_commands.add_parser(
         "run-campaign",
         help="Run only an exact execution-authorized evaluation cell plan",
@@ -5811,8 +5805,7 @@ def _handle_taste_family_policy_fit(args: argparse.Namespace) -> int:
         for path in args.episode
     )
     assignments = tuple(
-        load_scientific_decision_family_assignment(path)
-        for path in args.assignment
+        load_scientific_decision_family_assignment(path) for path in args.assignment
     )
     model = fit_family_conditioned_lifecycle_taste_policy(
         episodes,
@@ -5829,12 +5822,8 @@ def _handle_taste_family_policy_fit(args: argparse.Namespace) -> int:
                 "policy_id": model.policy_id,
                 "policy_sha256": model.policy_sha256,
                 "source_episode_count": len(model.source_episode_ids),
-                "learned_decision_families": [
-                    family.value for family in model.family_heads
-                ],
-                "empty_decision_families": [
-                    family.value for family in model.empty_families
-                ],
+                "learned_decision_families": [family.value for family in model.family_heads],
+                "empty_decision_families": [family.value for family in model.empty_families],
                 "reviewer_kind": model.reviewer_kind,
                 "not_human_review": model.not_human_review,
                 "no_api_calls_performed": True,

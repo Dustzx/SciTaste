@@ -1208,14 +1208,11 @@ def snapshot_taste_source_segmentation_group_boundary(
         return None
     if (
         sample.selection_algorithm_version != "sha256-ranked-source-group-disjoint-v3"
-        or sample.uncertainty_estimand
-        != "descriptive-calibration-superpopulation-work-model"
+        or sample.uncertainty_estimand != "descriptive-calibration-superpopulation-work-model"
     ):
         raise ValueError("Segmentation group uncertainty requires group-first v3 sampling")
     root = Path(locator_root).resolve(strict=True)
-    snapshots_by_id = {
-        snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots
-    }
+    snapshots_by_id = {snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots}
     if len(snapshots_by_id) != len(campaign_snapshots) or set(snapshots_by_id) != set(
         sample.source_campaign_locators or {}
     ):
@@ -1231,10 +1228,8 @@ def snapshot_taste_source_segmentation_group_boundary(
         campaign = snapshot.campaign
         if (
             snapshot.locator != (sample.source_campaign_locators or {})[campaign_id]
-            or snapshot.file_sha256
-            != (sample.source_campaign_file_sha256s or {})[campaign_id]
-            or campaign.campaign_sha256
-            != (sample.source_campaign_sha256s or {})[campaign_id]
+            or snapshot.file_sha256 != (sample.source_campaign_file_sha256s or {})[campaign_id]
+            or campaign.campaign_sha256 != (sample.source_campaign_sha256s or {})[campaign_id]
         ):
             raise ValueError("Segmentation group-boundary campaign binding drifted")
         campaign_root = root.joinpath(*PurePosixPath(snapshot.locator).parent.parts)
@@ -1247,8 +1242,7 @@ def snapshot_taste_source_segmentation_group_boundary(
         if (
             len(private_raw) != campaign.private_item_map.bytes
             or private_sha256 != campaign.private_item_map.sha256
-            or private_sha256
-            != (sample.source_private_map_file_sha256s or {})[campaign_id]
+            or private_sha256 != (sample.source_private_map_file_sha256s or {})[campaign_id]
         ):
             raise ValueError("Segmentation group-boundary private map drifted")
         payload = json.loads(private_raw)
@@ -1267,9 +1261,7 @@ def snapshot_taste_source_segmentation_group_boundary(
         selected_ids = selected_by_campaign.get(campaign_id, set())
         if not selected_ids.issubset(private_by_id):
             raise ValueError("Segmentation group boundary lacks selected private-map rows")
-        groups = {
-            (campaign_id, private_by_id[item_id].source_group_id) for item_id in selected_ids
-        }
+        groups = {(campaign_id, private_by_id[item_id].source_group_id) for item_id in selected_ids}
         if len(groups) != len(selected_ids) or observed_groups & groups:
             raise ValueError("Segmentation sample is not source-group disjoint")
         observed_groups.update(groups)
@@ -1840,8 +1832,7 @@ def normalize_taste_source_decision_segmentation(
             campaign = snapshot.campaign
             if (
                 snapshot.locator != (sample.source_campaign_locators or {})[campaign_id]
-                or snapshot.file_sha256
-                != (sample.source_campaign_file_sha256s or {})[campaign_id]
+                or snapshot.file_sha256 != (sample.source_campaign_file_sha256s or {})[campaign_id]
                 or campaign.campaign_sha256 != (sample.source_campaign_sha256s or {})[campaign_id]
                 or snapshot.scientific_items_file_sha256
                 != (sample.source_scientific_items_sha256s or {})[campaign_id]
@@ -2302,9 +2293,7 @@ def normalize_taste_source_segmentation_resolution(
         )
     else:
         campaign_snapshots = prevalidated_campaign_snapshots
-    snapshots_by_id = {
-        snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots
-    }
+    snapshots_by_id = {snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots}
     if len(snapshots_by_id) != len(campaign_snapshots) or set(snapshots_by_id) != set(
         source_run.campaign_locators
     ):
@@ -2772,9 +2761,7 @@ def _group_boundary_from_snapshot(
         or snapshot.campaign_file_sha256s != run.campaign_file_sha256s
         or snapshot.campaign_sha256s != run.campaign_sha256s
         or snapshot.selected_items_sha256
-        != _canonical_sha256(
-            sorted((item.campaign_id, item.review_item_id) for item in run.items)
-        )
+        != _canonical_sha256(sorted((item.campaign_id, item.review_item_id) for item in run.items))
     ):
         raise ValueError("Segmentation in-memory group boundary differs from normalized run")
     return (

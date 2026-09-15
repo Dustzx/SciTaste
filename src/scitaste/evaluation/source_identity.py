@@ -150,9 +150,7 @@ class CanonicalSourceIdentityRegistry(BaseModel):
     @model_validator(mode="after")
     def registry_is_unambiguous_and_hashed(self) -> CanonicalSourceIdentityRegistry:
         canonical = [item.canonical_source_group_id for item in self.entries]
-        identities = [
-            (item.namespace, item.source_identity_sha256) for item in self.entries
-        ]
+        identities = [(item.namespace, item.source_identity_sha256) for item in self.entries]
         if canonical != sorted(set(canonical)) or len(identities) != len(set(identities)):
             raise ValueError("canonical source identities must be sorted and unique")
         if self.source_artifact_sha256s != tuple(sorted(set(self.source_artifact_sha256s))):

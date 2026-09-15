@@ -110,9 +110,7 @@ def test_lifecycle_credit_requires_static_and_shuffled_controls(tmp_path: Path) 
     )
 
     assert report.scientifically_coherent is False
-    assert "missing_required_contrast" in {
-        item.code for item in report.scientific_blockers
-    }
+    assert "missing_required_contrast" in {item.code for item in report.scientific_blockers}
 
 
 def test_scientific_identity_does_not_change_with_resource_snapshot() -> None:

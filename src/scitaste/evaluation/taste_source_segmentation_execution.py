@@ -1667,11 +1667,9 @@ def inspect_taste_source_segmentation_execution_authorization(
     )
     if (
         segmentation_rubric.locator != protocol.protocol.segmentation_rubric.locator
-        or segmentation_rubric.file_sha256
-        != protocol.protocol.segmentation_rubric.file_sha256
+        or segmentation_rubric.file_sha256 != protocol.protocol.segmentation_rubric.file_sha256
         or adjudication_rubric.locator != protocol.protocol.adjudication_rubric.locator
-        or adjudication_rubric.file_sha256
-        != protocol.protocol.adjudication_rubric.file_sha256
+        or adjudication_rubric.file_sha256 != protocol.protocol.adjudication_rubric.file_sha256
     ):
         raise ValueError("Segmentation execution rubric snapshot drifted")
 
@@ -1685,9 +1683,7 @@ def inspect_taste_source_segmentation_execution_authorization(
         snapshot_taste_source_segmentation_campaign(root / locator, locator_root=root)
         for locator in sorted((sample.source_campaign_locators or {}).values())
     )
-    campaigns_by_id = {
-        snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots
-    }
+    campaigns_by_id = {snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots}
     if len(campaigns_by_id) != len(campaign_snapshots) or set(campaigns_by_id) != set(
         sample.source_campaign_locators or {}
     ):
@@ -1697,10 +1693,8 @@ def inspect_taste_source_segmentation_execution_authorization(
         campaign = snapshot.campaign
         if (
             snapshot.locator != (sample.source_campaign_locators or {})[campaign_id]
-            or snapshot.file_sha256
-            != (sample.source_campaign_file_sha256s or {})[campaign_id]
-            or campaign.campaign_sha256
-            != (sample.source_campaign_sha256s or {})[campaign_id]
+            or snapshot.file_sha256 != (sample.source_campaign_file_sha256s or {})[campaign_id]
+            or campaign.campaign_sha256 != (sample.source_campaign_sha256s or {})[campaign_id]
             or snapshot.scientific_items_file_sha256
             != (sample.source_scientific_items_sha256s or {})[campaign_id]
         ):
@@ -2448,9 +2442,7 @@ def run_taste_source_segmentation_calibration(
     protocol = inspection.protocol.protocol
     identity_protocol = inspection.identity_protocol.protocol
     provider = inspection.provider_resource
-    packets = {
-        (packet.segmenter_slot, packet.shard_index): packet for packet in inspection.packets
-    }
+    packets = {(packet.segmenter_slot, packet.shard_index): packet for packet in inspection.packets}
     if len(packets) != len(inspection.packets):
         raise ValueError("Segmentation in-memory packet snapshot contains duplicate slots")
     token_to_campaign = _campaign_token_map(inspection)
@@ -2482,6 +2474,7 @@ def run_taste_source_segmentation_calibration(
     call_receipts: list[SegmentationProviderCallReceipt] = []
     firewall_receipts: list[SegmentationInputFirewallReceipt] = []
     adjudication_firewall_receipts: list[SegmentationAdjudicationInputFirewallReceipt] = []
+
     def execute_call(
         *,
         role: ApiIdentityCallRole,
@@ -3724,9 +3717,7 @@ def _campaign_token_map(
         for snapshot in inspection.campaigns
     }
     observed_tokens = {
-        item.campaign_token
-        for packet in inspection.packets
-        for item in packet.items
+        item.campaign_token for packet in inspection.packets for item in packet.items
     }
     if set(mapping) != observed_tokens:
         raise ValueError("Segmentation campaign token map differs from the request pack")

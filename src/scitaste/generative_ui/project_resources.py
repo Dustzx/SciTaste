@@ -181,15 +181,11 @@ def load_project_resource_portfolio(
         available_resource_count=len(available_resources),
         available_resources=available_resources,
         planner_binding_state=planner_state,
-        planner_resource_id=(
-            planner_binding.resource_id if planner_binding is not None else None
-        ),
+        planner_resource_id=(planner_binding.resource_id if planner_binding is not None else None),
         planner_provider_id=(
             planner_definition.provider_id if planner_definition is not None else None
         ),
-        planner_model_id=(
-            planner_definition.model_id if planner_definition is not None else None
-        ),
+        planner_model_id=(planner_definition.model_id if planner_definition is not None else None),
         configuration_authority="user_applied" if configuration is not None else "proposal_only",
         configuration_run_id=configuration.run_id if configuration is not None else None,
         source_planning_publication_id=(

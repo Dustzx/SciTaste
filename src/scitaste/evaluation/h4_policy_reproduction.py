@@ -117,9 +117,7 @@ class H4PolicyReproductionSpec(BaseModel):
                 raise ValueError("schema-1.1 H4 reproduction requires complete family evidence")
             if self.decision_family is not ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION:
                 raise ValueError("H4 requires the adaptive-allocation Taste head")
-            if len(self.decision_family_assignment_locators) != len(
-                self.admitted_episode_locators
-            ):
+            if len(self.decision_family_assignment_locators) != len(self.admitted_episode_locators):
                 raise ValueError("H4 family assignments must cover every admitted episode")
         payload = self.model_dump(mode="json", exclude={"spec_sha256"})
         expected_hashes = {content_sha256(payload)}

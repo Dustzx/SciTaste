@@ -435,9 +435,7 @@ class BenchmarkResearchIteration(BaseModel):
             iteration_receipt_sha256=None,
             **payload,
         )
-        payload["post_iteration_state_sha256"] = _post_iteration_state_sha256(
-            provisional
-        )
+        payload["post_iteration_state_sha256"] = _post_iteration_state_sha256(provisional)
         unsigned = cls.model_construct(iteration_receipt_sha256="0" * 64, **payload)
         payload["iteration_receipt_sha256"] = content_sha256(
             unsigned.model_dump(mode="json", exclude={"iteration_receipt_sha256"})
@@ -481,17 +479,14 @@ class BenchmarkResearchLoopResult(BaseModel):
 
     @model_validator(mode="after")
     def counts_and_hash_are_consistent(self) -> BenchmarkResearchLoopResult:
-        if tuple(item.iteration for item in self.iterations) != tuple(
-            range(len(self.iterations))
-        ):
+        if tuple(item.iteration for item in self.iterations) != tuple(range(len(self.iterations))):
             raise ValueError("benchmark research loop iterations must be contiguous")
         if self.development_experiment_count != sum(
             item.development_receipt_sha256 is not None for item in self.iterations
         ):
             raise ValueError("benchmark research loop development count mismatch")
         if self.unverified_development_attempt_count != sum(
-            item.disposition == "execution_failed"
-            and item.development_receipt_sha256 is None
+            item.disposition == "execution_failed" and item.development_receipt_sha256 is None
             for item in self.iterations
         ):
             raise ValueError("benchmark research loop unverified attempt count mismatch")
@@ -522,8 +517,7 @@ class BenchmarkResearchLoopResult(BaseModel):
             previous = None
             for item in self.iterations:
                 if (
-                    item.h4_arm_run_request_sha256
-                    != self.h4_arm_run_request_sha256
+                    item.h4_arm_run_request_sha256 != self.h4_arm_run_request_sha256
                     or item.previous_iteration_receipt_sha256 != previous
                     or item.editable_surface_after_sha256 is None
                 ):
@@ -713,21 +707,15 @@ class BenchmarkResearchLoop:
                         _research_iteration(
                             config,
                             records,
-                            editable_surface_after_sha256=(
-                                context.editable_surface_sha256
-                            ),
+                            editable_surface_after_sha256=(context.editable_surface_sha256),
                             iteration=iteration,
                             disposition="stopped",
                             patch_context_sha256=context.context_sha256,
-                            research_state_snapshot_id=(
-                                action_decision.decision.state_snapshot_id
-                            ),
+                            research_state_snapshot_id=(action_decision.decision.state_snapshot_id),
                             research_action_menu_sha256=(
                                 action_decision.contract.action_menu_sha256
                             ),
-                            research_action_decision_sha256=(
-                                action_decision.decision_sha256
-                            ),
+                            research_action_decision_sha256=(action_decision.decision_sha256),
                             taste_intervention_contract_sha256=(
                                 action_decision.contract.contract_sha256
                             ),
@@ -793,9 +781,7 @@ class BenchmarkResearchLoop:
                         _research_iteration(
                             config,
                             records,
-                            editable_surface_after_sha256=(
-                                context.editable_surface_sha256
-                            ),
+                            editable_surface_after_sha256=(context.editable_surface_sha256),
                             iteration=iteration,
                             disposition="proposal_rejected",
                             patch_context_sha256=context.context_sha256,
@@ -898,9 +884,7 @@ class BenchmarkResearchLoop:
                     _research_iteration(
                         config,
                         records,
-                        editable_surface_after_sha256=(
-                            rollback.editable_surface_after_sha256
-                        ),
+                        editable_surface_after_sha256=(rollback.editable_surface_after_sha256),
                         iteration=iteration,
                         disposition="execution_failed",
                         patch_context_sha256=context.context_sha256,
@@ -1092,9 +1076,7 @@ class BenchmarkResearchLoop:
                     f"Improve held-out {self.spec.primary_metric} under the frozen task "
                     "and resource contract."
                 ),
-                falsifies=[
-                    "The selected lifecycle action fails to improve development evidence."
-                ],
+                falsifies=["The selected lifecycle action fails to improve development evidence."],
                 estimated_cost={"experiments": float(config.maximum_patch_iterations)},
                 matched_baselines=["identical-executor-lifecycle-policy-off"],
                 negative_controls=["no-update", "shuffled-credit"],
@@ -1159,9 +1141,7 @@ class BenchmarkResearchLoop:
             spec_fingerprint=self.spec.fingerprint,
             prepared_workspace_receipt_sha256=self.prepared_workspace.receipt_sha256,
             execution_profile_fingerprint=config.execution_profile_fingerprint,
-            resource_verification_receipt_sha256=(
-                config.resource_verification_receipt_sha256
-            ),
+            resource_verification_receipt_sha256=(config.resource_verification_receipt_sha256),
             editable_surface_sha256=surface_sha256,
             patch_receipt_sha256=patch_receipt_sha256,
             iteration=iteration,
@@ -1265,8 +1245,7 @@ class BenchmarkResearchLoop:
             best_editable_surface_sha256=surface,
             development_experiment_count=development_count,
             unverified_development_attempt_count=sum(
-                item.disposition == "execution_failed"
-                and item.development_receipt_sha256 is None
+                item.disposition == "execution_failed" and item.development_receipt_sha256 is None
                 for item in records
             ),
             patch_proposal_count=proposal_count,

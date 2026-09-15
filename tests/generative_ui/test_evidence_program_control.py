@@ -73,8 +73,7 @@ def test_effective_core_order_controls_the_primary_generation_as_content_phase()
 def test_lifecycle_program_uses_the_same_seven_user_facing_phases() -> None:
     repository = Path(__file__).resolve().parents[2]
     dossier = load_experiment_decision_dossier(
-        repository
-        / "configs/evaluation/campaigns/iclr2027_self_development_lifecycle_v2.yaml"
+        repository / "configs/evaluation/campaigns/iclr2027_self_development_lifecycle_v2.yaml"
     ).dossier
     report = inspect_experiment_decision_dossier(dossier, evidence_root=repository)
     effective = compile_effective_experiment_program(

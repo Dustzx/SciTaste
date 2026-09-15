@@ -173,7 +173,7 @@ def test_v4_behavioral_attestation_fails_closed_after_implementation_drift(
     assert list(tmp_path.iterdir()) == []
 
 
-def test_v5_behaviorally_attests_all_six_current_native_conditions(
+def test_v5_behavioral_attestation_fails_closed_after_format_and_verifier_change(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -189,18 +189,26 @@ def test_v5_behaviorally_attests_all_six_current_native_conditions(
         allow_local_fixture_execution=True,
     )
 
-    assert report.implementation_qualified is True
-    assert report.findings == ()
-    assert report.exact_condition_population_verified is True
-    assert report.workflow_component_routes_verified is True
+    assert report.implementation_qualified is False
+    assert {
+        item.message.rsplit(": ", 1)[-1]
+        for item in report.findings
+        if item.code == "implementation_evidence_drift"
+    } == {
+        "src/scitaste/full_workflow.py",
+        "src/scitaste/taste/controller.py",
+        "src/scitaste/schema/decisions.py",
+        "src/scitaste/evaluation/taste_corpus_curation.py",
+        "src/scitaste/evaluation/native_condition_preflight.py",
+        "src/scitaste/executor/native.py",
+    }
+    assert report.exact_condition_population_verified is False
+    assert report.workflow_component_routes_verified is False
     assert report.full_placebo_single_factor_verified is True
-    assert len(report.condition_probes) == 6
-    assert all(item.condition_contract_verified for item in report.condition_probes)
-    assert report.taste_routing_probe is not None
-    assert report.taste_routing_probe.verified is True
-    assert report.critic_routing_probe is not None
-    assert report.critic_routing_probe.verified is True
-    assert report.local_fixture_execution_performed is True
+    assert report.condition_probes == ()
+    assert report.taste_routing_probe is None
+    assert report.critic_routing_probe is None
+    assert report.local_fixture_execution_performed is False
     assert report.real_task_or_experiment_execution_performed is False
     assert report.model_calls == report.api_calls == report.gpu_jobs == 0
     assert list(tmp_path.iterdir()) == []

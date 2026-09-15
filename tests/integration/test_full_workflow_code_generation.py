@@ -232,8 +232,7 @@ print(
     )
 
     run_root = (
-        tmp_path
-        / "outputs/projects/runtime-repaired-code-project/runs/runtime-repair-seed-07"
+        tmp_path / "outputs/projects/runtime-repaired-code-project/runs/runtime-repair-seed-07"
     )
     repair_input = json.loads(
         (run_root / "native_execution/context/code_generation/repair/REPAIR_INPUT.json").read_text(
@@ -264,9 +263,7 @@ print(
     assert experiment_outcomes == ["FAILED", "SUCCEEDED"]
     assert result["stages"]["evidence"]["result_basis"] == "sandbox-measured-replicates"
     assert (
-        result["native_execution"]["experiment"][
-            "standalone_post_execution_preflight_performed"
-        ]
+        result["native_execution"]["experiment"]["standalone_post_execution_preflight_performed"]
         is False
     )
 

@@ -80,7 +80,7 @@ def _article_xml(doi: str, version: int) -> str:
     report = ""
     if version == 2:
         report = f"""
-        <sub-article article-type="reviewer-report" id="report-{base.rsplit('.', 1)[1]}">
+        <sub-article article-type="reviewer-report" id="report-{base.rsplit(".", 1)[1]}">
           <front-stub>
             <permissions><license xlink:href="https://creativecommons.org/licenses/by/4.0/"/></permissions>
             <related-article xlink:href="{reviewed_doi}"/>
@@ -153,9 +153,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
         )
     )
     acquisition_root = (
-        runtime.projects_root
-        / snapshot.project_id
-        / "evaluations/acquisitions/f1000-test-pilot"
+        runtime.projects_root / snapshot.project_id / "evaluations/acquisitions/f1000-test-pilot"
     )
     transport = _RecordedF1000()
     acquired = acquire_f1000_domain_sources(
@@ -193,9 +191,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert report.verification.route.value == "direct_path"
     assert report.standalone_preflight_performed is False
 
-    candidates = (
-        acquisition_root / "derived/taste-population-v1/CANDIDATES.jsonl"
-    ).read_text()
+    candidates = (acquisition_root / "derived/taste-population-v1/CANDIDATES.jsonl").read_text()
     assert "Hidden" not in candidates
     assert "10.12688" not in candidates
     assert "added the requested comparator" in candidates
@@ -208,9 +204,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
         runtime,
         project_id="f1000-test-project",
         run_id="f1000-domain-population-v1",
-        source_report_path=(
-            acquisition_root / "derived/taste-population-v1/REPORT.json"
-        ),
+        source_report_path=(acquisition_root / "derived/taste-population-v1/REPORT.json"),
         expected_revision=snapshot.revision,
     )
     surface = WorkspaceSurfaceFactory(runtime).build_surface(
@@ -236,9 +230,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
         if item.quick_intent_id == "review-taste-candidate-population"
     )
     assert published.report_sha256 == report.report_sha256
-    assert curation.target_ids == (
-        "f1000-multidomain-review-response-v1",
-    )
+    assert curation.target_ids == ("f1000-multidomain-review-response-v1",)
     assert snapshot.revision == 2
 
     tracked_policy = load_taste_source_review_policy(
@@ -385,8 +377,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
         for name in ("scientific-1", "scientific-2", "privacy-1")
     ]
     sessions = [
-        TasteSourceReviewSession.model_validate_json(path.read_bytes())
-        for path in session_paths
+        TasteSourceReviewSession.model_validate_json(path.read_bytes()) for path in session_paths
     ]
     submission_payloads: list[dict[str, object]] = []
     for session in sessions:
@@ -462,9 +453,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert collected.ready_for_taste_abstraction_review is True
     assert collected.ready_for_benchmark_admission is False
     assert collected.result_locator == "review-control/RESULT.json"
-    assert collected.abstraction_plan_locator == (
-        "review-control/abstraction-plan/PLAN.json"
-    )
+    assert collected.abstraction_plan_locator == ("review-control/abstraction-plan/PLAN.json")
     assert collected.abstraction_input_count == 10
     assert collected.abstraction_candidate_ceiling == 10
     assert collected.abstraction_capacity_basis == "locked-eligible-inputs"
@@ -481,9 +470,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert abstraction_plan.same_source_projection_required_for_raw_rag is True
     first_input = json.loads(
         (
-            control_root
-            / "abstraction-plan"
-            / abstraction_plan.inputs[0].input_file.locator
+            control_root / "abstraction-plan" / abstraction_plan.inputs[0].input_file.locator
         ).read_text()
     )
     source_projection = json.loads(first_input["source_projection"])
@@ -512,8 +499,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert locked_review["abstraction_model_execution_route"] == "owner_approval"
     locked_catalog = WorkspaceIntentResolver(runtime).quick_catalog("f1000-test-project")
     assert any(
-        item.quick_intent_id == "plan-reviewed-taste-abstraction"
-        for item in locked_catalog.intents
+        item.quick_intent_id == "plan-reviewed-taste-abstraction" for item in locked_catalog.intents
     )
 
 
@@ -545,8 +531,7 @@ def test_f1000_acquisition_excludes_canonical_groups_across_receipts(
     )
 
     selected = {
-        canonical_f1000_source_group_id(item.base_doi)
-        for item in acquired.receipt.selected_sources
+        canonical_f1000_source_group_id(item.base_doi) for item in acquired.receipt.selected_sources
     }
     assert selected.isdisjoint(excluded)
 

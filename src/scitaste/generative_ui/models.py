@@ -1096,9 +1096,7 @@ class ProjectProgressTasteCandidatePopulationItem(BaseModel):
             self.candidate_count >= self.target_population_floor
         ):
             raise ValueError("Taste candidate population floor is inconsistent")
-        if self.target_domain_floor_met != (
-            self.domain_count_observed >= self.target_domain_count
-        ):
+        if self.target_domain_floor_met != (self.domain_count_observed >= self.target_domain_count):
             raise ValueError("Taste candidate domain floor is inconsistent")
         if self.candidate_count != (
             self.alignment_agreement_count + self.alignment_disagreement_count
@@ -1285,9 +1283,7 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
             raise ValueError("Taste source-review session locators must be unique")
         if self.reviewer_submissions_collected != len(self.collected_submission_locators):
             raise ValueError("Taste source-review submission count is inconsistent")
-        if len(self.collected_submission_locators) != len(
-            set(self.collected_submission_locators)
-        ):
+        if len(self.collected_submission_locators) != len(set(self.collected_submission_locators)):
             raise ValueError("Taste source-review submission locators must be unique")
         locked = self.review_collection_status == "review_locked"
         result_fields = (
@@ -2944,13 +2940,9 @@ class ProjectProgressBoardData(BaseModel):
     reference_selection_comparisons: tuple[
         ProjectProgressReferenceSelectionComparisonItem, ...
     ] = ()
-    taste_candidate_populations: tuple[
-        ProjectProgressTasteCandidatePopulationItem, ...
-    ] = ()
+    taste_candidate_populations: tuple[ProjectProgressTasteCandidatePopulationItem, ...] = ()
     taste_domain_expansions: tuple[ProjectProgressTasteDomainExpansionItem, ...] = ()
-    taste_source_review_campaigns: tuple[
-        ProjectProgressTasteSourceReviewCampaignItem, ...
-    ] = ()
+    taste_source_review_campaigns: tuple[ProjectProgressTasteSourceReviewCampaignItem, ...] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -3103,9 +3095,7 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress Taste-population count must match its rows")
         if self.counts.taste_domain_expansions != len(self.taste_domain_expansions):
             raise ValueError("project progress Taste-domain count must match its rows")
-        if self.counts.taste_source_review_campaigns != len(
-            self.taste_source_review_campaigns
-        ):
+        if self.counts.taste_source_review_campaigns != len(self.taste_source_review_campaigns):
             raise ValueError("project progress Taste-review count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]

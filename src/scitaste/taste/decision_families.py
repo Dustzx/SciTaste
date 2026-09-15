@@ -57,8 +57,7 @@ SCIENTIFIC_TASTE_DECISION_FAMILY_DESCRIPTIONS = {
         "justifies their opportunity cost"
     ),
     ScientificTasteDecisionFamily.EPISTEMIC_DISCRIMINATION: (
-        "prefer decisions that separate plausible explanations and reduce consequential "
-        "uncertainty"
+        "prefer decisions that separate plausible explanations and reduce consequential uncertainty"
     ),
     ScientificTasteDecisionFamily.EMPIRICAL_DIAGNOSTICITY: (
         "design measurements, controls, and ablations that diagnose mechanisms rather than "
@@ -154,10 +153,7 @@ class ScientificDecisionFamilyAssignment(BaseModel):
         if len(primary_families) == 1:
             if adjudicators or primary[0].decision_family is not self.decision_family:
                 raise ValueError("unanimous family reviews require no adjudicator")
-        elif (
-            len(adjudicators) != 1
-            or adjudicators[0].decision_family is not self.decision_family
-        ):
+        elif len(adjudicators) != 1 or adjudicators[0].decision_family is not self.decision_family:
             raise ValueError("split family reviews require one decisive adjudicator")
         expected = content_sha256(self.model_dump(mode="json", exclude={"assignment_sha256"}))
         if self.assignment_sha256 != expected:
@@ -190,6 +186,8 @@ class ScientificDecisionFamilyAssignment(BaseModel):
                 unsigned.model_dump(mode="json", exclude={"assignment_sha256"})
             ),
         )
+
+
 class FamilyConditionedLifecycleTastePolicy(BaseModel):
     """Independent lifecycle-policy heads selected by a bound decision-family ledger."""
 
@@ -205,9 +203,7 @@ class FamilyConditionedLifecycleTastePolicy(BaseModel):
     assignment_population_sha256: str = Field(pattern=_SHA256)
     family_heads: dict[ScientificTasteDecisionFamily, LifecycleTastePolicyModel]
     empty_families: tuple[ScientificTasteDecisionFamily, ...]
-    conditioning_method: Literal["independent-family-heads-v1"] = (
-        "independent-family-heads-v1"
-    )
+    conditioning_method: Literal["independent-family-heads-v1"] = "independent-family-heads-v1"
     reviewer_kind: Literal["ai"] = "ai"
     not_human_review: Literal[True] = True
     human_validity_claim_allowed: Literal[False] = False
@@ -258,9 +254,7 @@ class FamilyConditionedLifecycleTastePolicy(BaseModel):
                 raise ValueError("family-conditioned head belongs to another Idea revision")
             if head.source_episode_ids != tuple(item.admission_id for item in expected):
                 raise ValueError("family-conditioned head uses another episode partition")
-            if head.source_episode_sha256 != tuple(
-                source[item.admission_id] for item in expected
-            ):
+            if head.source_episode_sha256 != tuple(source[item.admission_id] for item in expected):
                 raise ValueError("family-conditioned head episode hashes differ")
         expected_policy_hash = content_sha256(
             self.model_dump(mode="json", exclude={"policy_sha256"})
@@ -385,12 +379,8 @@ def fit_family_conditioned_lifecycle_taste_policy(
         key=lambda item: item.value,
     )
     for family in assigned_families:
-        family_ids = {
-            item.admission_id for item in assignments if item.decision_family is family
-        }
-        family_episodes = tuple(
-            item for item in episodes if item.admission_id in family_ids
-        )
+        family_ids = {item.admission_id for item in assignments if item.decision_family is family}
+        family_episodes = tuple(item for item in episodes if item.admission_id in family_ids)
         head_config = LifecycleTastePolicyConfig.model_validate(
             {
                 **config.model_dump(mode="python"),
@@ -428,9 +418,7 @@ def assess_family_conditioned_lifecycle_taste_policy(
 
     if not actions:
         raise ValueError("family-conditioned Taste assessment requires candidate actions")
-    candidate_set_sha256 = content_sha256(
-        [item.model_dump(mode="json") for item in actions]
-    )
+    candidate_set_sha256 = content_sha256([item.model_dump(mode="json") for item in actions])
     head = model.family_heads.get(decision_family)
     if head is None:
         return FamilyConditionedTasteAssessment.create(

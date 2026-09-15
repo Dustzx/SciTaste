@@ -1966,21 +1966,21 @@ def _verify_h4_static_model_resources(
             and not development_inspection.profile.gpu.enabled
             and not heldout_inspection.profile.gpu.enabled
             and all(
-            cell.resource.kind is ExecutionLaneKind.API_ONLY
-            and cell.resource.provider_id == backend.provider
-            and cell.resource.model_id == backend.model
-            and cell.resource.api_key_env == backend.api_key_env
-            and config.maximum_patch_iterations <= int(cell.resource.max_requests or 0)
-            and model_profile.admission.max_input_tokens
-            <= int(cell.resource.max_input_tokens_per_call or 0)
-            and model_profile.admission.max_output_tokens
-            <= int(cell.resource.max_output_tokens_per_call or 0)
-            and config.maximum_patch_iterations * model_profile.admission.max_total_tokens
-            <= int(cell.resource.max_total_tokens or 0)
-            and config.maximum_patch_iterations * model_profile.admission.max_response_cost_usd
-            <= float(cell.resource.max_cost or 0)
-            for cell in cells
-        )
+                cell.resource.kind is ExecutionLaneKind.API_ONLY
+                and cell.resource.provider_id == backend.provider
+                and cell.resource.model_id == backend.model
+                and cell.resource.api_key_env == backend.api_key_env
+                and config.maximum_patch_iterations <= int(cell.resource.max_requests or 0)
+                and model_profile.admission.max_input_tokens
+                <= int(cell.resource.max_input_tokens_per_call or 0)
+                and model_profile.admission.max_output_tokens
+                <= int(cell.resource.max_output_tokens_per_call or 0)
+                and config.maximum_patch_iterations * model_profile.admission.max_total_tokens
+                <= int(cell.resource.max_total_tokens or 0)
+                and config.maximum_patch_iterations * model_profile.admission.max_response_cost_usd
+                <= float(cell.resource.max_cost or 0)
+                for cell in cells
+            )
         )
     elif isinstance(config.backend, LocalRuntimeBackend):
         backend = config.backend.config

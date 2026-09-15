@@ -72,9 +72,7 @@ def test_h4_lifecycle_matrix_changes_no_static_component() -> None:
     matrix = load_native_condition_matrix(H4_MATRIX).matrix
 
     assert matrix.schema_version == "1.2"
-    assert {item.condition_id for item in matrix.profiles} == set(
-        NativeLifecycleCondition
-    )
+    assert {item.condition_id for item in matrix.profiles} == set(NativeLifecycleCondition)
     learned = matrix.profile(NativeLifecycleCondition.LEARNED_POLICY_ON)
     control = matrix.profile(NativeLifecycleCondition.LEARNED_POLICY_OFF)
     assert learned.components == control.components

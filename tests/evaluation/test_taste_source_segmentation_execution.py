@@ -193,9 +193,7 @@ def test_v6_sample_cannot_consume_its_independent_validation_groups():
         ).read_text(encoding="utf-8")
     )
     protocol = TasteSourceSegmentationProspectiveProtocol.model_validate(protocol_payload)
-    sample = load_taste_source_segmentation_sample_manifest(
-        _ROOT / protocol.sample.locator
-    ).sample
+    sample = load_taste_source_segmentation_sample_manifest(_ROOT / protocol.sample.locator).sample
 
     audit = assess_taste_source_segmentation_validation_reserve(protocol, sample)
 

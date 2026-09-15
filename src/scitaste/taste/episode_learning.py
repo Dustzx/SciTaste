@@ -467,9 +467,7 @@ class AdmittedTasteEpisode(BaseModel):
     supported_credit_ids: tuple[str, ...] = Field(min_length=1, max_length=100)
     attribution_confidence: float = Field(gt=0.0, le=1.0)
     training_weight: float = Field(gt=0.0, le=1.0)
-    review_evidence_kind: Literal["ai", "legacy-unverified", "mixed"] = (
-        "legacy-unverified"
-    )
+    review_evidence_kind: Literal["ai", "legacy-unverified", "mixed"] = "legacy-unverified"
     human_validity_claim_allowed: Literal[False] = False
     ai_review_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
     ai_review_count: int = Field(default=0, ge=0, le=3)
@@ -506,9 +504,7 @@ class AdmittedTasteEpisode(BaseModel):
             raise ValueError("non-AI Taste admission cannot bind an AI panel contract")
         if self.review_evidence_kind == "ai" and self.ai_review_count != len(self.reviews):
             raise ValueError("AI Taste evidence kind differs from review composition")
-        legacy_composition_differs = self.legacy_unverified_review_count != len(
-            self.reviews
-        )
+        legacy_composition_differs = self.legacy_unverified_review_count != len(self.reviews)
         if self.review_evidence_kind == "legacy-unverified" and legacy_composition_differs:
             raise ValueError("legacy Taste evidence kind differs from review composition")
         if self.review_evidence_kind == "mixed" and not (
@@ -637,8 +633,7 @@ def inspect_taste_episode_admission(
                 "AI-only panel contract cannot admit legacy or mixed reviewers",
             )
         if any(
-            item.panel_contract_sha256 != ai_review_contract.contract_sha256
-            for item in ai_reviews
+            item.panel_contract_sha256 != ai_review_contract.contract_sha256 for item in ai_reviews
         ):
             _admission_add(
                 findings,
@@ -654,8 +649,7 @@ def inspect_taste_episode_admission(
                 "AI Taste panel requires distinct reviewer models",
             )
         raw_hashes = [
-            item.artifact(AITasteReviewArtifactRole.RAW_RESPONSE).sha256
-            for item in ai_reviews
+            item.artifact(AITasteReviewArtifactRole.RAW_RESPONSE).sha256 for item in ai_reviews
         ]
         if ai_review_contract.require_distinct_raw_responses and len(raw_hashes) != len(
             set(raw_hashes)
@@ -1050,9 +1044,7 @@ class LifecycleTastePolicyModel(BaseModel):
     training_source_group_count: int = Field(default=0, ge=0)
     effective_training_weight: float = Field(default=0.0, ge=0.0)
     pairwise_comparison_count: int = Field(ge=0)
-    source_review_evidence_kinds: tuple[
-        Literal["ai", "legacy-unverified", "mixed"], ...
-    ] = ()
+    source_review_evidence_kinds: tuple[Literal["ai", "legacy-unverified", "mixed"], ...] = ()
     source_ai_reviewed_episode_count: int = Field(default=0, ge=0)
     source_legacy_unverified_episode_count: int = Field(default=0, ge=0)
     ai_review_contract_sha256s: tuple[str, ...] = ()
@@ -1119,13 +1111,11 @@ class LifecycleTastePolicyModel(BaseModel):
             raise ValueError("lifecycle Taste source episode hashes do not close")
         if list(self.source_review_evidence_kinds) != sorted(
             self.source_review_evidence_kinds
-        ) or len(self.source_review_evidence_kinds) != len(
-            set(self.source_review_evidence_kinds)
-        ):
+        ) or len(self.source_review_evidence_kinds) != len(set(self.source_review_evidence_kinds)):
             raise ValueError("lifecycle Taste review evidence kinds are not canonical")
-        if list(self.ai_review_contract_sha256s) != sorted(
+        if list(self.ai_review_contract_sha256s) != sorted(self.ai_review_contract_sha256s) or len(
             self.ai_review_contract_sha256s
-        ) or len(self.ai_review_contract_sha256s) != len(set(self.ai_review_contract_sha256s)):
+        ) != len(set(self.ai_review_contract_sha256s)):
             raise ValueError("lifecycle Taste AI review contracts are not canonical")
         if self.source_ai_reviewed_episode_count > len(self.source_episode_ids):
             raise ValueError("lifecycle Taste AI episode count exceeds source episodes")
@@ -1210,9 +1200,7 @@ class LifecycleTastePolicyModel(BaseModel):
             ):
                 legacy_payload.pop(field)
         legacy_expected = (
-            content_sha256(legacy_payload)
-            if self.schema_version not in {"1.4", "1.5"}
-            else None
+            content_sha256(legacy_payload) if self.schema_version not in {"1.4", "1.5"} else None
         )
         if self.policy_sha256 not in {expected, legacy_expected}:
             raise ValueError("lifecycle Taste policy hash mismatch")
@@ -1230,8 +1218,7 @@ class LifecycleTastePolicyModel(BaseModel):
         if self.training_source_group_count != self.training_episode_count:
             raise ValueError("shuffled-credit requires one episode per source group")
         assignment_order = [
-            (item.block_sha256, item.recipient_admission_id)
-            for item in self.shuffle_assignments
+            (item.block_sha256, item.recipient_admission_id) for item in self.shuffle_assignments
         ]
         if assignment_order != sorted(assignment_order):
             raise ValueError("shuffled-credit assignment ledger is not canonical")
@@ -1242,13 +1229,13 @@ class LifecycleTastePolicyModel(BaseModel):
         block_ids = {item.block_sha256 for item in self.shuffle_assignments}
         if self.shuffle_block_count != len(block_ids):
             raise ValueError("shuffled-credit block telemetry is inconsistent")
-        if {
-            item.recipient_source_group_key for item in self.shuffle_assignments
-        } != set(self.training_source_group_keys):
+        if {item.recipient_source_group_key for item in self.shuffle_assignments} != set(
+            self.training_source_group_keys
+        ):
             raise ValueError("shuffled-credit source groups differ from training policy")
-        if len(
-            {item.recipient_source_group_key for item in self.shuffle_assignments}
-        ) != len(self.shuffle_assignments):
+        if len({item.recipient_source_group_key for item in self.shuffle_assignments}) != len(
+            self.shuffle_assignments
+        ):
             raise ValueError("shuffled-credit ledger repeats a source-group unit")
         for block_sha256 in block_ids:
             block = tuple(
@@ -1288,15 +1275,11 @@ class LifecycleTastePolicyModel(BaseModel):
     def h3_policy_artifact_eligible(self) -> bool:
         """Return policy-level eligibility; study sample/effects remain separate gates."""
 
-        return (
-            self.intervention_policy_artifact_eligible
-            and self.config.update_mode
-            in {
-                LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
-                LifecycleTastePolicyUpdateMode.NO_UPDATE,
-                LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT,
-            }
-        )
+        return self.intervention_policy_artifact_eligible and self.config.update_mode in {
+            LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            LifecycleTastePolicyUpdateMode.NO_UPDATE,
+            LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT,
+        }
 
     @property
     def intervention_policy_artifact_eligible(self) -> bool:
@@ -1437,7 +1420,7 @@ def fit_lifecycle_taste_policy(
         ):
             raise ValueError("lifecycle Taste episode belongs to another Idea revision")
         if (
-                episode.candidate.schema_version not in {"1.2", "1.3"}
+            episode.candidate.schema_version not in {"1.2", "1.3"}
             or episode.candidate.source_group_id is None
             or episode.candidate.dataset_partition is None
         ):
@@ -1455,13 +1438,9 @@ def fit_lifecycle_taste_policy(
         if existing is not episode.candidate.dataset_partition:
             raise ValueError("lifecycle Taste source group crosses dataset partitions")
     selected = _select_training_episodes(episodes, config)
-    decision_context_count = sum(
-        item.candidate.decision_context is not None for item in selected
-    )
+    decision_context_count = sum(item.candidate.decision_context is not None for item in selected)
     if decision_context_count not in {0, len(selected)}:
-        raise ValueError(
-            "lifecycle Taste training cannot mix context-bound and legacy episodes"
-        )
+        raise ValueError("lifecycle Taste training cannot mix context-bound and legacy episodes")
     group_counts: dict[str, int] = defaultdict(int)
     for episode in selected:
         group_counts[_source_group_key(episode)] += 1
@@ -1780,15 +1759,11 @@ def _training_preferences(
 
     blocks: dict[tuple[object, ...], list[AdmittedTasteEpisode]] = defaultdict(list)
     if any(count != 1 for count in group_counts.values()):
-        raise ValueError(
-            "blocked shuffled-credit requires one sampled episode per source group"
-        )
+        raise ValueError("blocked shuffled-credit requires one sampled episode per source group")
     for episode in episodes:
         action_types = [item.action_type for item in episode.candidate.alternatives]
         if len(action_types) != len(set(action_types)):
-            raise ValueError(
-                "blocked shuffled-credit requires one alternative per action type"
-            )
+            raise ValueError("blocked shuffled-credit requires one alternative per action type")
         block_key = (
             episode.candidate.dataset_partition.value,
             episode.candidate.stage,
@@ -1802,10 +1777,7 @@ def _training_preferences(
     assignment_records: list[LifecycleTasteShuffleAssignment] = []
     fixed_points = 0
     ordered_blocks = sorted(
-        (
-            (content_sha256(block_key), block_key, members)
-            for block_key, members in blocks.items()
-        ),
+        ((content_sha256(block_key), block_key, members) for block_key, members in blocks.items()),
         key=lambda item: item[0],
     )
     for block_sha256, _block_key, members in ordered_blocks:
@@ -1851,8 +1823,7 @@ def _training_preferences(
                     assigned_action_id=assigned_action_id,
                     assigned_action_type=assigned_type,
                     effective_episode_weight=(
-                        episode.training_weight
-                        / group_counts[_source_group_key(episode)]
+                        episode.training_weight / group_counts[_source_group_key(episode)]
                     ),
                 )
             )
@@ -1905,9 +1876,7 @@ def _supported_outcome_stratum(
 ) -> tuple[tuple[str, str, str, str, str], ...]:
     credit_by_id = {item.credit_id: item for item in episode.candidate.credit_assignments}
     outcome_by_id = {item.outcome_id: item for item in episode.candidate.outcomes}
-    confounder_by_id = {
-        item.confounder_id: item for item in episode.candidate.confounders
-    }
+    confounder_by_id = {item.confounder_id: item for item in episode.candidate.confounders}
     return tuple(
         sorted(
             {
@@ -1917,10 +1886,7 @@ def _supported_outcome_stratum(
                     credit.confidence.hex(),
                     outcome_by_id[outcome_id].polarity.value,
                     ",".join(
-                        sorted(
-                            confounder_by_id[item].resolution
-                            for item in credit.confounder_ids
-                        )
+                        sorted(confounder_by_id[item].resolution for item in credit.confounder_ids)
                     ),
                 )
                 for credit_id in episode.supported_credit_ids
@@ -2046,9 +2012,7 @@ def _inspect_ai_review_artifacts(
                     "AI review execution receipt differs from the normalized review",
                 )
 
-    normalization_binding = review.artifact(
-        AITasteReviewArtifactRole.NORMALIZATION_REPORT
-    )
+    normalization_binding = review.artifact(AITasteReviewArtifactRole.NORMALIZATION_REPORT)
     normalization_path = root / normalization_binding.locator
     if normalization_path.is_file():
         try:
@@ -2067,8 +2031,7 @@ def _inspect_ai_review_artifacts(
                 or normalization.candidate_sha256 != review.candidate_sha256
                 or normalization.raw_response_sha256
                 != review.artifact(AITasteReviewArtifactRole.RAW_RESPONSE).sha256
-                or normalization.normalized_response_sha256
-                != review.normalized_response_sha256
+                or normalization.normalized_response_sha256 != review.normalized_response_sha256
             ):
                 _admission_add(
                     findings,
@@ -2087,9 +2050,7 @@ def _episode_action_features(episode, action) -> tuple[tuple[str, str], ...]:  #
         decision_context=(
             ()
             if episode.candidate.decision_context is None
-            else tuple(
-                episode.candidate.decision_context.model_dump(mode="json").items()
-            )
+            else tuple(episode.candidate.decision_context.model_dump(mode="json").items())
         ),
     )
 

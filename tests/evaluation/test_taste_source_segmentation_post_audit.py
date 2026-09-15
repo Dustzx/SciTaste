@@ -214,14 +214,10 @@ def test_sealed_inventory_normalization_and_hash_round_trip(tmp_path: Path) -> N
         locator_root=tmp_path,
     )
 
-    assert inventory.items[0].decisions[0].verbatim_decision_text == (
-        "Add a larger control group."
-    )
+    assert inventory.items[0].decisions[0].verbatim_decision_text == ("Add a larger control group.")
     assert inventory.not_human_review is True
     assert inventory.formal_evidence_eligible is False
-    saved = save_taste_source_integrity_inventory(
-        inventory, tmp_path / "SEALED_INVENTORY.json"
-    )
+    saved = save_taste_source_integrity_inventory(inventory, tmp_path / "SEALED_INVENTORY.json")
     assert load_taste_source_integrity_inventory(saved) == inventory
     replayed, replayed_pack, replayed_items = post_audit._verify_and_replay_inventory(
         inventory_path=saved,
@@ -269,9 +265,7 @@ def test_sealed_inventory_normalization_and_hash_round_trip(tmp_path: Path) -> N
     payload = json.loads(saved.read_text(encoding="utf-8"))
     payload["items"][0]["residual_decision_bearing_text_possible"] = True
     saved.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(
-        ValueError, match=r"residual count drifted|semantic hash mismatch"
-    ):
+    with pytest.raises(ValueError, match=r"residual count drifted|semantic hash mismatch"):
         load_taste_source_integrity_inventory(saved)
 
 

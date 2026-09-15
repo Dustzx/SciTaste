@@ -674,9 +674,10 @@ def test_model_generates_a_non_executable_project_bound_program_amendment() -> N
         "target_route_sha256": "3" * 64,
     }
     assert len(backend.calls[0].input_payload["tool_intelligence_routes"]) == 2
-    assert "every next_stage_id exactly once" in backend.calls[0].input_payload[
-        "change_kind_contracts"
-    ]["reprioritize_next_gates"]
+    assert (
+        "every next_stage_id exactly once"
+        in backend.calls[0].input_payload["change_kind_contracts"]["reprioritize_next_gates"]
+    )
     assert "research-basis" not in {
         item["stage_id"] for item in backend.calls[0].input_payload["stages"]
     }

@@ -74,8 +74,10 @@ def _meta_learning_score(workspace: Path, method_name: str, phase: str) -> float
     if method_name not in handlers:
         raise ValueError(f"unknown meta-learning method: {method_name}")
     handler = handlers[method_name]
-    if not isinstance(handler, str) or not handler or any(
-        part in {"", ".", ".."} for part in Path(handler).parts
+    if (
+        not isinstance(handler, str)
+        or not handler
+        or any(part in {"", ".", ".."} for part in Path(handler).parts)
     ):
         raise ValueError("meta-learning method handler is not a safe relative directory")
     method_directory = (workspace / "methods" / handler).resolve(strict=True)

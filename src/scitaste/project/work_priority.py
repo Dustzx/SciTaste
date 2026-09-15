@@ -129,9 +129,7 @@ class DeadlineWorkPlan(BaseModel):
         unsigned = cls.model_construct(plan_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            plan_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"plan_sha256"})
-            ),
+            plan_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"plan_sha256"})),
         )
 
 

@@ -197,6 +197,7 @@ def test_campaign_reopens_verified_resource_record_without_rehashing(tmp_path: P
     assert receipt.receipt_sha256 == expected.receipt_sha256
     assert receipt.verification_basis == "verified-materialization"
 
+
 def test_schema_1_profile_fingerprint_remains_backward_compatible() -> None:
     inspection = inspect_native_execution_profile(
         "configs/experiments/native_execution_dataset_cpu_v1.yaml"

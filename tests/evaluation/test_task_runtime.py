@@ -170,12 +170,8 @@ def _fixture(tmp_path: Path) -> tuple[Path, BenchmarkTaskRuntimeSpec]:
         baseline_development_score=0.1,
         baseline_heldout_score=0.05,
         asset_receipt=binding(root / "evidence" / "receipt.json", "evidence/receipt.json"),
-        archive_qualification=binding(
-            root / "evidence" / "archive.json", "evidence/archive.json"
-        ),
-        license_evidence=binding(
-            root / "evidence" / "license.json", "evidence/license.json"
-        ),
+        archive_qualification=binding(root / "evidence" / "archive.json", "evidence/archive.json"),
+        license_evidence=binding(root / "evidence" / "license.json", "evidence/license.json"),
         source_status=ReadinessStatus.VERIFIED,
         archive_status=ReadinessStatus.VERIFIED,
         license_status=ReadinessStatus.VERIFIED,
@@ -896,9 +892,7 @@ def test_research_loop_adopts_improvement_and_rolls_back_regression(tmp_path: Pa
                 spec_fingerprint=spec.fingerprint,
                 workspace_receipt_sha256=prepared.receipt_sha256,
                 execution_profile_fingerprint=request.execution_profile_fingerprint,
-                resource_verification_receipt_sha256=(
-                    request.resource_verification_receipt_sha256
-                ),
+                resource_verification_receipt_sha256=(request.resource_verification_receipt_sha256),
                 entrypoint_sha256=spec.objective_entrypoint.file_sha256,
                 status="succeeded",
                 error_code=None,
@@ -998,9 +992,7 @@ def test_benchmark_condition_guidance_is_compiled_from_the_six_arm_matrix() -> N
             source_locator=f"evidence/{guidance_id}.json",
             source_sha256=hashlib.sha256(guidance_id.encode()).hexdigest(),
             derivation_receipt_locator=f"evidence/{guidance_id}-receipt.json",
-            derivation_receipt_sha256=hashlib.sha256(
-                f"{guidance_id}-receipt".encode()
-            ).hexdigest(),
+            derivation_receipt_sha256=hashlib.sha256(f"{guidance_id}-receipt".encode()).hexdigest(),
             entries=(entry,),
         )
 

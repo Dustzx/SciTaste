@@ -215,9 +215,7 @@ def compile_benchmark_condition_guidance(
         raise ValueError("benchmark guidance set binds another condition-matrix file")
     if guidance.condition_matrix_fingerprint != matrix.matrix.fingerprint:
         raise ValueError("benchmark guidance set binds another condition matrix")
-    if (matrix.matrix.schema_version in {"1.1", "1.2"}) != (
-        guidance.schema_version == "1.1"
-    ):
+    if (matrix.matrix.schema_version in {"1.1", "1.2"}) != (guidance.schema_version == "1.1"):
         raise ValueError("formal condition matrix and mechanism guidance schema must match")
     profile = matrix.matrix.profile(condition)
     components = profile.components

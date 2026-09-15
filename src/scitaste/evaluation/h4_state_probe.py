@@ -82,9 +82,7 @@ class H4FrozenStateProbe(BaseModel):
         unsigned = cls.model_construct(probe_sha256="0" * 64, **values)
         return cls(
             **values,
-            probe_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"probe_sha256"})
-            ),
+            probe_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"probe_sha256"})),
         )
 
 
@@ -127,9 +125,7 @@ class H4FrozenStateProbeContract(BaseModel):
         H4FrozenStateProbe,
     ]
     probe_population_sha256: str = Field(pattern=_SHA256)
-    acceptance_rule: Literal["h4-frozen-state-manipulation-v1"] = (
-        "h4-frozen-state-manipulation-v1"
-    )
+    acceptance_rule: Literal["h4-frozen-state-manipulation-v1"] = "h4-frozen-state-manipulation-v1"
     minimum_score_separation: Literal[1e-6] = _MINIMUM_SCORE_SEPARATION
     formal_result_references: tuple[()] = ()
     outcome_blind: Literal[True] = True
@@ -194,9 +190,7 @@ class H4StateProbeArmObservation(BaseModel):
         expected_margin = ranked[0] - ranked[1] if len(ranked) > 1 else 0.0
         if abs(self.strict_top_margin - expected_margin) > 1e-12:
             raise ValueError("H4 probe strict top margin differs")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"observation_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"observation_sha256"}))
         if self.observation_sha256 != expected:
             raise ValueError("H4 probe arm observation hash differs")
         return self
@@ -229,8 +223,7 @@ class H4StateProbeObservation(BaseModel):
             and self.on.lifecycle_policy_weight == 1.0
             and self.off.state_snapshot_sha256 == self.on.state_snapshot_sha256
             and self.off.candidate_set_sha256 == self.on.candidate_set_sha256
-            and self.off.lifecycle_action_adjustments
-            == self.on.lifecycle_action_adjustments
+            and self.off.lifecycle_action_adjustments == self.on.lifecycle_action_adjustments
             and self.off.abstained == self.on.abstained
             and self.off.reason_codes == self.on.reason_codes
         )
@@ -311,9 +304,7 @@ def reduce_h4_feedback_context(
             break
         streak += 1
     improvements = [
-        item.directed_improvement
-        for item in history
-        if item.directed_improvement is not None
+        item.directed_improvement for item in history if item.directed_improvement is not None
     ]
     latest = improvements[-1] if improvements else None
     best = history[-1].best_directed_progress_after if history else 0.0
@@ -330,9 +321,7 @@ def reduce_h4_feedback_context(
             if latest < -1e-12
             else "flat"
         ),
-        best_vs_baseline=(
-            "above" if best > 1e-12 else "below" if best < -1e-12 else "equal"
-        ),
+        best_vs_baseline=("above" if best > 1e-12 else "below" if best < -1e-12 else "equal"),
     )
 
 
@@ -410,8 +399,7 @@ def inspect_h4_state_probe_manipulation(
 
     if (
         policy.policy_sha256 != contract.lifecycle_policy_sha256
-        or lifecycle_policy_training_corpus_sha256(policy)
-        != contract.policy_training_corpus_sha256
+        or lifecycle_policy_training_corpus_sha256(policy) != contract.policy_training_corpus_sha256
         or idea_scientific_contract_sha256(current_idea_revision)
         != contract.idea_scientific_contract_sha256
         or not idea_binding_matches_current(
@@ -462,8 +450,7 @@ def inspect_h4_state_probe_manipulation(
                 if decision.candidate_scores[action.action_id] is not None
             }
             adjustments = {
-                action.type.value: trace.action_adjustments[action.action_id]
-                for action in actions
+                action.type.value: trace.action_adjustments[action.action_id] for action in actions
             }
             ranked = sorted(scores.values(), reverse=True)
             arm_observations[weight] = H4StateProbeArmObservation.create(
@@ -528,9 +515,7 @@ def inspect_h4_state_probe_manipulation(
     unsigned = H4StateProbeReport.model_construct(report_sha256="0" * 64, **payload)
     return H4StateProbeReport(
         **payload,
-        report_sha256=content_sha256(
-            unsigned.model_dump(mode="json", exclude={"report_sha256"})
-        ),
+        report_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"report_sha256"})),
     )
 
 
@@ -603,14 +588,12 @@ def _feedback_is_sensitive(observations: tuple[H4StateProbeObservation, ...]) ->
     feedback = tuple(
         item
         for item in observations
-        if item.probe_id in {"failure", "stagnation", "improving"}
-        and not item.on.abstained
+        if item.probe_id in {"failure", "stagnation", "improving"} and not item.on.abstained
     )
     distinct_supported_tops = {
         _strict_adjustment_top(item.on.lifecycle_action_adjustments)
         for item in feedback
-        if _adjustment_margin(item.on.lifecycle_action_adjustments)
-        >= _MINIMUM_SCORE_SEPARATION
+        if _adjustment_margin(item.on.lifecycle_action_adjustments) >= _MINIMUM_SCORE_SEPARATION
     }
     return len(distinct_supported_tops) >= 2
 

@@ -194,9 +194,7 @@ def validate_evaluation_campaign_activation(
         raise ValueError("campaign activation binds another project, evaluation, or plan")
     if activation.model_dump(exclude={"approval"}) != expected.model_dump(exclude={"approval"}):
         raise ValueError("campaign activation scope or resource ceiling differs from its plan")
-    return tuple(
-        cell for cell in plan.cells if cell.cell_id in set(activation.selected_cell_ids)
-    )
+    return tuple(cell for cell in plan.cells if cell.cell_id in set(activation.selected_cell_ids))
 
 
 def load_evaluation_campaign_activation(path: str | Path) -> EvaluationCampaignActivation:

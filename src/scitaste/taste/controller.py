@@ -129,13 +129,9 @@ class TasteController:
                 raise ValueError(
                     "family-conditioned Taste requires an explicit scientific decision family"
                 )
-            lifecycle_policy = family_conditioned_policy.require_head(
-                lifecycle_decision_family
-            )
+            lifecycle_policy = family_conditioned_policy.require_head(lifecycle_decision_family)
         elif lifecycle_decision_family is not None:
-            raise ValueError(
-                "a scientific decision family requires a family-conditioned policy"
-            )
+            raise ValueError("a scientific decision family requires a family-conditioned policy")
         self.lifecycle_policy = lifecycle_policy
         self.family_conditioned_policy = family_conditioned_policy
         self.lifecycle_decision_family = lifecycle_decision_family
@@ -195,13 +191,9 @@ class TasteController:
         frozen_taste_pool: list[RetrievedTasteCase] | None = None
         if intervention_contract is not None:
             if self.candidate_generation_backend is not None:
-                raise ValueError(
-                    "formal Taste intervention requires a fixed candidate-action menu"
-                )
+                raise ValueError("formal Taste intervention requires a fixed candidate-action menu")
             if self._custom_critic_suite:
-                raise ValueError(
-                    "formal Taste intervention requires the first-party critic suite"
-                )
+                raise ValueError("formal Taste intervention requires the first-party critic suite")
             if self.mode is TasteMode.AUGMENTED:
                 assert self.retriever is not None
                 frozen_taste_pool = self.retriever.retrieve(
@@ -209,9 +201,7 @@ class TasteController:
                     limit=self.deliberation_candidate_limit,
                 )
             precedent_pool_sha256 = taste_precedent_pool_sha256(frozen_taste_pool or ())
-            precedent_source_group_ids = taste_precedent_source_group_ids(
-                frozen_taste_pool or ()
-            )
+            precedent_source_group_ids = taste_precedent_source_group_ids(frozen_taste_pool or ())
             selector_runtime_sha256 = self._selector_runtime_sha256(
                 precedent_pool_sha256=precedent_pool_sha256,
                 taste_deliberation=taste_deliberation,
@@ -515,15 +505,11 @@ class TasteController:
                 "expected_preference_model": self.expected_preference_model,
                 "candidate_generation_enabled": self.candidate_generation_backend is not None,
                 "candidate_generation_task": self.candidate_generation_task,
-                "candidate_generation_prompt_version": (
-                    self.candidate_generation_prompt_version
-                ),
+                "candidate_generation_prompt_version": (self.candidate_generation_prompt_version),
                 "expected_candidate_generation_backend": (
                     self.expected_candidate_generation_backend
                 ),
-                "expected_candidate_generation_model": (
-                    self.expected_candidate_generation_model
-                ),
+                "expected_candidate_generation_model": (self.expected_candidate_generation_model),
             }
         )
 
@@ -819,9 +805,7 @@ def _lifecycle_policy_trace(
         policy_sha256=assessment.policy_sha256,
         decision_family=(None if decision_family is None else decision_family.value),
         family_policy_id=(None if family_policy is None else family_policy.policy_id),
-        family_policy_sha256=(
-            None if family_policy is None else family_policy.policy_sha256
-        ),
+        family_policy_sha256=(None if family_policy is None else family_policy.policy_sha256),
         idea_revision_id=assessment.idea_revision_id,
         idea_revision_record_sha256=assessment.idea_revision_record_sha256,
         observed_idea_revision_id=assessment.observed_idea_revision_id,
@@ -843,9 +827,7 @@ def _lifecycle_policy_rationale(
     if assessment is None:
         return ""
     family_text = (
-        ""
-        if decision_family is None
-        else f" for the {decision_family.value} decision family"
+        "" if decision_family is None else f" for the {decision_family.value} decision family"
     )
     if assessment.abstained:
         return (

@@ -179,13 +179,16 @@ def test_project_binding_admits_only_its_configured_generation_model(
     assert portfolio is not None
     assert portfolio.planner_binding_state == "ready"
     assert portfolio.planner_resource_id == "api-a"
-    assert inspect_project_planner_admission(
-        runtime,
-        "resource-project",
-        planner_implementation="structured-model-v1",
-        planner_backend="api-a",
-        planner_model="api-a",
-    ).admitted is True
+    assert (
+        inspect_project_planner_admission(
+            runtime,
+            "resource-project",
+            planner_implementation="structured-model-v1",
+            planner_backend="api-a",
+            planner_model="api-a",
+        ).admitted
+        is True
+    )
     mismatch = inspect_project_planner_admission(
         runtime,
         "resource-project",

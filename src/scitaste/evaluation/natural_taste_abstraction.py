@@ -516,9 +516,7 @@ def _load_privacy_items(
         try:
             payload = json.loads(line)
         except json.JSONDecodeError as exc:
-            raise ValueError(
-                f"natural Taste privacy item line {line_number} is invalid"
-            ) from exc
+            raise ValueError(f"natural Taste privacy item line {line_number} is invalid") from exc
         values.append(PrivacyTasteSourceReviewItem.model_validate(payload))
     if not values:
         raise ValueError("natural Taste privacy item set is empty")

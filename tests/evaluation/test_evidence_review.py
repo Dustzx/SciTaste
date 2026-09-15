@@ -15,8 +15,7 @@ from scitaste.evaluation import (
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = ROOT / "configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml"
 LIFECYCLE_PACKAGE = (
-    ROOT
-    / "configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml"
+    ROOT / "configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml"
 )
 
 

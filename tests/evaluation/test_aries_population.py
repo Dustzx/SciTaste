@@ -249,9 +249,7 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
     assert report.verification.route == "direct_path"
     assert report.standalone_preflight_performed is False
     assert "example.org" not in json.dumps(candidate)
-    assert candidate["source_group_id"] == canonical_openreview_source_group_id(
-        "test-document"
-    )
+    assert candidate["source_group_id"] == canonical_openreview_source_group_id("test-document")
 
     snapshot, _ = publish_aries_taste_population_run(
         runtime,
@@ -470,9 +468,7 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         source_group_disjoint=True,
     )
     assert group_disjoint_sample.schema_version == "1.2"
-    assert group_disjoint_sample.per_campaign_source_group_counts == {
-        campaign.campaign_id: 1
-    }
+    assert group_disjoint_sample.per_campaign_source_group_counts == {campaign.campaign_id: 1}
     assert group_disjoint_sample.maximum_items_per_source_group == 1
     assert group_disjoint_sample.source_group_ids_exposed_to_provider is False
     assert group_disjoint_sample.per_campaign_eligible_source_group_counts == {
@@ -496,9 +492,7 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         prospective_sample_path,
     )
     assert (
-        load_taste_source_segmentation_sample_manifest(
-            prospective_sample_path
-        ).sample.sample_sha256
+        load_taste_source_segmentation_sample_manifest(prospective_sample_path).sample.sample_sha256
         == prospective_sample.sample_sha256
     )
     assert (
@@ -508,9 +502,7 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         ).sample.sample_sha256
         == prospective_sample.sample_sha256
     )
-    tampered_sample_payload = yaml.safe_load(
-        prospective_sample_path.read_text(encoding="utf-8")
-    )
+    tampered_sample_payload = yaml.safe_load(prospective_sample_path.read_text(encoding="utf-8"))
     tampered_sample_payload["source_campaign_file_sha256s"][campaign.campaign_id] = "0" * 64
     tampered_sample_path = tmp_path / "prospective-sample-tampered.yaml"
     tampered_sample_path.write_text(
@@ -586,9 +578,10 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         "review_comment",
     }
     assert "article_title" not in request_payload["items"][0]
-    assert request_payload["rubric_file_sha256"] == hashlib.sha256(
-        segmentation_rubric.read_bytes()
-    ).hexdigest()
+    assert (
+        request_payload["rubric_file_sha256"]
+        == hashlib.sha256(segmentation_rubric.read_bytes()).hexdigest()
+    )
     assert request_payload["output_contract"]["required"] == ["items"]
     assert request_payload["output_contract"]["properties"]["items"]["minItems"] == 1
     raw_segmentation_payload = json.loads(raw_segmentation.read_text(encoding="utf-8"))
@@ -613,22 +606,16 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         campaign_root / "CAMPAIGN.json",
         locator_root=tmp_path,
     )
-    group_boundary_snapshot = (
-        segmentation_module.snapshot_taste_source_segmentation_group_boundary(
-            sample_inspection=load_taste_source_segmentation_sample_manifest(
-                group_disjoint_sample_path
-            ),
-            sample_manifest_locator=group_disjoint_sample_path.relative_to(
-                tmp_path
-            ).as_posix(),
-            campaign_snapshots=(campaign_snapshot,),
-            locator_root=tmp_path,
-        )
+    group_boundary_snapshot = segmentation_module.snapshot_taste_source_segmentation_group_boundary(
+        sample_inspection=load_taste_source_segmentation_sample_manifest(
+            group_disjoint_sample_path
+        ),
+        sample_manifest_locator=group_disjoint_sample_path.relative_to(tmp_path).as_posix(),
+        campaign_snapshots=(campaign_snapshot,),
+        locator_root=tmp_path,
     )
     assert group_boundary_snapshot is not None
-    assert group_boundary_snapshot.per_campaign_source_group_counts == {
-        campaign.campaign_id: 1
-    }
+    assert group_boundary_snapshot.per_campaign_source_group_counts == {campaign.campaign_id: 1}
     sample_snapshot = load_taste_source_segmentation_sample_manifest(segmentation_sample)
 
     def reject_late_input_read(*_args: object, **_kwargs: object) -> None:

@@ -158,8 +158,7 @@ def project_iclr_evidence_program(
         (
             vocabulary
             for vocabulary in _PHASE_VOCABULARIES
-            if set(stages)
-            == {stage_id for _, _, phase in vocabulary for stage_id in phase}
+            if set(stages) == {stage_id for _, _, phase in vocabulary for stage_id in phase}
         ),
         None,
     )

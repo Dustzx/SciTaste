@@ -516,10 +516,7 @@ def derive_h4_formal_preparation_request(
     manifest = load_prelaunch_manifest(evaluation_root / manifest_binding.locator).manifest
     plan = load_evaluation_cell_plan(evaluation_root / plan_binding.locator)
     cells = tuple(sorted(plan.cells, key=lambda item: item.cell_id))
-    if (
-        {item.system_id for item in cells} != _H4_SYSTEM_IDS
-        or not _h4_cells_are_paired(cells)
-    ):
+    if {item.system_id for item in cells} != _H4_SYSTEM_IDS or not _h4_cells_are_paired(cells):
         raise ValueError("H4 request compiler requires an exact paired H4-only plan")
 
     from scitaste.evaluation.native_benchmark_adapter import (
@@ -542,9 +539,10 @@ def derive_h4_formal_preparation_request(
     )
     for field in common_fields:
         values = [getattr(configs[system_id], field) for system_id in sorted(configs)]
-        if any(value is None for value in values) or len(
-            {value.model_dump_json() for value in values if value is not None}
-        ) != 1:
+        if (
+            any(value is None for value in values)
+            or len({value.model_dump_json() for value in values if value is not None}) != 1
+        ):
             raise ValueError(f"H4 adapters do not share one {field} binding")
 
     lanes = {item.lane_id: item for item in manifest.lanes}
@@ -688,9 +686,7 @@ def compile_h4_formal_preparation_bundle(
         evaluation_bundle_sha256=evaluation.bundle_sha256,
         proposal_sha256=evaluation.proposal_sha256,
         plan_sha256=plan.plan_sha256,
-        idea_scientific_contract_sha256=idea_scientific_contract_sha256(
-            idea.current_binding
-        ),
+        idea_scientific_contract_sha256=idea_scientific_contract_sha256(idea.current_binding),
         repository_commit=repository_commit,
         repository_tree_sha256=repository_tree_sha256,
         h4_cell_population_sha256=content_sha256(

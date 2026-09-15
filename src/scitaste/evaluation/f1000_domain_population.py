@@ -297,9 +297,7 @@ class F1000TasteCandidate(BaseModel):
     revised_abstract: str = Field(min_length=1, max_length=_MAX_TEXT_CHARS)
     review_comment: str = Field(min_length=1, max_length=_MAX_TEXT_CHARS)
     author_response: str | None = Field(default=None, max_length=_MAX_TEXT_CHARS)
-    recommendation: Literal[
-        "approved", "approved-with-reservations", "not-approved", "unknown"
-    ]
+    recommendation: Literal["approved", "approved-with-reservations", "not-approved", "unknown"]
     subsequent_revision_observed: Literal[True] = True
     publisher_domain_is_not_gold: Literal[True] = True
     recommendation_is_not_gold: Literal[True] = True
@@ -648,9 +646,7 @@ def acquire_f1000_domain_sources(
                 )
             )
         article_evidence.sort(key=lambda item: item.response_locator)
-        total_bytes = sum(
-            item.response_bytes for item in (*search_evidence, *article_evidence)
-        )
+        total_bytes = sum(item.response_bytes for item in (*search_evidence, *article_evidence))
         if total_bytes > plan.maximum_total_bytes:
             raise ValueError("F1000 acquisition exceeded its aggregate byte ceiling")
         receipt = F1000DomainAcquisitionReceipt.create(
@@ -904,9 +900,7 @@ def publish_f1000_taste_population_run(
                 artifact=artifact,
                 generative_ui_projection=_PROJECT_PROJECTION,
                 population_id=source_report.population_id,
-                acquisition_receipt_sha256=(
-                    source_report.acquisition_receipt_sha256
-                ),
+                acquisition_receipt_sha256=(source_report.acquisition_receipt_sha256),
                 authorizes_model_calls=False,
                 authorizes_experiment=False,
                 no_model_call_performed=True,
@@ -943,9 +937,7 @@ def publish_f1000_taste_population_run(
         observed_domain_count=observed.observed_domain_count,
         observed_domain_floor_met=observed.observed_domain_floor_met,
         added_domain_group_floor_met=observed.added_domain_group_floor_met,
-        ready_for_taste_abstraction_review=(
-            observed.ready_for_taste_abstraction_review
-        ),
+        ready_for_taste_abstraction_review=(observed.ready_for_taste_abstraction_review),
         ready_for_benchmark_admission=observed.ready_for_benchmark_admission,
         blocker_codes=[item.code for item in observed.blockers],
         verification_route=observed.verification.route.value,
@@ -1002,13 +994,11 @@ def _review_candidates(
     result: list[F1000TasteCandidate] = []
     for report in revised.root.findall("./sub-article[@article-type='reviewer-report']"):
         related = report.find("./front-stub/related-article")
-        related_doi = (related.attrib.get(_XLINK_HREF, "") if related is not None else "")
+        related_doi = related.attrib.get(_XLINK_HREF, "") if related is not None else ""
         if related_doi.casefold() != source.reviewed_doi.casefold():
             continue
         license_node = report.find("./front-stub/permissions/license")
-        if license_node is None or not _CC_BY.fullmatch(
-            license_node.attrib.get(_XLINK_HREF, "")
-        ):
+        if license_node is None or not _CC_BY.fullmatch(license_node.attrib.get(_XLINK_HREF, "")):
             raise ValueError("F1000 selected review lacks a supported CC-BY license")
         review_text = _clean(_text(report.find("./body")))
         if not review_text:
@@ -1132,9 +1122,7 @@ def _parse_doi(value: str) -> tuple[str, int]:
 
 
 def _search_url(subject_query: str, page: int, rows: int) -> str:
-    query = urlencode(
-        {"q": f'R_SUB:"{subject_query}"', "rows": str(rows), "page": str(page)}
-    )
+    query = urlencode({"q": f'R_SUB:"{subject_query}"', "rows": str(rows), "page": str(page)})
     return f"https://f1000research.com/extapi/search?{query}"
 
 

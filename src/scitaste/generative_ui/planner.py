@@ -1389,11 +1389,7 @@ def _normalize_redundant_surface_echoes(
         normalized_brief = dict(brief)
         prior_turn = (
             next(
-                (
-                    item
-                    for item in reversed(context.turns)
-                    if item.authored_brief is not None
-                ),
+                (item for item in reversed(context.turns) if item.authored_brief is not None),
                 None,
             )
             if context is not None
@@ -1408,8 +1404,7 @@ def _normalize_redundant_surface_echoes(
         return normalized
     candidates = {item.candidate_id: item for item in catalog.candidates}
     components = {
-        candidate_id: item.component.component.value
-        for candidate_id, item in candidates.items()
+        candidate_id: item.component.component.value for candidate_id, item in candidates.items()
     }
     normalized_entries: list[JsonValue] = []
     for value in entries:
@@ -1534,8 +1529,7 @@ def _bounded_evidence_digest(
                 depth=0,
                 dict_key_limit=(
                     None
-                    if candidate.component.component
-                    is TrustedComponent.PROJECT_PROGRESS_BOARD
+                    if candidate.component.component is TrustedComponent.PROJECT_PROGRESS_BOARD
                     else 16
                 ),
             ),

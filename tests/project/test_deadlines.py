@@ -193,9 +193,6 @@ def test_critical_deadline_routes_claim_work_and_defers_repeated_checks(
     decisions = {item.work_id: item for item in program.decisions}
     assert decisions["abstract-freeze"].disposition is DeadlineWorkDisposition.EXECUTE_NOW
     assert decisions["abstract-freeze"].priority_rank == 1
-    assert (
-        decisions["full-test-repeat"].disposition
-        is DeadlineWorkDisposition.DEFER_NONCRITICAL
-    )
+    assert decisions["full-test-repeat"].disposition is DeadlineWorkDisposition.DEFER_NONCRITICAL
     assert "non-release-verification-deferred" in decisions["full-test-repeat"].reason_codes
     assert program.execution_authorized is False

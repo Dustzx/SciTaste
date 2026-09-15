@@ -141,12 +141,8 @@ class SciTasteNativeExecutor:
     ) -> ExecutionResult:
         input_paths: tuple[Path, ...] = ()
         recover_exact_success = (
-            capability == NativeCapability.RETRIEVAL
-            and self.recover_completed_retrieval
-        ) or (
-            capability == NativeCapability.EXPERIMENT
-            and self.recover_completed_experiment
-        )
+            capability == NativeCapability.RETRIEVAL and self.recover_completed_retrieval
+        ) or (capability == NativeCapability.EXPERIMENT and self.recover_completed_experiment)
         if recover_exact_success and self.store is not None:
             recovered = self.store.recover_successful(
                 state=state,

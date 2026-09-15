@@ -1970,9 +1970,7 @@ def _runtime_code_failure(
             or expected_source not in record.input_sha256.values()
         ):
             continue
-        execution_locators = [
-            item for item in result.artifacts if item.endswith("/execution.json")
-        ]
+        execution_locators = [item for item in result.artifacts if item.endswith("/execution.json")]
         stderr_locators = [item for item in result.artifacts if item.endswith("/stderr.txt")]
         if len(execution_locators) != 1 or len(stderr_locators) != 1:
             return None

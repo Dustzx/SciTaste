@@ -113,9 +113,7 @@ class DatasetLicenseCoverageReport(BaseModel):
         ready = not expected_blockers
         if self.ingestion_license_ready != ready:
             raise ValueError("dataset license readiness differs from its blockers")
-        expected_disposition = (
-            "qualified" if ready else "blocked_missing_per_image_license_records"
-        )
+        expected_disposition = "qualified" if ready else "blocked_missing_per_image_license_records"
         if self.disposition != expected_disposition:
             raise ValueError("dataset license disposition differs from its evidence")
         if self.verification_decision.route is not VerificationRoute.TARGETED_CHECK:
@@ -179,9 +177,7 @@ def inspect_awa_license_coverage(
     ):
         raise ValueError("AWA policy, receipt, and archive qualification differ")
 
-    relative_archive = PurePosixPath(receipt.destination_root) / PurePosixPath(
-        acquired.destination
-    )
+    relative_archive = PurePosixPath(receipt.destination_root) / PurePosixPath(acquired.destination)
     if relative_archive.is_absolute() or any(
         part in {"", ".", ".."} for part in relative_archive.parts
     ):
@@ -236,12 +232,8 @@ def inspect_awa_license_coverage(
     if not image_label_complete:
         raise ValueError("AWA Mini image and label identities are incomplete")
 
-    license_columns_present = any(
-        "license" in name.lower() for name in (reader.fieldnames or ())
-    )
-    license_metadata_keys_present = any(
-        "license" in str(name).lower() for name in info_payload
-    )
+    license_columns_present = any("license" in name.lower() for name in (reader.fieldnames or ()))
+    license_metadata_keys_present = any("license" in str(name).lower() for name in info_payload)
     license_members = tuple(
         name for name in metadata_names if "license" in PurePosixPath(name).name.lower()
     )
@@ -309,9 +301,7 @@ def inspect_awa_license_coverage(
         satisfied_checks=satisfied,
         blocker_codes=blockers,
         ingestion_license_ready=not blockers,
-        disposition=(
-            "qualified" if not blockers else "blocked_missing_per_image_license_records"
-        ),
+        disposition=("qualified" if not blockers else "blocked_missing_per_image_license_records"),
         verification_decision=decision,
         claim_boundary=(
             "This targeted local read proves whether the exact acquired AWA Mini archive "

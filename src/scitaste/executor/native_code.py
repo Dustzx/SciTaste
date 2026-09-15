@@ -570,13 +570,7 @@ def load_native_code_context_record(
 
     if re.fullmatch(_SAFE_ID, context_directory) is None:
         raise ValueError("native code context directory must be one safe path segment")
-    path = (
-        Path(run_root)
-        / "native_execution"
-        / "context"
-        / context_directory
-        / "CODE.json"
-    )
+    path = Path(run_root) / "native_execution" / "context" / context_directory / "CODE.json"
     if not path.exists():
         return None
     if path.is_symlink() or not path.is_file():
