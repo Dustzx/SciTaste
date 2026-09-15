@@ -84,7 +84,7 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
     """Distill a source-traceable principle with explicit transfer limits."""
 
     node_name = GROUNDED_TASTE_ABSTRACTION_NODE
-    prompt_version = "grounded-taste-abstraction-v2"
+    prompt_version = "grounded-taste-abstraction-v3"
     system_instruction = (
         "Distill one transferable scientific decision precedent from only the supplied canonical "
         "source projection. Return a closed decision with alternatives, selected action, "
@@ -103,6 +103,13 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         "transfer. Preserve controller-issued identities internally but never expose source, "
         "candidate, relation, condition, or held-out-task identity in the abstraction. Do not use "
         "outside facts, admit memory, call tools, execute actions, or claim that SciTaste works. "
+        "Create candidate_actions first, then copy one candidate string byte-for-byte into "
+        "preferred_action and copy every remaining candidate string byte-for-byte into "
+        "rejected_actions; never paraphrase an action between these fields. Set reviewer_context "
+        "to null because no reviewer-context source field is provided. Do not mention the request "
+        "stage, domain tag, model, AI role, controller, or review workflow in any proposal text. "
+        "Before returning JSON, check these exact-copy constraints and every grounding excerpt "
+        "against source_projection. "
         "This is an untrusted proposal for independent review; a reviewer may be AI and must never "
         "be represented as human."
     )
