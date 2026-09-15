@@ -1,0 +1,115 @@
+schema_version: "1.0"
+pilot_id: scitastebench-track-a-ai-pilot-v1
+project_id: scitaste-self-development
+pilot_kind: natural-source-track-a-ai-pilot
+hypotheses:
+  - H1_taste_abstraction
+  - H2_taste_specificity
+selection_seed: scitastebench-track-a-ai-pilot-v1-content-selection
+selection_algorithm: sha256-content-ranked-domain-balanced-v1
+pairing_algorithm: sha256-family-first-source-disjoint-v1
+planner_implementation:
+  locator: src/scitaste/evaluation/taste_mechanism_pilot.py
+  file_sha256: fd3799c73bce178611f55582f87ed8b6484216fc519917b05bc92254dd7f11ca
+target_counts_by_domain:
+  computing: 8
+  ecology: 8
+  public-health: 8
+target_count: 24
+precedent_pool_count: 16
+inventory_sources:
+  - cohort_id: prospective-v6
+    inventory:
+      locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-d-sealed-inventory-v2/SEALED_INVENTORY.json
+      file_sha256: fe69af0729ea890cfae27fb9f7a1496b34e3a68f2c89b89a71e399dbffd66045
+      semantic_sha256: 70a905982b3db251702059fe673cd7d5fda3b2bf4d9e92948f42e0f29bdd354c
+    sample_manifest:
+      locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v5.yaml
+      file_sha256: 8ddabcbb6fdada1ca11519d06518fd1092ebb12c8004f7cf8b47730ed162a9b2
+      semantic_sha256: 118b3ade59e17bbc2f03d4e1a285f61da2cd016f29e9e062e673c771a34c2f57
+  - cohort_id: prospective-v7
+    inventory:
+      locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/ai-d-sealed-inventory-v1/SEALED_INVENTORY.json
+      file_sha256: cec5a07664ddc548e3845cd796d8a11108ee651bde24e559c083c8d890c6e2d4
+      semantic_sha256: ec387e9e61fe36d58122cb2a3faff6c5afd9fd7cb84602caf0af8c707a8908cb
+    sample_manifest:
+      locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v6.yaml
+      file_sha256: 867070b13b4db5d3e1e318a6a8eddfc1f3b91298bd4e624ba13d0b9a1b9c82d0
+      semantic_sha256: 387769b03c863637fc655a41a25c21ae85811b70f055ad5a10b73224abb66aa8
+campaigns:
+  - cohort_id: prospective-v6
+    campaign_id: aries-taste-source-review-v1
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-source-review-v1/CAMPAIGN.json
+      file_sha256: 85bced0fcc8a470578aa2fee4040c6182900657ab474c286eb21aad30b426844
+      semantic_sha256: 83c95d2d0dcbc9f96708aedf95caa9808a093383efb8d61a063572f52adb6af3
+    scientific_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-source-review-v1/SCIENTIFIC_ITEMS.jsonl
+      file_sha256: 946981aa247e4a50bdac7acd26c65e74658b1307d96c113ffdd2e76460efdbbd
+    privacy_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-source-review-v1/PRIVACY_ITEMS.jsonl
+      file_sha256: 243f90c95f35462df38b5b552b7822c34e8fa4f9317497ba2d53257cdfbe7e86
+    private_item_map:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-source-review-v1/PRIVATE_ITEM_MAP.json
+      file_sha256: 92da1725e5c7172ce9f904d79860ef0aa70ec600851d88d8403d352dfc0f7cad
+  - cohort_id: prospective-v6
+    campaign_id: f1000-multidomain-taste-source-review-v1
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/reviews/f1000-multidomain-taste-source-review-v1/CAMPAIGN.json
+      file_sha256: deb793bc065d09ddcfd6e02350bd430ecb81f9fc563d9f1bb7b466ebcd60263e
+      semantic_sha256: 74a45dc4ec755776e887ccc22ae433878abd6a5ad587a89e53690cb95cd99539
+    scientific_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/reviews/f1000-multidomain-taste-source-review-v1/SCIENTIFIC_ITEMS.jsonl
+      file_sha256: cc6d7d283b2e7dc3a5efef90a04b3dc4d5e2433ba0717940856ba306de74eefd
+    privacy_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/reviews/f1000-multidomain-taste-source-review-v1/PRIVACY_ITEMS.jsonl
+      file_sha256: 00f491329fc14d30cf9fda03a1b6cd9fc6bbcbbe4d543e77bd4685a7bd5b0bdd
+    private_item_map:
+      locator: outputs/projects/scitaste-self-development/evaluations/reviews/f1000-multidomain-taste-source-review-v1/PRIVATE_ITEM_MAP.json
+      file_sha256: c10d45ed5ea6afeb391095189f06355ebec11842a8d1497bf0b09b419d7fd365
+  - cohort_id: prospective-v7
+    campaign_id: aries-validation-reserve-source-review-v2
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-validation-reserve-v1/derived/taste-source-review-v3/CAMPAIGN.json
+      file_sha256: 015d9a8a38b13462f0e109d4c984b30383e29bf677427b75e02e5a9dc5a400e4
+      semantic_sha256: 59c632ff0d4b329dac80decf3920e9dc4ce34a66569c2b63d47313d84cecfa63
+    scientific_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-validation-reserve-v1/derived/taste-source-review-v3/SCIENTIFIC_ITEMS.jsonl
+      file_sha256: 44d4b493f85f69bc5cb1e8e7bd276b3fbd50e6cc5453ecd276a893bac2791a04
+    privacy_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-validation-reserve-v1/derived/taste-source-review-v3/PRIVACY_ITEMS.jsonl
+      file_sha256: e778a333e092e8d0da0f00c60796604b9f7cce4cbc8bb25a070433f4a7aa26be
+    private_item_map:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-validation-reserve-v1/derived/taste-source-review-v3/PRIVATE_ITEM_MAP.json
+      file_sha256: cad09b5677862dc7bb0e3a2d3cdedc20ab40500c5c3df619d893c7141023c95e
+  - cohort_id: prospective-v7
+    campaign_id: f1000-validation-reserve-source-review-v2
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-validation-reserve-v2/derived/taste-source-review-v2/CAMPAIGN.json
+      file_sha256: b3c53b960577ed7bb5230725c708d96212658054cd685a9685c5d008a69218c6
+      semantic_sha256: 3af247c9022800ddf097341dfe961861591c44ed34127f3b7f88c1a704591883
+    scientific_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-validation-reserve-v2/derived/taste-source-review-v2/SCIENTIFIC_ITEMS.jsonl
+      file_sha256: ec2dbd3ff1e9fe29f78ae8aafe7b2476468508069b36c4c2e2f823e83dfb4f80
+    privacy_items:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-validation-reserve-v2/derived/taste-source-review-v2/PRIVACY_ITEMS.jsonl
+      file_sha256: 59ca217156960521cb333176e6e33d2ba6ce285a84539a04c94a7e5ae42b6883
+    private_item_map:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-validation-reserve-v2/derived/taste-source-review-v2/PRIVATE_ITEM_MAP.json
+      file_sha256: 6b5cf37b75b000848db7e3675596cd23627e13130d731d7a4556c5e29a06dfa8
+target_outcomes_hidden: true
+precedent_outcomes_available_to_both_h1_arms: true
+raw_and_taste_share_exact_projection_bytes: true
+target_and_precedent_source_groups_disjoint: true
+reviewer_kind: ai
+not_human_review: true
+human_validity_claim_allowed: false
+objective_correctness_claim_allowed: false
+permitted_diagnostic: observed-action-agreement-and-natural-outcome-proxy
+natural_pilot: true
+formal_evidence_eligible: false
+authorizes_api_calls: false
+authorizes_model_calls: false
+authorizes_gpu_work: false
+authorizes_experiment_execution: false
+config_sha256: e47e7d83bf987596385f7fcc0e3285cd60646eebfb07e3408185bf6fd8a6771b
