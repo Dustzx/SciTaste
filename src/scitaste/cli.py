@@ -447,11 +447,17 @@ from scitaste.taste.semantic import (
     taste_abstraction_candidate_from_ledger,
 )
 from scitaste.taste.trajectory_reconstruction import (
+    TasteProcessEpisodeProposal,
     TasteTrajectoryAssignmentTiming,
     TasteTrajectorySamplingPlan,
     capture_prospective_taste_decision,
+    compile_prospective_taste_episode,
+    load_taste_process_episode_proposal,
+    load_taste_prospective_capture,
+    load_taste_trajectory_inventory,
     load_taste_trajectory_sampling_plan,
     reconstruct_taste_trajectory,
+    save_taste_process_episode_proposal,
     save_taste_trajectory_inventory,
     save_taste_trajectory_sampling_plan,
 )
@@ -1627,6 +1633,27 @@ def build_parser() -> argparse.ArgumentParser:
     trajectory_capture.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(trajectory_capture)
     trajectory_capture.set_defaults(handler=_handle_taste_capture_prospective_decision)
+    process_proposal = taste_commands.add_parser(
+        "seal-process-episode-proposal",
+        help="Seal one delayed-outcome proposal before independent AI review",
+    )
+    process_proposal.add_argument("--draft", type=Path, required=True)
+    process_proposal.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(process_proposal)
+    process_proposal.set_defaults(handler=_handle_taste_seal_process_episode_proposal)
+    process_compile = taste_commands.add_parser(
+        "compile-prospective-episode",
+        help="Compile one sealed delayed outcome against an exact prospective foundation",
+    )
+    process_compile.add_argument("--plan", type=Path, required=True)
+    process_compile.add_argument("--capture", type=Path, required=True)
+    process_compile.add_argument("--inventory", type=Path, required=True)
+    process_compile.add_argument("--proposal", type=Path, required=True)
+    process_compile.add_argument("--expected-revision", type=int, required=True)
+    process_compile.add_argument("--output", type=Path, required=True)
+    process_compile.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(process_compile)
+    process_compile.set_defaults(handler=_handle_taste_compile_prospective_episode)
     family_policy_fit = taste_commands.add_parser(
         "fit-family-policy",
         help="Fit isolated scientific decision-family Taste heads without model execution",
@@ -5957,6 +5984,72 @@ def _handle_taste_capture_prospective_decision(args: argparse.Namespace) -> int:
                 "no_model_calls_performed": True,
                 "no_api_calls_performed": True,
                 "no_gpu_work_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_seal_process_episode_proposal(args: argparse.Namespace) -> int:
+    raw = _bounded_regular_input(args.draft, label="process episode proposal draft")
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("process episode proposal draft must be a JSON object")
+    proposal = TasteProcessEpisodeProposal.create(**payload)
+    output = save_taste_process_episode_proposal(proposal, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "process-episode-proposal-sealed",
+                "output": str(output),
+                "proposal_id": proposal.proposal_id,
+                "proposal_sha256": proposal.proposal_sha256,
+                "canonical_evidence": False,
+                "admission_authority": False,
+                "policy_update_authorized": False,
+                "no_model_calls_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_compile_prospective_episode(args: argparse.Namespace) -> int:
+    plan = load_taste_trajectory_sampling_plan(args.plan)
+    capture = load_taste_prospective_capture(args.capture)
+    inventory = load_taste_trajectory_inventory(args.inventory)
+    proposal = load_taste_process_episode_proposal(args.proposal)
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, plan.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"process episode compilation requires a verified current Idea: {codes}")
+    candidate = compile_prospective_taste_episode(
+        plan,
+        capture,
+        inventory,
+        proposal,
+        runtime=runtime,
+        current_idea_revision=idea_report.current_binding,
+        expected_project_revision=args.expected_revision,
+        output=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "prospective-process-episode-quarantined",
+                "output": str(args.output),
+                "candidate_id": candidate.candidate_id,
+                "candidate_sha256": candidate.candidate_sha256,
+                "maturity": candidate.maturity.value,
+                "ready_for_ai_attribution_review": True,
+                "retrieval_eligible": False,
+                "policy_update_authorized": False,
+                "no_model_calls_performed": True,
             },
             indent=2,
             ensure_ascii=False,

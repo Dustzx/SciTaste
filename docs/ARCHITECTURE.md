@@ -4078,6 +4078,14 @@ It cannot label delayed scientific success or make the record training-eligible;
 those authorities remain in the independent outcome-attribution and admission
 stages.
 
+Once a downstream observation exists, the process miner seals a proposal that
+names its outcomes, causal-credit hypothesis, confounders, applicability and
+failure boundaries, and run-owned evidence locators. The compiler replays the
+plan, capture, inventory, exact decision line, and state binding before hashing
+the evidence and producing a quarantined `TasteEpisodeCandidate`. The proposal
+is not a review: the existing cross-model attribution panel must still accept or
+reject its causal interpretation before admission can authorize a policy update.
+
 ### ADR-130: Venue deadlines are project state, not remembered dates
 
 Status: accepted and implemented.

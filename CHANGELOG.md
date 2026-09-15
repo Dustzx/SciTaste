@@ -12,6 +12,12 @@ semantic versioning.
   JSONL line, state snapshot, executor result, and all relevant content hashes;
   it explicitly creates no scientific-outcome label and authorizes no policy
   training while the delayed outcome is still unknown.
+- Added the deterministic delayed-outcome join for prospective project
+  trajectories. A self-hashed process-miner proposal binds the sampling plan,
+  capture receipt, reconstruction inventory, exact decision/state bytes, and
+  run-owned outcome evidence. Compilation produces only a quarantined Taste
+  episode ready for the existing cross-model attribution panel; proposal and
+  compilation perform no model call and cannot admit or update a policy.
 - Added the missing production bridge from project-owned Taste episodes to a
   disclosed cross-model AI attribution panel. One shared, condition- and
   claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and

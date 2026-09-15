@@ -18,7 +18,18 @@ from scitaste.project.models import content_sha256, validate_project_id, validat
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.persistence import DecisionLogger, StateStore, snapshot_id
 from scitaste.state.research_state import ResearchState
-from scitaste.taste.episodes import TasteEpisodePartition, TasteEpisodeSourceRelationship
+from scitaste.taste.episodes import (
+    TasteCreditAssignment,
+    TasteEpisodeCandidate,
+    TasteEpisodeConfounder,
+    TasteEpisodeDecisionContext,
+    TasteEpisodeEvidence,
+    TasteEpisodeEvidenceRole,
+    TasteEpisodeOutcome,
+    TasteEpisodePartition,
+    TasteEpisodeSourceRelationship,
+    compile_process_taste_episode_candidate,
+)
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
@@ -28,6 +39,7 @@ _MAX_DECISION_LOG_BYTES = 16 * 1024 * 1024
 _MAX_DECISION_LINE_BYTES = 2 * 1024 * 1024
 _MAX_STATE_BYTES = 4 * 1024 * 1024
 _MAX_CONTRACT_BYTES = 4 * 1024 * 1024
+_MAX_EVIDENCE_BYTES = 64 * 1024 * 1024
 _MAX_STATE_TREE_ENTRIES = 50_000
 
 
@@ -288,6 +300,94 @@ class TasteProspectiveDecisionCaptureReceipt(BaseModel):
         )
 
 
+class TasteProcessEvidenceBinding(BaseModel):
+    """A declared run-owned input whose digest is computed during compilation."""
+
+    model_config = _CONFIG
+
+    evidence_id: str = Field(pattern=_ID)
+    role: TasteEpisodeEvidenceRole
+    locator: str
+
+    @model_validator(mode="after")
+    def locator_is_owned(self) -> TasteProcessEvidenceBinding:
+        validate_relative_locator(self.locator, field_name="process episode evidence")
+        return self
+
+
+class TasteProcessEpisodeProposal(BaseModel):
+    """A delayed-outcome attribution proposal with no admission authority."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    proposal_id: str = Field(pattern=_ID)
+    plan_id: str = Field(pattern=_ID)
+    plan_sha256: str = Field(pattern=_SHA256)
+    capture_sha256: str = Field(pattern=_SHA256)
+    inventory_sha256: str = Field(pattern=_SHA256)
+    decision_id: str
+    candidate_id: str = Field(pattern=_ID)
+    producer_id: str = Field(pattern=_ID)
+    observed_at: datetime
+    state_summary: str = Field(min_length=1, max_length=20_000)
+    decision_context: TasteEpisodeDecisionContext | None = None
+    decision_principle: str = Field(min_length=1, max_length=10_000)
+    why_preferred: str = Field(min_length=1, max_length=10_000)
+    outcomes: tuple[TasteEpisodeOutcome, ...] = Field(min_length=1, max_length=100)
+    credit_assignments: tuple[TasteCreditAssignment, ...] = Field(min_length=1, max_length=100)
+    applicability_conditions: tuple[str, ...] = Field(min_length=1, max_length=30)
+    failure_conditions: tuple[str, ...] = Field(min_length=1, max_length=30)
+    counterfactual_probe: str = Field(min_length=1, max_length=10_000)
+    evidence: tuple[TasteProcessEvidenceBinding, ...] = Field(min_length=3, max_length=200)
+    domain_tags: tuple[str, ...] = Field(default=(), max_length=30)
+    venue_tags: tuple[str, ...] = Field(default=(), max_length=30)
+    confounders: tuple[TasteEpisodeConfounder, ...] = Field(default=(), max_length=100)
+    missing_evidence_questions: tuple[str, ...] = Field(default=(), max_length=30)
+    canonical_evidence: Literal[False] = False
+    admission_authority: Literal[False] = False
+    policy_update_authorized: Literal[False] = False
+    proposal_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def proposal_is_closed(self) -> TasteProcessEpisodeProposal:
+        if self.observed_at.utcoffset() is None:
+            raise ValueError("delayed outcome observation time must include a timezone")
+        evidence_ids = [item.evidence_id for item in self.evidence]
+        evidence_locators = [item.locator for item in self.evidence]
+        if len(evidence_ids) != len(set(evidence_ids)):
+            raise ValueError("process episode evidence IDs must be unique")
+        if len(evidence_locators) != len(set(evidence_locators)):
+            raise ValueError("process episode evidence locators must be unique")
+        required_roles = {
+            TasteEpisodeEvidenceRole.DECISION,
+            TasteEpisodeEvidenceRole.DECISION_STATE,
+            TasteEpisodeEvidenceRole.OUTCOME,
+        }
+        if not required_roles.issubset({item.role for item in self.evidence}):
+            raise ValueError("process episode proposal lacks decision, state, or outcome evidence")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"proposal_sha256"}))
+        if self.proposal_sha256 != expected:
+            raise ValueError("process episode proposal hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TasteProcessEpisodeProposal:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("proposal_sha256", None)
+        unsigned = cls.model_construct(proposal_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            proposal_sha256=content_sha256(
+                unsigned.model_dump(
+                    mode="json",
+                    exclude={"proposal_sha256"},
+                    warnings=False,
+                )
+            ),
+        )
+
+
 def capture_prospective_taste_decision(
     plan: TasteTrajectorySamplingPlan,
     *,
@@ -368,6 +468,119 @@ def capture_prospective_taste_decision(
     return receipt
 
 
+def compile_prospective_taste_episode(
+    plan: TasteTrajectorySamplingPlan,
+    capture: TasteProspectiveDecisionCaptureReceipt,
+    inventory: TasteTrajectoryInventory,
+    proposal: TasteProcessEpisodeProposal,
+    *,
+    runtime: ProjectRuntime,
+    current_idea_revision: ProjectIdeaRevisionBinding,
+    expected_project_revision: int,
+    output: str | Path,
+) -> TasteEpisodeCandidate:
+    """Bind a delayed-outcome proposal to one exact prospective foundation."""
+
+    if plan.assignment_timing is not TasteTrajectoryAssignmentTiming.PROSPECTIVE:
+        raise ValueError("process episode compilation requires a prospective plan")
+    if not idea_binding_matches_current(plan.idea_revision, current_idea_revision):
+        raise ValueError("process episode plan belongs to a stale Idea revision")
+    if (
+        proposal.plan_id != plan.plan_id
+        or proposal.plan_sha256 != plan.plan_sha256
+        or capture.plan_id != plan.plan_id
+        or capture.plan_sha256 != plan.plan_sha256
+        or inventory.plan_id != plan.plan_id
+        or inventory.plan_sha256 != plan.plan_sha256
+    ):
+        raise ValueError("process episode artifacts bind different sampling plans")
+    if proposal.capture_sha256 != capture.capture_sha256:
+        raise ValueError("process episode proposal binds another capture")
+    if proposal.inventory_sha256 != inventory.inventory_sha256:
+        raise ValueError("process episode proposal binds another reconstruction inventory")
+    if proposal.decision_id != capture.decision_id:
+        raise ValueError("process episode proposal binds another decision")
+    seeds = [item for item in inventory.decisions if item.decision_id == capture.decision_id]
+    if len(seeds) != 1 or not seeds[0].foundation_eligible:
+        raise ValueError("process episode decision lacks one eligible prospective foundation")
+    seed = seeds[0]
+    if (
+        seed.line_number != capture.decision_line_number
+        or seed.line_sha256 != capture.decision_line_sha256
+        or seed.decision_sha256 != capture.decision_sha256
+        or seed.state_snapshot_id != capture.state_snapshot_id
+        or seed.executor_result_id != capture.executor_result_id
+        or seed.executor_outcome_sha256 != capture.executor_outcome_sha256
+    ):
+        raise ValueError("process episode capture differs from reconstructed decision")
+
+    snapshot = runtime.open(plan.source_project_id)
+    if snapshot.revision != expected_project_revision:
+        raise ValueError(
+            f"stale project revision {expected_project_revision}; current is {snapshot.revision}"
+        )
+    run_root = runtime.projects_root / plan.source_project_id / "runs" / plan.source_run_id
+    decision_path = _owned_file(
+        run_root,
+        plan.decision_log_locator,
+        max_bytes=_MAX_DECISION_LOG_BYTES,
+    )
+    raw_lines = decision_path.read_bytes().splitlines(keepends=True)
+    if capture.decision_line_number > len(raw_lines):
+        raise ValueError("captured decision line is absent")
+    raw_line = raw_lines[capture.decision_line_number - 1]
+    if hashlib.sha256(raw_line).hexdigest() != capture.decision_line_sha256:
+        raise ValueError("process episode decision line drifted after capture")
+    decision = ResearchDecision.model_validate_json(raw_line)
+
+    required_bindings = {
+        (TasteEpisodeEvidenceRole.DECISION, plan.decision_log_locator),
+        (TasteEpisodeEvidenceRole.DECISION_STATE, capture.state_snapshot_locator),
+    }
+    observed_bindings = {(item.role, item.locator) for item in proposal.evidence}
+    if not required_bindings.issubset(observed_bindings):
+        raise ValueError("process episode proposal does not bind the captured decision and state")
+    evidence = tuple(
+        TasteEpisodeEvidence(
+            evidence_id=item.evidence_id,
+            role=item.role,
+            locator=item.locator,
+            sha256=hashlib.sha256(
+                _owned_file(run_root, item.locator, max_bytes=_MAX_EVIDENCE_BYTES).read_bytes()
+            ).hexdigest(),
+        )
+        for item in proposal.evidence
+    )
+    candidate = compile_process_taste_episode_candidate(
+        decision,
+        candidate_id=proposal.candidate_id,
+        project_id=plan.project_id,
+        source_project_id=plan.source_project_id,
+        source_group_id=plan.source_group_id,
+        dataset_partition=plan.dataset_partition,
+        source_project_revision=capture.observed_project_revision,
+        source_project_snapshot_sha256=capture.observed_project_snapshot_sha256,
+        idea_revision=plan.idea_revision,
+        producer_id=proposal.producer_id,
+        state_summary=proposal.state_summary,
+        decision_context=proposal.decision_context,
+        decision_principle=proposal.decision_principle,
+        why_preferred=proposal.why_preferred,
+        outcomes=proposal.outcomes,
+        credit_assignments=proposal.credit_assignments,
+        applicability_conditions=proposal.applicability_conditions,
+        failure_conditions=proposal.failure_conditions,
+        counterfactual_probe=proposal.counterfactual_probe,
+        evidence=evidence,
+        domain_tags=proposal.domain_tags,
+        venue_tags=proposal.venue_tags,
+        confounders=proposal.confounders,
+        missing_evidence_questions=proposal.missing_evidence_questions,
+    )
+    _write_new_json(output, candidate.model_dump_json(indent=2) + "\n")
+    return candidate
+
+
 def reconstruct_taste_trajectory(
     plan: TasteTrajectorySamplingPlan,
     *,
@@ -421,11 +634,35 @@ def load_taste_trajectory_sampling_plan(path: str | Path) -> TasteTrajectorySamp
     return TasteTrajectorySamplingPlan.model_validate_json(source.read_bytes())
 
 
+def load_taste_prospective_capture(
+    path: str | Path,
+) -> TasteProspectiveDecisionCaptureReceipt:
+    source = _bounded_input_file(path, max_bytes=_MAX_CONTRACT_BYTES)
+    return TasteProspectiveDecisionCaptureReceipt.model_validate_json(source.read_bytes())
+
+
+def load_taste_trajectory_inventory(path: str | Path) -> TasteTrajectoryInventory:
+    source = _bounded_input_file(path, max_bytes=_MAX_CONTRACT_BYTES)
+    return TasteTrajectoryInventory.model_validate_json(source.read_bytes())
+
+
+def load_taste_process_episode_proposal(path: str | Path) -> TasteProcessEpisodeProposal:
+    source = _bounded_input_file(path, max_bytes=_MAX_CONTRACT_BYTES)
+    return TasteProcessEpisodeProposal.model_validate_json(source.read_bytes())
+
+
 def save_taste_trajectory_sampling_plan(
     plan: TasteTrajectorySamplingPlan,
     path: str | Path,
 ) -> Path:
     return _write_new_json(path, plan.model_dump_json(indent=2) + "\n")
+
+
+def save_taste_process_episode_proposal(
+    proposal: TasteProcessEpisodeProposal,
+    path: str | Path,
+) -> Path:
+    return _write_new_json(path, proposal.model_dump_json(indent=2) + "\n")
 
 
 def save_taste_trajectory_inventory(
@@ -616,6 +853,8 @@ def _write_new_json(value: str | Path, contents: str) -> Path:
 
 
 __all__ = [
+    "TasteProcessEpisodeProposal",
+    "TasteProcessEvidenceBinding",
     "TasteProspectiveDecisionCaptureReceipt",
     "TasteTrajectoryAssignmentTiming",
     "TasteTrajectoryDecisionSeed",
@@ -623,8 +862,13 @@ __all__ = [
     "TasteTrajectoryInventory",
     "TasteTrajectorySamplingPlan",
     "capture_prospective_taste_decision",
+    "compile_prospective_taste_episode",
+    "load_taste_process_episode_proposal",
+    "load_taste_prospective_capture",
+    "load_taste_trajectory_inventory",
     "load_taste_trajectory_sampling_plan",
     "reconstruct_taste_trajectory",
+    "save_taste_process_episode_proposal",
     "save_taste_trajectory_inventory",
     "save_taste_trajectory_sampling_plan",
 ]
