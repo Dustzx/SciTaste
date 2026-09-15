@@ -24,6 +24,21 @@ Model availability no longer defines the experiment. The enforced order is:
 6. only then prefer an already available API or checkpoint when scientifically
    equivalent.
 
+The executable candidate authority is now
+[`scitaste_iclr27_related_work_candidates_v1.yaml`](../../configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml).
+It starts with the two direct 2026 Scientific Taste neighbors before using the
+broader AutoResearch literature to assign research, coding, figure, review, and
+task-model roles. Its ten candidates span eight model families, including
+models for which access is not configured. This is intentional: access state is
+recorded but cannot select or exclude a scientifically required model.
+
+The closest released baselines have narrow roles. `SciJudge-4B-2605` is an
+external impact-preference baseline and `SciThinker-4B` is an external ideation
+baseline. Neither is evidence of a complete lifecycle policy, and SciJudge's
+citation-impact objective cannot make it a full-paper peer reviewer. Conversely,
+the MLRC `LocPointTransformer` is owned by the benchmark task recipe and cannot
+act as a scientific agent.
+
 The program records MLR-Bench, AI Scientist-v2, SciNav, DeepScientist,
 AutoResearchClaw, SAGE/MHFA, and SGHA as current design anchors. Their combined
 implication is not one preferred model name: it is stagewise plus end-to-end
@@ -114,9 +129,20 @@ The immediate critical path is therefore:
 
 The current no-run E2 handoff is
 [`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
-SHA-256 `efff263d10bb614440819d8e3f59a88a589fb3328cfc2aaa379716cc8d7ba52a`.
-Its eleven static scientific and execution boundaries pass, including an exact
-binding to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`.
+SHA-256 `98741378de7a809a8e2d19d67f5e3edc5d57f335f7243ddda54c4331f2fc90e4`.
+Its eleven static scientific and execution boundaries pass, including exact
+bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
+and the related-work candidate catalog. The E2 pool now includes unconfigured
+GPT and Gemini candidates alongside current GLM, DeepSeek, Qwen API, and open
+9B candidates, so local inventory cannot silently define the experiment.
 It is deliberately not
 launchable while the independent judge panel, development-only full-loop receipt,
 actual GPU baseline, final role/budget freeze, and owner approval remain open.
+
+The remote fixed-revision `Qwen/Qwen3.5-9B` candidate is now statically complete:
+16 files, four indexed shards, 15,664,539,861 bytes, aggregate checkpoint digest
+`eb33159890e4493dd7fa36b611020576535ecbcf776bcfd3f540f92914f63884`.
+Only the previously missing 3,345,623,595 bytes were downloaded. No model load,
+generation, GPU job, or benchmark run occurred. This changes feasibility, not
+selection; the checkpoint still needs source-disjoint role conformance and
+cannot replace the frontier matched-model stratum.

@@ -46,7 +46,11 @@ def test_related_work_e2_manifest_does_not_require_an_available_checkpoint() -> 
         == "recent-related-work-and-idea-task-fit-first"
     )
     assert manifest.model_selection.scientific_agent_and_task_model_separate is True
+    assert manifest.model_selection.candidate_catalog is not None
     assert all("2b" not in item.model_id.casefold() for item in manifest.model_selection.candidates)
+    assert {item.model_id for item in manifest.model_selection.candidates}.issuperset(
+        {"GPT-5.4-Thinking", "Gemini-3-Pro", "Qwen/Qwen3.5-9B"}
+    )
     assert manifest.project.idea_revision_id == "outcome-calibrated-scientific-taste-policy-v2"
     assert manifest.project.idea_revision is not None
     assert manifest.workload.architecture == "LocPointTransformer"

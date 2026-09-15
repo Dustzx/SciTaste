@@ -25,6 +25,9 @@ from scitaste.evaluation.mlrc_perception_runtime import (
     load_mlrc_perception_runtime_manifest,
     load_mlrc_perception_runtime_receipt,
 )
+from scitaste.evaluation.related_work_model_selection import (
+    load_related_work_model_catalog,
+)
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -167,7 +170,11 @@ class E2ModelCandidate(BaseModel):
     candidate_id: str
     model_id: str
     source_kind: Literal[
-        "hosted-api", "local-checkpoint", "inventory-candidate", "download-candidate"
+        "hosted-api",
+        "local-checkpoint",
+        "inventory-candidate",
+        "download-candidate",
+        "unconfigured-api-candidate",
     ]
     eligible_roles: tuple[Literal["research_agent", "code_agent"], ...]
     inventory_id: str | None = None
@@ -203,7 +210,11 @@ class E2ModelCandidate(BaseModel):
             raise ValueError("only local E2 candidates may carry checkpoint bytes")
         if self.source_kind == "hosted-api" and self.resource_manifest is None:
             raise ValueError("hosted E2 candidates require an exact API resource binding")
-        if self.source_kind in {"inventory-candidate", "download-candidate"} and (
+        if self.source_kind in {
+            "inventory-candidate",
+            "download-candidate",
+            "unconfigured-api-candidate",
+        } and (
             self.resource_manifest is not None
         ):
             raise ValueError(
@@ -216,6 +227,7 @@ class E2ModelSelection(BaseModel):
     model_config = _CONFIG
 
     inventory: E2FileBinding
+    candidate_catalog: E2FileBinding | None = None
     candidates: tuple[E2ModelCandidate, ...] = Field(min_length=2, max_length=24)
     b0_agent_candidate_id: str | None = None
     b1_agent_model_id: Literal[None] = None
@@ -282,7 +294,8 @@ class E2ModelSelection(BaseModel):
             raise ValueError("E2 model selection order must retain all v4 role gates")
         if self.candidate_universe_authority == "recent-related-work-and-idea-task-fit-first":
             if (
-                self.available_inventory_role
+                self.candidate_catalog is None
+                or self.available_inventory_role
                 != "execution-cost-optimization-only-after-scientific-fit"
                 or len(self.related_work_anchor_ids) < 4
                 or tuple(self.selection_order[:2])
@@ -730,6 +743,8 @@ def _all_bindings(manifest: E2PrelaunchManifest) -> tuple[tuple[str, E2FileBindi
         ("condition-matrix", manifest.comparison.condition_matrix),
         ("gpu-host", manifest.resources.gpu_host),
     ]
+    if manifest.model_selection.candidate_catalog is not None:
+        values.append(("model-candidate-catalog", manifest.model_selection.candidate_catalog))
     if manifest.project.idea_revision is not None:
         values.append(("idea-revision", manifest.project.idea_revision))
     values.extend(
@@ -922,6 +937,33 @@ def _model_selection_matches(root: Path, manifest: E2PrelaunchManifest) -> bool:
         and policy.get("scientific_design_may_require_models_absent_from_inventory") is True
     ):
         return False
+    if (
+        manifest.model_selection.candidate_universe_authority
+        == "recent-related-work-and-idea-task-fit-first"
+    ):
+        catalog_binding = manifest.model_selection.candidate_catalog
+        catalog_path = (
+            _under(root, catalog_binding.locator) if catalog_binding is not None else None
+        )
+        if catalog_path is None:
+            return False
+        try:
+            catalog, catalog_sha256 = load_related_work_model_catalog(catalog_path)
+        except (OSError, ValueError, yaml.YAMLError):
+            return False
+        eligible_models = {
+            item.model_id for item in catalog.candidates if "research-agent" in item.planes
+        }
+        if (
+            catalog_sha256 != catalog_binding.sha256
+            or catalog.idea.idea_revision_id != manifest.project.idea_revision_id
+            or catalog.formal_model_selected is not False
+            or any(
+                item.model_id not in eligible_models
+                for item in manifest.model_selection.candidates
+            )
+        ):
+            return False
     inventory_ids = {item.get("resource_id") for item in inventory.get("api_models", [])} | {
         item.get("asset_id") for item in inventory.get("local_assets", [])
     }

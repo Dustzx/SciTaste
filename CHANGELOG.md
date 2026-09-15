@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Completed and full-tree-hashed the fixed-revision remote Qwen3.5-9B candidate
+  after downloading its missing 3.35 GB. Registered all file hashes and the
+  checkpoint resource while retaining zero model loads/GPU jobs and no formal
+  selection authority.
+- Added a typed, source-bound ICLR 2027 model candidate catalog that derives
+  role-specific candidates from the accepted Idea, the two direct Scientific
+  Taste neighbors, and recent AutoResearch conventions before considering API
+  or checkpoint availability. Bound it into the E2 prelaunch inspector so
+  inventory-only candidate pools no longer close the model-selection boundary.
+
 - Added the related-work-driven ICLR 2027 program v7 and selected its immutable
   project-owned run as the self-development authority. Candidate model classes
   now derive from the frozen Idea, recent neighboring AutoResearch methods, and

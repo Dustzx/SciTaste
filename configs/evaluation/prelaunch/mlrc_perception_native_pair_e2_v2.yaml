@@ -66,6 +66,9 @@ model_selection:
   inventory:
     locator: configs/resources/assets/model_role_inventory_v2.yaml
     sha256: 4b7ceaa3038acf2c1d45d37d1116a67a41a6c97bce1f66399d042058906f3e63
+  candidate_catalog:
+    locator: configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml
+    sha256: a62be679b084f5f1f8bfa2d444cdc2e98cfc8d28a735e244db242e15b4a9d6a4
   candidates:
     - candidate_id: zhipu-glm53-flash
       model_id: glm-5.3-flash
@@ -100,17 +103,26 @@ model_selection:
       checkpoint_sha256: null
       checkpoint_bytes: null
       status: task-excluded-conformance-candidate
-    - candidate_id: local-open-weight-robustness
-      model_id: Qwen/Qwen3-VL-8B-Instruct
-      source_kind: inventory-candidate
+    - candidate_id: gpt54-thinking-frontier
+      model_id: GPT-5.4-Thinking
+      source_kind: unconfigured-api-candidate
       eligible_roles: [research_agent, code_agent]
-      inventory_id: qwen3-vl-8b-instruct-local
+      inventory_id: null
       resource_manifest: null
       checkpoint_sha256: null
       checkpoint_bytes: null
       status: task-excluded-conformance-candidate
-    - candidate_id: related-work-qualified-new-model
-      model_id: unresolved-related-work-qualified-model
+    - candidate_id: gemini3-pro-frontier
+      model_id: Gemini-3-Pro
+      source_kind: unconfigured-api-candidate
+      eligible_roles: [research_agent]
+      inventory_id: null
+      resource_manifest: null
+      checkpoint_sha256: null
+      checkpoint_bytes: null
+      status: task-excluded-conformance-candidate
+    - candidate_id: qwen35-9b-open-robustness
+      model_id: Qwen/Qwen3.5-9B
       source_kind: download-candidate
       eligible_roles: [research_agent, code_agent]
       inventory_id: null

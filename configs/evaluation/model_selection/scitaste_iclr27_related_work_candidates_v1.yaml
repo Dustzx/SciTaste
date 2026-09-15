@@ -1,0 +1,261 @@
+schema_version: "1.0"
+catalog_id: scitaste-iclr27-related-work-model-candidates-v1
+refreshed_at: "2026-09-16"
+idea:
+  idea_revision_id: outcome-calibrated-scientific-taste-policy-v2
+  locator: outputs/projects/scitaste-self-development/runs/2026-09-15__scitaste-native__outcome-calibrated-taste-idea-v2__seed-00/idea_refinement/REVISION.json
+  sha256: 4b592572eb58236def8d273329995472b9f05ce0435fa16b7b551d758b13a765
+candidate_universe_authority: frozen-idea-then-direct-neighbors-then-autoresearch-conventions
+resource_inventory_role: feasibility-and-cost-tiebreak-only
+selection_data: source-disjoint-task-excluded-conformance-only
+formal_model_selected: false
+selection_order:
+  - freeze-idea-and-causal-roles
+  - admit-direct-neighbor-and-autoresearch-model-evidence
+  - construct-role-specific-candidate-universe-without-access-filter
+  - test-source-disjoint-task-fit-and-reliability
+  - bind-exact-identity-license-and-serving-window
+  - use-resource-cost-and-throughput-only-as-tiebreakers
+
+anchors:
+  - work_id: ai-can-learn-scientific-taste
+    title: AI Can Learn Scientific Taste
+    source_url: https://arxiv.org/abs/2603.14473
+    relationship: direct-scientific-taste-neighbor
+    reported_models:
+      - SciJudge-Qwen3-4B
+      - SciJudge-Qwen3-30B
+      - SciThinker-Qwen3-4B
+      - SciThinker-Qwen3-30B
+      - GPT-5.4-Thinking
+      - MiniMax-M3-Thinking
+      - GLM-5.1-Thinking
+      - DeepSeek-v3.2-Thinking
+      - GPT-5.2-high
+      - GLM-5
+      - Gemini-3-Pro
+    informs_planes: [taste-impact-judge, taste-ideator, paper-reviewer, adjudicator]
+    selection_implication: >-
+      Treat released Scientific Judge and Thinker models as direct-neighbor
+      baselines, and use an identity-diverse frontier panel for open-ended idea
+      preference rather than allowing one generator to judge itself.
+  - work_id: institutional-traces-taste
+    title: Machines acquire scientific taste from institutional traces
+    source_url: https://arxiv.org/abs/2603.16659
+    relationship: direct-scientific-taste-neighbor
+    reported_models: [eleven-frontier-model-panel, field-specific-finetuned-models]
+    informs_planes: [taste-impact-judge, taste-ideator]
+    selection_implication: >-
+      Preserve a training-based institutional-outcome baseline and compare it
+      separately from SciTaste's training-free lifecycle policy; do not treat
+      generic frontier reasoning as evidence of learned scientific taste.
+  - work_id: mlr-bench
+    title: MLR-Bench
+    source_url: https://arxiv.org/abs/2505.19955
+    relationship: autoresearch-benchmark
+    reported_models:
+      - o4-mini
+      - Claude-3.7-Sonnet
+      - DeepSeek-R1
+      - Ministral-8B
+      - Qwen3-235B-A22B
+      - Gemini-2.5-Pro-Preview
+      - GPT-4o-Search-Preview
+    informs_planes: [taste-ideator, research-agent, code-agent, paper-reviewer]
+    selection_implication: >-
+      Use stagewise and end-to-end comparisons over multiple model families,
+      report matched-backbone and best-native estimands separately, and preserve
+      the benchmark-owned task model for executable objective scoring.
+  - work_id: ai-scientist-v2
+    title: The AI Scientist-v2
+    source_url: https://arxiv.org/abs/2504.08066
+    relationship: autoresearch-method
+    reported_models: [Claude-3.5-Sonnet-v2, GPT-4o]
+    informs_planes: [code-agent, figure-reviewer, paper-reviewer]
+    selection_implication: >-
+      Separate code generation from multimodal figure feedback and paper review;
+      historical reported models define replication, not the only current model pool.
+  - work_id: deep-scientist
+    title: DeepScientist
+    source_url: https://arxiv.org/abs/2509.26603
+    relationship: autoresearch-method
+    reported_models: [Gemini-2.5-Pro, Claude-4-Opus]
+    informs_planes: [research-agent, code-agent, paper-reviewer]
+    selection_implication: >-
+      Retain separate scientific-reasoning and coding roles and include a current
+      high-capability family even when it is not present in local inventory.
+
+candidates:
+  - candidate_id: scijudge-4b-2605-external
+    model_id: OpenMOSS-Team/SciJudge-4B-2605
+    model_family: qwen3-scijudge
+    source_kind: released-open-checkpoint
+    planes: [taste-impact-judge]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Direct learned-Taste baseline for impact preference, with released Apache-2.0 checkpoint and temporal/metric controls.
+    access_state: download-authorized-pending
+    resource_locator: null
+    exact_revision: null
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - Predicts citation impact from paired metadata; it is not a lifecycle-action policy or full-paper reviewer.
+  - candidate_id: scithinker-4b-external
+    model_id: OpenMOSS-Team/SciThinker-4B
+    model_family: qwen3-scithinker
+    source_kind: released-open-checkpoint
+    planes: [taste-ideator]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Direct learned-Taste ideation baseline for comparing one-paper follow-up generation against lifecycle-conditioned SciTaste ideation.
+    access_state: download-authorized-pending
+    resource_locator: null
+    exact_revision: null
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - Generates title-and-abstract follow-ups only and does not execute or revise research.
+  - candidate_id: gpt54-thinking-frontier
+    model_id: GPT-5.4-Thinking
+    model_family: openai-gpt
+    source_kind: historical-reported-model
+    planes: [taste-impact-judge, taste-ideator, research-agent, paper-reviewer]
+    experimental_role: primary-matched-candidate
+    evidence_anchor_ids: [ai-can-learn-scientific-taste, mlr-bench]
+    task_fit_rationale: Strong direct-neighbor Taste baseline and current-family candidate for a matched end-to-end scientific-agent contrast.
+    access_state: access-not-configured
+    resource_locator: null
+    exact_revision: null
+    selection_state: task-excluded-conformance-pending
+    availability_may_select_model: false
+    limitations:
+      - Exact API model identity, availability, tool contract, price, and serving window remain unfrozen.
+  - candidate_id: gemini3-pro-frontier
+    model_id: Gemini-3-Pro
+    model_family: google-gemini
+    source_kind: historical-reported-model
+    planes: [taste-ideator, research-agent, figure-reviewer, paper-reviewer, adjudicator]
+    experimental_role: review-panel-candidate
+    evidence_anchor_ids: [ai-can-learn-scientific-taste, mlr-bench, deep-scientist]
+    task_fit_rationale: Direct-neighbor independent ideation judge and current successor to the research core used by DeepScientist.
+    access_state: access-not-configured
+    resource_locator: null
+    exact_revision: null
+    selection_state: task-excluded-conformance-pending
+    availability_may_select_model: false
+    limitations:
+      - Provider access and exact current serving identity are not configured.
+  - candidate_id: glm53-flash-current
+    model_id: glm-5.3-flash
+    model_family: zai-glm
+    source_kind: current-family-successor
+    planes: [taste-ideator, research-agent, code-agent, paper-reviewer]
+    experimental_role: primary-matched-candidate
+    evidence_anchor_ids: [ai-can-learn-scientific-taste, mlr-bench]
+    task_fit_rationale: Available current GLM-family successor to direct-neighbor GLM evaluators; research and code passed the frozen B0 subset.
+    access_state: available-exact
+    resource_locator: configs/resources/api/zhipu_glm53_flash_v3.yaml
+    exact_revision: provider-observed-serving-identity-required-per-formal-window
+    selection_state: task-excluded-conformance-passed-for-subset
+    availability_may_select_model: false
+    limitations:
+      - Existing access is a cost advantage only; full long-horizon and independent-review qualification remain incomplete.
+  - candidate_id: deepseek-v41-flash-current
+    model_id: deepseek-flash
+    model_family: deepseek
+    source_kind: current-family-successor
+    planes: [taste-ideator, research-agent, code-agent, paper-reviewer, adjudicator]
+    experimental_role: primary-matched-candidate
+    evidence_anchor_ids: [ai-can-learn-scientific-taste, mlr-bench]
+    task_fit_rationale: Current DeepSeek-family successor to reported DeepSeek reasoning baselines, admitted only after the same role-level conformance.
+    access_state: access-not-configured
+    resource_locator: configs/resources/api/deepseek_v41_flash_v4.yaml
+    exact_revision: provider-observed-serving-identity-required-per-formal-window
+    selection_state: task-excluded-conformance-pending
+    availability_may_select_model: false
+    limitations:
+      - The currently stored credential fails authentication and no conformance result exists.
+  - candidate_id: qwen38-max-current
+    model_id: qwen3.8-max
+    model_family: alibaba-qwen
+    source_kind: current-family-successor
+    planes: [taste-ideator, research-agent, code-agent, paper-reviewer]
+    experimental_role: primary-matched-candidate
+    evidence_anchor_ids: [ai-can-learn-scientific-taste, mlr-bench]
+    task_fit_rationale: Current hosted Qwen-family successor to MLR-Bench and direct-Taste model families, tested under the same task-excluded protocol.
+    access_state: available-exact
+    resource_locator: configs/resources/api/bailian_qwen38_max_v2.yaml
+    exact_revision: provider-observed-serving-identity-required-per-formal-window
+    selection_state: task-excluded-conformance-failed-for-role
+    availability_may_select_model: false
+    limitations:
+      - Failed the frozen judge reliability threshold; it is not a qualified paper reviewer or adjudicator.
+  - candidate_id: qwen35-9b-open-robustness
+    model_id: Qwen/Qwen3.5-9B
+    model_family: alibaba-qwen-open
+    source_kind: released-open-checkpoint
+    planes: [taste-ideator, research-agent, code-agent]
+    experimental_role: cross-model-robustness-candidate
+    evidence_anchor_ids: [mlr-bench, ai-can-learn-scientific-taste]
+    task_fit_rationale: Open 9B-class robustness candidate motivated by recent open-model strata, pending exact checkpoint completion and task-fit evidence.
+    access_state: available-exact
+    resource_locator: configs/resources/gpu/checkpoints/qwen3_5_9b_remote_v2.yaml
+    exact_revision: c202236235762e1c871ad0ccb60c8ee5ba337b9a
+    selection_state: task-excluded-conformance-pending
+    availability_may_select_model: false
+    limitations:
+      - Static availability does not establish role conformance; it is not the model reported by the neighboring methods and never substitutes for a frontier matched-backbone result.
+  - candidate_id: claude4-opus-method-replication
+    model_id: Claude-4-Opus
+    model_family: anthropic-claude
+    source_kind: historical-reported-model
+    planes: [code-agent]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [deep-scientist, ai-scientist-v2]
+    task_fit_rationale: Exact reported coding family for DeepScientist-style best-native replication, separated from the matched-model SciTaste contrast.
+    access_state: historical-comparability-only
+    resource_locator: null
+    exact_revision: null
+    selection_state: historical-context-only
+    availability_may_select_model: false
+    limitations:
+      - Historical model is recorded for best-native comparability; current access is not configured.
+  - candidate_id: mlrc-locpoint-task-model
+    model_id: MLRC-Perception/LocPointTransformer
+    model_family: locpoint-transformer
+    source_kind: benchmark-owned-model
+    planes: [benchmark-task-model]
+    experimental_role: task-recipe-owned
+    evidence_anchor_ids: [mlr-bench]
+    task_fit_rationale: MLRC Perception owns this randomly initialized train-and-score model; it is causally separate from the scientific agent.
+    access_state: benchmark-runtime-bound
+    resource_locator: configs/evaluation/task_runtime/mlrc_perception_temporal_action_loc_v2.yaml
+    exact_revision: task-source-and-runtime-hashes-bound-by-e2-manifest
+    selection_state: task-model-fixed-by-benchmark
+    availability_may_select_model: false
+    limitations:
+      - Cannot perform literature, ideation, coding-agent, writing, or review roles.
+
+role_requirements:
+  - plane: taste-impact-judge
+    minimum_distinct_families: 2
+    required_experimental_roles: [external-neighbor-baseline, primary-matched-candidate]
+  - plane: taste-ideator
+    minimum_distinct_families: 4
+    required_experimental_roles: [external-neighbor-baseline, primary-matched-candidate, cross-model-robustness-candidate]
+  - plane: research-agent
+    minimum_distinct_families: 4
+    required_experimental_roles: [primary-matched-candidate, cross-model-robustness-candidate]
+  - plane: code-agent
+    minimum_distinct_families: 4
+    required_experimental_roles: [external-neighbor-baseline, primary-matched-candidate, cross-model-robustness-candidate]
+  - plane: paper-reviewer
+    minimum_distinct_families: 4
+    required_experimental_roles: [primary-matched-candidate, review-panel-candidate]
+  - plane: adjudicator
+    minimum_distinct_families: 2
+    required_experimental_roles: [primary-matched-candidate, review-panel-candidate]
+  - plane: benchmark-task-model
+    minimum_distinct_families: 1
+    required_experimental_roles: [task-recipe-owned]

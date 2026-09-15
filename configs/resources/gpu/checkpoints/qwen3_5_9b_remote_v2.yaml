@@ -1,0 +1,28 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: qwen3-5-9b-remote-eb331598
+  model_id: Qwen/Qwen3.5-9B
+  model_revision: c202236235762e1c871ad0ccb60c8ee5ba337b9a
+  local_path: /media/sdb/wwh/models/Qwen3.5-9B
+  storage_scope: gpu_host
+  storage_gpu_resource_id: gpu-host-3090-2
+  checkpoint_hash_scheme: SCITASTE_REMOTE_CHECKPOINT_V1
+  checkpoint_sha256: eb33159890e4493dd7fa36b611020576535ecbcf776bcfd3f540f92914f63884
+  checkpoint_bytes: 15664539861
+  regular_file_count: 16
+  format: Hugging Face indexed safetensors
+  weight_shards: 4
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids:
+    - gpu-host-3090-2
+  evidence_ref: configs/resources/observations/v9/qwen3_5_9b_remote_20260916_v1.yaml
+  evidence_sha256: 3acdd87448f2fb34b82db72f0523c29012a652d49fbc74336aee3c0a42f11bf0
+  observed_at: 2026-09-16T00:00:00+08:00
+  availability: verified
+  availability_reason: >-
+    All 16 regular files, all four indexed weight shards, the tokenizer, and
+    required JSON files were present at the fixed upstream revision and hashed.
+    No model load, generation, GPU job, or benchmark execution was performed.
+  scientific_selection_authority: none
+  next_gate: source-disjoint-task-excluded-role-conformance
