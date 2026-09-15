@@ -1,0 +1,49 @@
+schema_version: "1.0"
+amendment_id: scitastebench-segmentation-prospective-v6-routing-amendment-v1
+project_id: scitaste-self-development
+amended_at: 2026-09-15T09:20:00+08:00
+reason: >-
+  A precontact AI red-team found that literal differences in explanatory prose
+  would route otherwise identical decision boundaries to adjudication. The
+  frozen v6 estimand covers decision presence, trigger, shared context, and
+  primary family, not verbatim agreement of generated explanations.
+base_protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v6.yaml
+  file_sha256: 9211b5e5c72b9b21e980cca6b4a5cec783d9ab6fbd3768cd400ab15581d15a77
+base_freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v8.yaml
+  file_sha256: 1deac153e20c694c87ed6acdc6c5755125ce6e9fd9446b846d37febc5f17878e
+request_pack:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/request-pack-v8/REQUEST_PACK.json
+  file_sha256: 944e772246051a892551dafd933ba43d9c0ce35e6914fed4d0d16f5c4d6b251e
+  pack_sha256: 97b3d673a054aba1fcaab856626b4b9fd9b99bb839872a8c95d6d9713cdc21e8
+routing_contract: decision-boundary-only-v2
+adjudication_blocker_fields:
+  - decision-presence
+  - segment-count
+  - trigger-boundary
+  - context-range-set
+  - primary-decision-family
+  - residual-decision-risk
+diagnostic_only_fields:
+  - atomic-decision-statement
+  - rationale
+  - uncertainty
+  - no-decision-rationale
+selection_rule: >-
+  Explanatory free text, uncertainty labels, and zero-decision rationales remain
+  persisted for audit but cannot create an adjudication request. Non-adjudicated
+  items copy segmenter A's complete record and disclose that deterministic rule.
+sample_or_outcome_changed: false
+provider_contact_performed: false
+authority:
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  authorizes_scaled_execution: false
+  authorizes_benchmark_admission: false
+  formal_evidence_eligible: false
+  human_review_claim_allowed: false
+claim_boundary: >-
+  This precontact amendment repairs the routing implementation to match the
+  already-frozen v6 estimand. It changes no sample, threshold, model, outcome, or
+  resource ceiling and grants no execution or scientific-claim authority.

@@ -510,6 +510,9 @@ class TasteSourceSegmentationAgreementItem(BaseModel):
     campaign_id: str = Field(pattern=_ID)
     review_item_id: str = Field(pattern=_ID)
     review_item_sha256: str = Field(pattern=_SHA256)
+    routing_contract: Literal[
+        "legacy-exact-all-fields-v1", "decision-boundary-only-v2"
+    ] = "legacy-exact-all-fields-v1"
     segmenter_a_count: int = Field(ge=0, le=128)
     segmenter_b_count: int = Field(ge=0, le=128)
     exact_span_agreement_count: int = Field(ge=0, le=128)
@@ -562,10 +565,11 @@ class TasteSourceSegmentationAgreementItem(BaseModel):
             expected_blockers.add("decision-family-disagreement")
         if self.context_disagreement_segment_ids:
             expected_blockers.add("context-range-disagreement")
-        if self.semantic_disagreement_segment_ids:
-            expected_blockers.add("decision-semantics-disagreement")
-        if self.no_decision_rationale_disagreement:
-            expected_blockers.add("no-decision-rationale-disagreement")
+        if self.routing_contract == "legacy-exact-all-fields-v1":
+            if self.semantic_disagreement_segment_ids:
+                expected_blockers.add("decision-semantics-disagreement")
+            if self.no_decision_rationale_disagreement:
+                expected_blockers.add("no-decision-rationale-disagreement")
         if self.residual_decision_bearing_text_possible:
             expected_blockers.add("residual-decision-risk")
         if self.blocker_codes != tuple(sorted(expected_blockers)):
@@ -638,7 +642,7 @@ class TasteSourceSegmentationAgreementReport(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     report_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     compiled_at: datetime
@@ -650,6 +654,9 @@ class TasteSourceSegmentationAgreementReport(BaseModel):
     sample_manifest_file_sha256: str = Field(pattern=_SHA256)
     sample_sha256: str = Field(pattern=_SHA256)
     sample_selection_timing: Literal["preregistered", "retrospective-pilot-binding"]
+    routing_contract: Literal[
+        "legacy-exact-all-fields-v1", "decision-boundary-only-v2"
+    ] = "legacy-exact-all-fields-v1"
     items: tuple[TasteSourceSegmentationAgreementItem, ...] = Field(min_length=1)
     source_item_count: int = Field(gt=0)
     segmenter_a_decision_count: int = Field(ge=0)
@@ -704,6 +711,12 @@ class TasteSourceSegmentationAgreementReport(BaseModel):
         keys = [(item.campaign_id, item.review_item_id) for item in self.items]
         if keys != sorted(set(keys)):
             raise ValueError("Segmentation agreement items must be sorted and unique")
+        if any(item.routing_contract != self.routing_contract for item in self.items):
+            raise ValueError("Segmentation agreement routing contracts differ")
+        if (self.schema_version == "1.2") != (
+            self.routing_contract == "decision-boundary-only-v2"
+        ):
+            raise ValueError("Segmentation agreement schema differs from routing contract")
         expected_counts = (
             len(self.items),
             sum(item.segmenter_a_count for item in self.items),
@@ -848,7 +861,11 @@ class TasteSourceSegmentationResolutionItem(BaseModel):
     campaign_id: str = Field(pattern=_ID)
     review_item_id: str = Field(pattern=_ID)
     review_item_sha256: str = Field(pattern=_SHA256)
-    resolution_kind: Literal["exact-dual-agent-agreement", "ai-adjudicated"]
+    resolution_kind: Literal[
+        "exact-dual-agent-agreement",
+        "decision-boundary-agreement",
+        "ai-adjudicated",
+    ]
     source_blocker_codes: tuple[str, ...]
     segments: tuple[TasteSourceDecisionSegment, ...] = Field(min_length=0, max_length=128)
     no_decision_rationale: str | None = Field(
@@ -879,6 +896,8 @@ class TasteSourceSegmentationResolutionItem(BaseModel):
             )
         if self.resolution_kind == "exact-dual-agent-agreement" and self.source_blocker_codes:
             raise ValueError("Exact segmentation agreement cannot retain source blockers")
+        if self.resolution_kind == "decision-boundary-agreement" and self.source_blocker_codes:
+            raise ValueError("Decision-boundary agreement cannot retain source blockers")
         if self.resolution_kind == "ai-adjudicated" and not self.source_blocker_codes:
             raise ValueError("AI adjudication requires a recorded source blocker")
         return self
@@ -889,7 +908,7 @@ class TasteSourceSegmentationResolutionRun(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     run_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     adjudicator_id: str = Field(pattern=_ID)
@@ -918,6 +937,9 @@ class TasteSourceSegmentationResolutionRun(BaseModel):
     source_item_count: int = Field(gt=0)
     final_atomic_decision_count: int = Field(ge=0)
     exact_agreement_item_count: int = Field(ge=0)
+    decision_boundary_agreement_item_count: int = Field(
+        default=0, ge=0, exclude_if=lambda value: value == 0
+    )
     ai_adjudicated_item_count: int = Field(ge=0)
     residual_risk_item_count: int = Field(ge=0)
     internal_pilot_resolution_complete: bool
@@ -964,6 +986,7 @@ class TasteSourceSegmentationResolutionRun(BaseModel):
             len(self.items),
             sum(len(item.segments) for item in self.items),
             sum(item.resolution_kind == "exact-dual-agent-agreement" for item in self.items),
+            sum(item.resolution_kind == "decision-boundary-agreement" for item in self.items),
             sum(item.resolution_kind == "ai-adjudicated" for item in self.items),
             sum(item.residual_decision_bearing_text_possible for item in self.items),
         )
@@ -971,6 +994,7 @@ class TasteSourceSegmentationResolutionRun(BaseModel):
             self.source_item_count,
             self.final_atomic_decision_count,
             self.exact_agreement_item_count,
+            self.decision_boundary_agreement_item_count,
             self.ai_adjudicated_item_count,
             self.residual_risk_item_count,
         )
@@ -1687,8 +1711,11 @@ def compile_taste_source_segmentation_agreement(
     segmentation_paths: tuple[str | Path, str | Path],
     compiled_at: datetime,
     locator_root: str | Path,
+    routing_contract: Literal[
+        "legacy-exact-all-fields-v1", "decision-boundary-only-v2"
+    ] = "legacy-exact-all-fields-v1",
 ) -> TasteSourceSegmentationAgreementReport:
-    """Compare two segmenters; only exact span-and-family matches pass onward."""
+    """Compare two segmenters under an explicit, artifact-visible routing rule."""
 
     root = Path(locator_root).resolve(strict=True)
     inspections = tuple(
@@ -1833,10 +1860,11 @@ def compile_taste_source_segmentation_agreement(
             blockers.add("decision-family-disagreement")
         if context_disagreements:
             blockers.add("context-range-disagreement")
-        if semantic_disagreements:
-            blockers.add("decision-semantics-disagreement")
-        if no_decision_rationale_disagreement:
-            blockers.add("no-decision-rationale-disagreement")
+        if routing_contract == "legacy-exact-all-fields-v1":
+            if semantic_disagreements:
+                blockers.add("decision-semantics-disagreement")
+            if no_decision_rationale_disagreement:
+                blockers.add("no-decision-rationale-disagreement")
         if residual:
             blockers.add("residual-decision-risk")
         compared.append(
@@ -1844,6 +1872,7 @@ def compile_taste_source_segmentation_agreement(
                 campaign_id=item_a.campaign_id,
                 review_item_id=item_a.review_item_id,
                 review_item_sha256=item_a.review_item_sha256,
+                routing_contract=routing_contract,
                 segmenter_a_count=len(segments_a),
                 segmenter_b_count=len(segments_b),
                 exact_span_agreement_count=len(shared_ids),
@@ -1922,7 +1951,13 @@ def compile_taste_source_segmentation_agreement(
     if group_uncertainty is not None:
         scale_blockers.add("source-group-validation-stage-required")
     return TasteSourceSegmentationAgreementReport(
-        schema_version="1.1" if group_uncertainty is not None else "1.0",
+        schema_version=(
+            "1.2"
+            if routing_contract == "decision-boundary-only-v2"
+            else "1.1"
+            if group_uncertainty is not None
+            else "1.0"
+        ),
         report_id=report_id,
         project_id=first.project_id,
         compiled_at=compiled_at,
@@ -1931,6 +1966,7 @@ def compile_taste_source_segmentation_agreement(
         sample_manifest_file_sha256=first.sample_manifest_file_sha256,
         sample_sha256=first.sample_sha256,
         sample_selection_timing=first.sample_selection_timing,
+        routing_contract=routing_contract,
         items=tuple(compared),
         source_item_count=len(compared),
         segmenter_a_decision_count=count_a,
@@ -2039,6 +2075,8 @@ def normalize_taste_source_segmentation_resolution(
         expected_kind = (
             "ai-adjudicated"
             if agreement_item.requires_adjudication
+            else "decision-boundary-agreement"
+            if agreement.routing_contract == "decision-boundary-only-v2"
             else "exact-dual-agent-agreement"
         )
         if raw_item.get("resolution_kind") != expected_kind:
@@ -2049,18 +2087,26 @@ def normalize_taste_source_segmentation_resolution(
             review_item_id=key[1],
             review_comment=source.review_comment,
         )
-        if expected_kind == "exact-dual-agent-agreement":
+        if expected_kind in {
+            "exact-dual-agent-agreement",
+            "decision-boundary-agreement",
+        }:
             expected_item = first_items[key]
+            expected_rationale = (
+                "Copied deterministically from decision-boundary agreement; "
+                "free-text explanation differences were diagnostic only."
+                if expected_kind == "decision-boundary-agreement"
+                else "Copied deterministically from exact dual-agent agreement."
+            )
             if (
                 segments != expected_item.segments
                 or raw_item.get("no_decision_rationale")
                 != expected_item.no_decision_rationale
                 or raw_item.get("residual_decision_bearing_text_possible")
                 != expected_item.residual_decision_bearing_text_possible
-                or raw_item.get("resolution_rationale")
-                != "Copied deterministically from exact dual-agent agreement."
+                or raw_item.get("resolution_rationale") != expected_rationale
             ):
-                raise ValueError("Exact-agreement segments changed during resolution")
+                raise ValueError("Agreement-routed segments changed during resolution")
         resolved.append(
             TasteSourceSegmentationResolutionItem(
                 campaign_id=key[0],
@@ -2096,7 +2142,13 @@ def normalize_taste_source_segmentation_resolution(
     if not all(artifact.network_isolation_verified for artifact in agreement.artifacts):
         screening_blockers.add("outcome-blind-network-isolation-unverified")
     return TasteSourceSegmentationResolutionRun(
-        schema_version="1.1" if agreement.schema_version == "1.1" else "1.0",
+        schema_version=(
+            "1.2"
+            if agreement.routing_contract == "decision-boundary-only-v2"
+            else "1.1"
+            if agreement.schema_version == "1.1"
+            else "1.0"
+        ),
         run_id=run_id,
         project_id=agreement.project_id,
         adjudicator_id=adjudicator_id,
@@ -2122,6 +2174,9 @@ def normalize_taste_source_segmentation_resolution(
         final_atomic_decision_count=sum(len(item.segments) for item in ordered),
         exact_agreement_item_count=sum(
             item.resolution_kind == "exact-dual-agent-agreement" for item in ordered
+        ),
+        decision_boundary_agreement_item_count=sum(
+            item.resolution_kind == "decision-boundary-agreement" for item in ordered
         ),
         ai_adjudicated_item_count=sum(item.resolution_kind == "ai-adjudicated" for item in ordered),
         residual_risk_item_count=residual_count,

@@ -6907,6 +6907,19 @@ def _handle_evaluation_taste_source_segmentation_execution_inspect(
                 ),
                 "runner_git_binding_verified": (inspection.runner_git_binding_verified),
                 "payload_firewall_verified": inspection.payload_firewall_verified,
+                "routing_amendment_verified": inspection.routing_amendment_verified,
+                "precontact_audit_seal_verified": (
+                    inspection.precontact_audit_seal_verified
+                ),
+                "ai_d_inventory_replay_verified": (
+                    inspection.ai_d_inventory_replay_verified
+                ),
+                "ai_e_preexecution_pass_verified": (
+                    inspection.ai_e_preexecution_pass_verified
+                ),
+                "ai_e_authority_pass_verified": (
+                    inspection.ai_e_authority_pass_verified
+                ),
                 "authorization_candidate_validated": (inspection.authorization_candidate_validated),
                 "execution_ready": inspection.execution_ready,
                 "external_action_performed": inspection.external_action_performed,

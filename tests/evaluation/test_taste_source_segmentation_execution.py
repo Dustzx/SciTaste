@@ -11,7 +11,10 @@ import yaml
 from pydantic import ValidationError
 
 from scitaste.evaluation.model_identity import ApiIdentityCallReceipt, ApiIdentityCallRole
-from scitaste.evaluation.taste_source_segmentation import _normalize_raw_segments
+from scitaste.evaluation.taste_source_segmentation import (
+    TasteSourceSegmentationAgreementItem,
+    _normalize_raw_segments,
+)
 from scitaste.evaluation.taste_source_segmentation_execution import (
     SegmentationExecutionAuthority,
     SegmentationExecutionFileBinding,
@@ -238,6 +241,12 @@ def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
         request_pack=SegmentationExecutionPackBinding(
             locator="REQUEST_PACK.json", file_sha256=_SHA, pack_sha256=_SHA
         ),
+        routing_amendment=SegmentationExecutionFileBinding(
+            locator="routing-amendment.yaml", file_sha256=_SHA
+        ),
+        precontact_audit_seal=SegmentationExecutionFileBinding(
+            locator="precontact-seal.yaml", file_sha256=_SHA
+        ),
         provider_resource=SegmentationExecutionFileBinding(
             locator="provider.yaml", file_sha256=_SHA
         ),
@@ -294,6 +303,59 @@ def test_authorization_is_self_hashed_and_cannot_overclaim() -> None:
     payload["requested_model"] = "another-model"
     with pytest.raises(ValidationError, match="authorization hash mismatch"):
         TasteSourceSegmentationExecutionAuthorization.model_validate(payload)
+
+
+def test_decision_boundary_routing_does_not_adjudicate_free_text_differences() -> None:
+    item = TasteSourceSegmentationAgreementItem(
+        campaign_id="campaign-v1",
+        review_item_id="review-v1",
+        review_item_sha256=_SHA,
+        routing_contract="decision-boundary-only-v2",
+        segmenter_a_count=1,
+        segmenter_b_count=1,
+        exact_span_agreement_count=1,
+        exact_span_family_agreement_count=1,
+        overlap_span_agreement_count=1,
+        overlap_span_family_agreement_count=1,
+        family_disagreement_segment_ids=(),
+        context_disagreement_segment_ids=(),
+        semantic_disagreement_segment_ids=("segment-v1",),
+        no_decision_rationale_disagreement=True,
+        segmenter_a_unmatched_segment_ids=(),
+        segmenter_b_unmatched_segment_ids=(),
+        residual_decision_bearing_text_possible=False,
+        blocker_codes=(),
+        requires_adjudication=False,
+        exact_span_route_passed=True,
+    )
+
+    assert item.semantic_disagreement_segment_ids == ("segment-v1",)
+    assert item.no_decision_rationale_disagreement is True
+    assert item.blocker_codes == ()
+    assert item.requires_adjudication is False
+
+
+def test_legacy_routing_still_adjudicates_free_text_differences() -> None:
+    with pytest.raises(ValidationError, match="routing blockers"):
+        TasteSourceSegmentationAgreementItem(
+            campaign_id="campaign-v1",
+            review_item_id="review-v1",
+            review_item_sha256=_SHA,
+            segmenter_a_count=1,
+            segmenter_b_count=1,
+            exact_span_agreement_count=1,
+            exact_span_family_agreement_count=1,
+            overlap_span_agreement_count=1,
+            overlap_span_family_agreement_count=1,
+            family_disagreement_segment_ids=(),
+            semantic_disagreement_segment_ids=("segment-v1",),
+            segmenter_a_unmatched_segment_ids=(),
+            segmenter_b_unmatched_segment_ids=(),
+            residual_decision_bearing_text_possible=False,
+            blocker_codes=(),
+            requires_adjudication=False,
+            exact_span_route_passed=True,
+        )
 
 
 def test_live_protocol_requires_a_distinct_disputed_only_adjudication_firewall() -> None:

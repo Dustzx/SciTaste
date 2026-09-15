@@ -177,6 +177,8 @@ class TasteSourceSegmentationExecutionAuthorization(BaseModel):
     protocol: SegmentationExecutionFileBinding
     freeze_receipt: SegmentationExecutionFileBinding
     request_pack: SegmentationExecutionPackBinding
+    routing_amendment: SegmentationExecutionFileBinding
+    precontact_audit_seal: SegmentationExecutionFileBinding
     provider_resource: SegmentationExecutionFileBinding
     official_catalog_snapshot: SegmentationExecutionFileBinding
     identity_protocol: SegmentationExecutionFileBinding
@@ -232,6 +234,11 @@ class TasteSourceSegmentationExecutionInspection(BaseModel):
     unique_item_count: int = Field(gt=0)
     runner_git_binding_verified: Literal[True] = True
     payload_firewall_verified: Literal[True] = True
+    routing_amendment_verified: Literal[True] = True
+    precontact_audit_seal_verified: Literal[True] = True
+    ai_d_inventory_replay_verified: Literal[True] = True
+    ai_e_preexecution_pass_verified: Literal[True] = True
+    ai_e_authority_pass_verified: Literal[True] = True
     authorization_candidate_validated: Literal[True] = True
     execution_ready: Literal[False] = False
     external_action_performed: Literal[False] = False
@@ -1122,6 +1129,289 @@ class LiveProviderHTTPTransport:
                 )
 
 
+def _verify_precontact_execution_gate(
+    *,
+    root: Path,
+    authorization: TasteSourceSegmentationExecutionAuthorization,
+    protocol: TasteSourceSegmentationProtocolInspection,
+    request_pack: TasteSourceSegmentationRequestPack,
+) -> None:
+    """Replay the AI-only precontact seal as a mandatory live-execution gate."""
+
+    amendment_path = _bound_path(root, authorization.routing_amendment)
+    amendment = _yaml_mapping(amendment_path, "segmentation routing amendment")
+    if (
+        amendment.get("schema_version") != "1.0"
+        or amendment.get("project_id") != authorization.project_id
+        or amendment.get("routing_contract") != "decision-boundary-only-v2"
+        or amendment.get("provider_contact_performed") is not False
+        or amendment.get("sample_or_outcome_changed") is not False
+        or amendment.get("base_protocol") != authorization.protocol.model_dump(mode="json")
+        or amendment.get("base_freeze_receipt")
+        != authorization.freeze_receipt.model_dump(mode="json")
+        or amendment.get("request_pack")
+        != authorization.request_pack.model_dump(mode="json")
+        or amendment.get("adjudication_blocker_fields")
+        != [
+            "decision-presence",
+            "segment-count",
+            "trigger-boundary",
+            "context-range-set",
+            "primary-decision-family",
+            "residual-decision-risk",
+        ]
+        or amendment.get("diagnostic_only_fields")
+        != [
+            "atomic-decision-statement",
+            "rationale",
+            "uncertainty",
+            "no-decision-rationale",
+        ]
+    ):
+        raise ValueError("Segmentation routing amendment is not the frozen v2 contract")
+    amendment_authority = amendment.get("authority")
+    if not isinstance(amendment_authority, dict) or any(
+        amendment_authority.get(field) is not False
+        for field in (
+            "authorizes_provider_contact",
+            "authorizes_calibration_execution",
+            "authorizes_scaled_execution",
+            "authorizes_benchmark_admission",
+            "formal_evidence_eligible",
+            "human_review_claim_allowed",
+        )
+    ):
+        raise ValueError("Segmentation routing amendment overclaims authority")
+
+    seal_path = _bound_path(root, authorization.precontact_audit_seal)
+    seal = _yaml_mapping(seal_path, "segmentation precontact audit seal")
+    if (
+        seal.get("schema_version") != "1.0"
+        or seal.get("seal_id")
+        != "scitastebench-segmentation-precontact-audit-seal-v2"
+        or seal.get("project_id") != authorization.project_id
+        or seal.get("protocol") != authorization.protocol.model_dump(mode="json")
+        or seal.get("freeze_receipt")
+        != authorization.freeze_receipt.model_dump(mode="json")
+        or seal.get("request_pack")
+        != authorization.request_pack.model_dump(mode="json")
+        or seal.get("routing_amendment")
+        != authorization.routing_amendment.model_dump(mode="json")
+        or seal.get("execution_runner") != authorization.runner.model_dump(mode="json")
+    ):
+        raise ValueError("Segmentation precontact seal differs from execution authority")
+
+    predecessor_binding = SegmentationExecutionFileBinding.model_validate(
+        seal.get("predecessor_seal")
+    )
+    predecessor_path = _bound_path(root, predecessor_binding)
+    predecessor = _yaml_mapping(predecessor_path, "segmentation predecessor audit seal")
+    _verify_predecessor_precontact_seal(
+        root=root,
+        predecessor=predecessor,
+        authorization=authorization,
+        protocol=protocol,
+        request_pack=request_pack,
+    )
+
+    authority_review_binding = SegmentationExecutionFileBinding.model_validate(
+        seal.get("ai_e_authority_review")
+    )
+    authority_review_path = _bound_path(root, authority_review_binding)
+    authority_review = _yaml_mapping(
+        authority_review_path, "segmentation AI-E authority review"
+    )
+    exact_inputs = authority_review.get("exact_input_hashes")
+    if (
+        authority_review.get("role_id") != "ai-e-execution-authority"
+        or authority_review.get("reviewer_kind") != "ai"
+        or authority_review.get("not_human_review") is not True
+        or authority_review.get("decision") != "pass"
+        or authority_review.get("verdict") != "pass"
+        or authority_review.get("blocker_codes") != []
+        or authority_review.get("provider_contact_authorized") is not False
+        or authority_review.get("provider_contact_performed") is not False
+        or authority_review.get("external_api_calls_performed") is not False
+        or authority_review.get("formal_evidence_eligible") is not False
+        or authority_review.get("human_review_claim_allowed") is not False
+        or not isinstance(exact_inputs, dict)
+        or exact_inputs.get("predecessor_seal")
+        != predecessor_binding.model_dump(mode="json")
+        or exact_inputs.get("routing_amendment")
+        != authorization.routing_amendment.model_dump(mode="json")
+        or exact_inputs.get("execution_runner") != authorization.runner.model_dump(mode="json")
+    ):
+        raise ValueError("Segmentation AI-E authority review is not a bound pass")
+
+    boundary = seal.get("execution_boundary")
+    if not isinstance(boundary, dict) or any(
+        boundary.get(field) is not False
+        for field in (
+            "provider_contact_performed",
+            "api_calls_authorized",
+            "calibration_execution_authorized",
+            "scaled_execution_authorized",
+            "benchmark_admission_authorized",
+            "formal_evidence_eligible",
+            "human_review_claim_allowed",
+        )
+    ) or boundary.get("fresh_exact_owner_authorization_required") is not True:
+        raise ValueError("Segmentation precontact seal execution boundary is invalid")
+    scope = seal.get("required_authorization_scope")
+    generation = protocol.protocol.generation
+    limits = authorization.limits
+    if not isinstance(scope, dict) or scope != {
+        "provider": authorization.requested_provider,
+        "model": authorization.requested_model,
+        "unique_item_count": request_pack.unique_item_count,
+        "segmenter_requests": generation.segmenter_total_requests,
+        "maximum_adjudication_requests": generation.maximum_adjudication_shards,
+        "identity_sentinel_requests": generation.identity_sentinel_requests,
+        "maximum_provider_requests": limits.maximum_provider_requests,
+        "maximum_input_tokens": limits.maximum_input_tokens,
+        "maximum_output_tokens": limits.maximum_output_tokens,
+        "retry_count": limits.retry_count,
+        "owner_maximum_liability_usd": (
+            authorization.price_ceiling.owner_maximum_liability_usd
+        ),
+    }:
+        raise ValueError("Segmentation precontact seal scope differs from authorization")
+
+
+def _verify_predecessor_precontact_seal(
+    *,
+    root: Path,
+    predecessor: dict[str, object],
+    authorization: TasteSourceSegmentationExecutionAuthorization,
+    protocol: TasteSourceSegmentationProtocolInspection,
+    request_pack: TasteSourceSegmentationRequestPack,
+) -> None:
+    """Replay the original no-contact AI-D/AI-E evidence bound by seal v2."""
+
+    if (
+        predecessor.get("schema_version") != "1.0"
+        or predecessor.get("seal_id")
+        != "scitastebench-segmentation-precontact-audit-seal-v1"
+        or predecessor.get("project_id") != authorization.project_id
+        or predecessor.get("protocol") != authorization.protocol.model_dump(mode="json")
+        or predecessor.get("freeze_receipt")
+        != authorization.freeze_receipt.model_dump(mode="json")
+        or predecessor.get("request_pack")
+        != authorization.request_pack.model_dump(mode="json")
+    ):
+        raise ValueError("Segmentation predecessor seal differs from frozen inputs")
+
+    ai_d = predecessor.get("ai_d_attempt_v2")
+    if not isinstance(ai_d, dict) or (
+        ai_d.get("reviewer_kind") != "ai"
+        or ai_d.get("not_human_review") is not True
+        or ai_d.get("verdict") != "inventory-complete"
+        or ai_d.get("item_count") != request_pack.unique_item_count
+        or ai_d.get("residual_risk_item_count") != 0
+    ):
+        raise ValueError("Segmentation AI-D precontact inventory did not pass")
+    raw_binding = ai_d.get("raw_inventory")
+    receipt_binding = ai_d.get("review_receipt")
+    inventory_binding = ai_d.get("normalized_inventory")
+    for label, binding in (
+        ("AI-D raw inventory", raw_binding),
+        ("AI-D review receipt", receipt_binding),
+        ("AI-D normalized inventory", inventory_binding),
+    ):
+        if not isinstance(binding, dict) or not isinstance(binding.get("locator"), str):
+            raise ValueError(f"Segmentation {label} binding is invalid")
+        source = _bounded_file(root / _safe_locator(binding["locator"]), _MAX_PACKET_BYTES)
+        if _sha256_file(source) != binding.get("file_sha256"):
+            raise ValueError(f"Segmentation {label} file hash drifted")
+
+    from scitaste.evaluation.taste_source_segmentation_post_audit import (
+        load_taste_source_integrity_inventory,
+        load_taste_source_integrity_review_receipt,
+        normalize_taste_source_integrity_inventory,
+    )
+
+    assert isinstance(raw_binding, dict)
+    assert isinstance(receipt_binding, dict)
+    assert isinstance(inventory_binding, dict)
+    raw_path = root / _safe_locator(str(raw_binding["locator"]))
+    receipt_path = root / _safe_locator(str(receipt_binding["locator"]))
+    inventory_path = root / _safe_locator(str(inventory_binding["locator"]))
+    receipt = load_taste_source_integrity_review_receipt(receipt_path)
+    inventory = load_taste_source_integrity_inventory(inventory_path)
+    if (
+        receipt.receipt_sha256 != receipt_binding.get("receipt_sha256")
+        or inventory.inventory_sha256 != inventory_binding.get("inventory_sha256")
+        or inventory.item_count != request_pack.unique_item_count
+        or inventory.residual_risk_item_count != 0
+        or inventory.project_id != authorization.project_id
+        or inventory.request_pack.file_sha256 != authorization.request_pack.file_sha256
+        or inventory.request_pack.semantic_sha256 != authorization.request_pack.pack_sha256
+    ):
+        raise ValueError("Segmentation AI-D sealed evidence differs from its seal")
+    gate_path = root / _safe_locator(receipt.gate.locator)
+    replayed = normalize_taste_source_integrity_inventory(
+        raw_inventory_path=raw_path,
+        request_pack_path=root / _safe_locator(authorization.request_pack.locator),
+        gate_path=gate_path,
+        review_receipt_path=receipt_path,
+        inventory_id=inventory.inventory_id,
+        locator_root=root,
+    )
+    if replayed != inventory:
+        raise ValueError("Segmentation AI-D inventory replay differs from sealed inventory")
+
+    ai_e = predecessor.get("ai_e_preexecution_review")
+    if not isinstance(ai_e, dict):
+        raise ValueError("Segmentation predecessor seal lacks AI-E review")
+    ai_e_binding = SegmentationExecutionFileBinding.model_validate(ai_e.get("report"))
+    ai_e_path = _bound_path(root, ai_e_binding)
+    ai_e_report = _yaml_mapping(ai_e_path, "segmentation AI-E preexecution review")
+    inputs = ai_e_report.get("exact_input_hashes")
+    if (
+        ai_e.get("reviewer_kind") != "ai"
+        or ai_e.get("not_human_review") is not True
+        or ai_e.get("decision") != "pass"
+        or ai_e.get("blocker_codes") != []
+        or ai_e_report.get("role_id") != "ai-e-protocol-authority"
+        or ai_e_report.get("reviewer_kind") != "ai"
+        or ai_e_report.get("not_human_review") is not True
+        or ai_e_report.get("decision") != "pass"
+        or ai_e_report.get("verdict") != "pass"
+        or ai_e_report.get("blocker_codes") != []
+        or ai_e_report.get("provider_contact_authorized") is not False
+        or ai_e_report.get("provider_contact_performed") is not False
+        or ai_e_report.get("external_api_calls_performed") is not False
+        or not isinstance(inputs, dict)
+        or inputs.get("protocol") != {
+            **authorization.protocol.model_dump(mode="json"),
+            "protocol_id": protocol.protocol.protocol_id,
+            "schema_version": protocol.protocol.schema_version,
+        }
+        or inputs.get("freeze_receipt")
+        != {
+            **authorization.freeze_receipt.model_dump(mode="json"),
+            "freeze_receipt_id": protocol.freeze_receipt.freeze_receipt_id,
+            "schema_version": protocol.freeze_receipt.schema_version,
+        }
+        or inputs.get("request_pack")
+        != {
+            **authorization.request_pack.model_dump(mode="json"),
+            "pack_id": request_pack.pack_id,
+            "schema_version": request_pack.schema_version,
+        }
+    ):
+        raise ValueError("Segmentation AI-E preexecution review is not a bound pass")
+
+
+def _yaml_mapping(path: Path, label: str) -> dict[str, object]:
+    payload = yaml.safe_load(
+        _bounded_file(path, _MAX_PACKET_BYTES).read_text(encoding="utf-8")
+    )
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must contain a YAML mapping")
+    return payload
+
+
 def inspect_taste_source_segmentation_execution_authorization(
     *,
     authorization_path: str | Path,
@@ -1261,6 +1551,13 @@ def inspect_taste_source_segmentation_execution_authorization(
     ).total_seconds()
     if price_age_seconds < 0 or price_age_seconds > 24 * 3_600:
         raise ValueError("Segmentation execution price ceiling is not contemporaneous")
+
+    _verify_precontact_execution_gate(
+        root=root,
+        authorization=authorization,
+        protocol=protocol,
+        request_pack=pack,
+    )
 
     pack_root = pack_path.parent
     rubric_path = _bounded_file(
@@ -2409,6 +2706,7 @@ def run_taste_source_segmentation_calibration(
             ),
             compiled_at=datetime.now(UTC),
             locator_root=root,
+            routing_contract="decision-boundary-only-v2",
         )
         agreement_path = output_root / "derived" / "agreement.json"
         save_taste_source_segmentation_agreement_report(agreement, agreement_path)
@@ -3520,8 +3818,15 @@ def _legacy_resolution_payload(
             ]
             residual = source.residual_decision_bearing_text_possible
             no_decision_rationale = source.no_decision_rationale
-            rationale = "Copied deterministically from exact dual-agent agreement."
-            resolution_kind = "exact-dual-agent-agreement"
+            if agreement.routing_contract == "decision-boundary-only-v2":
+                rationale = (
+                    "Copied deterministically from decision-boundary agreement; "
+                    "free-text explanation differences were diagnostic only."
+                )
+                resolution_kind = "decision-boundary-agreement"
+            else:
+                rationale = "Copied deterministically from exact dual-agent agreement."
+                resolution_kind = "exact-dual-agent-agreement"
         resolved.append(
             {
                 "campaign_id": item.campaign_id,
