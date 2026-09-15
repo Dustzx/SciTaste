@@ -15,3 +15,6 @@ profiles:
   - path: profile_local_qwen3vl2b_taste_review_v1.yaml
     sha256: 8487fb5bab44641f460774f8532fea353df62e8f9813662c9e21055bf422338f
     profile_sha256: 1213856b0d6a3704bd577df65e457847eca2f11145c8183f62f5dd16ab05ea39
+  - path: profile_bailian_qwen38max_taste_review_v1.yaml
+    sha256: a89a76ee0460ca16ddf9e8b5bcec4983a3d278003cf0ced3e30e13aa72f2a3e9
+    profile_sha256: f33dbb8574d4228ab6df1c34161db65e49526ae43776dea878cd6691ae89ae36

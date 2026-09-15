@@ -26,6 +26,11 @@ semantic versioning.
   The review-specific local config disables Qwen thinking tokens and bounds one
   response to 2,048 tokens after a real 8,192-token attempt exposed repetitive
   post-JSON generation; the rejected attempt remains in the project ledger.
+- Added a distinct Bailian Qwen3.8-Max review profile so a strong second AI
+  primary can complete attribution and decision-family panels when a DeepSeek
+  credential is not bound. Provider, current model ID, 1M context envelope,
+  pricing ceiling, invocation, raw response, and nonhuman-review status remain
+  explicit rather than treating two calls to one model as independent.
 - Added the missing production bridge from project-owned Taste episodes to a
   disclosed cross-model AI attribution panel. One shared, condition- and
   claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and

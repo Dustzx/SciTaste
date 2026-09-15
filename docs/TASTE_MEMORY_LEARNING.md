@@ -161,6 +161,11 @@ add `--backend-mode local` during preparation plus `--allow-local` during model
 node execution. The other primary must still use a distinct model; local review
 does not become human or expert evidence.
 
+The profile set also includes `bailian-qwen38max-taste-review` for the current
+`qwen3.8-max` API. It is a distinct strong-model primary when DeepSeek is not
+configured, and uses the same `--backend-mode live` execution path. Credentials
+remain environment-only and raw provider responses remain project-owned.
+
 ## Scientific decision-family conditioning
 
 Admitted episodes are not pooled into one generic quality score. A fixed
