@@ -1188,7 +1188,10 @@ def _precedent_projection(source: _LoadedSource, decision: TasteSourceDecisionSe
             "value": context.reviewed_abstract,
         },
         "verbatim_scientific_action": {
-            "semantic_roles": ["alternative", "scientific_action"],
+            # Natural review actions commonly state the evidential limitation that
+            # motivates the action; expose that dual role instead of forcing the
+            # model to ground an evidence summary in an unrelated abstract span.
+            "semantic_roles": ["alternative", "scientific_action", "evidence", "limitation"],
             "value": decision.verbatim_decision_text,
         },
         "observed_natural_outcome": {

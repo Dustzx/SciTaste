@@ -109,6 +109,19 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
     input_model = TasteAbstractionInput
     output_model = GroundedTasteCaseAbstraction
 
+    def _normalize_proposal(
+        self,
+        proposal: GroundedTasteCaseAbstraction,
+        *,
+        input_data: TasteAbstractionInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> GroundedTasteCaseAbstraction:
+        """Undo only redundant JSON quote escaping when it yields an exact source span."""
+
+        del context, policy
+        return _normalize_grounding_quote_escapes(proposal, input_data)
+
     def _proposal_rejections(
         self,
         proposal: GroundedTasteCaseAbstraction,
@@ -529,6 +542,43 @@ def _common_proposal_rejections(
     if any(identifier in text for identifier in internal_ids for text in visible):
         reasons.append("Taste abstraction leaked internal source or candidate identity")
     return sorted(set(reasons))
+
+
+def _normalize_grounding_quote_escapes(
+    proposal: GroundedTasteCaseAbstraction,
+    input_data: TasteAbstractionInput,
+) -> GroundedTasteCaseAbstraction:
+    try:
+        projection = json.loads(input_data.source_projection)
+    except json.JSONDecodeError:
+        return proposal
+    fields = projection.get("fields") if isinstance(projection, dict) else None
+    if not isinstance(fields, dict):
+        return proposal
+    visible: dict[str, str] = {}
+    for name, record in fields.items():
+        if not isinstance(name, str) or not isinstance(record, dict) or "value" not in record:
+            continue
+        value = record["value"]
+        visible[name] = (
+            value
+            if isinstance(value, str)
+            else json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+        )
+    changed = False
+    grounding = []
+    for claim in proposal.grounding:
+        supports = []
+        for support in claim.supports:
+            evidence = support.verbatim_evidence
+            source = visible.get(support.projection_field)
+            normalized = evidence.replace('\\"', '"')
+            if source is not None and evidence not in source and normalized in source:
+                support = support.model_copy(update={"verbatim_evidence": normalized})
+                changed = True
+            supports.append(support)
+        grounding.append(claim.model_copy(update={"supports": tuple(supports)}))
+    return proposal.model_copy(update={"grounding": tuple(grounding)}) if changed else proposal
 
 
 def load_verified_taste_abstraction_ledger(

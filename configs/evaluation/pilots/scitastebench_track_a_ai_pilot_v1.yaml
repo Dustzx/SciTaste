@@ -10,7 +10,7 @@ selection_algorithm: sha256-content-ranked-domain-balanced-v1
 pairing_algorithm: sha256-family-first-source-disjoint-v1
 planner_implementation:
   locator: src/scitaste/evaluation/taste_mechanism_pilot.py
-  file_sha256: fd3799c73bce178611f55582f87ed8b6484216fc519917b05bc92254dd7f11ca
+  file_sha256: ccd11116401e8a603f1cc5f067cd6f9f8554808092763f1668dd3ffc9cf29fba
 target_counts_by_domain:
   computing: 8
   ecology: 8
@@ -112,4 +112,4 @@ authorizes_api_calls: false
 authorizes_model_calls: false
 authorizes_gpu_work: false
 authorizes_experiment_execution: false
-config_sha256: e47e7d83bf987596385f7fcc0e3285cd60646eebfb07e3408185bf6fd8a6771b
+config_sha256: bc9cf8f0b1ae40f9ef818ea402d5182cdab7bda1161755ea55c9068de10e10ad

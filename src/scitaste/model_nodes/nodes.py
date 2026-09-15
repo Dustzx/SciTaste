@@ -175,6 +175,12 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         except ValueError as exc:
             reasons.append(f"output schema violation: invalid JSON value ({exc})")
         if parsed_proposal is not None:
+            parsed_proposal = self._normalize_proposal(
+                parsed_proposal,
+                input_data=validated_input,
+                context=validated_context,
+                policy=validated_policy,
+            )
             reasons.extend(
                 self._proposal_rejections(
                     parsed_proposal,
@@ -207,6 +213,19 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
                 rejection_reasons=reasons,
             ),
         )
+
+    def _normalize_proposal(
+        self,
+        proposal: OutputT,
+        *,
+        input_data: InputT,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> OutputT:
+        """Apply an explicitly node-owned, deterministic provider adapter."""
+
+        del input_data, context, policy
+        return proposal
 
     def _build_request(
         self,
