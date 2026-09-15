@@ -55,7 +55,10 @@ _DOI = re.compile(
     re.IGNORECASE,
 )
 _XLINK_HREF = "{http://www.w3.org/1999/xlink}href"
-_CC_BY = re.compile(r"^https?://creativecommons\.org/licenses/by/(?:3\.0|4\.0)/?$", re.I)
+_CC_BY = re.compile(
+    r"^https?://creativecommons\.org/licenses/by/(?:3\.0(?:/igo)?|4\.0)/?$",
+    re.I,
+)
 _EMAIL = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
 _MAX_CONFIG_BYTES = 256 * 1024
 _MAX_XML_NODES = 200_000
@@ -782,8 +785,13 @@ def materialize_f1000_taste_population(
         _write_new(staging / "CANDIDATES.jsonl", candidate_bytes)
         domain_counts = {key: len(value) for key, value in groups_by_domain.items()}
         recommendations = dict(Counter(item.recommendation for item in candidates))
+        population_id = (
+            "f1000-multidomain-review-response-v1"
+            if receipt.acquisition_id == "f1000-multidomain-taste-pilot-v1"
+            else f"{receipt.acquisition_id}-review-response"
+        )
         report = F1000TastePopulationReport.create(
-            population_id="f1000-multidomain-review-response-v1",
+            population_id=population_id,
             project_id=receipt.project_id,
             acquisition_receipt_file_sha256=_sha256_file(receipt_path),
             acquisition_receipt_sha256=receipt.receipt_sha256,

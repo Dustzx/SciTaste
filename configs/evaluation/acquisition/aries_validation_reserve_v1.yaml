@@ -1,0 +1,46 @@
+schema_version: "1.0"
+request_id: aries-validation-reserve-v1
+project_id: scitaste-self-development
+track_id: scientific-taste-decisions
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Download the official ARIES review-reply object needed to construct at least
+  seven source-group-disjoint natural dev trajectories for an independent
+  AI-only SciTasteBench validation reserve.
+claim_boundary: >-
+  This transaction establishes exact source bytes only. ARIES dev associations
+  are heuristic rather than human gold, and no reply, revision, or publication
+  outcome is a scientific-quality label, admitted Taste case, benchmark result,
+  construct validation, or paper effect.
+selection_id: aries-validation-reserve-v1
+selection_proposal_sha256: c3fd333567c485a7631a6b67c47c20a6e696e0a0e471b0f87fab8109f5633210
+destination_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-validation-reserve-v1/raw
+allowed_hosts:
+  - ai2-s2-research-public.s3.amazonaws.com
+items:
+  - item_id: review_replies
+    source_url: https://ai2-s2-research-public.s3.amazonaws.com/aries/review_replies.jsonl?scitaste-revision=434ef2211b816b8a8836500e635a1671-24&item_id=review_replies
+    source_revision: 434ef2211b816b8a8836500e635a1671-24
+    destination: review_replies.jsonl
+    maximum_bytes: 198981013
+    media_type: application/x-ndjson
+    license_identifier: ODC-BY-1.0
+    license_scope: >-
+      Official ARIES public review/author-reply associations retained as natural
+      process observations; heuristic alignment is not treated as human gold.
+    license_status: verified
+    expected_sha256: null
+    expected_http_etag: 434ef2211b816b8a8836500e635a1671-24
+    runtime_assets_included: false
+maximum_total_bytes: 198981013
+evidence:
+  - evidence_id: aries-validation-reserve-scope
+    path: docs/research/data/aries_validation_reserve_scope_v1.yaml
+    sha256: c3fd333567c485a7631a6b67c47c20a6e696e0a0e471b0f87fab8109f5633210
+approval:
+  approved: false
+redirects_allowed: false
+overwrite_allowed: false
+secrets_forbidden: true
+authorizes_ingestion: false
+authorizes_execution: false

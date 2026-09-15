@@ -1,0 +1,46 @@
+schema_version: "1.0"
+scope_id: aries-validation-reserve-v1
+project_id: scitaste-self-development
+source_id: aries
+source_name: ARIES-public-review-author-response
+official_repository: https://github.com/allenai/aries
+repository_commit: 5691bae71a101225ed345d0ffc42e47609f03bbb
+official_dataset_prefix: s3://ai2-s2-research-public/aries/
+dataset_license: ODC-BY-1.0
+code_license: Apache-2.0
+authorization_basis: project-owner-standing-sub-10gb-download-authority
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Add exact public review/author-reply bytes for source-group-disjoint ARIES dev
+  trajectories so the AI-only SciTasteBench construction protocol can preserve
+  an independent validation reserve without reusing exposed test groups.
+claim_boundary: >-
+  Review replies and heuristic reply-to-edit associations are natural process
+  observations, not human gold, scientific-quality labels, preferred actions,
+  benchmark admissions, construct validation, or paper effects. Formal use
+  requires private source-group mapping, one item per group, independent AI
+  privacy/quality review, and an immutable validation split.
+selected_objects:
+  - item_id: review_replies
+    key: aries/review_replies.jsonl
+    version_id: _D3CI_iDILk9ja0KDbLNgzQGvEQJBmsJ
+    etag: 434ef2211b816b8a8836500e635a1671-24
+    size_bytes: 198981013
+    role: public-review-author-response-context
+selected_object_count: 1
+maximum_total_bytes: 198981013
+reused_receipt_bound_objects:
+  - split_ids.json
+  - paper_edits.jsonl
+  - s2orc.tar.gz
+selection:
+  origin_split: dev
+  selection_salt: aries-validation-reserve-v1-20260915
+  maximum_items_per_source_group: 1
+  minimum_new_source_groups: 7
+  source_group_identity: canonical-openreview-forum-v1
+network_calls_authorized: true
+source_text_ingestion_authorized: false
+model_calls_authorized: false
+gpu_work_authorized: false
+human_labels_created: false

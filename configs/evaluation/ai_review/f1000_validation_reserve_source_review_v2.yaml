@@ -1,0 +1,50 @@
+schema_version: "1.0"
+policy_id: f1000-validation-reserve-source-review-v2
+project_id: scitaste-self-development
+population_id: f1000-multidomain-taste-validation-reserve-v2-review-response
+scientific_reviewers_per_item: 2
+privacy_reviewers_per_item: 1
+required_decision_families: [idea, experiment, evidence, writing, review, visual]
+allowed_domain_labels: [ecology, public-health, other, cannot-assess]
+minimum_eligible_groups_per_domain: 15
+domain_instruction: >-
+  Infer the primary domain only from the displayed title, original abstract, and
+  review. Select Other when neither named domain fits and Cannot assess only for
+  insufficient scientific content.
+decision_family_instructions:
+  idea: Judges problem importance, novelty, scope, framing, or research direction.
+  experiment: Judges intervention, comparator, ablation, measurement, or experimental design.
+  evidence: Judges inference validity, confounding, uncertainty, statistics, or evidential support.
+  writing: Judges claim wording, organization, explanation, or textual communication.
+  review: Judges response to criticism, concern closure, revision priority, or review process.
+  visual: Judges a figure, table, diagram, caption, or visual evidence presentation.
+quality_dimension_instructions:
+  evidential_rigor: The comment connects a decision to relevant evidence, uncertainty, limitation, or observable outcome.
+  decision_traceability: A concrete scientific action and why it should be taken are visible rather than inferred from later success.
+  alternative_visibility: A genuine competing action, baseline, null, or counterfactual is visible.
+  failure_boundary_visibility: The comment exposes when the action would fail, cease to help, or require qualification.
+  transfer_potential: The judgment can transfer as a reusable principle beyond this exact article.
+privacy_instruction: >-
+  Review every displayed free-text field for direct identifiers, contacts,
+  sensitive personal information, or combinations that could re-identify a
+  participant. Safe means no further redaction is needed.
+cannot_assess_instruction: >-
+  Use Cannot assess only for insufficient visible scientific information, not
+  for an ordinary weak episode, and record the reason.
+adjudication_rule: >-
+  Domain or decision-family disagreement and split strong-quality eligibility
+  require a third identity-distinct AI adjudicator blind to source identity,
+  response, revision, peer outputs, and model identities. This remains AI review.
+scientific_review_hides_publisher_subject: true
+scientific_review_hides_recommendation: true
+scientific_review_hides_author_response: true
+scientific_review_hides_later_revision: true
+scientific_review_hides_other_reviews: true
+privacy_review_separate_from_scientific_review: true
+ethics_determination_required_before_recruitment: true
+compensation_and_consent_required_before_recruitment: true
+authorizes_reviewer_recruitment: false
+authorizes_model_calls: false
+authorizes_api_spend: false
+authorizes_gpu_work: false
+authorizes_experiment: false

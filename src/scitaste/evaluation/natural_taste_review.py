@@ -29,6 +29,10 @@ from scitaste.evaluation.aries_population import (
     AriesTasteCandidate,
     AriesTastePopulationReport,
 )
+from scitaste.evaluation.aries_reply_reserve import (
+    AriesReplyReserveCandidate,
+    AriesReplyReserveReport,
+)
 from scitaste.evaluation.f1000_domain_population import (
     F1000TasteCandidate,
     F1000TastePopulationReport,
@@ -1274,13 +1278,14 @@ def publish_taste_source_review_campaign_run(
 
 def _load_candidates(
     path: Path,
-    report: F1000TastePopulationReport | AriesTastePopulationReport,
-) -> tuple[F1000TasteCandidate | AriesTasteCandidate, ...]:
-    item_type = (
-        AriesTasteCandidate
-        if isinstance(report, AriesTastePopulationReport)
-        else F1000TasteCandidate
-    )
+    report: F1000TastePopulationReport | AriesTastePopulationReport | AriesReplyReserveReport,
+) -> tuple[F1000TasteCandidate | AriesTasteCandidate | AriesReplyReserveCandidate, ...]:
+    if isinstance(report, AriesTastePopulationReport):
+        item_type = AriesTasteCandidate
+    elif isinstance(report, AriesReplyReserveReport):
+        item_type = AriesReplyReserveCandidate
+    else:
+        item_type = F1000TasteCandidate
     values = _load_jsonl(path, item_type)
     ids = [item.candidate_id for item in values]
     if len(values) != report.candidate_count or len(ids) != len(set(ids)):
@@ -1290,21 +1295,23 @@ def _load_candidates(
 
 def _load_supported_population_report(
     path: Path,
-) -> F1000TastePopulationReport | AriesTastePopulationReport:
+) -> F1000TastePopulationReport | AriesTastePopulationReport | AriesReplyReserveReport:
     payload = json.loads(path.read_bytes())
     if not isinstance(payload, dict):
         raise ValueError("Taste source population report must contain a mapping")
     if "split_source_group_counts" in payload:
         return AriesTastePopulationReport.model_validate(payload)
+    if payload.get("population_id") == "aries-dev-review-reply-validation-reserve-v1":
+        return AriesReplyReserveReport.model_validate(payload)
     if "domain_source_group_counts" in payload:
         return F1000TastePopulationReport.model_validate(payload)
     raise ValueError("Taste source population is not a supported natural source")
 
 
 def _population_group_counts(
-    report: F1000TastePopulationReport | AriesTastePopulationReport,
+    report: F1000TastePopulationReport | AriesTastePopulationReport | AriesReplyReserveReport,
 ) -> tuple[int, dict[str, int]]:
-    if isinstance(report, AriesTastePopulationReport):
+    if isinstance(report, (AriesTastePopulationReport, AriesReplyReserveReport)):
         return report.source_group_count, {
             TasteSourceDomainLabel.COMPUTING.value: report.source_group_count
         }
@@ -1312,7 +1319,7 @@ def _population_group_counts(
 
 
 def _candidate_review_projection(
-    candidate: F1000TasteCandidate | AriesTasteCandidate,
+    candidate: F1000TasteCandidate | AriesTasteCandidate | AriesReplyReserveCandidate,
 ) -> tuple[str, str, str, str, str | None, str, str]:
     if isinstance(candidate, F1000TasteCandidate):
         return (
@@ -1323,6 +1330,16 @@ def _candidate_review_projection(
             candidate.author_response,
             candidate.source_domain,
             candidate.recommendation,
+        )
+    if isinstance(candidate, AriesReplyReserveCandidate):
+        return (
+            candidate.article_title,
+            candidate.reviewed_abstract,
+            candidate.revised_abstract,
+            candidate.review_comment,
+            candidate.author_response,
+            TasteSourceDomainLabel.COMPUTING.value,
+            "public-author-reply-observed",
         )
     revised_context = "\n\n".join(
         edit.target_text for edit in candidate.observed_edits if edit.target_text

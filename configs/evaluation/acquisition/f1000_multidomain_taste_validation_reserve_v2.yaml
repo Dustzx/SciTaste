@@ -1,0 +1,79 @@
+schema_version: "1.1"
+acquisition_id: f1000-multidomain-taste-validation-reserve-v2
+project_id: scitaste-self-development
+source_host: f1000research.com
+strata:
+  - domain_id: ecology
+    subject_query: Ecology
+    expected_page_count: 5
+    target_source_groups: 20
+  - domain_id: public-health
+    subject_query: Public Health
+    expected_page_count: 8
+    target_source_groups: 20
+rows_per_page: 100
+minimum_latest_version: 2
+selection_salt: scitaste-f1000-validation-reserve-v2-20260915
+excluded_canonical_source_group_ids:
+  - f1000-work-0422579034a8c22d715a51e0c1cad8f944756b29ff590d563c69c7f1ceea70dd
+  - f1000-work-138b6ae97706043f95e7bff1eda82e216d4b4d3a929b21eebebb2544f236a2f5
+  - f1000-work-165098ac8ecb9fbad1a56c59550f901c7c5714847b8aa706a274064728e9d1ff
+  - f1000-work-1ba80b1d88b53293c11b50fc1360abe667010d64c1b77b23a3f8df788bb624c2
+  - f1000-work-3613a6f9652279df2cb0e2eed0b85718d1e8c209f0354a29bb0167718103f60f
+  - f1000-work-38d835defadc9e3e89f12a562a9f740af6796808f37c0fbb7bc80ea3bce5311f
+  - f1000-work-3a32bbc4826b8800f5c20030ee2d16a037b0c6abd84dcb470a39e5c0a77d7bc9
+  - f1000-work-5dc83e705f32715cb1cbbb57ed3180cbcae9edf0d42a6ded0c6b8c4228021c8e
+  - f1000-work-64e64e6361d4ba49d322b2c1d5eb2b106936cd425967b797824215906358dce0
+  - f1000-work-65339c0a264463941ff9346b95503082d372ebb7619d895e760740682f3c4d19
+  - f1000-work-66aa58fd003418dd56387755a2976a8d2d415ef0686b5bf68da1c682c6521cd4
+  - f1000-work-6ef5e8d1536d1afdc18f9c7ddfed10b8b663906bd35b941e7bcdfb8628f90e0a
+  - f1000-work-711ec6f4c0769a3dc270d8732931992c7b792159f39f073969c824ce47fef067
+  - f1000-work-793fed6530be46008e62e6140b6c2f38da28a3157a510b9aa5a9a9a6166ccbdf
+  - f1000-work-7ac914f0e025bb0f13e9530b9f2d9523b224b5ad71dbb6c3d0a2097fdbed9ab0
+  - f1000-work-800cf37fd500c36a81d5c9e35afed985311879be2b4217600e5a429fa6e1eb99
+  - f1000-work-8c058163edb0ce2966965b0e7a05b40a0180e7396640e062fc3fe00bb2b45b6d
+  - f1000-work-907d48078a4c535fcd08b95a9eb05afda8ce33e0dd37f15d3c04e4897697200a
+  - f1000-work-94461b755cdc14b2e77932aa3823137e47e95007f01088965d4837641d483d77
+  - f1000-work-a017c58c31408008ecb02a620fea462c47a2f705c8c64f2163c30d7a821e30ca
+  - f1000-work-a79cb68fd2ef46c536e3a09200c298a6c24a898b08fe903de917dbf0fe3e1769
+  - f1000-work-b0d58be6fdb4b95a520993368a8f0fd1fd80c2580e776256852576dcb0df593a
+  - f1000-work-b14f1bff5c9b6953a8a172ea9724caf32f9f3b1220e6980a2ef341504552ace7
+  - f1000-work-bf786ebf87d419f195698752c0e6dbe500db753b62d6f69379452e09329372de
+  - f1000-work-c10cb713fa5ebbded3ac431f0898a4c6a86ade5a0c683e4ce6e136283544cb70
+  - f1000-work-c4133b76c0ac22a40010cba667604d9d749df44f789f9a235895b003b4e73852
+  - f1000-work-dbe75df1be4c2c6fdd3da0b11550a82314cea7b89dba5e5666a6f34a61923769
+  - f1000-work-dbf22063a521dc2d811512251c00ff5c63d62b0f05b2ba00f7c885017afcf85b
+  - f1000-work-de9ae14005eab7d14b99531353a78e4ed19d4104ff2aa9e75eb8d9e53a1ece76
+  - f1000-work-e387c0df98ca7f29624eee9e62145921d7bdd70d280e4773a5b06e9fc02724c7
+  - f1000-work-e493f6a75d6f501886035ff8229a1f47dd841dd9f29a1550f12910703361238a
+  - f1000-work-e700ef2d7d58f8882ffc02f62eb92adb41a31fab7adcaf1ed0548d3524ae3f8a
+  - f1000-work-ef21e445ccc0f20132c9117980f7f5e83fd03e36efd943a61fda32211dc544d8
+  - f1000-work-f07028347606e98d07e86718204e1996f1626180fe5b76d4d2dfc179353fd733
+  - f1000-work-f1ddbea1df2c6f1f93be0ffd0d48e7833429311340ca938d0b3d72c18f9abf50
+  - f1000-work-f5d23531e3634235a281df722bc0f9c9d2ab33a49925556e10c81d651b54d55a
+  - f1000-work-fbd8ee820271ee6a4dddd520531774c320c895a42164a36059f8a8d0a3e3d347
+  - f1000-work-fc06f537e76179b2690073e6cadb6ca4e6aa47ea2bfa72569e9b428bb58b3b8c
+  - f1000-work-fc0e5d7b9d616892d1fd3f141990c0f066d8f9897b1138ec2aaffeb084f7737b
+  - f1000-work-fc46fa8f0dd6ef97be29604e58bdfde8c732cdc8809e698bfd3d8b667b86cd72
+per_search_response_max_bytes: 2097152
+per_article_xml_max_bytes: 4194304
+maximum_total_bytes: 362807296
+timeout_seconds: 60
+parallel_article_requests: 8
+user_agent: SciTaste-F1000-validation-reserve/2.0 research-contact-local
+authorization_ref: user-standing-download-under-10gb-2026-09-14
+license_identifier: CC-BY
+purpose: >-
+  Acquire forty source-group-disjoint publisher review/revision trajectories
+  that were absent from the first F1000 pilot, preserving at least ten usable
+  independent validation groups after local candidate compilation.
+claim_boundary: >-
+  This transaction establishes exact public bytes and cross-receipt source-group
+  disjointness only. Subject membership, reviews, replies, and later revisions
+  are observed evidence rather than quality labels, Taste labels, benchmark
+  admissions, model-validation results, or paper effects.
+redirects_allowed: false
+credentials_used: false
+authorizes_model_calls: false
+authorizes_gpu_work: false
+authorizes_experiment: false

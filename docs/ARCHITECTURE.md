@@ -4281,3 +4281,37 @@ Even a ready head receives no application authority from this compiler, and the
 report always requires a separate formal effect evaluation. AI reviews satisfy
 the configured operational gate but retain `not_human_review=true` and cannot
 support a human-validity claim.
+
+### ADR-133: Calibration data and validation reserve are separate acquisitions
+
+Status: accepted and implemented through source compilation; protocol rebinding
+and AI review remain open.
+
+Repeated segmentation calibration consumed nearly all source groups in the
+original ARIES and F1000 campaigns. Reusing those groups for validation would
+measure adaptation to inspected sources rather than independent construction
+reliability. SciTaste therefore treats a validation reserve as new source bytes,
+not as another random seed over the old campaign.
+
+The F1000 reserve uses a schema-1.1 acquisition plan whose exclusion list
+contains the canonical identity of every work in the first receipt. It queries
+the same official subject strata, downloads exact version-one/latest XML pairs,
+and assigns a population identity derived from the new acquisition rather than
+reusing the historical campaign ID. Historical F1000 XML may declare CC-BY 3.0
+IGO; this is admitted as an attribution license while reviewer sub-articles
+still require supported CC-BY URIs.
+
+The ARIES reserve binds the separately acquired official public review/reply
+object to the original receipt-bound split, paper-edit, and S2ORC bytes. A fixed
+hash rank selects one review and one public author response from each of seven
+dev groups. Raw forum, review, response, and document IDs remain in a private
+map; model-visible candidates expose only canonical group identities and
+de-identified text. Because train/dev reply-to-edit association is heuristic,
+the report forbids human-gold, scientific-correctness, or preferred-action
+claims.
+
+Both reserve populations can be rendered through the existing outcome-blind
+source-review interface. That makes them operational inputs for independent AI
+quality/privacy review, not benchmark admissions. A new content-bound protocol
+and Git freeze must link the reserve campaigns before any previous provider
+authorization can be reused.

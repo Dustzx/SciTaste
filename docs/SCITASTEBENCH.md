@@ -11,18 +11,25 @@ Taste. It tests whether grounded decision experience improves scientific choices
 external suites such as MLRC-Bench separately test whether those choices produce
 objective research progress. Neither role can substitute for the other.
 
-The current natural construction pool contains 273 candidate review-to-revision
+The original natural construction pool contains 273 candidate review-to-revision
 episodes from 81 source groups: 196 ARIES candidates from 42 groups and 77 F1000
 candidates from 39 groups. Together they expose three observed domain or
 publisher-subject strata, but those strata are not yet independently confirmed.
+An independently acquired validation reserve now adds 84 candidate trajectories
+from 47 source-group-disjoint works: seven natural ARIES dev review/reply cases
+and 77 F1000 cases from forty previously unseen works. ARIES reply-to-edit
+association is heuristic and explicitly not a human label. The combined local
+construction inventory is therefore 357 candidates across 128 source groups,
+but the original calibration sample and the new reserve remain separately
+identified rather than being pooled after inspection.
 The candidates are not benchmark items or gold outcomes. The formally admitted
 population is currently zero because independent domain, quality, privacy,
 decision-family, grounded-abstraction, and attribution review has not completed.
-Both source populations now have executable, outcome-blind review packages.
-Completing them requires 546 scientific assessments and 273 separate privacy
-assessments before adjudication or abstraction; no reviewer has been contacted
-and no result has been collected. The workload must be sharded before activation
-if the owner cannot allocate two scientific reviewers across all 273 items.
+All four source populations have executable, outcome-blind review packages. The
+active deadline route uses identity-distinct AI reviewers and records
+`reviewer_kind=ai`, `not_human_review=true`; it does not claim human or expert
+validity. The new reserve has not yet received that AI quality/privacy pass and
+cannot enter a protocol merely because its byte and source-group gates passed.
 
 Version 3 already specifies the title-critical H1/H2 conditions: same-source raw
 evidence, same-source abstracted Taste, and source-disjoint mismatched Taste under

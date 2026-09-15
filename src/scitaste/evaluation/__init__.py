@@ -79,6 +79,13 @@ from scitaste.evaluation.aries_population import (
     materialize_aries_taste_population,
     publish_aries_taste_population_run,
 )
+from scitaste.evaluation.aries_reply_reserve import (
+    AriesReplyReserveCandidate,
+    AriesReplyReservePrivateMapItem,
+    AriesReplyReserveReport,
+    load_aries_reply_reserve_report,
+    materialize_aries_reply_validation_reserve,
+)
 from scitaste.evaluation.benchmark_alignment import (
     EvidenceBenchmarkAlignmentFinding,
     EvidenceBenchmarkAlignmentReport,
@@ -1164,6 +1171,9 @@ __all__ = [
     "ApprovalRecord",
     "AriesObservedEdit",
     "AriesPopulationFinding",
+    "AriesReplyReserveCandidate",
+    "AriesReplyReservePrivateMapItem",
+    "AriesReplyReserveReport",
     "AriesTasteCandidate",
     "AriesTastePopulationReport",
     "AutomatedJudgeRole",
@@ -1835,6 +1845,7 @@ __all__ = [
     "load_adapter_preflight_manifest",
     "load_agent_laboratory_preparation",
     "load_api_identity_protocol",
+    "load_aries_reply_reserve_report",
     "load_aries_taste_population_report",
     "load_benchmark_development_execution_receipt",
     "load_benchmark_frozen_candidate",
@@ -1939,6 +1950,7 @@ __all__ = [
     "lock_taste_source_review_submissions",
     "materialize_aaar_quality_calibration_plan",
     "materialize_aaar_quality_projections",
+    "materialize_aries_reply_validation_reserve",
     "materialize_aries_taste_population",
     "materialize_dataset_acquisition",
     "materialize_dataset_package_acquisition",
