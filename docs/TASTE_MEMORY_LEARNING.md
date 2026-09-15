@@ -181,6 +181,26 @@ Compile each assignment, then fit one independent head per observed family:
   --output FAMILY_POLICY.json
 ```
 
+For the runtime-bound path, do not choose `--decision-family` manually. Prepare
+and execute the two provider configs as above, using
+`prepare-decision-family-review`; import each ledger result with
+`import-decision-family-review`; then resolve the panel:
+
+```bash
+.venv/bin/scitaste taste assign-decision-family-panel \
+  --assignment-id episode-001-family-v1 \
+  --episode admitted-episode-001.json \
+  --review family-review-zhipu.json \
+  --review family-review-deepseek.json \
+  --output episode-001-family-v1.json
+```
+
+The family packet contains no outcome, credit-assignment, experiment-condition,
+or paper-claim field. If the primaries disagree, this command stops until one
+third model invocation is imported with `--role adjudicator`. The older
+`assign-decision-family` form remains available for legacy records; its output
+truthfully records that it is not runtime-bound.
+
 Unobserved families abstain rather than borrowing another head. Native H4 uses
 only the exact `adaptive-allocation` head, while its reproduction report binds
 the complete parent policy, assignment population, and admitted episodes.
@@ -188,10 +208,10 @@ the complete parent policy, assignment population, and admitted episodes.
 ## Current evidence boundary
 
 The implementation proves that unreviewed self-reflections cannot enter the
-production retriever and that decision or outcome drift, author-review conflict,
+production retriever and that decision or outcome drift, producer-review conflict,
 missing adjudication, temporal inconsistency, and replay over an admitted record
-fail closed. No real project reflection
-has yet completed this new human gate, and no longitudinal effectiveness result
-exists. The ICLR claim still requires held-out H1/H2/H3 experiments and
-independent review; this mechanism makes future continual-learning evidence
-admissible rather than supplying that evidence itself.
+fail closed. No natural project reflection has yet completed the runtime-bound AI
+panel, and no longitudinal effectiveness result exists. The ICLR claim still
+requires held-out H1/H2/H3 experiments and disclosed independent AI review; this
+mechanism makes future continual-learning evidence admissible rather than
+supplying that evidence itself.

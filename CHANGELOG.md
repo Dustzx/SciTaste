@@ -15,6 +15,13 @@ semantic versioning.
   retaining `reviewer_kind=ai`, `not_human_review=true`, and
   `human_validity_claim_allowed=false`. No model call is hidden inside
   preparation, import, or admission.
+- Added the corresponding outcome-blind decision-family bridge. The same GLM
+  and DeepSeek panel now sees only pre-outcome decision fields and the fixed
+  seven-family ontology; verified ledger imports retain episode, packet,
+  provider, model, project-run, raw-response, and entry hashes. Unanimous
+  primaries compile an assignment automatically, while a split requires one
+  distinct adjudicator. Family panels may no longer reuse one model identity or
+  mix runtime-bound and legacy records.
 - Added a v6 Git-and-worktree-pinned behavioral preflight for the current
   six-condition native implementation at `83a2e77...`. Implementation evidence
   now covers every requirement locator plus the verifier itself and must match

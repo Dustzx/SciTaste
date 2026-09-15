@@ -4,6 +4,7 @@ profile_version: 1.0.0
 provider: zhipu-direct
 model: glm-5.3-flash
 allowed_node_names:
+  - scientific-decision-family-review
   - taste-episode-attribution-review
 live_execution_permitted: true
 unrestricted_code_generation: false

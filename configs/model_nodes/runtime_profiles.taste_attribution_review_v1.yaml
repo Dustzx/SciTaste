@@ -7,8 +7,8 @@ profile_set_version: 1.0.0
 live_enabled: true
 profiles:
   - path: profile_zhipu_glm53_taste_attribution_review_v1.yaml
-    sha256: 2d0d6b9c0f9f180254bd92fc5e1e9f52d7836360ca566578dc705a8f08d22c5b
-    profile_sha256: 318cb743fd4432f1975357a078014214a2a191521d2b104206440ede7d528d90
+    sha256: f188d307ee22a688a4f83e2fe75d3415b67e2587268009dfa5173d66dcde5e30
+    profile_sha256: 7e7fdec04164fef743e2dc5400744e86527ee308ff9b426478636429ecc785fc
   - path: profile_deepseek_v4flash_taste_attribution_review_v1.yaml
-    sha256: 07f350e54359f1fb55f2b1e8faf77b15b87f10b2948bb684d025eb4401316eea
-    profile_sha256: c7c8736f86eeddf94731eba54d9b9dbd0199f99d3bd5f5824fec155f79ec0337
+    sha256: 50ee1755cddc30290336bae20c01c0f5785898d60678a5e0090d698c20f27006
+    profile_sha256: 1ba62c759292eb4a482eb5fa4864d63858600a36ba7b03835acf1bd637e2253c

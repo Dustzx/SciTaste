@@ -408,6 +408,12 @@ from scitaste.taste.episodes import (
     TasteEpisodePartition,
     TasteEpisodeSourceRelationship,
 )
+from scitaste.taste.family_review import (
+    build_scientific_decision_family_review_material,
+    build_scientific_decision_family_runtime_config,
+    compile_scientific_decision_family_assignment,
+    scientific_decision_family_review_from_runtime,
+)
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
     load_calibration_suite,
@@ -1705,6 +1711,46 @@ def build_parser() -> argparse.ArgumentParser:
     ai_episode_admit.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(ai_episode_admit)
     ai_episode_admit.set_defaults(handler=_handle_taste_admit_ai_reviewed_episode)
+    family_review_prepare = taste_commands.add_parser(
+        "prepare-decision-family-review",
+        help="Build one outcome-blind AI decision-family review config",
+    )
+    family_review_prepare.add_argument("--episode", type=Path, required=True)
+    family_review_prepare.add_argument("--profile-set", type=Path, required=True)
+    family_review_prepare.add_argument("--profile-id", required=True)
+    family_review_prepare.add_argument("--backend-config", type=Path, required=True)
+    family_review_prepare.add_argument("--output", type=Path, required=True)
+    family_review_prepare.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(family_review_prepare)
+    family_review_prepare.set_defaults(handler=_handle_taste_prepare_decision_family_review)
+    family_review_import = taste_commands.add_parser(
+        "import-decision-family-review",
+        help="Import one actual model generation as an AI family review",
+    )
+    family_review_import.add_argument("--episode", type=Path, required=True)
+    family_review_import.add_argument("--project-id", required=True)
+    family_review_import.add_argument("--run-id", required=True)
+    family_review_import.add_argument("--invocation-id", required=True)
+    family_review_import.add_argument("--reviewer-id", required=True)
+    family_review_import.add_argument(
+        "--role",
+        choices=("primary", "adjudicator"),
+        default="primary",
+    )
+    family_review_import.add_argument("--output", type=Path, required=True)
+    family_review_import.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(family_review_import)
+    family_review_import.set_defaults(handler=_handle_taste_import_decision_family_review)
+    family_panel = taste_commands.add_parser(
+        "assign-decision-family-panel",
+        help="Resolve two AI family reviews and optional adjudication without a manual label",
+    )
+    family_panel.add_argument("--assignment-id", required=True)
+    family_panel.add_argument("--episode", type=Path, required=True)
+    family_panel.add_argument("--review", type=Path, action="append", required=True)
+    family_panel.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(family_panel)
+    family_panel.set_defaults(handler=_handle_taste_assign_decision_family_panel)
 
     library = commands.add_parser("library", help="Knowledge and taste libraries")
     library_commands = library.add_subparsers(dest="library_command", required=True)
@@ -6002,6 +6048,126 @@ def _handle_taste_admit_ai_reviewed_episode(args: argparse.Namespace) -> int:
                 "cross_model_ai_panel": admitted.cross_model_ai_panel,
                 "human_validity_claim_allowed": admitted.human_validity_claim_allowed,
                 "policy_update_authorized": admitted.policy_update_authorized,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_prepare_decision_family_review(args: argparse.Namespace) -> int:
+    episode = AdmittedTasteEpisode.model_validate_json(
+        _bounded_regular_input(args.episode, label="admitted Taste episode"),
+        strict=True,
+    )
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, episode.candidate.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"decision-family review requires a verified current Idea: {codes}")
+    profiles = load_model_node_profile_set(args.profile_set)
+    try:
+        profile = profiles.profiles[args.profile_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown model-node profile {args.profile_id!r}") from exc
+    material = build_scientific_decision_family_review_material(
+        runtime,
+        episode,
+        current_idea_revision=idea_report.current_binding,
+    )
+    config = build_scientific_decision_family_runtime_config(
+        material,
+        profile=profile,
+        backend_config=load_structured_openai_compatible_config(args.backend_config),
+    )
+    output = save_runtime_config(config, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "decision-family-review-runtime-prepared",
+                "project_id": episode.candidate.project_id,
+                "expected_project_revision": material.project_revision,
+                "admission_id": episode.admission_id,
+                "admission_sha256": episode.admission_sha256,
+                "packet_sha256": material.node_input.packet_sha256,
+                "outcomes_exposed": False,
+                "profile_id": profile.profile_id,
+                "runtime_config": str(output),
+                "reviewer_kind": "ai",
+                "not_human_review": True,
+                "model_called": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_import_decision_family_review(args: argparse.Namespace) -> int:
+    episode = AdmittedTasteEpisode.model_validate_json(
+        _bounded_regular_input(args.episode, label="admitted Taste episode"),
+        strict=True,
+    )
+    review = scientific_decision_family_review_from_runtime(
+        ProjectRuntime(args.outputs_root),
+        episode,
+        project_id=args.project_id,
+        run_id=args.run_id,
+        invocation_id=args.invocation_id,
+        reviewer_id=args.reviewer_id,
+        role=args.role,
+    )
+    output = save_ai_reviewed_episode_json(review, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "decision-family-ai-review-imported",
+                "output": str(output),
+                "admission_id": episode.admission_id,
+                "decision_family": review.decision_family.value,
+                "model_identifier": review.model_identifier,
+                "invocation_id": review.invocation_id,
+                "reviewer_kind": review.reviewer_kind,
+                "not_human_review": review.not_human_review,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_assign_decision_family_panel(args: argparse.Namespace) -> int:
+    episode = AdmittedTasteEpisode.model_validate_json(
+        _bounded_regular_input(args.episode, label="admitted Taste episode"),
+        strict=True,
+    )
+    reviews = tuple(
+        ScientificDecisionFamilyReview.model_validate_json(
+            _bounded_regular_input(path, label="scientific decision-family AI review"),
+            strict=True,
+        )
+        for path in args.review
+    )
+    assignment = compile_scientific_decision_family_assignment(
+        episode,
+        reviews,
+        assignment_id=args.assignment_id,
+    )
+    output = save_scientific_decision_family_assignment(assignment, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "scientific-decision-family-panel-assigned",
+                "output": str(output),
+                "assignment_id": assignment.assignment_id,
+                "assignment_sha256": assignment.assignment_sha256,
+                "decision_family": assignment.decision_family.value,
+                "review_count": len(assignment.reviews),
+                "reviewer_kind": assignment.reviewer_kind,
+                "not_human_review": assignment.not_human_review,
             },
             indent=2,
             ensure_ascii=False,

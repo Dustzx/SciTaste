@@ -100,8 +100,35 @@ class ScientificDecisionFamilyReview(BaseModel):
     decision_family: ScientificTasteDecisionFamily
     rationale: str = Field(min_length=1, max_length=10_000)
     raw_response_sha256: str = Field(pattern=_SHA256)
+    runtime_bound: bool = False
+    admission_id: str | None = Field(default=None, pattern=_ID)
+    admission_sha256: str | None = Field(default=None, pattern=_SHA256)
+    packet_sha256: str | None = Field(default=None, pattern=_SHA256)
+    provider_id: str | None = Field(default=None, max_length=300)
+    model_id: str | None = Field(default=None, max_length=500)
+    project_run_id: str | None = Field(default=None, pattern=_ID)
+    ledger_entry_sha256: str | None = Field(default=None, pattern=_SHA256)
     reviewer_kind: Literal["ai"] = "ai"
     not_human_review: Literal[True] = True
+
+    @model_validator(mode="after")
+    def runtime_binding_is_atomic(self) -> ScientificDecisionFamilyReview:
+        bindings = (
+            self.admission_id,
+            self.admission_sha256,
+            self.packet_sha256,
+            self.provider_id,
+            self.model_id,
+            self.project_run_id,
+            self.ledger_entry_sha256,
+        )
+        if self.runtime_bound != all(item is not None for item in bindings):
+            raise ValueError("decision-family runtime evidence binding must be complete")
+        if not self.runtime_bound and any(item is not None for item in bindings):
+            raise ValueError("legacy decision-family review cannot carry partial runtime evidence")
+        if self.runtime_bound and self.model_identifier != f"{self.provider_id}:{self.model_id}":
+            raise ValueError("decision-family model identifier differs from runtime evidence")
+        return self
 
 
 class ScientificDecisionFamilyAssignment(BaseModel):
@@ -109,7 +136,7 @@ class ScientificDecisionFamilyAssignment(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     assignment_id: str = Field(pattern=_ID)
     admission_id: str = Field(pattern=_ID)
     admission_sha256: str = Field(pattern=_SHA256)
@@ -123,6 +150,7 @@ class ScientificDecisionFamilyAssignment(BaseModel):
     assignment_method: Literal["ai-review"] = "ai-review"
     reviewer_kind: Literal["ai"] = "ai"
     not_human_review: Literal[True] = True
+    runtime_review_evidence_bound: bool = False
     reviews: tuple[ScientificDecisionFamilyReview, ...] = Field(
         min_length=2,
         max_length=3,
@@ -149,21 +177,57 @@ class ScientificDecisionFamilyAssignment(BaseModel):
             raise ValueError("decision-family review invocations must be distinct")
         if len({item.raw_response_sha256 for item in self.reviews}) != len(self.reviews):
             raise ValueError("decision-family raw review responses must be distinct")
+        if len({item.model_identifier for item in self.reviews}) != len(self.reviews):
+            raise ValueError("decision-family AI reviewers must use distinct models")
+        if self.runtime_review_evidence_bound != all(item.runtime_bound for item in self.reviews):
+            raise ValueError("decision-family runtime-review binding summary differs")
+        if (
+            any(item.runtime_bound for item in self.reviews)
+            and not self.runtime_review_evidence_bound
+        ):
+            raise ValueError(
+                "decision-family review panel cannot mix runtime-bound and legacy records"
+            )
+        if self.runtime_review_evidence_bound:
+            if any(
+                item.admission_id != self.admission_id
+                or item.admission_sha256 != self.admission_sha256
+                for item in self.reviews
+            ):
+                raise ValueError("decision-family runtime review binds another episode")
+            if len({item.packet_sha256 for item in primary}) != 1:
+                raise ValueError("decision-family primaries did not receive the same packet")
         primary_families = {item.decision_family for item in primary}
         if len(primary_families) == 1:
             if adjudicators or primary[0].decision_family is not self.decision_family:
                 raise ValueError("unanimous family reviews require no adjudicator")
         elif len(adjudicators) != 1 or adjudicators[0].decision_family is not self.decision_family:
             raise ValueError("split family reviews require one decisive adjudicator")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"assignment_sha256"}))
-        if self.assignment_sha256 != expected:
+        payload = self.model_dump(mode="json", exclude={"assignment_sha256"})
+        accepted_hashes = {content_sha256(payload)}
+        if self.schema_version == "1.0":
+            payload.pop("runtime_review_evidence_bound", None)
+            for review in payload["reviews"]:
+                for name in (
+                    "runtime_bound",
+                    "admission_id",
+                    "admission_sha256",
+                    "packet_sha256",
+                    "provider_id",
+                    "model_id",
+                    "project_run_id",
+                    "ledger_entry_sha256",
+                ):
+                    review.pop(name, None)
+            accepted_hashes.add(content_sha256(payload))
+        if self.assignment_sha256 not in accepted_hashes:
             raise ValueError("decision-family assignment hash differs")
         return self
 
     @classmethod
     def create(cls, **values: object) -> ScientificDecisionFamilyAssignment:
         payload = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "ontology_sha256": SCIENTIFIC_TASTE_DECISION_ONTOLOGY_SHA256,
             "assignment_method": "ai-review",
             "reviewer_kind": "ai",
@@ -178,6 +242,12 @@ class ScientificDecisionFamilyAssignment(BaseModel):
                     {TasteOutcomeFamily(item) for item in outcomes},  # type: ignore[union-attr]
                     key=lambda item: item.value,
                 )
+            )
+        reviews = payload.get("reviews")
+        if reviews is not None:
+            payload["runtime_review_evidence_bound"] = all(
+                item.runtime_bound
+                for item in reviews  # type: ignore[union-attr]
             )
         unsigned = cls.model_construct(assignment_sha256="0" * 64, **payload)
         return cls(

@@ -63,6 +63,12 @@ from scitaste.taste.ai_attribution import (
     build_ai_taste_attribution_runtime_config,
     materialize_ai_taste_attribution_review,
 )
+from scitaste.taste.family_review import (
+    build_scientific_decision_family_review_material,
+    build_scientific_decision_family_runtime_config,
+    compile_scientific_decision_family_assignment,
+    scientific_decision_family_review_from_runtime,
+)
 from scitaste.taste.semantic import taste_node_types
 
 
@@ -696,6 +702,83 @@ def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path)
     assert admitted.cross_model_ai_panel is True
     assert admitted.human_validity_claim_allowed is False
     assert len(list((tmp_path / "reviews").glob("*/REVIEW.json"))) == 2
+
+    family_material = build_scientific_decision_family_review_material(
+        project,
+        admitted,
+        current_idea_revision=_idea_binding(),
+    )
+    family_reviews = []
+    for label, profile_id in (
+        ("a", "zhipu-glm53-taste-attribution-review"),
+        ("b", "deepseek-v4flash-taste-attribution-review"),
+    ):
+        profile = profiles[profile_id]
+        config = build_scientific_decision_family_runtime_config(
+            family_material,
+            profile=profile,
+            backend_config=StructuredOpenAICompatibleConfig(
+                provider=profile.provider,
+                base_url="https://example.test",
+                model=profile.model,
+                api_key_env="TEST_API_KEY",
+                max_output_tokens=8192,
+            ),
+        )
+        invocation_id = f"family-review-{label}"
+        scripted = ScriptedStructuredBackend(
+            name=profile.provider,
+            model=profile.model,
+            replies={
+                invocation_id: ScriptedStructuredReply(
+                    output_payload={
+                        "packet_sha256": family_material.node_input.packet_sha256,
+                        "decision_family": "adaptive-allocation",
+                        "rationale": f"Model {label} identifies resource allocation.",
+                    },
+                    usage=Usage(input_tokens=80, output_tokens=20, cost_usd=0.001),
+                )
+            },
+        )
+        receipt = ModelNodeRuntime(project, node_types=taste_node_types()).execute(
+            project_id="episode-project",
+            run_id="attribution-panel-run",
+            invocation_id=invocation_id,
+            request_id=invocation_id,
+            expected_project_revision=snapshot.revision,
+            state_revision=snapshot.revision,
+            node_name=config.node_name,
+            node_input=config.node_input,
+            context=config.state_projection.to_node_context(),
+            trigger=config.trigger,
+            profile=profile,
+            policy=config.policy,
+            backend_mode=RuntimeBackendMode.LIVE,
+            backend=LiveFixtureBackend(scripted),
+            allow_live=True,
+            seed=0,
+        )
+        assert receipt.outcome is RuntimeOutcome.ACCEPTED, receipt.blockers
+        family_reviews.append(
+            scientific_decision_family_review_from_runtime(
+                project,
+                admitted,
+                project_id="episode-project",
+                run_id="attribution-panel-run",
+                invocation_id=invocation_id,
+                reviewer_id=f"family-reviewer-{label}",
+                role="primary",
+            )
+        )
+    assignment = compile_scientific_decision_family_assignment(
+        admitted,
+        tuple(family_reviews),
+        assignment_id="runtime-panel-family",
+    )
+
+    assert assignment.decision_family is ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION
+    assert assignment.not_human_review is True
+    assert assignment.runtime_review_evidence_bound is True
 
 
 def test_split_preference_requires_independent_adjudication(tmp_path: Path) -> None:

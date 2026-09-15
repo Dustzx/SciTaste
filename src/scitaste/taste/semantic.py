@@ -259,6 +259,7 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
     """Return the Scientific Taste extension understood by the durable runtime."""
 
     from scitaste.taste.ai_attribution import ai_attribution_node_types
+    from scitaste.taste.family_review import family_review_node_types
 
     registrations = {
         REFERENCE_MINING_NODE: ModelNodeRegistration(
@@ -288,6 +289,7 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
         ),
     }
     registrations.update(ai_attribution_node_types())
+    registrations.update(family_review_node_types())
     return registrations
 
 
