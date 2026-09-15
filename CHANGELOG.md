@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the missing production bridge from project-owned Taste episodes to a
+  disclosed cross-model AI attribution panel. One shared, condition- and
+  claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and
+  DeepSeek-V4-Flash runtime configs; accepted live/local ledger entries
+  materialize the ten required prompt, input, raw-response, normalization,
+  receipt, firewall, rubric, and sampling artifacts. A new CLI then admits two
+  agreeing primary reviews under the central evidence-review authority while
+  retaining `reviewer_kind=ai`, `not_human_review=true`, and
+  `human_validity_claim_allowed=false`. No model call is hidden inside
+  preparation, import, or admission.
 - Added a v6 Git-and-worktree-pinned behavioral preflight for the current
   six-condition native implementation at `83a2e77...`. Implementation evidence
   now covers every requirement locator plus the verifier itself and must match

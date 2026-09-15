@@ -101,6 +101,58 @@ Those records bind model, invocation, and raw-response identities and always kee
 the project owner but never set `human_verified` or support a human-validity
 claim.
 
+The AI path is executable rather than a hand-written JSON convention. Prepare the
+same candidate once for each of the two provider profiles, execute both configs
+through the durable project model-node ledger, import their evidence bundles, and
+then admit the panel:
+
+```bash
+.venv/bin/scitaste taste prepare-ai-attribution-review \
+  --candidate episodes/candidate-001.json \
+  --evidence-root outputs/projects/<project-id> \
+  --profile-set configs/model_nodes/runtime_profiles.taste_attribution_review_v1.yaml \
+  --profile-id zhipu-glm53-taste-attribution-review \
+  --backend-config /ignored/live/zhipu-review.json \
+  --seed 7 --output /ignored/runtime/review-a.json
+
+.venv/bin/scitaste model-node runtime execute \
+  --project-id <project-id> --run-id <registered-panel-run> \
+  --invocation-id episode-001-review-a --expected-revision <printed-revision> \
+  --config /ignored/runtime/review-a.json \
+  --profile-set configs/model_nodes/runtime_profiles.taste_attribution_review_v1.yaml \
+  --profile-id zhipu-glm53-taste-attribution-review --allow-live
+
+.venv/bin/scitaste taste import-ai-attribution-review \
+  --candidate episodes/candidate-001.json \
+  --contract configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml \
+  --project-id <project-id> --run-id <registered-panel-run> \
+  --invocation-id episode-001-review-a --review-id episode-001-review-a \
+  --reviewer-id zhipu-primary --role primary \
+  --evidence-root outputs/projects/<project-id> \
+  --output-directory taste/episodes/episode-001/reviews/zhipu
+```
+
+Repeat preparation, execution, and import with
+`deepseek-v4flash-taste-attribution-review`, then run:
+
+```bash
+.venv/bin/scitaste taste admit-ai-reviewed-episode \
+  --candidate episodes/candidate-001.json \
+  --review taste/episodes/episode-001/reviews/zhipu/REVIEW.json \
+  --review taste/episodes/episode-001/reviews/deepseek/REVIEW.json \
+  --contract configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml \
+  --review-package configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml \
+  --workspace-root . --evidence-root outputs/projects/<project-id> \
+  --admission-id episode-001-admitted \
+  --output outputs/projects/<project-id>/taste/episodes/episode-001/ADMITTED.json
+```
+
+The two preparation commands create the same semantic prompt and sampling
+packet; provider and budget envelopes remain separately bound in their runtime
+ledger entries. Raw responses must differ, both calls must be real live/local
+generation rather than replay or scripted fixtures, and a disagreement still
+requires a third independent adjudicator.
+
 ## Scientific decision-family conditioning
 
 Admitted episodes are not pooled into one generic quality score. A fixed

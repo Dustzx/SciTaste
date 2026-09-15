@@ -258,7 +258,9 @@ class ReferenceMiningNode(ModelNode[ReferenceMiningNeed, ReferenceMiningProposal
 def taste_node_types() -> dict[str, ModelNodeRegistration]:
     """Return the Scientific Taste extension understood by the durable runtime."""
 
-    return {
+    from scitaste.taste.ai_attribution import ai_attribution_node_types
+
+    registrations = {
         REFERENCE_MINING_NODE: ModelNodeRegistration(
             ReferenceMiningNode,
             ReferenceMiningNeed,
@@ -285,6 +287,8 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
             TasteDeliberationProposal,
         ),
     }
+    registrations.update(ai_attribution_node_types())
+    return registrations
 
 
 def is_verified_model_generation_entry(entry: RuntimeLedgerEntry) -> bool:

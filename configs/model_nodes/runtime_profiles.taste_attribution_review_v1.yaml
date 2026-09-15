@@ -1,0 +1,14 @@
+# Cross-provider panel for disclosed, nonhuman Taste outcome-attribution review.
+# Execution additionally requires a live backend copy, environment credential,
+# an existing project run, and the caller's explicit --allow-live switch.
+schema_version: "1.0"
+profile_set_id: taste-attribution-review-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_taste_attribution_review_v1.yaml
+    sha256: 2d0d6b9c0f9f180254bd92fc5e1e9f52d7836360ca566578dc705a8f08d22c5b
+    profile_sha256: 318cb743fd4432f1975357a078014214a2a191521d2b104206440ede7d528d90
+  - path: profile_deepseek_v4flash_taste_attribution_review_v1.yaml
+    sha256: 07f350e54359f1fb55f2b1e8faf77b15b87f10b2948bb684d025eb4401316eea
+    profile_sha256: c7c8736f86eeddf94731eba54d9b9dbd0199f99d3bd5f5824fec155f79ec0337

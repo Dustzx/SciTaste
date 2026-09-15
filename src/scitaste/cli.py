@@ -377,6 +377,14 @@ from scitaste.review.model_report import (
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.research_state import ResearchState
+from scitaste.taste.ai_attribution import (
+    ai_review_authority_sha256,
+    build_ai_taste_attribution_review_material,
+    build_ai_taste_attribution_runtime_config,
+    materialize_ai_taste_attribution_review,
+    save_ai_reviewed_episode_json,
+    save_runtime_config,
+)
 from scitaste.taste.conditions import NativeTasteRetrievalMode, load_native_condition_matrix
 from scitaste.taste.decision_families import (
     ScientificDecisionFamilyAssignment,
@@ -389,9 +397,17 @@ from scitaste.taste.decision_families import (
 )
 from scitaste.taste.episode_learning import (
     AdmittedTasteEpisode,
+    AITasteEpisodeAttributionReview,
     LifecycleTastePolicyConfig,
+    TasteAttributionReviewRole,
+    admit_taste_episode,
+    load_ai_taste_review_panel_contract,
 )
-from scitaste.taste.episodes import TasteEpisodePartition, TasteEpisodeSourceRelationship
+from scitaste.taste.episodes import (
+    TasteEpisodeCandidate,
+    TasteEpisodePartition,
+    TasteEpisodeSourceRelationship,
+)
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
     load_calibration_suite,
@@ -1637,6 +1653,58 @@ def build_parser() -> argparse.ArgumentParser:
     family_assignment.add_argument("--output", type=Path, required=True)
     _add_log_level_option(family_assignment)
     family_assignment.set_defaults(handler=_handle_taste_decision_family_assignment)
+    ai_review_prepare = taste_commands.add_parser(
+        "prepare-ai-attribution-review",
+        help="Build one provider-bound config from a shared outcome-attribution packet",
+    )
+    ai_review_prepare.add_argument("--candidate", type=Path, required=True)
+    ai_review_prepare.add_argument("--evidence-root", type=Path, required=True)
+    ai_review_prepare.add_argument("--profile-set", type=Path, required=True)
+    ai_review_prepare.add_argument("--profile-id", required=True)
+    ai_review_prepare.add_argument("--backend-config", type=Path, required=True)
+    ai_review_prepare.add_argument("--seed", type=int, default=0)
+    ai_review_prepare.add_argument("--output", type=Path, required=True)
+    ai_review_prepare.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(ai_review_prepare)
+    ai_review_prepare.set_defaults(handler=_handle_taste_prepare_ai_attribution_review)
+    ai_review_import = taste_commands.add_parser(
+        "import-ai-attribution-review",
+        help="Materialize ten bound artifacts from one accepted model-node invocation",
+    )
+    ai_review_import.add_argument("--candidate", type=Path, required=True)
+    ai_review_import.add_argument("--contract", type=Path, required=True)
+    ai_review_import.add_argument("--project-id", required=True)
+    ai_review_import.add_argument("--run-id", required=True)
+    ai_review_import.add_argument("--invocation-id", required=True)
+    ai_review_import.add_argument("--review-id", required=True)
+    ai_review_import.add_argument("--reviewer-id", required=True)
+    ai_review_import.add_argument(
+        "--role",
+        choices=[item.value for item in TasteAttributionReviewRole],
+        default=TasteAttributionReviewRole.PRIMARY.value,
+    )
+    ai_review_import.add_argument("--evidence-root", type=Path, required=True)
+    ai_review_import.add_argument("--output-directory", required=True)
+    ai_review_import.add_argument("--producer-model-id", default=None)
+    ai_review_import.add_argument("--producer-run-id", default=None)
+    ai_review_import.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(ai_review_import)
+    ai_review_import.set_defaults(handler=_handle_taste_import_ai_attribution_review)
+    ai_episode_admit = taste_commands.add_parser(
+        "admit-ai-reviewed-episode",
+        help="Deterministically admit a complete cross-model AI review panel",
+    )
+    ai_episode_admit.add_argument("--candidate", type=Path, required=True)
+    ai_episode_admit.add_argument("--review", type=Path, action="append", required=True)
+    ai_episode_admit.add_argument("--contract", type=Path, required=True)
+    ai_episode_admit.add_argument("--review-package", type=Path, required=True)
+    ai_episode_admit.add_argument("--workspace-root", type=Path, default=Path("."))
+    ai_episode_admit.add_argument("--evidence-root", type=Path, required=True)
+    ai_episode_admit.add_argument("--admission-id", required=True)
+    ai_episode_admit.add_argument("--output", type=Path, required=True)
+    ai_episode_admit.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(ai_episode_admit)
+    ai_episode_admit.set_defaults(handler=_handle_taste_admit_ai_reviewed_episode)
 
     library = commands.add_parser("library", help="Knowledge and taste libraries")
     library_commands = library.add_subparsers(dest="library_command", required=True)
@@ -5783,6 +5851,157 @@ def _handle_taste_trajectory_reconstruct(args: argparse.Namespace) -> int:
                 "decision_count": inventory.decision_count,
                 "foundation_eligible_count": inventory.foundation_eligible_count,
                 "policy_training_authorized": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_prepare_ai_attribution_review(args: argparse.Namespace) -> int:
+    candidate = TasteEpisodeCandidate.model_validate_json(
+        _bounded_regular_input(args.candidate, label="Taste episode candidate"),
+        strict=True,
+    )
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, candidate.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"AI attribution review requires a verified current Idea: {codes}")
+    profiles = load_model_node_profile_set(args.profile_set)
+    try:
+        profile = profiles.profiles[args.profile_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown model-node profile {args.profile_id!r}") from exc
+    material = build_ai_taste_attribution_review_material(
+        runtime,
+        candidate,
+        evidence_root=args.evidence_root,
+        current_idea_revision=idea_report.current_binding,
+        seed=args.seed,
+    )
+    config = build_ai_taste_attribution_runtime_config(
+        material,
+        profile=profile,
+        backend_config=load_structured_openai_compatible_config(args.backend_config),
+    )
+    output = save_runtime_config(config, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "ai-attribution-review-runtime-prepared",
+                "project_id": candidate.project_id,
+                "expected_project_revision": material.project_revision,
+                "candidate_id": candidate.candidate_id,
+                "candidate_sha256": candidate.candidate_sha256,
+                "review_packet_sha256": material.node_input.review_packet_sha256,
+                "profile_id": profile.profile_id,
+                "profile_fingerprint": profile.fingerprint,
+                "runtime_config": str(output),
+                "runtime_config_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+                "reviewer_kind": "ai",
+                "not_human_review": True,
+                "model_called": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_import_ai_attribution_review(args: argparse.Namespace) -> int:
+    candidate = TasteEpisodeCandidate.model_validate_json(
+        _bounded_regular_input(args.candidate, label="Taste episode candidate"),
+        strict=True,
+    )
+    contract = load_ai_taste_review_panel_contract(args.contract)
+    review, output = materialize_ai_taste_attribution_review(
+        ProjectRuntime(args.outputs_root),
+        candidate,
+        project_id=args.project_id,
+        run_id=args.run_id,
+        invocation_id=args.invocation_id,
+        review_id=args.review_id,
+        reviewer_id=args.reviewer_id,
+        role=TasteAttributionReviewRole(args.role),
+        panel_contract=contract,
+        evidence_root=args.evidence_root,
+        output_directory=args.output_directory,
+        producer_model_id=args.producer_model_id,
+        producer_run_id=args.producer_run_id,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "ai-attribution-review-materialized",
+                "review": str(output),
+                "review_id": review.review_id,
+                "review_sha256": review.review_sha256,
+                "candidate_sha256": review.candidate_sha256,
+                "provider_id": review.provider_id,
+                "model_id": review.model_id,
+                "run_id": review.run_id,
+                "artifact_count": len(review.artifacts),
+                "reviewer_kind": review.reviewer_kind,
+                "not_human_review": review.not_human_review,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_admit_ai_reviewed_episode(args: argparse.Namespace) -> int:
+    candidate = TasteEpisodeCandidate.model_validate_json(
+        _bounded_regular_input(args.candidate, label="Taste episode candidate"),
+        strict=True,
+    )
+    reviews = tuple(
+        AITasteEpisodeAttributionReview.model_validate_json(
+            _bounded_regular_input(path, label="AI Taste attribution review"),
+            strict=True,
+        )
+        for path in args.review
+    )
+    contract = load_ai_taste_review_panel_contract(args.contract)
+    review_package = load_evidence_review_package(args.review_package)
+    if review_package.package.project_id != candidate.project_id:
+        raise ValueError("AI review authority package belongs to another project")
+    authority_sha256 = ai_review_authority_sha256(
+        review_package,
+        panel_contract=contract,
+        workspace_root=args.workspace_root,
+    )
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, candidate.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"AI episode admission requires a verified current Idea: {codes}")
+    admitted = admit_taste_episode(
+        candidate,
+        reviews,
+        admission_id=args.admission_id,
+        evidence_root=args.evidence_root,
+        current_idea_revision=idea_report.current_binding,
+        ai_review_contract=contract,
+        expected_ai_review_contract_sha256=authority_sha256,
+    )
+    output = save_ai_reviewed_episode_json(admitted, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "ai-reviewed-taste-episode-admitted",
+                "output": str(output),
+                "admission_id": admitted.admission_id,
+                "admission_sha256": admitted.admission_sha256,
+                "review_evidence_kind": admitted.review_evidence_kind,
+                "ai_review_count": admitted.ai_review_count,
+                "cross_model_ai_panel": admitted.cross_model_ai_panel,
+                "human_validity_claim_allowed": admitted.human_validity_claim_allowed,
+                "policy_update_authorized": admitted.policy_update_authorized,
             },
             indent=2,
             ensure_ascii=False,

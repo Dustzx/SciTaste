@@ -3,14 +3,25 @@ from __future__ import annotations
 import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from scitaste.backends.base import Usage
 from scitaste.evaluation.h4_policy_reproduction import (
     H4PolicyReproductionSpec,
     reproduce_h4_lifecycle_policy,
 )
-from scitaste.project import ProjectIdeaRevisionBinding
+from scitaste.model_nodes.backends import ScriptedStructuredBackend, ScriptedStructuredReply
+from scitaste.model_nodes.openai_compatible import StructuredOpenAICompatibleConfig
+from scitaste.model_nodes.profiles import load_model_node_profile_set
+from scitaste.model_nodes.runtime import ModelNodeRuntime, RuntimeBackendMode, RuntimeOutcome
+from scitaste.project import (
+    ProjectIdeaRevisionBinding,
+    ProjectManifest,
+    ProjectRun,
+    ProjectRuntime,
+)
 from scitaste.project.models import content_sha256
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
@@ -47,6 +58,12 @@ from scitaste.taste import (
     inspect_taste_episode_admission,
     load_ai_taste_review_panel_contract,
 )
+from scitaste.taste.ai_attribution import (
+    build_ai_taste_attribution_review_material,
+    build_ai_taste_attribution_runtime_config,
+    materialize_ai_taste_attribution_review,
+)
+from scitaste.taste.semantic import taste_node_types
 
 
 def _family_assignment(episode, ordinal: int) -> ScientificDecisionFamilyAssignment:
@@ -537,6 +554,148 @@ def test_two_ai_reviews_admit_training_but_forbid_human_validity_claim(
     )
     assert diagnostic.intervention_policy_artifact_eligible is True
     assert diagnostic.h3_policy_artifact_eligible is False
+
+
+def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path) -> None:
+    candidate = _candidate(tmp_path, 1)
+    outputs = tmp_path / "outputs"
+    project = ProjectRuntime(outputs)
+    project.create(
+        ProjectManifest(
+            project_id="episode-project",
+            title="Episode project",
+            research_direction="Exercise real model-node attribution import.",
+            status="active",
+        )
+    )
+    snapshot = project.begin_run(
+        "episode-project",
+        ProjectRun(
+            run_id="attribution-panel-run",
+            provider="scitaste-native",
+            model="cross-model-panel",
+            condition="ai-attribution-review",
+            seed=0,
+            status="running",
+            evidence_scope="taste-attribution",
+        ),
+        expected_revision=0,
+    )
+    material = build_ai_taste_attribution_review_material(
+        project,
+        candidate,
+        evidence_root=tmp_path,
+        current_idea_revision=_idea_binding(),
+        seed=7,
+    )
+    profiles = load_model_node_profile_set(
+        "configs/model_nodes/runtime_profiles.taste_attribution_review_v1.yaml"
+    ).profiles
+    contract = load_ai_taste_review_panel_contract(
+        "configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml"
+    )
+    reviews = []
+    for label, profile_id in (
+        ("a", "zhipu-glm53-taste-attribution-review"),
+        ("b", "deepseek-v4flash-taste-attribution-review"),
+    ):
+        profile = profiles[profile_id]
+        config = build_ai_taste_attribution_runtime_config(
+            material,
+            profile=profile,
+            backend_config=StructuredOpenAICompatibleConfig(
+                provider=profile.provider,
+                base_url="https://example.test",
+                model=profile.model,
+                api_key_env="TEST_API_KEY",
+                max_output_tokens=8192,
+            ),
+        )
+        invocation_id = f"attribution-review-{label}"
+        payload = {
+            "review_packet_sha256": material.node_input.review_packet_sha256,
+            "verdict": "accept",
+            "preferred_action_id": candidate.selected_action_id,
+            "supported_credit_ids": [candidate.credit_assignments[0].credit_id],
+            "decision_trace_supported": True,
+            "outcome_trace_supported": True,
+            "alternatives_supported": True,
+            "credit_assignment_supported": True,
+            "transfer_scope_supported": True,
+            "reversal_probe_supported": True,
+            "attribution_confidence": 0.9,
+            "rationale": f"Independent model {label} supports the bounded attribution.",
+        }
+        scripted = ScriptedStructuredBackend(
+            name=profile.provider,
+            model=profile.model,
+            replies={
+                invocation_id: ScriptedStructuredReply(
+                    output_payload=payload,
+                    usage=Usage(input_tokens=100, output_tokens=40, cost_usd=0.001),
+                )
+            },
+        )
+
+        class LiveFixtureBackend:
+            config = SimpleNamespace(live_enabled=True, max_output_tokens=8192)
+
+            def __init__(self, delegate):
+                self.delegate = delegate
+                self.name = delegate.name
+                self.model = delegate.model
+
+            def complete(self, request):
+                return self.delegate.complete(request)
+
+        receipt = ModelNodeRuntime(project, node_types=taste_node_types()).execute(
+            project_id="episode-project",
+            run_id="attribution-panel-run",
+            invocation_id=invocation_id,
+            request_id=invocation_id,
+            expected_project_revision=snapshot.revision,
+            state_revision=snapshot.revision,
+            node_name=config.node_name,
+            node_input=config.node_input,
+            context=config.state_projection.to_node_context(),
+            trigger=config.trigger,
+            profile=profile,
+            policy=config.policy,
+            backend_mode=RuntimeBackendMode.LIVE,
+            backend=LiveFixtureBackend(scripted),
+            allow_live=True,
+            seed=7,
+        )
+        assert receipt.outcome is RuntimeOutcome.ACCEPTED, receipt.blockers
+        review, _ = materialize_ai_taste_attribution_review(
+            project,
+            candidate,
+            project_id="episode-project",
+            run_id="attribution-panel-run",
+            invocation_id=invocation_id,
+            review_id=f"review-{label}",
+            reviewer_id=f"reviewer-{label}",
+            role=TasteAttributionReviewRole.PRIMARY,
+            panel_contract=contract,
+            evidence_root=tmp_path,
+            output_directory=f"reviews/{label}",
+        )
+        reviews.append(review)
+
+    admitted = admit_taste_episode(
+        candidate,
+        tuple(reviews),
+        admission_id="runtime-panel-admission",
+        evidence_root=tmp_path,
+        current_idea_revision=_idea_binding(),
+        ai_review_contract=contract,
+        expected_ai_review_contract_sha256=contract.contract_sha256,
+    )
+
+    assert admitted.review_evidence_kind == "ai"
+    assert admitted.cross_model_ai_panel is True
+    assert admitted.human_validity_claim_allowed is False
+    assert len(list((tmp_path / "reviews").glob("*/REVIEW.json"))) == 2
 
 
 def test_split_preference_requires_independent_adjudication(tmp_path: Path) -> None:
