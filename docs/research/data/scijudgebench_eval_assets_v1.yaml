@@ -1,0 +1,47 @@
+schema_version: "1.0"
+asset_id: scijudgebench-evaluation-splits-20260916-v1
+dataset_id: OpenMOSS-Team/SciJudgeBench
+upstream_revision: 6f5457a17ffc8bdd89f00c8f9c59dd136ed1f974
+source: https://huggingface.co/datasets/OpenMOSS-Team/SciJudgeBench
+license_identifier: Apache-2.0
+relationship_to_scitaste: direct-neighbor-narrow-task-baseline
+local_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/scijudgebench-eval-v1/source
+files:
+  - split: test
+    locator: test.jsonl
+    bytes: 5665111
+    rows: 1000
+    sha256: b0c831f2d43dbc993f36f1134f2115e8032019e1343d2557c2846bb85b01b767
+    role: in-domain-impact-preference-reproduction
+  - split: test_ood_year
+    locator: test_ood_year.jsonl
+    bytes: 5967288
+    rows: 904
+    sha256: ce0c9503c4563b7d6f7f325bb67a3dc1265c9682ac4f5fd873bd3e8c3902a5e4
+    role: temporal-transfer-impact-preference
+  - split: test_ood_iclr
+    locator: test_ood_iclr.jsonl
+    bytes: 3668304
+    rows: 611
+    sha256: ef711e63cf0f8b3dc1fd714bb862eaee250b764274c26716f469596b89dd237c
+    role: peer-review-metric-transfer
+readme:
+  locator: README.md
+  bytes: 4157
+  sha256: e4aac878107174194aa7244c9731e111631d6f270ab63b9766b5e7ea6ec3b3de
+downloaded_bytes: 15304860
+download_authority: project-owner-download-under-10gb-v1
+training_split:
+  downloaded: false
+  upstream_bytes: 3877780011
+  exclusion_reason: Evaluation and inference reproduction do not require the 720341 training pairs.
+scientific_boundaries:
+  - Report each split separately; never pool citation, temporal, and ICLR-review labels into SciTasteBench lifecycle scores.
+  - Citation impact preference is not equivalent to action quality, experiment progress, or paper review.
+  - This asset cannot update the SciTaste policy split used for its own evaluation.
+external_actions:
+  downloaded_files: 4
+  model_loads: 0
+  api_calls: 0
+  gpu_jobs: 0
+  benchmark_runs: 0

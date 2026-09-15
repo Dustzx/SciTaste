@@ -28,7 +28,7 @@ The executable candidate authority is now
 [`scitaste_iclr27_related_work_candidates_v1.yaml`](../../configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml).
 It starts with the two direct 2026 Scientific Taste neighbors before using the
 broader AutoResearch literature to assign research, coding, figure, review, and
-task-model roles. Its ten candidates span eight model families, including
+task-model roles. Its twelve candidates span eleven model families, including
 models for which access is not configured. This is intentional: access state is
 recorded but cannot select or exclude a scientifically required model.
 
@@ -38,6 +38,14 @@ baseline. Neither is evidence of a complete lifecycle policy, and SciJudge's
 citation-impact objective cannot make it a full-paper peer reviewer. Conversely,
 the MLRC `LocPointTransformer` is owned by the benchmark task recipe and cannot
 act as a scientific agent.
+
+The no-run direct-neighbor study extension is
+[`iclr2027_scitaste_direct_neighbor_extension_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_direct_neighbor_extension_v1.yaml),
+SHA-256 `75044c803d06c644df396cb5977a139da279bedbd5f8363dddb59cd8c5f72ba2`.
+It reports native impact-prediction reproduction, ideation training effect,
+lifecycle transfer, SciTaste mechanisms, and downstream objective progress as
+separate estimands. Aggregating those heterogeneous tasks into one score is
+forbidden.
 
 The program records MLR-Bench, AI Scientist-v2, SciNav, DeepScientist,
 AutoResearchClaw, SAGE/MHFA, and SGHA as current design anchors. Their combined
@@ -129,7 +137,7 @@ The immediate critical path is therefore:
 
 The current no-run E2 handoff is
 [`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
-SHA-256 `98741378de7a809a8e2d19d67f5e3edc5d57f335f7243ddda54c4331f2fc90e4`.
+SHA-256 `804f0957c40b4ef19b37a7a66c6110f20062b4093ecb852e9997d2bebfb4ecb0`.
 Its eleven static scientific and execution boundaries pass, including exact
 bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
 and the related-work candidate catalog. The E2 pool now includes unconfigured

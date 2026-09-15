@@ -1,0 +1,41 @@
+schema_version: "1.0"
+resource:
+  kind: python_gpu_environment
+  resource_id: scitaste-py312-remote-development-v1
+  host_resource_id: gpu-host-3090-2
+  path: /media/sdb/wwh/envs/scitaste-py312
+  python_version: 3.12.7
+  cuda_available: true
+  packages:
+    torch: 2.5.1+cu124
+    transformers: 4.57.6
+    huggingface_hub: 0.36.0
+    tokenizers: 0.22.2
+    accelerate: 1.4.0
+    pydantic: 2.11.10
+    pyyaml: 6.0.1
+    safetensors: 0.5.3
+  construction:
+    venv_mode: system-site-packages
+    inherited_heavy_dependency: torch-2.5.1+cu124
+    isolated_overrides:
+      - huggingface-hub==0.36.0
+      - transformers==4.57.6
+      - tokenizers==0.22.2
+    downloaded_bytes_upper_bound: 20000000
+  availability: verified-development
+  availability_reason: >-
+    Python 3.12 imports the pinned Transformers stack and observes CUDA. The
+    environment was created because the remote base environment had an
+    incompatible Hub/Transformers pair, while existing working model
+    environments used Python 3.10 or 3.11.
+  formal_authority: false
+  next_gate: exact-package-lock-plus-model-load-generation-receipt
+  limitations:
+    - System-site-package inheritance is acceptable for bounded development preflight only.
+    - A formal campaign must freeze the complete installed distribution and CUDA/driver identity.
+  external_actions:
+    model_loads: 0
+    generations: 0
+    gpu_jobs: 0
+    benchmark_runs: 0

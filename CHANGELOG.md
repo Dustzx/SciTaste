@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a remote Python 3.12 development GPU environment with the exact
+  Transformers 4.57.6 stack required by the direct-neighbor Qwen3 checkpoints,
+  replacing neither the formal environment lock nor any benchmark execution.
+- Acquired only the 15.3 MB SciJudgeBench evaluation splits needed for
+  in-domain, temporal-OOD, and ICLR-review-metric reproduction, leaving the
+  3.88 GB training split undownloaded. Added a direct-neighbor experiment
+  extension that forbids pooling its impact/ideation tasks with lifecycle or
+  downstream-progress evidence.
 - Completed and full-tree-hashed the fixed-revision remote Qwen3.5-9B candidate
   after downloading its missing 3.35 GB. Registered all file hashes and the
   checkpoint resource while retaining zero model loads/GPU jobs and no formal

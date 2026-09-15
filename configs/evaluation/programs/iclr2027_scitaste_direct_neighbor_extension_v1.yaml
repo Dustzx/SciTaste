@@ -1,0 +1,88 @@
+schema_version: "1.0"
+extension_id: scitaste-iclr2027-direct-taste-neighbor-extension-v1
+base_program:
+  program_id: scitaste-iclr2027-capability-driven-autoresearch-program-v7
+  locator: configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml
+  sha256: 5c27721ab923516129de8b6ea9c40ddc20a82fab668190b2df2d6980a0ebec41
+idea:
+  idea_revision_id: outcome-calibrated-scientific-taste-policy-v2
+  locator: outputs/projects/scitaste-self-development/runs/2026-09-15__scitaste-native__outcome-calibrated-taste-idea-v2__seed-00/idea_refinement/REVISION.json
+  sha256: 4b592572eb58236def8d273329995472b9f05ce0435fa16b7b551d758b13a765
+model_candidates:
+  locator: configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml
+  sha256: c17bea9657593aa82cee9766e668024ac1a75cf958de36b83cdbb00dd22682fd
+dataset:
+  locator: docs/research/data/scijudgebench_eval_assets_v1.yaml
+  sha256: 4beeec37322b304a13046a47640d9807e8ad5339e460edc245171cf52d275e86
+
+purpose: >-
+  Distinguish the direct neighbors' learned pointwise impact/ideation Taste from
+  SciTaste's training-free, outcome-updated lifecycle action policy and its
+  downstream autonomous-research effect.
+
+studies:
+  - study_id: N1-impact-preference-reproduction
+    task: paired-paper-impact-preference
+    systems:
+      - OpenMOSS-Team/SciJudge-4B-2605
+      - Qwen/Qwen3-4B-Instruct-2507
+    data_splits: [test, test_ood_year, test_ood_iclr]
+    endpoint: position-swap-consistent-pairwise-accuracy-per-split
+    interpretation: direct-neighbor-method-reproduction-and-transfer
+    title_authority: false
+  - study_id: N2-followup-ideation-training-effect
+    task: seed-paper-to-followup-title-and-abstract
+    systems:
+      - OpenMOSS-Team/SciThinker-4B
+      - Qwen/Qwen3-4B-Thinking-2507
+    inputs: source-disjoint-seed-papers-frozen-before-generation
+    endpoint: generator-blinded-independent-panel-pairwise-preference-with-position-swap
+    interpretation: direct-neighbor-preference-alignment-effect
+    title_authority: false
+  - study_id: N3-lifecycle-transfer-diagnostic
+    task: fixed-alternative-lifecycle-action-choice
+    systems:
+      - OpenMOSS-Team/SciJudge-4B-2605-zero-shot-action-adapter
+      - scitaste-native
+      - native-base
+    inputs: scitastebench-source-disjoint-heldout-decisions
+    endpoint: action-quality-calibration-abstention-and-adapter-validity
+    interpretation: transfer-boundary-diagnostic-not-a-native-task-comparison
+    title_authority: false
+  - study_id: E1-core-lifecycle-mechanisms
+    task: source-grounded-lifecycle-action-choice
+    systems: [base, raw, matched, mismatched, full]
+    endpoint: preregistered-H0-H3-mechanism-contrasts
+    interpretation: scitaste-core-mechanism-evidence
+    title_authority: supporting
+  - study_id: E2-downstream-objective-progress
+    task: mlrc-hidden-objective-progress
+    systems: [scitaste-native, native-base]
+    endpoint: paired-hidden-objective-progress-all-failures-retained
+    interpretation: only-title-critical-causal-autoresearch-effect
+    title_authority: true
+
+reporting:
+  aggregate_score_across_studies: forbidden
+  matched_model_effects_and_ecological_system_effects_reported_separately: true
+  direct_neighbor_native_task_scores_are_not_lifecycle_scores: true
+  scijudge_may_review_full_papers: false
+  formal_model_selection_from_test_or_hidden_scores: forbidden
+  required_tables:
+    - direct-neighbor-native-task-reproduction
+    - lifecycle-transfer-boundaries
+    - scitaste-core-mechanism-contrasts
+    - downstream-objective-progress
+  required_failure_accounting:
+    - schema-and-adapter-failures
+    - position-swap-inconsistency
+    - abstentions
+    - execution-failures
+    - review-disagreement
+
+execution_state:
+  dataset_eval_splits_downloaded: true
+  direct_neighbor_checkpoints_complete: false
+  exact_base_checkpoints_complete: false
+  task_excluded_load_generation_preflight_complete: false
+  formal_execution_started: false

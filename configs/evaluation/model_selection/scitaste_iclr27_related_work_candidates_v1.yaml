@@ -116,6 +116,36 @@ candidates:
     availability_may_select_model: false
     limitations:
       - Generates title-and-abstract follow-ups only and does not execute or revise research.
+  - candidate_id: qwen3-4b-instruct-2507-impact-base
+    model_id: Qwen/Qwen3-4B-Instruct-2507
+    model_family: qwen3-base
+    source_kind: released-open-checkpoint
+    planes: [taste-impact-judge]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Exact base checkpoint required to separate Scientific Judge training from generic Qwen pairwise impact prediction.
+    access_state: download-authorized-pending
+    resource_locator: null
+    exact_revision: cdbee75f17c01a7cc42f958dc650907174af0554
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - Baseline for the narrow impact task only; it is not the SciTaste Native control arm.
+  - candidate_id: qwen3-4b-thinking-2507-ideation-base
+    model_id: Qwen/Qwen3-4B-Thinking-2507
+    model_family: qwen3-base
+    source_kind: released-open-checkpoint
+    planes: [taste-ideator]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Exact base policy required to isolate Scientific Thinker preference-alignment gains before ecological comparison with SciTaste.
+    access_state: download-authorized-pending
+    resource_locator: null
+    exact_revision: 768f209d9ea81521153ed38c47d515654e938aea
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - Base-policy comparison isolates direct-neighbor training and cannot establish an end-to-end AutoResearch effect.
   - candidate_id: gpt54-thinking-frontier
     model_id: GPT-5.4-Thinking
     model_family: openai-gpt
