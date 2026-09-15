@@ -178,6 +178,12 @@ returns observations and artifacts but cannot select the next global action.
     mismatched-Taste contrasts. Best-native external outcomes are always
     descriptive and model-confounded. Valid preregistered execution failures
     remain outcomes; missing or invalid records block the contract.
+52. SciTasteBench decision episodes preserve the prospectively recorded action
+    menu and selected action exactly. Delayed outcomes and uncertainty-aware
+    attribution join later, AI review remains explicitly nonhuman, source groups
+    cannot cross evidence tiers/splits/roles, and self-development trajectories
+    never establish external validity. Held-out target projections expose neither
+    the selected action nor outcome/attribution labels.
 
 ## Architecture decision records
 
@@ -4457,3 +4463,33 @@ Consequently v2 records `provider_serving_build_attested=false`, forbids a forma
 provider-token-equivalence claim, and is restricted to the natural pilot. A
 successful API usage receipt remains authoritative for observed provider token
 counts.
+
+### ADR-138: Prospective trajectories, not reconstructed foils, define decision episodes
+
+Status: accepted and implemented for self-development diagnostics; formal external
+cohort construction remains open.
+
+Track-A source construction consumes the existing prospective Taste chain:
+sampling plan, exact decision/state capture, reconstruction inventory, delayed
+outcome proposal, compiled episode, and completed cross-model AI admission. The
+compiler proves that all alternatives and the selected action came from the
+recorded predecision `ResearchDecision`; postdecision prose, scores, replies, or
+revisions cannot add an alternative. Missing outcomes remain pending, incomplete
+joins or byte drift are quarantined, and attribution must retain confidence,
+confounders, unresolved outcomes, or explicit missing-evidence questions.
+
+The materialized source pool separates target-visible context from a scoring-only
+label vault. Held-out targets contain no selected action, outcome, or attribution;
+precedents may expose the reviewed lesson. One source group has one evidence tier,
+split, and role. `self-dogfood` is development diagnostics only and cannot support
+external-generalization claims; `formal-external` requires independently owned
+prospective projects and compatible precedent/held-out splits. All operational
+review can be completed by independent AI models, but every artifact records
+`reviewer_kind=ai`, `not_human_review=true`, and no human-validity permission.
+
+The H4 benchmark loop has a separate ingress hook for its pre-patch
+`RESEARCH_STATE.json` and `RESEARCH_ACTION_DECISION.json`, with optional iteration
+and loop-result receipts. Those files can establish a real fixed action menu and
+selection, but development scores are retained only as post-run bindings. The H4
+source remains pending until a dedicated delayed scientific-outcome attribution
+contract and independent AI panel are joined.

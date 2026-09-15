@@ -287,6 +287,11 @@ from scitaste.evaluation.decision_episode_integrity import (
     inspect_track_a_decision_episode_integrity_plan,
     prepare_track_a_decision_episode_integrity_plan,
 )
+from scitaste.evaluation.prospective_decision_cohort import (
+    inspect_prospective_decision_cohort,
+    materialize_prospective_decision_cohort,
+    prepare_prospective_decision_cohort_plan,
+)
 from scitaste.evaluation.reference_selection_comparison import (
     ReferenceSelectionDownstreamEnvelope,
     ReferenceSelectionSourceLink,
@@ -2273,6 +2278,41 @@ def build_parser() -> argparse.ArgumentParser:
     track_a_integrity_inspect.set_defaults(
         handler=_handle_evaluation_track_a_decision_integrity_inspect
     )
+    cohort_prepare = evaluation_commands.add_parser(
+        "prospective-decision-cohort-prepare",
+        help="Freeze a source-group-disjoint SciTasteBench trajectory ingress plan",
+    )
+    cohort_prepare.add_argument("--draft", type=Path, required=True)
+    cohort_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(cohort_prepare)
+    cohort_prepare.set_defaults(handler=_handle_evaluation_prospective_cohort_prepare)
+    cohort_materialize = evaluation_commands.add_parser(
+        "prospective-decision-cohort-materialize",
+        help="Materialize an outcome-hidden source pool and scoring-only label vault",
+    )
+    cohort_materialize.add_argument("--plan", type=Path, required=True)
+    cohort_materialize.add_argument("--evidence-root", type=Path, default=Path("."))
+    cohort_materialize.add_argument("--output", type=Path, required=True)
+    cohort_materialize.add_argument(
+        "--require-formal-ready",
+        action="store_true",
+        help="return nonzero until external precedent and held-out target pools both exist",
+    )
+    _add_log_level_option(cohort_materialize)
+    cohort_materialize.set_defaults(handler=_handle_evaluation_prospective_cohort_materialize)
+    cohort_inspect = evaluation_commands.add_parser(
+        "prospective-decision-cohort-inspect",
+        help="Verify a materialized trajectory cohort and its leakage boundaries",
+    )
+    cohort_inspect.add_argument("--directory", type=Path, required=True)
+    cohort_inspect.add_argument("--evidence-root", type=Path, default=Path("."))
+    cohort_inspect.add_argument(
+        "--require-formal-ready",
+        action="store_true",
+        help="return nonzero while the external formal cohort remains incomplete",
+    )
+    _add_log_level_option(cohort_inspect)
+    cohort_inspect.set_defaults(handler=_handle_evaluation_prospective_cohort_inspect)
     abstraction_review_prepare = evaluation_commands.add_parser(
         "ai-abstraction-review-prepare",
         help="Bridge accepted grounded abstractions into two AI-only review requests",
@@ -8036,6 +8076,113 @@ def _handle_evaluation_track_a_decision_integrity_inspect(args: argparse.Namespa
     if args.require_eligible and (
         plan.eligible_target_count == 0 or plan.eligible_precedent_count == 0
     ):
+        return 1
+    return 0
+
+
+def _handle_evaluation_prospective_cohort_prepare(args: argparse.Namespace) -> int:
+    plan = prepare_prospective_decision_cohort_plan(
+        draft_path=args.draft,
+        output_path=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "prospective-decision-cohort-plan-frozen",
+                "cohort_id": plan.cohort_id,
+                "plan_sha256": plan.plan_sha256,
+                "source_count": len(plan.sources),
+                "reviewer_kind": plan.reviewer_kind,
+                "not_human_review": plan.not_human_review,
+                "human_validity_claim_allowed": plan.human_validity_claim_allowed,
+                "model_calls_authorized": plan.model_calls_authorized,
+                "api_calls_authorized": plan.api_calls_authorized,
+                "gpu_work_authorized": plan.gpu_work_authorized,
+                "output": str(args.output),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_prospective_cohort_materialize(args: argparse.Namespace) -> int:
+    manifest = materialize_prospective_decision_cohort(
+        plan_path=args.plan,
+        evidence_root=args.evidence_root,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": manifest.status,
+                "cohort_id": manifest.cohort_id,
+                "manifest_sha256": manifest.manifest_sha256,
+                "source_count": manifest.source_count,
+                "eligible_count": manifest.eligible_count,
+                "pending_count": manifest.pending_count,
+                "quarantined_count": manifest.quarantined_count,
+                "self_dogfood_eligible_count": manifest.self_dogfood_eligible_count,
+                "formal_external_eligible_count": (
+                    manifest.formal_external_eligible_count
+                ),
+                "formal_precedent_count": manifest.formal_precedent_count,
+                "formal_heldout_target_count": manifest.formal_heldout_target_count,
+                "reviewer_kind": manifest.reviewer_kind,
+                "not_human_review": manifest.not_human_review,
+                "human_validity_claim_allowed": manifest.human_validity_claim_allowed,
+                "track_a_suite_authorized": manifest.track_a_suite_authorized,
+                "model_calls_performed": manifest.model_calls_performed,
+                "api_calls_performed": manifest.api_calls_performed,
+                "gpu_work_performed": manifest.gpu_work_performed,
+                "output": str(args.output / "MANIFEST.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_formal_ready and manifest.status != "formal-track-a-ready":
+        return 1
+    return 0
+
+
+def _handle_evaluation_prospective_cohort_inspect(args: argparse.Namespace) -> int:
+    inspection = inspect_prospective_decision_cohort(
+        args.directory,
+        evidence_root=args.evidence_root,
+    )
+    manifest = inspection.manifest
+    print(
+        json.dumps(
+            {
+                "status": manifest.status,
+                "cohort_id": manifest.cohort_id,
+                "manifest_sha256": manifest.manifest_sha256,
+                "manifest_file_sha256": inspection.manifest_file_sha256,
+                "eligible_count": manifest.eligible_count,
+                "pending_count": manifest.pending_count,
+                "quarantined_count": manifest.quarantined_count,
+                "self_dogfood_eligible_count": manifest.self_dogfood_eligible_count,
+                "formal_external_eligible_count": (
+                    manifest.formal_external_eligible_count
+                ),
+                "file_bindings_verified": inspection.file_bindings_verified,
+                "cross_artifact_bindings_verified": (
+                    inspection.cross_artifact_bindings_verified
+                ),
+                "source_group_leakage_absent": (
+                    inspection.source_group_leakage_absent
+                ),
+                "reviewer_kind": manifest.reviewer_kind,
+                "not_human_review": manifest.not_human_review,
+                "human_validity_claim_allowed": manifest.human_validity_claim_allowed,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_formal_ready and manifest.status != "formal-track-a-ready":
         return 1
     return 0
 

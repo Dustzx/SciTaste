@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added prospective SciTasteBench decision-episode cohort ingress. It reuses the
+  existing frozen trajectory/capture/outcome/episode/admission chain, verifies
+  predecision alternatives and selections against exact decision-log bytes,
+  preserves attribution uncertainty, and quarantines or leaves incomplete sources
+  pending instead of fabricating labels. Cohort materialization enforces evidence-
+  tier/split/role group isolation, keeps self-development outside external-validity
+  evidence, publishes outcome-hidden target projections plus a scoring-only label
+  vault, and records all operational review as AI/nonhuman. An H4 research-loop
+  hook binds its pre-patch state/action and later receipts while refusing to treat
+  post-run development scores as predecision alternatives or delayed outcomes.
 - Added no-call Track-A token-manifest materialization from the pinned official
   GLM-5.3-Flash tokenizer. It validates all local asset sizes and hashes, uses
   `PreTrainedTokenizerFast` without remote code, applies the fixed chat-template
