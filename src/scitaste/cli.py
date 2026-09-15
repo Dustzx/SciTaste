@@ -2451,9 +2451,7 @@ def build_parser() -> argparse.ArgumentParser:
     track_a_abstraction_prepare.add_argument("--run-id", required=True)
     track_a_abstraction_prepare.add_argument("--project-revision", type=int, required=True)
     track_a_abstraction_prepare.add_argument("--locator-root", type=Path, default=Path("."))
-    track_a_abstraction_prepare.add_argument(
-        "--outputs-root", type=Path, default=Path("outputs")
-    )
+    track_a_abstraction_prepare.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     track_a_abstraction_prepare.add_argument(
         "--reference-quality-batch",
         type=Path,
@@ -2472,9 +2470,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     track_a_abstraction_prepare.add_argument("--output", type=Path, required=True)
     _add_log_level_option(track_a_abstraction_prepare)
-    track_a_abstraction_prepare.set_defaults(
-        handler=_handle_evaluation_track_a_abstraction_prepare
-    )
+    track_a_abstraction_prepare.set_defaults(handler=_handle_evaluation_track_a_abstraction_prepare)
     track_a_suite_materialize = evaluation_commands.add_parser(
         "track-a-suite-materialize",
         help="Freeze available Track-A targets into no-call three-arm requests",
@@ -8322,9 +8318,7 @@ def _handle_evaluation_prospective_cohort_materialize(args: argparse.Namespace) 
                 "pending_count": manifest.pending_count,
                 "quarantined_count": manifest.quarantined_count,
                 "self_dogfood_eligible_count": manifest.self_dogfood_eligible_count,
-                "formal_external_eligible_count": (
-                    manifest.formal_external_eligible_count
-                ),
+                "formal_external_eligible_count": (manifest.formal_external_eligible_count),
                 "formal_precedent_count": manifest.formal_precedent_count,
                 "formal_heldout_target_count": manifest.formal_heldout_target_count,
                 "reviewer_kind": manifest.reviewer_kind,
@@ -8362,16 +8356,10 @@ def _handle_evaluation_prospective_cohort_inspect(args: argparse.Namespace) -> i
                 "pending_count": manifest.pending_count,
                 "quarantined_count": manifest.quarantined_count,
                 "self_dogfood_eligible_count": manifest.self_dogfood_eligible_count,
-                "formal_external_eligible_count": (
-                    manifest.formal_external_eligible_count
-                ),
+                "formal_external_eligible_count": (manifest.formal_external_eligible_count),
                 "file_bindings_verified": inspection.file_bindings_verified,
-                "cross_artifact_bindings_verified": (
-                    inspection.cross_artifact_bindings_verified
-                ),
-                "source_group_leakage_absent": (
-                    inspection.source_group_leakage_absent
-                ),
+                "cross_artifact_bindings_verified": (inspection.cross_artifact_bindings_verified),
+                "source_group_leakage_absent": (inspection.source_group_leakage_absent),
                 "reviewer_kind": manifest.reviewer_kind,
                 "not_human_review": manifest.not_human_review,
                 "human_validity_claim_allowed": manifest.human_validity_claim_allowed,
@@ -8532,9 +8520,7 @@ def _handle_evaluation_track_a_abstraction_prepare(args: argparse.Namespace) -> 
         expected_project_revision=args.project_revision,
         output_dir=args.output,
         reference_quality_batch_path=args.reference_quality_batch,
-        reference_quality_qualification_paths=tuple(
-            args.reference_quality_qualification
-        ),
+        reference_quality_qualification_paths=tuple(args.reference_quality_qualification),
     )
     print(
         json.dumps(

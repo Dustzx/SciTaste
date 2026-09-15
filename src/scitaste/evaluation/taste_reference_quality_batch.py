@@ -351,9 +351,7 @@ def _quality_projection(source_projection: str) -> str:
     return json.dumps(
         {
             "schema_version": "1.0",
-            "outcome_information_availability": payload.get(
-                "outcome_information_availability"
-            ),
+            "outcome_information_availability": payload.get("outcome_information_availability"),
             "fields": normalized,
         },
         ensure_ascii=False,

@@ -200,9 +200,7 @@ def prepare(args: argparse.Namespace) -> tuple[InteractiveTasteDevelopmentProtoc
                 "code_runner_sha256": code_runner.fingerprint if code_runner else None,
             }
         ),
-        repair_policy_sha256=content_sha256(
-            {"policy": "no-repair-inside-development-trajectory"}
-        ),
+        repair_policy_sha256=content_sha256({"policy": "no-repair-inside-development-trajectory"}),
         executor_sha256=content_sha256(
             {
                 "implementation_sha256": implementation_sha256,

@@ -100,9 +100,7 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
     source_identity_registry_sha256: str = Field(pattern=_SHA256)
     controller_backbone_sha256: str = Field(pattern=_SHA256)
     decision_provider: Literal["scitaste-native"] = "scitaste-native"
-    decision_model: Literal["deterministic-utility-controller"] = (
-        "deterministic-utility-controller"
-    )
+    decision_model: Literal["deterministic-utility-controller"] = "deterministic-utility-controller"
     prompt_version: str
     seed: int = Field(ge=0)
     condition_id: Literal["development-foundation"] = "development-foundation"
@@ -226,9 +224,7 @@ class InteractiveDevelopmentEpisodeBatch(BaseModel):
         unsigned = cls.model_construct(batch_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            batch_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"batch_sha256"})
-            ),
+            batch_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"batch_sha256"})),
         )
 
 
@@ -285,10 +281,7 @@ class DevelopmentTasteGuidanceProvider:
         if snapshot.revision != expected_project_revision:
             raise ValueError("interactive development project revision drifted")
         run_root = (
-            runtime.projects_root
-            / protocol.project_id
-            / "runs"
-            / sampling_plan.source_run_id
+            runtime.projects_root / protocol.project_id / "runs" / sampling_plan.source_run_id
         )
         resolved_lock_root = Path(lock_root).expanduser().resolve()
         if not resolved_lock_root.is_relative_to(run_root.resolve()):
@@ -419,10 +412,7 @@ def finalize_interactive_development_episodes(
     if len(lock_paths) != len(receipt.turns):
         raise ValueError("interactive development lock coverage differs from executed turns")
     run_root = (
-        runtime.projects_root
-        / protocol.project_id
-        / "runs"
-        / sampling_plan.source_run_id
+        runtime.projects_root / protocol.project_id / "runs" / sampling_plan.source_run_id
     ).resolve()
     receipt_source = Path(receipt_path).expanduser().resolve()
     if not receipt_source.is_relative_to(run_root):
@@ -487,9 +477,7 @@ def finalize_interactive_development_episodes(
         state_path = run_root / PurePosixPath(lock.state_snapshot_locator)
         state = ResearchState.model_validate_json(_bounded_file(state_path))
         polarity = _outcome_polarity(protocol, receipt)
-        outcome_family = (
-            TasteOutcomeFamily.DESIGN if turn == 1 else TasteOutcomeFamily.ADAPTATION
-        )
+        outcome_family = TasteOutcomeFamily.DESIGN if turn == 1 else TasteOutcomeFamily.ADAPTATION
         outcome_id = f"interactive-terminal-{turn:03d}"
         credit_id = f"interactive-credit-{turn:03d}"
         proposal = TasteProcessEpisodeProposal.create(
@@ -732,9 +720,7 @@ def refine_interactive_development_candidate(
                 TasteEpisodeOutcome(
                     outcome_id=outcome_id,
                     family=(
-                        TasteOutcomeFamily.DESIGN
-                        if turn == 1
-                        else TasteOutcomeFamily.ADAPTATION
+                        TasteOutcomeFamily.DESIGN if turn == 1 else TasteOutcomeFamily.ADAPTATION
                     ),
                     summary=(
                         f"Compliant {model_action} produced observation {observation_sha256}. "
@@ -749,9 +735,7 @@ def refine_interactive_development_candidate(
                 TasteCreditAssignment(
                     credit_id=credit_id,
                     family=(
-                        TasteOutcomeFamily.DESIGN
-                        if turn == 1
-                        else TasteOutcomeFamily.ADAPTATION
+                        TasteOutcomeFamily.DESIGN if turn == 1 else TasteOutcomeFamily.ADAPTATION
                     ),
                     direction=TasteCreditDirection.BENEFICIAL,
                     outcome_ids=(outcome_id,),
@@ -848,9 +832,7 @@ def _interactive_state(
             expected_information_gain=1.0,
         ),
         executor_context={
-            "remaining_experiments": _remaining_experiment_bucket(
-                context.remaining_experiments
-            ),
+            "remaining_experiments": _remaining_experiment_bucket(context.remaining_experiments),
             "remaining_turns": context.remaining_turns,
             "failure_count": "zero",
             "no_improvement_streak": "unknown",
@@ -925,9 +907,7 @@ def _development_bootstrap_actions(
         preferred = "EXPERIMENT"
     else:
         preferred = "REFINE"
-    experiment_cost = float(
-        min(context.max_experiments_per_turn, context.remaining_experiments)
-    )
+    experiment_cost = float(min(context.max_experiments_per_turn, context.remaining_experiments))
     actions = tuple(
         action.model_copy(
             update={
@@ -935,9 +915,7 @@ def _development_bootstrap_actions(
                     {} if action.type.value == "STOP" else {"experiments": experiment_cost}
                 ),
                 "expected_value": {
-                    "information_gain": (
-                        10.0 if action.type.value == preferred else 0.0
-                    )
+                    "information_gain": (10.0 if action.type.value == preferred else 0.0)
                 },
                 "tags": [
                     *action.tags,

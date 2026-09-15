@@ -137,9 +137,7 @@ def test_initialize_binds_capability_driven_v4_without_selecting_qwen2b(
     assert initialized.contract.model_selection_gate == "task-excluded-conformance"
     project = runtime.project_runtime.open("capability-program")
     run = next(
-        item
-        for item in project.manifest.runs
-        if item.run_id == initialized.state.program_id
+        item for item in project.manifest.runs if item.run_id == initialized.state.program_id
     )
     assert run.condition == "complete-autoresearch-program-v4"
     assert run.model == "task-excluded-selection-pending"

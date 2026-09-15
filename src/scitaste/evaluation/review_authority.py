@@ -86,12 +86,8 @@ class AIReviewFinalityPolicy(BaseModel):
     require_distinct_raw_responses: Literal[True] = True
     adjudication_trigger: Literal["primary-disagreement-only"] = "primary-disagreement-only"
     operationally_final_nodes: tuple[OperationalReviewNode, ...] = _ALL_REVIEW_NODES
-    accepted_review_effect: Literal["close-node-and-admit-subject"] = (
-        "close-node-and-admit-subject"
-    )
-    rejected_review_effect: Literal["close-node-and-block-subject"] = (
-        "close-node-and-block-subject"
-    )
+    accepted_review_effect: Literal["close-node-and-admit-subject"] = "close-node-and-admit-subject"
+    rejected_review_effect: Literal["close-node-and-block-subject"] = "close-node-and-block-subject"
     reviewer_kind: Literal["ai"] = "ai"
     not_human_review: Literal[True] = True
     human_validity_claim_allowed: Literal[False] = False
@@ -101,9 +97,7 @@ class AIReviewFinalityPolicy(BaseModel):
         "replace-reviewer-recruitment-with-ai-panel-completion"
     ] = "replace-reviewer-recruitment-with-ai-panel-completion"
     endpoint_overrides: dict[str, str] = Field(min_length=5, max_length=10)
-    ai_panel_evidence_role: Literal["mechanism-and-proxy-only"] = (
-        "mechanism-and-proxy-only"
-    )
+    ai_panel_evidence_role: Literal["mechanism-and-proxy-only"] = "mechanism-and-proxy-only"
     ai_panel_can_authorize_title: Literal[False] = False
     title_authority_source: Literal["held-out-objective-scorer-only"] = (
         "held-out-objective-scorer-only"
@@ -145,9 +139,7 @@ class AIReviewFinalityPolicy(BaseModel):
             OperationalReviewNode(item)  # type: ignore[arg-type]
             for item in payload.get("operationally_final_nodes", _ALL_REVIEW_NODES)
         )
-        payload["required_title_claim_ids"] = tuple(
-            payload.get("required_title_claim_ids", ())
-        )
+        payload["required_title_claim_ids"] = tuple(payload.get("required_title_claim_ids", ()))
         payload["forbidden_claims"] = tuple(payload.get("forbidden_claims", ()))
         unsigned = cls.model_construct(contract_sha256="0" * 64, **payload)
         return cls(
@@ -235,9 +227,7 @@ class AIOperationalReviewClosure(BaseModel):
                 raise ValueError("AI adjudicator must have a distinct model identity")
             if adjudicator.run_id in {item.run_id for item in primaries}:
                 raise ValueError("AI adjudicator must have a distinct run identity")
-            if adjudicator.raw_response_sha256 in {
-                item.raw_response_sha256 for item in primaries
-            }:
+            if adjudicator.raw_response_sha256 in {item.raw_response_sha256 for item in primaries}:
                 raise ValueError("AI adjudicator must have a distinct raw response")
             expected_verdict = adjudicator.verdict
         else:
@@ -293,9 +283,7 @@ class ObjectiveTitleEvidenceRegistration(BaseModel):
         ):
             if len(values) != len(set(values)):
                 raise ValueError(f"objective title {label} registrations must be unique")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"registration_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"registration_sha256"}))
         if self.registration_sha256 != expected:
             raise ValueError("objective title evidence registration hash differs")
         return self
@@ -390,9 +378,7 @@ def inspect_objective_title_authority(
 
     findings: list[TitleAuthorityFinding] = []
     required = tuple(policy.required_title_claim_ids)
-    program_title_claims = tuple(
-        item.claim_id for item in program.claims if item.title_critical
-    )
+    program_title_claims = tuple(item.claim_id for item in program.claims if item.title_critical)
     if (
         policy.base_program_id != program.program_id
         or policy.base_program_proposal_sha256 != program.proposal_sha256
@@ -552,9 +538,7 @@ def inspect_objective_title_authority(
     )
     return ObjectiveTitleAuthorityReport(
         **payload,
-        report_sha256=content_sha256(
-            unsigned.model_dump(mode="json", exclude={"report_sha256"})
-        ),
+        report_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"report_sha256"})),
     )
 
 
@@ -578,8 +562,7 @@ def _require_positive_objective_assessment(assessment: EvaluationOutcomeAssessme
         or assessment.required_confirmatory_comparisons < 1
         or assessment.supported_confirmatory_comparisons
         != assessment.required_confirmatory_comparisons
-        or assessment.valid_confirmatory_comparisons
-        != assessment.required_confirmatory_comparisons
+        or assessment.valid_confirmatory_comparisons != assessment.required_confirmatory_comparisons
     ):
         raise ValueError("objective result is incomplete or does not support every causal contrast")
 

@@ -1892,9 +1892,7 @@ def _build_projection(
         stage=candidate.stage,
         state_summary=candidate.state_summary,
         actions=actions,
-        action_menu_sha256=content_sha256(
-            tuple(item.model_dump(mode="json") for item in actions)
-        ),
+        action_menu_sha256=content_sha256(tuple(item.model_dump(mode="json") for item in actions)),
         domain_tags=candidate.domain_tags,
         venue_tags=candidate.venue_tags,
     )
@@ -1983,8 +1981,7 @@ def _apply_group_leakage_gate(
                 code="source-group-split-or-role-leakage",
                 severity=DecisionEpisodeFindingSeverity.QUARANTINE,
                 message=(
-                    "One source group was assigned to multiple evidence tiers, splits, "
-                    "or roles."
+                    "One source group was assigned to multiple evidence tiers, splits, or roles."
                 ),
             )
             audit = DecisionEpisodeSourceAudit.create(

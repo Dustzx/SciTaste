@@ -536,9 +536,7 @@ def _bound_file(root: Path, binding: DecisionEpisodeFileBinding | object) -> Pat
 
 def _safe_locator(locator: str) -> PurePosixPath:
     path = PurePosixPath(locator)
-    if "\\" in locator or path.is_absolute() or any(
-        part in {"", ".", ".."} for part in path.parts
-    ):
+    if "\\" in locator or path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
         raise ValueError("decision-episode artifact locator is unsafe")
     return path
 

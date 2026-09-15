@@ -595,9 +595,7 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
         observed_cost = sum(item.estimated_cost_cny for item in self.call_receipts)
         if abs(self.estimated_cost_cny - observed_cost) > 1e-9:
             raise ValueError("Segmentation calibration estimated cost drifted")
-        if (self.schema_version in {"1.1", "1.2"}) != (
-            self.group_uncertainty is not None
-        ):
+        if (self.schema_version in {"1.1", "1.2"}) != (self.group_uncertainty is not None):
             raise ValueError("Segmentation calibration schema differs from group uncertainty")
         workload_calls = tuple(
             item for item in self.call_receipts if item.call.role is ApiIdentityCallRole.WORKLOAD
@@ -1877,9 +1875,7 @@ def _adapt_unknown_null_provider_fields(
     )
     if protocol_enabled != rubric_enabled:
         if protocol_enabled or rubric_enabled:
-            raise ValueError(
-                "Segmentation protocol and rubric disagree on unknown-null adaptation"
-            )
+            raise ValueError("Segmentation protocol and rubric disagree on unknown-null adaptation")
         return payload, ()
     if not protocol_enabled:
         return payload, ()
@@ -3473,9 +3469,7 @@ def _resolve_anchored_segments_v15(
                 start_char=start_char,
                 end_char=end_char,
                 context_ranges=tuple(contexts),
-                own_trigger_context_overlap_allowed=(
-                    own_trigger_context_overlap_allowed
-                ),
+                own_trigger_context_overlap_allowed=(own_trigger_context_overlap_allowed),
             )
         )
     if trigger_intervals != sorted(trigger_intervals):
@@ -3531,9 +3525,7 @@ def _resolve_anchored_provider_output_v15(
                 segments=_resolve_anchored_segments_v15(
                     item.segments,
                     source=source_item.review_comment,
-                    own_trigger_context_overlap_allowed=(
-                        own_trigger_context_overlap_allowed
-                    ),
+                    own_trigger_context_overlap_allowed=(own_trigger_context_overlap_allowed),
                 ),
                 no_decision_rationale=item.no_decision_rationale,
                 residual_decision_bearing_text_possible=(
@@ -3582,9 +3574,7 @@ def _resolve_anchored_adjudication_output_v15(
                 segments=_resolve_anchored_segments_v15(
                     item.segments,
                     source=source,
-                    own_trigger_context_overlap_allowed=(
-                        own_trigger_context_overlap_allowed
-                    ),
+                    own_trigger_context_overlap_allowed=(own_trigger_context_overlap_allowed),
                 ),
                 no_decision_rationale=item.no_decision_rationale,
                 residual_decision_bearing_text_possible=(

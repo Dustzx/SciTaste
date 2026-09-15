@@ -686,9 +686,7 @@ _PHASE_SEMANTIC_VALIDATORS.update(
         "evidence-admission": ("project-evaluation-result-admission-v1",),
         "dual-ai-review": ("registered-independent-dual-ai-review-v1",),
         "ai-adjudication": ("ai-paper-review-disagreement-adjudication-v1",),
-        "final-ai-review-and-package-freeze": (
-            "ai-paper-review-operational-finality-v1",
-        ),
+        "final-ai-review-and-package-freeze": ("ai-paper-review-operational-finality-v1",),
     }
 )
 
@@ -1247,8 +1245,7 @@ def _validate_phase_artifacts(
                 source_binding = by_id["isolated-inference-receipt"]
                 if (
                     b0_receipt.project_id != project_id
-                    or b0_receipt.source_receipt_locator
-                    != source_binding.project_relative_locator
+                    or b0_receipt.source_receipt_locator != source_binding.project_relative_locator
                     or b0_receipt.source_receipt_sha256 != source_binding.sha256
                 ):
                     raise ValueError(
@@ -1449,9 +1446,7 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
     tracks = program_payload.get("research_tracks")
     if not isinstance(tracks, list):
         raise ValueError("program v4 lacks the complete research-track matrix")
-    by_study = {
-        item.get("study_id"): item for item in tracks if isinstance(item, dict)
-    }
+    by_study = {item.get("study_id"): item for item in tracks if isinstance(item, dict)}
     if set(by_study) != {"E0", "E1", "E2", "E3", "E4"}:
         raise ValueError("program v4 must bind E0 through E4 exactly once")
     if by_study["E2"].get("title_authority") is not True:
@@ -1478,7 +1473,8 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
         or not isinstance(downloads, dict)
         or downloads.get("automatic_single_resource_max_bytes") != 10 * 1024**3
         or not isinstance(role_gates, dict)
-        or set(role_gates) != {
+        or set(role_gates)
+        != {
             "research_agent",
             "code_agent",
             "judge",

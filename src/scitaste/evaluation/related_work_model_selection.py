@@ -256,9 +256,7 @@ def summarize_related_work_model_catalog(
     by_plane: dict[str, tuple[str, ...]] = {}
     for requirement in catalog.role_requirements:
         by_plane[requirement.plane] = tuple(
-            item.candidate_id
-            for item in catalog.candidates
-            if requirement.plane in item.planes
+            item.candidate_id for item in catalog.candidates if requirement.plane in item.planes
         )
     unresolved = tuple(
         item.candidate_id
@@ -272,8 +270,7 @@ def summarize_related_work_model_catalog(
         candidate_count=len(catalog.candidates),
         model_family_count=len({item.model_family for item in catalog.candidates}),
         direct_neighbor_count=sum(
-            item.relationship == "direct-scientific-taste-neighbor"
-            for item in catalog.anchors
+            item.relationship == "direct-scientific-taste-neighbor" for item in catalog.anchors
         ),
         candidates_by_plane=by_plane,
         unresolved_access_candidates=unresolved,

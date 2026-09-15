@@ -12,9 +12,7 @@ from scitaste.evaluation.related_work_model_selection import (
     summarize_related_work_model_catalog,
 )
 
-CATALOG = Path(
-    "configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml"
-)
+CATALOG = Path("configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml")
 
 
 def _payload() -> dict[str, object]:

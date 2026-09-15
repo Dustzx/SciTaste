@@ -12,8 +12,7 @@ from scitaste.project.research_program import (
 )
 
 _DEFAULT_PROGRAM = Path(
-    "configs/evaluation/programs/"
-    "iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml"
+    "configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml"
 )
 _DEFAULT_MODEL_INVENTORY = Path("configs/resources/assets/model_role_inventory_v1.yaml")
 

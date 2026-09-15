@@ -82,9 +82,7 @@ def execute_embedding_conformance(
     campaign_root = source.parent
     plan = load_bytebound_campaign_plan(source)
     requests = tuple(
-        item
-        for item in plan.requests
-        if item.candidate.candidate.candidate_id == candidate_id
+        item for item in plan.requests if item.candidate.candidate.candidate_id == candidate_id
     )
     if not requests:
         raise ValueError(f"unknown campaign candidate {candidate_id!r}")

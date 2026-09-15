@@ -639,9 +639,7 @@ def materialize_lifecycle_task_package(
     fresh = plan_lifecycle_benchmark_bridge(
         plan.benchmark_id,
         request_path=root.joinpath(*PurePosixPath(plan.acquisition.request_ref).parts),
-        acquisition_root=root.joinpath(
-            *PurePosixPath(plan.acquisition.acquisition_root_ref).parts
-        ),
+        acquisition_root=root.joinpath(*PurePosixPath(plan.acquisition.acquisition_root_ref).parts),
         program_path=root.joinpath(*PurePosixPath(plan.program_ref).parts),
         workspace_root=root,
     )
@@ -709,9 +707,7 @@ def inspect_lifecycle_benchmark_bridge(
     fresh = plan_lifecycle_benchmark_bridge(
         plan.benchmark_id,
         request_path=root.joinpath(*PurePosixPath(plan.acquisition.request_ref).parts),
-        acquisition_root=root.joinpath(
-            *PurePosixPath(plan.acquisition.acquisition_root_ref).parts
-        ),
+        acquisition_root=root.joinpath(*PurePosixPath(plan.acquisition.acquisition_root_ref).parts),
         program_path=root.joinpath(*PurePosixPath(plan.program_ref).parts),
         workspace_root=root,
     )

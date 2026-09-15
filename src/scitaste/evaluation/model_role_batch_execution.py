@@ -105,9 +105,7 @@ def execute_local_model_role_batch(
     unknown_requests = set(request_ids) - set(request_by_id)
     if unknown_requests:
         raise ValueError(f"unknown campaign request IDs: {sorted(unknown_requests)!r}")
-    known_candidates = {
-        item.candidate.candidate.candidate_id for item in plan.requests
-    }
+    known_candidates = {item.candidate.candidate.candidate_id for item in plan.requests}
     unknown_candidates = set(candidate_ids) - known_candidates
     if unknown_candidates:
         raise ValueError(f"unknown campaign candidate IDs: {sorted(unknown_candidates)!r}")
@@ -116,10 +114,7 @@ def execute_local_model_role_batch(
         item
         for item in plan.requests
         if (not request_ids or item.request_id in request_ids)
-        and (
-            not candidate_ids
-            or item.candidate.candidate.candidate_id in candidate_ids
-        )
+        and (not candidate_ids or item.candidate.candidate.candidate_id in candidate_ids)
     ]
     if max_requests is not None:
         selected = selected[:max_requests]
@@ -135,9 +130,7 @@ def execute_local_model_role_batch(
     outputs_root = _outputs_root_from_campaign(campaign_root, plan)
     project_runtime = ProjectRuntime(outputs_root)
     snapshot = project_runtime.open(plan.project_id)
-    facade = ModelNodeFacade(
-        ModelNodeRuntime(project_runtime, node_types=first_party_node_types())
-    )
+    facade = ModelNodeFacade(ModelNodeRuntime(project_runtime, node_types=first_party_node_types()))
     prepared = [_load_request(campaign_root, request) for request in selected]
     groups: dict[str, list[tuple[ConformanceDispatchRequest, ModelNodeRuntimeConfig, object]]] = {}
     for item in prepared:
@@ -266,9 +259,7 @@ def _load_request(
     assert binding is not None
     assert binding.runtime_config_ref is not None
     assert binding.profile_set_ref is not None
-    config = load_model_node_runtime_config(
-        campaign_root / binding.runtime_config_ref
-    ).config
+    config = load_model_node_runtime_config(campaign_root / binding.runtime_config_ref).config
     if not isinstance(config.backend, LocalRuntimeBackend):
         raise ValueError("local campaign request does not bind a local runtime backend")
     profiles = load_model_node_profile_set(campaign_root / binding.profile_set_ref)

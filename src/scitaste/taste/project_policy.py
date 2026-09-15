@@ -111,9 +111,7 @@ class ProjectTastePolicyCorpusManifest(BaseModel):
         )
         if self.population_sha256 != expected_population:
             raise ValueError("project Taste corpus population hash differs")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"corpus_manifest_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"corpus_manifest_sha256"}))
         if self.corpus_manifest_sha256 != expected:
             raise ValueError("project Taste corpus manifest hash differs")
         return self
@@ -498,12 +496,8 @@ def refresh_project_taste_policy(
         source_episode_count=sum(item.source_episode_count for item in family_readiness),
         training_episode_count=sum(item.training_episode_count for item in family_readiness),
         observed_family_count=sum(item.source_episode_count > 0 for item in family_readiness),
-        support_sufficient_family_count=sum(
-            item.support_sufficient for item in family_readiness
-        ),
-        adaptive_head_ready_family_count=sum(
-            item.adaptive_head_ready for item in family_readiness
-        ),
+        support_sufficient_family_count=sum(item.support_sufficient for item in family_readiness),
+        adaptive_head_ready_family_count=sum(item.adaptive_head_ready for item in family_readiness),
         policy_application_ready=any(item.adaptive_head_ready for item in family_readiness),
         reason_codes=_readiness_reason_codes(family_readiness),
     )

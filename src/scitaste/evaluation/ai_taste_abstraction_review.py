@@ -977,9 +977,7 @@ def compile_ai_taste_abstraction_review_requests(
             [protocol.protocol_sha256, *(item.runtime_entry_sha256 for item in candidates)]
         )
         pack = AIAbstractionRequestPack(
-            schema_version=(
-                "1.0" if planned_source_count is None else "1.1"
-            ),
+            schema_version=("1.0" if planned_source_count is None else "1.1"),
             pack_id=f"ai-taste-abstraction-{pack_identity[:24]}",
             protocol=_binding(root, protocol_file),
             protocol_sha256=protocol.protocol_sha256,

@@ -172,8 +172,7 @@ class AriesReplyReserveReport(BaseModel):
         ):
             raise ValueError("ARIES reply reserve schema 1.0 identity drifted")
         if self.schema_version == "1.1" and self.population_id != (
-            f"aries-dev-review-reply-validation-reserve-"
-            f"{self.target_source_group_count}-v2"
+            f"aries-dev-review-reply-validation-reserve-{self.target_source_group_count}-v2"
         ):
             raise ValueError("ARIES reply reserve schema 1.1 identity drifted")
         if len(set(self.blockers)) != 4:
@@ -245,10 +244,7 @@ def materialize_aries_reply_validation_reserve(
     ):
         raise ValueError("ARIES reserve upstream splits overlap")
 
-    edits = {
-        _required_text(row, "doc_id"): row
-        for row in _read_jsonl(base_files["paper_edits"])
-    }
+    edits = {_required_text(row, "doc_id"): row for row in _read_jsonl(base_files["paper_edits"])}
     eligible: dict[str, list[dict[str, object]]] = defaultdict(list)
     eligible_rows = 0
     for row in _read_jsonl(reply_files["review_replies"]):
@@ -321,13 +317,16 @@ def materialize_aries_reply_validation_reserve(
         group = canonical_openreview_source_group_id(forum)
         review_id = _required_text(review, "id")
         response_id = _required_text(response, "id")
-        candidate_id = "aries-reply-candidate-" + _rank(
-            reply_receipt.receipt_sha256,
-            base_receipt.receipt_sha256,
-            forum,
-            review_id,
-            response_id,
-        )[:24]
+        candidate_id = (
+            "aries-reply-candidate-"
+            + _rank(
+                reply_receipt.receipt_sha256,
+                base_receipt.receipt_sha256,
+                forum,
+                review_id,
+                response_id,
+            )[:24]
+        )
         review_content = review["content"]
         assert isinstance(review_content, dict)
         raw_edits = edit.get("edits")
@@ -361,13 +360,16 @@ def materialize_aries_reply_validation_reserve(
     candidate_bytes = b"".join(
         _canonical_json(item.model_dump(mode="json")) + b"\n" for item in candidates
     )
-    private_bytes = _canonical_json(
-        {
-            "schema_version": "1.0",
-            "private": True,
-            "items": [item.model_dump(mode="json") for item in private_items],
-        }
-    ) + b"\n"
+    private_bytes = (
+        _canonical_json(
+            {
+                "schema_version": "1.0",
+                "private": True,
+                "items": [item.model_dump(mode="json") for item in private_items],
+            }
+        )
+        + b"\n"
+    )
     target = Path(output_directory)
     if target.exists() or target.is_symlink():
         raise FileExistsError(target)
@@ -383,8 +385,7 @@ def materialize_aries_reply_validation_reserve(
             population_id=(
                 _POPULATION_ID
                 if target_source_group_count == 7
-                else f"aries-dev-review-reply-validation-reserve-"
-                f"{target_source_group_count}-v2"
+                else f"aries-dev-review-reply-validation-reserve-{target_source_group_count}-v2"
             ),
             project_id=base_request.project_id,
             base_request_file_sha256=base_request_inspection.file_sha256,

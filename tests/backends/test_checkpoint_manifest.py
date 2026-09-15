@@ -47,9 +47,7 @@ def test_checkpoint_manifest_binds_every_checkpoint_byte(
             expected_checkpoint_identity_sha256=manifest.checkpoint_identity_sha256,
         )
 
-    safetensors.write_bytes(
-        len(header).to_bytes(8, "little") + header + b"\x00\x00\x00\x00"
-    )
+    safetensors.write_bytes(len(header).to_bytes(8, "little") + header + b"\x00\x00\x00\x00")
     (model / "config.json").write_text('{"model_type":"drifted"}\n', encoding="utf-8")
     with pytest.raises(RuntimeError, match="differs from its identity manifest"):
         verify_local_checkpoint_identity_manifest(

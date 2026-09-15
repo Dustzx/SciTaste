@@ -91,9 +91,7 @@ def _materialize_acquisition(
         source_hosts=tuple(
             sorted(
                 {
-                    "raw.githubusercontent.com"
-                    if "github" in item.source_url
-                    else "huggingface.co"
+                    "raw.githubusercontent.com" if "github" in item.source_url else "huggingface.co"
                     for item in request.items
                 }
             )
@@ -288,9 +286,7 @@ def test_missing_receipt_is_a_materialization_and_admission_blocker(tmp_path: Pa
 def test_output_contract_cannot_claim_completion_before_candidate_freeze() -> None:
     result_input = ConjunctiveResultInput(
         candidate_manifest_sha256="1" * 64,
-        stage_outputs=(
-            StageOutput(stage=LifecycleStage.HYPOTHESIS, status=StageStatus.SUCCEEDED),
-        ),
+        stage_outputs=(StageOutput(stage=LifecycleStage.HYPOTHESIS, status=StageStatus.SUCCEEDED),),
     )
 
     with pytest.raises(ValidationError, match="frozen candidate"):
@@ -429,9 +425,7 @@ def test_cli_status_resolves_relative_package_root_within_workspace(
     status = json.loads(capsys.readouterr().out)
     assert status["materialized"] is True
     assert status["materialized_package_valid"] is True
-    assert "materialized-package-drift" not in {
-        finding["code"] for finding in status["findings"]
-    }
+    assert "materialized-package-drift" not in {finding["code"] for finding in status["findings"]}
 
     package = tmp_path / package_ref
     saved_plan = load_lifecycle_benchmark_bridge_plan(plan_path)

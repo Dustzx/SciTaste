@@ -883,9 +883,7 @@ def materialize_track_a_input_token_manifest(
     tokenizer = _load_pinned_fast_tokenizer(tokenizer_config, snapshot)
     template = snapshot / tokenizer_config.loading.chat_template_file
     template_sha256 = _sha256(template)
-    template_revision = (
-        f"hf-{tokenizer_config.source.revision}-template-{template_sha256[:16]}"
-    )
+    template_revision = f"hf-{tokenizer_config.source.revision}-template-{template_sha256[:16]}"
     arguments = TrackATokenizerTemplateArguments()
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=f".{target.name}.", dir=target.parent) as temporary:
@@ -916,8 +914,10 @@ def materialize_track_a_input_token_manifest(
                 )
                 if not isinstance(rendered, str) or not rendered:
                     raise ValueError("Track-A chat template produced no rendered prompt")
-                if not isinstance(token_ids, list) or not token_ids or not all(
-                    isinstance(item, int) and item >= 0 for item in token_ids
+                if (
+                    not isinstance(token_ids, list)
+                    or not token_ids
+                    or not all(isinstance(item, int) and item >= 0 for item in token_ids)
                 ):
                     raise ValueError("Track-A chat template produced invalid token IDs")
                 replay_ids = tokenizer.encode(rendered, add_special_tokens=False)
@@ -1392,15 +1392,13 @@ def _verify_control_contract(
             or tokenizer_config.config_sha256 != token_manifest.tokenizer_config_sha256
             or tokenizer_config.model != suite.model
             or tokenizer_config.source.repository != token_manifest.tokenizer_repository
-            or tokenizer_config.source.revision
-            != token_manifest.counts[0].tokenizer_revision
+            or tokenizer_config.source.revision != token_manifest.counts[0].tokenizer_revision
             or tokenizer_config.local_snapshot.files != token_manifest.tokenizer_assets
             or str(snapshot) != token_manifest.tokenizer_snapshot_path
             or tokenizer_config.loading.library != token_manifest.tokenizer_library
             or tokenizer_config.loading.library_revision
             != token_manifest.tokenizer_library_revision
-            or tokenizer_config.loading.implementation
-            != token_manifest.tokenizer_implementation
+            or tokenizer_config.loading.implementation != token_manifest.tokenizer_implementation
             or tokenizer_config.loading.chat_template_file
             not in {item.path for item in tokenizer_config.local_snapshot.files}
             or tokenizer_config.loading.tokenizer_file

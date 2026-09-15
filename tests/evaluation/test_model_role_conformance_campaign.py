@@ -160,9 +160,9 @@ def test_materialize_produces_real_existing_runtime_bindings_without_execution(
     request = api_requests[0]
     binding = request.existing_runner_binding
     assert binding is not None and binding.profile_set_ref is not None
-    profile = load_model_node_profile_set(
-        plan_path.parent / binding.profile_set_ref
-    ).profiles[request.candidate.profile.profile_id]
+    profile = load_model_node_profile_set(plan_path.parent / binding.profile_set_ref).profiles[
+        request.candidate.profile.profile_id
+    ]
     runtime = load_model_node_runtime_config(
         plan_path.parent / str(binding.runtime_config_ref)
     ).config
@@ -235,19 +235,14 @@ def test_materialize_produces_real_existing_runtime_bindings_without_execution(
     )
     (stage / "recordings" / f"{request.request_id}.jsonl").write_bytes(recording)
 
-    imported = import_model_node_runtime_receipts(
-        plan_path, request_ids=(request.request_id,)
-    )
+    imported = import_model_node_runtime_receipts(plan_path, request_ids=(request.request_id,))
     assert imported.imported_entries == 1
     assert imported.accepted_entries == 1
     assert imported.task_succeeded_entries == 0
     case_results = json.loads(
-        (
-            plan_path.parent
-            / "receipts"
-            / request.request_id
-            / "CASE_RESULTS.json"
-        ).read_text(encoding="utf-8")
+        (plan_path.parent / "receipts" / request.request_id / "CASE_RESULTS.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert case_results["cases"][0]["succeeded"] is False
 

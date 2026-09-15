@@ -95,9 +95,9 @@ class GroundedAbstractionBridgeAdmission(BaseModel):
         "not-formally-qualified",
         "ai-operational-qualified",
     ] = "not-formally-qualified"
-    source_quality_missing_reason: (
-        Literal["no-reference-quality-qualification-bound"] | None
-    ) = "no-reference-quality-qualification-bound"
+    source_quality_missing_reason: Literal["no-reference-quality-qualification-bound"] | None = (
+        "no-reference-quality-qualification-bound"
+    )
     reference_quality_qualification: AIAbstractionFileBinding | None = None
     reference_quality_report_sha256: str | None = Field(default=None, pattern=_SHA256)
     operational_reference_quality_qualification_bound: bool = False
@@ -226,9 +226,7 @@ class GroundedAbstractionReviewBridge(BaseModel):
             planned, eligible, runtime_accepted, runtime_rejected = counts
             assert planned is not None and eligible is not None
             assert runtime_accepted is not None and runtime_rejected is not None
-            observed_rejected = sum(
-                item.disposition == "rejected" for item in self.exclusions
-            )
+            observed_rejected = sum(item.disposition == "rejected" for item in self.exclusions)
             if (
                 not 0 < runtime_accepted <= eligible <= planned
                 or eligible != self.batch_item_count
@@ -377,9 +375,7 @@ def prepare_ai_taste_abstraction_review_from_batch(
     if not admissions:
         raise ValueError("Taste abstraction BATCH has no accepted generation eligible for review")
 
-    runtime_rejected_count = sum(
-        item.disposition == "rejected" for item in exclusions
-    )
+    runtime_rejected_count = sum(item.disposition == "rejected" for item in exclusions)
 
     request_pack = compile_ai_taste_abstraction_review_requests(
         evidence_root=root,
@@ -423,9 +419,7 @@ def prepare_ai_taste_abstraction_review_from_batch(
         eligible_source_count=(
             None if batch.schema_version == "1.0" else batch.eligible_source_count
         ),
-        runtime_accepted_source_count=(
-            None if batch.schema_version == "1.0" else len(admissions)
-        ),
+        runtime_accepted_source_count=(None if batch.schema_version == "1.0" else len(admissions)),
         runtime_rejected_source_count=(
             None if batch.schema_version == "1.0" else runtime_rejected_count
         ),
@@ -575,14 +569,10 @@ def _admit_entry(
         raw_recording_sha256=entry.recording_sha256,
         source_projection_sha256=node_input.source_projection_sha256,
         source_quality_status=(
-            "not-formally-qualified"
-            if quality is None
-            else "ai-operational-qualified"
+            "not-formally-qualified" if quality is None else "ai-operational-qualified"
         ),
         source_quality_missing_reason=(
-            "no-reference-quality-qualification-bound"
-            if quality is None
-            else None
+            "no-reference-quality-qualification-bound" if quality is None else None
         ),
         reference_quality_qualification=quality_receipt,
         reference_quality_report_sha256=(
@@ -654,9 +644,7 @@ def _verify_quality_qualified_subset(
         planned_input_file = _regular_file(plan_file.parent, planned.input_file.locator)
         if _sha256_file(planned_input_file) != planned.input_file.file_sha256:
             raise ValueError("qualified abstraction pilot input file hash drifted")
-        planned_input = TasteAbstractionInput.model_validate_json(
-            planned_input_file.read_bytes()
-        )
+        planned_input = TasteAbstractionInput.model_validate_json(planned_input_file.read_bytes())
         quality_item = quality_batch.items[plan_ordinal - 1]
         if (
             item.input_id != planned.input_id
@@ -665,8 +653,7 @@ def _verify_quality_qualified_subset(
             or quality_item.ordinal != plan_ordinal
             or quality_item.input_id != item.input_id
             or quality_item.source_group_id != item.source_group_id
-            or quality_item.precedent_projection_sha256
-            != item.source_projection_sha256
+            or quality_item.precedent_projection_sha256 != item.source_projection_sha256
             or qualification.quality_batch_ordinal != quality_item.ordinal
             or qualification.screening_id != quality_item.screening_id
             or qualification.source_id != planned_input.source_id
@@ -700,10 +687,8 @@ def _verify_quality_qualified_subset(
             or report.screening_id != qualification.screening_id
             or report.source_id != qualification.source_id
             or report.proposal_sha256 != qualification.proposal_sha256
-            or report.source_projection_sha256
-            != qualification.quality_source_projection_sha256
-            or report.source_content_sha256
-            != qualification.quality_source_projection_sha256
+            or report.source_projection_sha256 != qualification.quality_source_projection_sha256
+            or report.source_content_sha256 != qualification.quality_source_projection_sha256
             or report.invocation_id != quality_item.invocation_id
             or ledger_file != expected_ledger_file
             or report.ledger_sha256 != qualification.quality_ledger.file_sha256

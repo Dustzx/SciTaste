@@ -147,9 +147,7 @@ def _write_receipts(
                 ),
             )
             results_path = tmp_path / f"{run_id}.case-results.json"
-            results_path.write_text(
-                case_results.model_dump_json(indent=2) + "\n", encoding="utf-8"
-            )
+            results_path.write_text(case_results.model_dump_json(indent=2) + "\n", encoding="utf-8")
             results_file_sha256 = hashlib.sha256(results_path.read_bytes()).hexdigest()
             receipt = ModelRoleConformanceRunResult(
                 suite_id=plan.suite_id,

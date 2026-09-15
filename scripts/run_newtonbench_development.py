@@ -109,11 +109,7 @@ def run(args: argparse.Namespace):
     receipt_path = run_root / "interactive_development" / "RESULT" / "RECEIPT.json"
     save_interactive_research_run_receipt(receipt, receipt_path)
     lock_paths = tuple(
-        run_root
-        / "interactive_development"
-        / "taste_locks"
-        / f"turn-{turn.turn:03d}"
-        / "LOCK.json"
+        run_root / "interactive_development" / "taste_locks" / f"turn-{turn.turn:03d}" / "LOCK.json"
         for turn in receipt.turns
     )
     batch = finalize_interactive_development_episodes(
@@ -136,17 +132,12 @@ def run(args: argparse.Namespace):
             if receipt.status == "completed"
             else "development-terminal-failure-quarantined-no-formal-claim"
         ),
-        artifact=(
-            f"runs/{plan.source_run_id}/interactive_development/"
-            "taste_episodes/BATCH.json"
-        ),
+        artifact=(f"runs/{plan.source_run_id}/interactive_development/taste_episodes/BATCH.json"),
         interactive_status=receipt.status,
         receipt_sha256=receipt.receipt_sha256,
         batch_sha256=batch.batch_sha256,
         objective_primary_value=(
-            receipt.objective_score.primary_value
-            if receipt.objective_score is not None
-            else None
+            receipt.objective_score.primary_value if receipt.objective_score is not None else None
         ),
         policy_update_authorized=False,
         formal_evidence=False,

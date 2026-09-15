@@ -329,11 +329,7 @@ def compile_taste_abstraction_runtime_batch(
         items: list[TasteAbstractionBatchItem] = []
         for ordinal, (plan_ordinal, record, qualification) in enumerate(selected_records, 1):
             abstraction_input = _load_abstraction_input(plan_file.parent, record)
-            gate_identity = (
-                ""
-                if quality_batch is None
-                else f"-q{quality_batch.batch_sha256[:8]}"
-            )
+            gate_identity = "" if quality_batch is None else f"-q{quality_batch.batch_sha256[:8]}"
             invocation_id = (
                 f"track-a-{plan.plan_sha256[:10]}{gate_identity}-abstraction-"
                 f"{plan_ordinal:02d}-{record.input_id}"
@@ -426,9 +422,7 @@ def compile_taste_abstraction_runtime_batch(
             reference_quality_batch_sha256=(
                 None if quality_batch is None else quality_batch.batch_sha256
             ),
-            planned_source_count=(
-                None if quality_batch is None else len(plan.abstraction_inputs)
-            ),
+            planned_source_count=(None if quality_batch is None else len(plan.abstraction_inputs)),
             eligible_source_count=(None if quality_batch is None else len(items)),
             excluded_source_count=(
                 None if quality_batch is None else len(plan.abstraction_inputs) - len(items)
@@ -508,13 +502,11 @@ def _verify_reference_quality_gate(
             or runtime.trigger.trigger_id != quality_item.invocation_id
             or quality_input.screening_id != quality_item.screening_id
             or quality_input.source_id != abstraction_input.source_id
-            or quality_input.source_projection_sha256
-            != quality_item.source_projection_sha256
+            or quality_input.source_projection_sha256 != quality_item.source_projection_sha256
             or quality_input.source_content_sha256 != quality_item.source_projection_sha256
             or runtime.state_projection.project_id != project_id
             or runtime.state_projection.state_revision != quality_batch.project_revision
-            or runtime.state_projection.state_snapshot_id
-            != quality_item.source_projection_sha256
+            or runtime.state_projection.state_snapshot_id != quality_item.source_projection_sha256
             or runtime.state_projection.evidence_ids != (abstraction_input.source_id,)
         ):
             raise ValueError("reference-quality runtime config differs from its batch item")
@@ -539,9 +531,7 @@ def _verify_reference_quality_gate(
         if recorded_report_sha256 != report.report_sha256:
             raise ValueError("reference-quality qualification semantic hash mismatch")
         try:
-            record, abstraction_input, quality_item = expected_by_invocation[
-                report.invocation_id
-            ]
+            record, abstraction_input, quality_item = expected_by_invocation[report.invocation_id]
         except KeyError as exc:
             raise ValueError("reference-quality qualification is foreign to the batch") from exc
         if record.input_id in seen_inputs:
@@ -566,16 +556,12 @@ def _verify_reference_quality_gate(
             or entry.intent.state_revision != quality_batch.project_revision
             or entry.intent.invocation_id != quality_item.invocation_id
             or entry.intent.context.project_id != quality_batch.project_id
-            or entry.intent.context.state_snapshot_id
-            != quality_item.source_projection_sha256
-            or tuple(entry.intent.context.evidence_ids)
-            != (abstraction_input.source_id,)
+            or entry.intent.context.state_snapshot_id != quality_item.source_projection_sha256
+            or tuple(entry.intent.context.evidence_ids) != (abstraction_input.source_id,)
             or verified.input.screening_id != quality_item.screening_id
             or verified.input.source_id != abstraction_input.source_id
-            or verified.input.source_projection_sha256
-            != quality_item.source_projection_sha256
-            or verified.input.source_content_sha256
-            != quality_item.source_projection_sha256
+            or verified.input.source_projection_sha256 != quality_item.source_projection_sha256
+            or verified.input.source_content_sha256 != quality_item.source_projection_sha256
             or report.source_projection_sha256 != quality_item.source_projection_sha256
             or report.source_content_sha256 != quality_item.source_projection_sha256
             or report.backend != quality_batch.provider

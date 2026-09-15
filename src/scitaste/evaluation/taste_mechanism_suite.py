@@ -158,9 +158,7 @@ class TrackAPilotSuiteSpec(BaseModel):
             "rationale",
         }:
             raise ValueError("Track-A suite output schema drifted")
-        if self.natural_pilot_reference_quality_override != (
-            self.study_mode == "natural-ai-pilot"
-        ):
+        if self.natural_pilot_reference_quality_override != (self.study_mode == "natural-ai-pilot"):
             raise ValueError(
                 "Track-A reference-quality override is allowed only for the natural pilot"
             )
@@ -217,9 +215,7 @@ class TrackAModelVisibleRequest(BaseModel):
     model: str
     system_instruction: str
     target_prompt: TrackATargetPrompt
-    precedent_representation: Literal[
-        "raw-source-projection", "grounded-taste-abstraction"
-    ]
+    precedent_representation: Literal["raw-source-projection", "grounded-taste-abstraction"]
     precedent_content: dict[str, JsonValue]
     output_schema: dict[str, JsonValue]
     sampling: TrackASuiteSampling
@@ -242,9 +238,7 @@ class TrackAArmExecutionConfig(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     config_id: str = Field(pattern=_ID)
     target_id: str = Field(pattern=_ID)
-    condition: Literal[
-        "raw-source-rag", "abstracted-matched-taste", "abstracted-mismatched-taste"
-    ]
+    condition: Literal["raw-source-rag", "abstracted-matched-taste", "abstracted-mismatched-taste"]
     precedent_input_id: str = Field(pattern=_ID)
     precedent_source_group_id: str = Field(pattern=_ID)
     precedent_domain: Literal["computing", "ecology", "public-health"]
@@ -287,9 +281,7 @@ class TrackAArmExecutionConfig(BaseModel):
 class TrackASuiteArmRecord(BaseModel):
     model_config = _CONFIG
 
-    condition: Literal[
-        "raw-source-rag", "abstracted-matched-taste", "abstracted-mismatched-taste"
-    ]
+    condition: Literal["raw-source-rag", "abstracted-matched-taste", "abstracted-mismatched-taste"]
     precedent_input_id: str = Field(pattern=_ID)
     precedent_source_group_id: str = Field(pattern=_ID)
     precedent_domain: Literal["computing", "ecology", "public-health"]
@@ -374,9 +366,7 @@ class TrackATargetCoverage(BaseModel):
     matched_input_id: str = Field(pattern=_ID)
     matched_status: Literal["accepted", "ai-review-rejected", "not-present-in-accepted-set"]
     mismatched_input_id: str = Field(pattern=_ID)
-    mismatched_status: Literal[
-        "accepted", "ai-review-rejected", "not-present-in-accepted-set"
-    ]
+    mismatched_status: Literal["accepted", "ai-review-rejected", "not-present-in-accepted-set"]
     runnable: bool
     blocker_codes: tuple[str, ...]
 
@@ -407,9 +397,7 @@ class TrackAPilotSuiteManifest(BaseModel):
     sampling: TrackASuiteSampling
     context_budget: TrackASuiteContextBudget
     study_mode: Literal["natural-ai-pilot", "formal-candidate"]
-    reference_quality_status: Literal[
-        "natural-pilot-explicit-override", "all-precedents-qualified"
-    ]
+    reference_quality_status: Literal["natural-pilot-explicit-override", "all-precedents-qualified"]
     reference_quality_qualifications: tuple[TrackASuiteSemanticBinding, ...]
     cases: tuple[TrackASuiteCaseRecord, ...] = Field(min_length=1, max_length=24)
     case_count: int = Field(ge=1, le=24)
@@ -558,9 +546,7 @@ class TrackAPilotSuitePreparation(BaseModel):
             or self.generated_arm_config_count != 3 * self.runnable_target_count
         ):
             raise ValueError("available Track-A suite has inconsistent config coverage")
-        expected = _canonical_sha256(
-            self.model_dump(mode="json", exclude={"preparation_sha256"})
-        )
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"preparation_sha256"}))
         if self.preparation_sha256 != expected:
             raise ValueError("Track-A suite preparation hash mismatch")
         return self
@@ -626,9 +612,7 @@ def materialize_track_a_pilot_suite(
         raise FileExistsError(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(
-        tempfile.mkdtemp(
-            prefix=f".{target.name}.", suffix=".staging", dir=target.parent
-        )
+        tempfile.mkdtemp(prefix=f".{target.name}.", suffix=".staging", dir=target.parent)
     )
     try:
         plan_binding = TrackASuiteSemanticBinding(
@@ -706,9 +690,7 @@ def materialize_track_a_pilot_suite(
             plan=plan,
             coverage_by_input=coverage_by_input,
         )
-        runnable_target_ids = {
-            item.target_id for item in target_coverage if item.runnable
-        }
+        runnable_target_ids = {item.target_id for item in target_coverage if item.runnable}
         if len(runnable_target_ids) != 24:
             blocker_codes.append("full-target-coverage-incomplete")
         quality_bindings, quality_status = _reference_quality_status(
@@ -722,8 +704,7 @@ def materialize_track_a_pilot_suite(
             blocker_codes.append("formal-reference-quality-qualification-incomplete")
         manifest: TrackAPilotSuiteManifest | None = None
         can_materialize = (
-            bool(runnable_target_ids)
-            and quality_status != "formal-qualification-incomplete"
+            bool(runnable_target_ids) and quality_status != "formal-qualification-incomplete"
         )
         if can_materialize:
             assert accepted_binding is not None
@@ -822,9 +803,7 @@ def inspect_track_a_pilot_suite(
     manifest = TrackAPilotSuiteManifest.model_validate_json(manifest_path.read_bytes())
     if manifest.manifest_sha256 != preparation.suite_manifest.semantic_sha256:
         raise ValueError("Track-A suite status binds another manifest")
-    if manifest.reference_quality_qualifications != (
-        preparation.reference_quality_qualifications
-    ):
+    if manifest.reference_quality_qualifications != (preparation.reference_quality_qualifications):
         raise ValueError("Track-A suite quality bindings differ from its status")
     verified = 0
     for case in manifest.cases:
@@ -865,9 +844,7 @@ def _materialize_ready_suite(
     ],
 ) -> TrackAPilotSuiteManifest:
     cases: list[TrackASuiteCaseRecord] = []
-    input_record_by_locator = {
-        item.input_file.locator: item for item in plan.abstraction_inputs
-    }
+    input_record_by_locator = {item.input_file.locator: item for item in plan.abstraction_inputs}
     for target_record in plan.targets:
         if target_record.target_id not in runnable_target_ids:
             continue
@@ -950,11 +927,7 @@ def _materialize_ready_suite(
                 model_request_bytes=request_bytes,
                 model_visible_request=visible,
             )
-            relative = (
-                PurePosixPath("execution-configs")
-                / target.target_id
-                / f"{condition}.json"
-            )
+            relative = PurePosixPath("execution-configs") / target.target_id / f"{condition}.json"
             config_path = staging.joinpath(*relative.parts)
             _write_new_json(
                 config_path,
@@ -1050,9 +1023,7 @@ def _verify_accepted_set(
     }
     if not pack_identities.issubset(set(plan_by_identity)):
         raise ValueError("Track-A abstraction review pack contains a foreign pilot input")
-    decision_by_review_id = {
-        item.review_item_id: item for item in accepted_set.decisions
-    }
+    decision_by_review_id = {item.review_item_id: item for item in accepted_set.decisions}
     if set(decision_by_review_id) != set(pack_by_review_id):
         raise ValueError("Track-A final AI decisions differ from the reviewed candidates")
     coverage_by_input: dict[str, tuple[str, str | None, str]] = {
@@ -1176,18 +1147,14 @@ def _verify_accepted_review_chain(
     responses: dict[str, tuple[AIAbstractionRawReviewResponse, Path]] = {}
     for binding in lock.raw_responses:
         response_path = _bound_ai_file(root, binding)
-        response = AIAbstractionRawReviewResponse.model_validate_json(
-            response_path.read_bytes()
-        )
+        response = AIAbstractionRawReviewResponse.model_validate_json(response_path.read_bytes())
         if response.reviewer_id in responses:
             raise ValueError("Track-A locked review repeats a primary AI response")
         responses[response.reviewer_id] = (response, response_path)
     receipts: dict[str, tuple[AIAbstractionReviewExecutionReceipt, Path]] = {}
     for binding in lock.execution_receipts:
         receipt_path = _bound_ai_file(root, binding)
-        receipt = AIAbstractionReviewExecutionReceipt.model_validate_json(
-            receipt_path.read_bytes()
-        )
+        receipt = AIAbstractionReviewExecutionReceipt.model_validate_json(receipt_path.read_bytes())
         if receipt.reviewer_id in receipts:
             raise ValueError("Track-A locked review repeats a primary AI receipt")
         receipts[receipt.reviewer_id] = (receipt, receipt_path)
@@ -1255,30 +1222,21 @@ def _verify_accepted_review_chain(
             adjudication_request_path.read_bytes()
         )
         response_path = _bound_ai_file(root, adjudication_response_binding)
-        response = AIAbstractionAdjudicationResponse.model_validate_json(
-            response_path.read_bytes()
-        )
+        response = AIAbstractionAdjudicationResponse.model_validate_json(response_path.read_bytes())
         receipt_path = _bound_ai_file(root, adjudication_receipt_binding)
-        receipt = AIAbstractionReviewExecutionReceipt.model_validate_json(
-            receipt_path.read_bytes()
-        )
+        receipt = AIAbstractionReviewExecutionReceipt.model_validate_json(receipt_path.read_bytes())
         if (
             adjudication_request.request_sha256 != lock.adjudication_request_sha256
-            or adjudication_request.locked_primary_review_set_sha256
-            != lock.primary_review_sha256
+            or adjudication_request.locked_primary_review_set_sha256 != lock.primary_review_sha256
             or response.request_sha256 != adjudication_request.request_sha256
-            or response.reviewer_identity_sha256
-            != adjudication_request.adjudicator.identity_sha256
+            or response.reviewer_identity_sha256 != adjudication_request.adjudicator.identity_sha256
             or receipt.request_sha256 != adjudication_request.request_sha256
-            or receipt.reviewer_identity_sha256
-            != adjudication_request.adjudicator.identity_sha256
+            or receipt.reviewer_identity_sha256 != adjudication_request.adjudicator.identity_sha256
             or _bound_ai_file(root, receipt.request) != adjudication_request_path
             or _bound_ai_file(root, receipt.raw_response) != response_path
         ):
             raise ValueError("Track-A AI adjudication identity drifted")
-        adjudication_by_item = {
-            item.review_item_id: item for item in response.responses
-        }
+        adjudication_by_item = {item.review_item_id: item for item in response.responses}
         if set(adjudication_by_item) != dispute_ids:
             raise ValueError("Track-A AI adjudication does not close every dispute")
     elif (
@@ -1288,18 +1246,12 @@ def _verify_accepted_review_chain(
     ):
         raise ValueError("Track-A accepted set carries adjudication without a dispute")
 
-    decision_by_item = {
-        item.review_item_id: item for item in accepted_set.decisions
-    }
+    decision_by_item = {item.review_item_id: item for item in accepted_set.decisions}
     if set(decision_by_item) != expected_items:
         raise ValueError("Track-A final AI decisions differ from the locked candidate set")
     for review_item_id, decision in decision_by_item.items():
         rows = sorted(
-            (
-                item
-                for item in lock.normalized_rows
-                if item.review_item_id == review_item_id
-            ),
+            (item for item in lock.normalized_rows if item.review_item_id == review_item_id),
             key=lambda item: item.reviewer_id,
         )
         if review_item_id in dispute_ids:
@@ -1315,9 +1267,7 @@ def _verify_accepted_review_chain(
                         ),
                         "request_sha256": lock.adjudication_request_sha256,
                         "raw_response_file_sha256": adjudication_response_binding.sha256,
-                        "execution_receipt_file_sha256": (
-                            adjudication_receipt_binding.sha256
-                        ),
+                        "execution_receipt_file_sha256": (adjudication_receipt_binding.sha256),
                         "assessment": raw.assessment.model_dump(mode="json"),
                         "disposition": raw.disposition.value,
                         "issue_codes": raw.issue_codes,
@@ -1333,9 +1283,7 @@ def _verify_accepted_review_chain(
                 or rows[0].disposition is AIAbstractionReviewDisposition.NEEDS_DISPUTE
             ):
                 raise ValueError("Track-A non-disputed primary AI reviews do not agree")
-            expected_disposition = AIAbstractionFinalDisposition(
-                rows[0].disposition.value
-            )
+            expected_disposition = AIAbstractionFinalDisposition(rows[0].disposition.value)
             expected_hashes = tuple(item.row_sha256 for item in rows)
             expected_resolution = "primary-agreement"
         if (
@@ -1357,9 +1305,7 @@ def _target_coverage(
     }
     rows: list[TrackATargetCoverage] = []
     for record in plan.targets:
-        target_path = plan_file.parent.joinpath(
-            *PurePosixPath(record.target_file.locator).parts
-        )
+        target_path = plan_file.parent.joinpath(*PurePosixPath(record.target_file.locator).parts)
         if _sha256_file(target_path) != record.target_file.file_sha256:
             raise ValueError("Track-A target bytes differ from the pilot plan")
         target = TasteMechanismPilotTarget.model_validate_json(target_path.read_bytes())
@@ -1416,9 +1362,7 @@ def _reference_quality_status(
     expected: dict[tuple[str, str], str] = {}
     for record in plan_inputs:
         node_input = _load_plan_input(plan_file.parent, record)
-        expected[(node_input.source_id, node_input.source_projection_sha256)] = (
-            record.input_id
-        )
+        expected[(node_input.source_id, node_input.source_projection_sha256)] = record.input_id
     qualified_by_input: dict[str, TrackASuiteSemanticBinding] = {}
     for value in paths:
         source = _regular_file(root, value)
@@ -1471,9 +1415,9 @@ def _ordered_actions(
 ) -> tuple[TrackACandidateAction, TrackACandidateAction]:
     observed = target.source_observed_action
     distractor = target.distractor_action
-    observed_first = int(
-        _canonical_sha256([spec.spec_sha256, target.target_id, "action-order"]), 16
-    ) % 2 == 0
+    observed_first = (
+        int(_canonical_sha256([spec.spec_sha256, target.target_id, "action-order"]), 16) % 2 == 0
+    )
     ordered = (observed, distractor) if observed_first else (distractor, observed)
     return tuple(
         TrackACandidateAction(
@@ -1485,18 +1429,17 @@ def _ordered_actions(
     )
 
 
-def _load_plan_input(
-    plan_root: Path, record: PilotAbstractionInputRecord
-) -> TasteAbstractionInput:
+def _load_plan_input(plan_root: Path, record: PilotAbstractionInputRecord) -> TasteAbstractionInput:
     path = plan_root.joinpath(*PurePosixPath(record.input_file.locator).parts)
-    if path.is_symlink() or not path.is_file() or _sha256_file(path) != (
-        record.input_file.file_sha256
+    if (
+        path.is_symlink()
+        or not path.is_file()
+        or _sha256_file(path) != (record.input_file.file_sha256)
     ):
         raise ValueError("Track-A planned abstraction input binding drifted")
     value = TasteAbstractionInput.model_validate_json(path.read_bytes())
-    if (
-        value.source_projection_sha256 != record.source_projection_sha256
-        or value.domain_tags != (record.source_domain,)
+    if value.source_projection_sha256 != record.source_projection_sha256 or value.domain_tags != (
+        record.source_domain,
     ):
         raise ValueError("Track-A planned abstraction input identity drifted")
     return value

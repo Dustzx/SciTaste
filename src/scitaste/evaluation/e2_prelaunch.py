@@ -108,11 +108,7 @@ class E2ProjectBinding(BaseModel):
     @field_validator("idea_revision_id")
     @classmethod
     def idea_id_is_safe(cls, value: str | None) -> str | None:
-        return (
-            None
-            if value is None
-            else validate_entry_id(value, field_name="idea_revision_id")
-        )
+        return None if value is None else validate_entry_id(value, field_name="idea_revision_id")
 
     @field_validator("outputs_root")
     @classmethod
@@ -251,9 +247,7 @@ class E2ModelCandidate(BaseModel):
             "inventory-candidate",
             "download-candidate",
             "unconfigured-api-candidate",
-        } and (
-            self.resource_manifest is not None
-        ):
+        } and (self.resource_manifest is not None):
             raise ValueError(
                 "unqualified inventory/download candidates cannot carry a selected resource"
             )
@@ -1001,8 +995,7 @@ def _model_selection_matches(root: Path, manifest: E2PrelaunchManifest) -> bool:
             or catalog.idea.idea_revision_id != manifest.project.idea_revision_id
             or catalog.formal_model_selected is not False
             or any(
-                item.model_id not in eligible_models
-                for item in manifest.model_selection.candidates
+                item.model_id not in eligible_models for item in manifest.model_selection.candidates
             )
         ):
             return False

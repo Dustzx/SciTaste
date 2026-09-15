@@ -84,9 +84,7 @@ def _handle_plan(args: argparse.Namespace) -> int:
                 "source_group_count": (
                     plan.task_package.source_group_count if plan.task_package else 0
                 ),
-                "scientific_use": (
-                    plan.task_package.scientific_use if plan.task_package else None
-                ),
+                "scientific_use": (plan.task_package.scientific_use if plan.task_package else None),
                 "ready_to_materialize": plan.ready_to_materialize,
                 "ready_for_controller_acquisition_binding": (
                     plan.ready_for_controller_acquisition_binding

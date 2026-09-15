@@ -148,9 +148,7 @@ def _random_toolbox(environment_seed: int) -> NewtonBenchToolbox:
 
 
 def test_newtonbench_measurements_are_seeded_replayable_and_rng_isolated() -> None:
-    request = (
-        InteractiveExperimentRequest(parameters={"mass1": 1, "mass2": 2, "distance": 3}),
-    )
+    request = (InteractiveExperimentRequest(parameters={"mass1": 1, "mass2": 2, "distance": 3}),)
     python_state = random.getstate()
     numpy_state = np.random.get_state()
     try:

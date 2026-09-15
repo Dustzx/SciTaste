@@ -66,3 +66,12 @@ ignore = ["UP040", "UP046", "UP047"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]
+
+[tool.ruff.format]
+# These executables are retained byte-for-byte because completed scientific
+# receipts bind their exact SHA-256. A semantic revision must mint a new asset
+# and a new receipt rather than silently rewriting historical execution bytes.
+exclude = [
+  "scripts/run_direct_taste_neighbor_b0.py",
+  "src/scitaste/evaluation/runtime_assets/mlrc_perception_objective_scorer.py",
+]

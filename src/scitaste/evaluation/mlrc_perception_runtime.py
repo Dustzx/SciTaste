@@ -550,8 +550,7 @@ def _parity_receipt_matches(
         return False
     try:
         scores_match = abs(
-            float(payload.get("scorer_average_map"))
-            - float(payload.get("upstream_average_map"))
+            float(payload.get("scorer_average_map")) - float(payload.get("upstream_average_map"))
         ) <= float(payload.get("absolute_tolerance"))
     except (TypeError, ValueError):
         return False
