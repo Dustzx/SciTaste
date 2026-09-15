@@ -764,8 +764,9 @@ The manuscript must not claim any of the following:
 - first human-intervenable autonomous research system;
 - improved research quality based only on repository tests, generated papers,
   model review scores, or the self-development case; or
-- a benchmark contribution before the natural, expert-labelled population is
-  actually released and evaluated.
+- a benchmark contribution before the natural population is formally admitted,
+  released, and independently validated. AI-panel admission alone supports only
+  an internal measurement instrument.
 
 Auditability, provenance, deterministic gates, Generation as Content, and Tool
 Intelligence remain meaningful product and enabling-system properties. They
@@ -776,11 +777,11 @@ comparative evidence.
 
 | Research claim | Decisive comparison | Primary evidence | Failure condition |
 |---|---|---|---|
-| Grounded decision representation adds value beyond retrieval | same admitted sources rendered as raw evidence versus TasteCase | condition-blinded expert preference over the resulting action and claim calibration | no material advantage or grounding/transfer failures dominate |
-| Taste must be context-specific | matched versus source-disjoint, quality- and token-matched Taste | paired expert preference and calibrated action selection | matched context is not better than mismatched context |
-| SciTaste can select useful precedents without an oracle | deliberative versus lexical selection from the same hidden-label pool | expert decision quality plus applicability/failure diagnostics | selection gains require oracle relation labels or extra context |
+| Grounded decision representation adds value beyond retrieval | same admitted sources rendered as raw evidence versus TasteCase | condition-blinded AI-panel and natural-outcome proxies over the resulting action and claim calibration | no material advantage or grounding/transfer failures dominate |
+| Taste must be context-specific | matched versus source-disjoint, quality- and token-matched Taste | paired AI-panel proxy, transfer error, and calibrated action selection | matched context is not better than mismatched context |
+| SciTaste can select useful precedents without an oracle | deliberative versus lexical selection from the same hidden-label pool | AI-panel decision proxy plus applicability, reversal, and failure diagnostics | selection gains require oracle relation labels or extra context |
 | Taste improves autonomous research | Full SciTaste versus Native Base with the same model, tools, starting state, and budget | task-level objective progress with failures retained | no task-level gain, invalid evidence, or gain explained by unmatched execution |
-| SciTaste is competitive with established systems | separately admitted accepted systems on common tasks | complete-package blind review and objective task scores | adapters or budgets are not comparable; model confounding is hidden |
+| SciTaste is competitive with established systems | separately admitted accepted systems on common tasks | explicitly nonhuman AI-panel package review and objective task scores | adapters or budgets are not comparable; model confounding is hidden |
 
 The current H0/H1/H2a/H2b/H3 registry is useful protocol detail, but the paper
 should tell the above three-part story rather than present five equally important
@@ -797,11 +798,14 @@ The intended result-dependent title remains:
 
 > **SciTaste: Improving Autonomous Research through Scientific Taste**
 
-“Improving” becomes defensible only after the grounded representation,
-contextual selection, and held-out objective-progress claims are complete and
-positive. The repository now estimates a policy rather than only retrieving
-cases, but “Learning” should appear in a submitted title only when that estimator
-is trained and evaluated on non-fixture episodes.
+Under the active AI-only protocol, “Improving” remains unauthorized even if the
+grounded-representation, contextual-selection, and held-out objective-progress
+results are positive; those results can establish proxy and task-level effects
+but not independent Scientific Taste construct validity. Escalating the title
+requires a separate construct-validation study. The repository now estimates a
+policy rather than only retrieving cases, but “Learning” should appear in a
+submitted title only when that estimator is trained and evaluated on non-fixture
+episodes.
 
 ## Three-minute report
 

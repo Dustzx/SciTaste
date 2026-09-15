@@ -1,10 +1,10 @@
 schema_version: '1.0'
 project_id: scitaste-self-development
-paper_id: scitaste-iclr2027-submission-draft-v6
-archetype: empirical-system
-central_question: Under matched information and resource budgets, does explicit scientific taste improve the scientific value and evidence validity of autonomous research?
-central_answer: SciTaste implements explicit precedent-informed scientific decisions over persistent research state, but the headline improvement claim remains unestablished until the registered external package-preference, objective-progress, ablation, and independent-review evidence is complete.
-manuscript_sha256: d36bb5e9f445ead71082ea4e52941808ff6f28e03c6737b3fd588dbeb8a5d22d
+paper_id: scitaste-iclr2027-submission-draft-v9
+archetype: empirical-method
+central_question: Can outcome-attributed scientific decisions support a bounded, uncertainty-aware lifecycle policy for autonomous research, and does that policy improve held-out objective progress?
+central_answer: SciTaste implements the decision, attribution, estimation, and abstention operators on authored fixtures, while natural-case proxy validity and held-out objective-progress effects remain open prospective questions.
+manuscript_sha256: f045bb67c7eab63109050bc10c63424e780f8163adad598ce40d4150864262e6
 required_entry_points:
 - title
 - abstract
@@ -76,7 +76,7 @@ carriers:
   evidence_ids:
   - evidence-repository-suite
   artifact_locator: assets/fig1-scitaste-control.pdf
-  artifact_sha256: 91ce4512daab68ceb8a5a3d70a592ccc7a9f63d4d7e13101cf5e17d770dcf122
+  artifact_sha256: f9e30fac9ce5239a619adca245fb76100d046d7331a08331432b573f84fc0d19
   absence_reason: null
 entry_points:
 - location: title
@@ -84,7 +84,7 @@ entry_points:
   - claim-decision-ownership
   central_question_visible: false
   central_answer_visible: true
-  scope_matches_contract: false
+  scope_matches_contract: true
 - location: abstract
   claim_ids:
   - claim-decision-ownership
@@ -130,21 +130,21 @@ sections:
   primary_carrier_ids:
   - carrier-control-loop-figure
 - section_id: framework
-  heading: 'Framework: SciTaste'
+  heading: 'Method: SciTaste'
   question_answered: Which state, controller, evidence, review, and communication objects implement decision-centric research control?
   claim_ids:
   - claim-decision-ownership
   primary_carrier_ids:
   - carrier-control-loop-figure
 - section_id: trust-architecture
-  heading: Trust and Execution Architecture
+  heading: Trust and execution architecture
   question_answered: Which component owns each proposal, action, execution, admission, and state transition?
   claim_ids:
   - claim-decision-ownership
   primary_carrier_ids:
   - carrier-contract-suite
 - section_id: evaluation-results
-  heading: Evaluation Results
+  heading: Evaluation Protocol and Results
   question_answered: Which implementation and bounded completion claims do the registered artifacts support, and which effectiveness inference remains excluded?
   claim_ids:
   - claim-decision-ownership
@@ -171,7 +171,7 @@ sections:
   - carrier-result-boundaries
 material_limitations:
 - limitation_id: limitation-effectiveness-pending
-  statement: The current evidence does not establish that Taste-guided control improves research yield; the external package-preference, objective-progress, native-ablation, and blinded expert-review evidence remain incomplete.
+  statement: The current evidence does not establish that Taste-guided control improves research yield; natural-case AI-panel proxy, objective-progress, native-ablation, and ecological package evidence remain incomplete, and none substitutes for independent construct validation.
   affected_claim_ids:
   - claim-bounded-completion
   disclosed_in:
@@ -187,4 +187,4 @@ material_limitations:
   - claim-bounded-completion
   disclosed_in:
   - Limitations
-contract_sha256: 79084b70aad77fd1d8e37faaaf437e21e29f5d8dfcb95bb7fb6fe6722478c3a3
+contract_sha256: e91ed29d7f7269c7a7af03bcb8890206c240a93ac8dbbc1bdb736f3a159252de

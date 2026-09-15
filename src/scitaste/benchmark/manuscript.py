@@ -321,6 +321,12 @@ def _convert_blocks(
     unnumbered_headings: set[str] | None = None,
 ) -> str:
     lines = markdown.splitlines()
+    heading_levels = tuple(
+        len(match.group(1))
+        for line in lines
+        if (match := re.match(r"^(#{1,4})\s+(.+?)\s*$", line)) is not None
+    )
+    root_heading_level = min(heading_levels, default=1)
     output: list[str] = []
     paragraph: list[str] = []
     list_kind: str | None = None
@@ -423,7 +429,13 @@ def _convert_blocks(
                 output.append("\\begin{abstract}")
                 abstract_open = True
             else:
-                command = {1: "section", 2: "section", 3: "subsection", 4: "subsubsection"}[level]
+                relative_level = max(1, level - root_heading_level + 1)
+                command = {
+                    1: "section",
+                    2: "subsection",
+                    3: "subsubsection",
+                    4: "paragraph",
+                }[min(relative_level, 4)]
                 if canonical in (unnumbered_headings or set()):
                     command = "subsection*"
                 output.append(f"\\{command}{{{_inline_latex(name)}}}")

@@ -1,7 +1,7 @@
 # SciTaste framework manuscript
 
-`main.md` is the tracked source for **SciTaste: Improving Autonomous Research
-through Scientific Taste**. `references.bib` contains its primary
+`main.md` is the tracked source for **SciTaste: Grounded Scientific Taste for
+Autonomous Research**. `references.bib` contains its primary
 references. `argument_contract.yaml` binds the draft's paper-level question,
 claims, evidence carriers, entry points, and material limitations to registered
 research evidence. `assets/fig1-scitaste-control.svg` is the canonical editable
@@ -14,5 +14,6 @@ The reader-facing Markdown, generated TeX, compiled PDF, bibliography, build
 record, and manuscript assessment are registered as a versioned paper bundle
 inside `outputs/projects/scitaste-self-development/papers/`. Generated files are
 not committed. The current artifact is a research working draft, not a
-publication-ready or empirically accepted paper: the full matched-budget study
-and blinded external review remain open.
+publication-ready or empirically accepted paper: natural-case AI-panel proxy
+evaluation, the full matched-budget objective study, ecological comparison, and
+independent construct validation remain open.

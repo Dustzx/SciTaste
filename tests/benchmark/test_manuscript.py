@@ -47,6 +47,27 @@ def test_markdown_to_latex_preserves_math_citations_and_tables() -> None:
     assert "\\bibliography{references}" in tex
 
 
+def test_markdown_to_latex_preserves_relative_heading_depth() -> None:
+    tex = markdown_to_latex(
+        """## Title
+Relative headings
+
+# Method
+Overview.
+
+## Policy
+Details.
+
+### Abstention
+More details.
+"""
+    )
+
+    assert "\\section{Method}" in tex
+    assert "\\subsection{Policy}" in tex
+    assert "\\subsubsection{Abstention}" in tex
+
+
 def test_materialize_manuscript_creates_self_contained_bundle(tmp_path, monkeypatch) -> None:
     source = tmp_path / "paper.md"
     source.write_text(SAMPLE + "\n![Repeated](charts/comparison.png)\n", encoding="utf-8")

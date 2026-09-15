@@ -3,28 +3,25 @@ SciTaste: Grounded Scientific Taste for Autonomous Research
 
 # Abstract
 
-Autonomous research systems can search literature, write code, run experiments,
-and draft papers, but greater execution capacity does not determine which
-research action is worth taking. Existing work learns paper- or idea-level
-impact judgments, preserves a researcher's stated Taste, or routes trial lessons
-into later workflow behavior. We introduce **SciTaste**, a method for learning
-scientific taste as a common policy over consequential decisions throughout a
-research trajectory. SciTaste represents each learning episode by the pre-decision state,
-available alternatives and evidence, delayed outcomes, causal-credit hypotheses,
-and conditions under which the preference should transfer or reverse. External
-scientific precedents, tool and experiment outcomes, and human corrections share
-this representation while retaining distinct authority. Two independent
-attribution reviews are required before an episode updates an uncertainty-aware
-pairwise policy; source-group weighting and development/held-out partitions limit
-duplication and leakage. At inference, the policy applies only under explicit
-Idea, domain, stage, support, and uncertainty constraints and otherwise abstains,
-while deterministic provenance, budget, and execution gates retain final
-authority. We evaluate this hypothesis through matched comparisons against
-same-source raw retrieval, mismatched Taste, static and shuffled-credit policies,
-and the same native research executor without learned Taste, followed by a
-separate comparison with accepted autonomous-research systems. This formulation
-makes delayed research judgment, rather than pipeline completion or paper-level
-scoring, the object of learning and causal evaluation.
+Autonomous research agents can execute long workflows, yet execution alone does
+not determine which research action is worth taking. We introduce **SciTaste**,
+which operationalizes scientific taste as an outcome-attributed policy over
+consequential decisions across a research trajectory. A candidate episode binds
+the pre-decision state, feasible alternatives, grounding evidence, delayed
+outcomes, causal-credit hypotheses, and transfer and reversal conditions. Under
+the current AI-only study protocol, two conflict-screened AI reviewers with
+distinct model, run, and response identities must agree before an episode can
+update a content-addressed factorized-Beta pairwise policy; disagreements invoke
+a third AI adjudicator. Source-group weighting, partition isolation, bounded
+adjustments, and support and uncertainty gates make the policy abstain outside
+registered scope, while deterministic runtime gates retain execution and
+evidence-admission authority. We implement these operators on authored fixtures
+and register matched tests of episode abstraction, contextual transfer,
+delayed-credit updating, and scorer-owned objective progress under a fixed native
+executor. No formal natural-case effectiveness result or human-expert validation
+is reported. SciTaste therefore contributes a grounded, falsifiable method and
+evaluation protocol; whether it improves autonomous research remains an open
+empirical question.
 
 # Introduction
 
@@ -65,37 +62,37 @@ choice was made. Transferring judgment therefore requires reconstructing a
 bounded decision episode and assigning later outcomes back to the earlier
 choice without turning executor completion or prestige into reward.
 
-SciTaste learns at the system-policy level. An episode closes the pre-decision
-state, candidate set, selected action, grounding evidence, delayed outcome
-families, confounders, causal-credit hypotheses, transfer conditions, and a
-reversal probe. Scientific records, endogenous tool and experiment traces, and
-typed human intervention can propose this same object, but none can admit its
-own proposal. Two conflict-cleared reviewers independently assess decision and
-outcome support, alternatives, credit, scope, and reversal; disagreement
-requires a third adjudicator. Admitted episodes estimate factorized Beta
-posteriors over pairwise action features with at most one unit of effective
-weight per source trajectory. At inference, missing Idea identity, domain or
-stage support, sample support, pairwise confidence, or a positive credible
-margin causes explicit abstention with zero policy adjustment.
+SciTaste estimates a bounded system-level decision policy. Each candidate
+episode closes the pre-decision state, alternatives, evidence, delayed outcomes,
+confounders, causal-credit hypotheses, transfer conditions, and a reversal
+probe. Under the current study protocol, two conflict-screened AI reviewers with
+distinct model, run, and raw-response identities independently assess the same
+hash-bound packet; a substantive split invokes a third AI adjudicator. An
+admitted episode is AI-supervised evidence rather than human or expert ground
+truth. Admitted episodes update factorized Beta posteriors over pairwise action
+features, with at most one effective unit per source trajectory and explicit
+abstention outside supported scope.
 
-This paper makes three contributions: (i) a unified lifecycle Scientific Taste
-policy and outcome-attributed episode contract; (ii) a source-to-policy method
-combining decision reconstruction, independent attribution, source-group-aware
-estimation, and uncertainty-bounded controller integration; and (iii) a causal
-evaluation separating abstraction from raw retrieval, contextual match from
-mismatched Taste, outcome learning from static or shuffled credit, and policy
-effects from the same native executor without Taste. Accepted-system comparisons
-remain separate ecological evidence.
+This paper contributes (i) an outcome-attributed lifecycle decision policy and
+episode contract; (ii) a source-to-policy method combining decision
+reconstruction, AI-supervised attribution, source-group-aware estimation, and
+uncertainty-bounded controller integration; and (iii) a registered causal
+evaluation design separating abstraction from raw retrieval, contextual match
+from mismatched Taste, outcome updating from no-update or shuffled credit, and
+policy effects from the identical native executor with policy adjustment
+disabled. Accepted-system comparisons are reserved as separate ecological
+evidence.
 
-The implementation path is complete enough to make these comparisons
-executable, but the current positive examples use authored fixtures. Natural
-prospective episodes, independent attribution, held-out policy effects, and
-downstream objective-progress results remain pending. We therefore report
-existing integration measurements only as implementation evidence and withhold
-the stronger result-dependent title *SciTaste: Improving Autonomous Research
-through Scientific Taste* until the registered causal gates are positive.
+The estimator, update controls, admission checks, and controller interface are
+implemented and exercised on authored fixtures. Natural prospective episodes,
+identity-bound AI-panel admission, held-out policy effects, and downstream
+objective-progress results remain pending. We therefore make method and
+implementation claims only. The stronger title *SciTaste: Improving Autonomous
+Research through Scientific Taste* remains unauthorized under the AI-only
+protocol even if proxy decision and objective-progress results are positive; it
+additionally requires independent construct validation.
 
-![SciTaste method. External scientific records, endogenous tool and experiment outcomes, and typed human interventions are reconstructed into grounded decision episodes. Independent attribution review admits source-group- and split-bound episodes to an uncertainty-aware pairwise policy. At the next decision, the policy adjusts the fixed controller only when Idea, domain, stage, support, probability, and credible-margin gates pass; otherwise it abstains. Workers remain bounded and deterministic admission alone can change project state.](assets/fig1-scitaste-control.pdf)
+![SciTaste reconstructs external records, endogenous outcomes, and typed user interventions into grounded decision candidates. Under the current study protocol, two distinct AI reviewers---and an AI adjudicator on disagreement---may admit a source-group- and split-bound episode to the pairwise policy. The policy adjusts a fixed controller only when Idea, domain, stage, support, probability, and credible-margin gates pass; otherwise it abstains. Executors remain bounded, and only deterministic admission changes project state. AI admission is not human-expert validation.](assets/fig1-scitaste-control.pdf)
 
 # Related Work
 
@@ -187,9 +184,11 @@ $C_i$ proposes causal credit and confounders, and $G_i$ records applicability,
 failure, and reversal conditions. The episode also freezes Idea revision,
 source relationship, natural source group, and dataset partition before review.
 Executor success is one observation inside $O_i$ and is not automatically a
-scientific label. Two independent primary reviewers must agree on the preferred
-action and share supported credit; a substantive split invokes a third
-adjudicator. Formal-held-out episodes and self-effectiveness records cannot
+scientific label. Under the current AI-only protocol, two primary reviewers with
+distinct model, reviewer, run, and raw-response identities must agree on the
+preferred action and supported credit; a substantive split invokes a third AI
+adjudicator. This produces an AI-panel proxy label, not human preference or
+expert agreement. Formal-held-out episodes and self-effectiveness records cannot
 train the policy.
 
 For each admitted episode, the preferred action is compared with every recorded
@@ -217,13 +216,14 @@ The causal target is research progress under a fixed budget, not policy fit or
 stage completion. Mechanism tests therefore hold source bytes, model, context,
 tools, and budget constant while changing abstraction, match, selection, or
 credit. The system test holds the native executor fixed while toggling the
-learned policy. Local endpoints include condition-blinded expert action quality,
-calibration, abstention, reversal, and transfer failures; system endpoints use
-objective task progress with every failed trajectory retained. Complete-paper
-preference and accepted-system comparisons are reported separately because they
-introduce writing and implementation confounds.
+learned policy. Under the AI-only amendment, H1 uses AI-panel and natural-outcome
+proxies, H2 uses AI-panel and transfer-error proxies, H2b uses AI-panel and
+reversal proxies, and the decision-level part of H3 uses AI-panel and
+held-out-decision proxies. H4 retains scorer-owned objective task progress with
+every failed trajectory retained. None of the proxy endpoints establishes
+human-expert alignment or general Scientific Taste construct validity.
 
-# Framework: SciTaste
+# Method: SciTaste
 
 ## Persistent research state
 
@@ -269,18 +269,20 @@ model-generated reflection cannot certify its own credit assignment.
 The process candidate compiler requires at least two closed alternatives,
 pre-action state and evidence, explicit outcome horizon, outcome-family-specific
 credit, confounders, applicability and failure conditions, and a reversal probe.
-A human intervention may remain in an awaiting-outcome state until later
+A typed user intervention may remain in an awaiting-outcome state until later
 evidence is joined by a different attribution producer. Candidate inspection
 rehashes every bound artifact and verifies the current Idea revision before
 independent review.
 
-Admission is intentionally separate from production. Exactly two independent,
-conflict-cleared primary reviewers assess decision trace, outcome trace,
-alternatives, credit, transfer scope, and reversal. Agreement admits an immutable
-training episode at the lower review confidence; disagreement cannot be resolved
-by the producer and requires an independent adjudicator. Source group and split
-are frozen before review, all decisions from one source trajectory share a unit
-weight ceiling, and formal-held-out records are excluded from training.
+Admission is separate from production. In the current experiment, exactly two
+conflict-cleared AI reviewers with distinct model and execution identities assess
+the same hash-bound decision trace, outcome trace, alternatives, credit, transfer
+scope, and reversal packet. Agreement admits an immutable AI-supervised episode
+at the lower confidence; disagreement requires a third independent AI
+adjudicator. This route does not authorize a human-validity claim. Source group
+and split are frozen before review, all decisions from one source trajectory
+share a unit weight ceiling, and formal-held-out records are excluded from
+training.
 
 The first estimator is a transparent factorized Beta pairwise policy. Its
 registered update modes are outcome-updated, no-update, success-only,
@@ -331,7 +333,7 @@ Generation as Content renders the same live evidence and alternatives for human
 inspection and records typed interventions, but a generated view or correction
 does not become reusable Taste without outcome and scope review.
 
-# Trust and Execution Architecture
+## Trust and execution architecture
 
 SciTaste separates four authorities. The controller chooses a research action.
 An executor carries it out. A model node may propose bounded semantic content.
@@ -373,19 +375,19 @@ layer only: they establish that contracts run as specified, not that the chosen
 scientific action is better. The confirmatory population excludes authored
 fixtures and the SciTaste self-development project.
 
-**Grounded representation and selection.** We construct natural, source-group-
-disjoint decisions spanning problem choice, hypothesis refinement, experimental
-design, interpretation, adaptation, review, and claims. Each case exposes a
-closed action set while hiding expert preference from the model. Same-source raw
-RAG versus grounded Taste isolates abstraction; matched versus source-disjoint
-mismatched Taste tests contextual specificity; and deliberative versus lexical
-selection uses the same hard-negative pool to test autonomous applicability.
-Content-grounded versus prestige-only source qualification is supporting
-evidence. Primary endpoints are condition-blinded expert preference over the
-resulting action and claim calibration, with agreement, calibration, abstention,
-reversal, and transfer-error diagnostics. This collection is a measurement
-instrument inside the method paper; it is not called an established benchmark
-before natural cases and independent labels are released.
+**Grounded representation and selection.** The registered H1/H2/H2b study will
+construct natural, source-group-disjoint decisions spanning problem choice,
+hypothesis refinement, experimental design, interpretation, adaptation, review,
+and claims. Each formally admitted case will expose a closed action set while
+withholding condition identity and out-of-window outcomes from the evaluated
+model. Same-source raw RAG versus grounded episodes isolates abstraction; matched
+versus source-disjoint mismatched episodes tests specificity; and
+decision-grounded versus lexical selection uses the same hard-negative pool. The
+registered primary endpoints are the amendment's AI-panel and natural-outcome,
+transfer-error, and reversal proxies, with agreement, calibration, abstention,
+and transfer diagnostics. The collection remains an internal measurement
+instrument, not a human-validated benchmark, until formal admission and an
+appropriate release study are complete.
 
 **Outcome-attributed lifecycle learning.** Prospective sampling plans freeze
 source trajectories and partitions before outcomes are reviewed. The primary
@@ -407,22 +409,21 @@ experiment rate, unsupported claims, pivots, cost, and intervention burden are
 secondary. This answers whether better local decisions change research outcomes
 rather than merely sounding more persuasive.
 
-**Ecological comparison.** A separate supporting lane compares complete
-SciTaste packages with real accepted autonomous-research methods on common
-full-lifecycle tasks. Agent Laboratory, AI-Researcher, and DeepScientist are
-candidates only after their unchanged implementations, task mappings, models,
-and budgets are disclosed and admitted. Complete-package review is blinded and
-independent. Because model and architecture equivalence may be impossible, these
-results are not pooled with the within-native causal estimate. Unavailable
-systems remain unavailable; no surrogate implementation is substituted.
+**Ecological comparison.** A separate supporting lane will compare complete
+SciTaste packages with admitted, unchanged implementations of accepted
+autonomous-research methods on common full-lifecycle tasks. Agent Laboratory and
+DeepScientist are the current candidates; AI-Researcher remains reference-only
+unless its code-use status is resolved. Model, task, tool, and budget mappings
+must be disclosed. AI-panel package judgments and scorer-owned endpoints must be
+reported as such, and these ecological results are not pooled with the
+within-native H4 estimate. Unavailable systems are not replaced by surrogates.
 
-Sample sizes and repetitions are determined once from task-excluded conformance
-pilots and power analysis rather than from a visually impressive cell count.
-The primary backbone is selected for instruction/tool conformance and stable
-identity before formal data are opened; provider and local-model robustness
-runs remain non-pooled. At the time of writing, task acquisition, prospective
-episodes, human review, model selection, power analysis, and execution authority
-are not complete. No API or GPU formal run is reported below.
+Sample size and repetition counts will be frozen after task-excluded conformance
+pilots and power analysis rather than chosen to produce a large cell count. At
+the time of writing, formal AI-panel calibration and natural-case admission,
+task-population qualification, backbone selection, power analysis, and owner
+execution authorization remain incomplete. No formal API or GPU effectiveness
+run is reported.
 
 # Results: Current Evidence and Open Questions
 
@@ -471,12 +472,12 @@ because none tests learned Taste on natural held-out decisions.
 
 ## RQ2: Does learned lifecycle Taste improve research decisions?
 
-This question is open. No current result compares the outcome-updated policy
-with no-update or shuffled-credit controls on natural held-out episodes. No
-independent reviewer set has yet established the correctness of reconstructed
-alternatives, delayed credit, transfer scope, or reversals. Earlier generated
-papers and one controlled integration task verify workflow completion only and
-are excluded from this estimate.
+This question is open. No current result compares outcome-updated, no-update,
+and shuffled-credit policies on formally admitted natural held-out episodes. The
+attempted AI screening and prospective segmentation pilots are calibration
+evidence only and are not eligible as benchmark admissions or effectiveness
+evidence. No result currently establishes the correctness of reconstructed
+alternatives, delayed credit, transfer scope, or reversals.
 
 ## RQ3: Does decision improvement change objective research progress?
 
@@ -518,8 +519,9 @@ particular field, venue, institution, or reviewer population. Source-group
 weighting, explicit confounders, transfer conditions, reversal probes, and
 abstention reduce obvious leakage but do not eliminate bias. The factorized
 estimator also assumes a fixed feature vocabulary and does not yet learn semantic
-transfer. It requires temporal, cross-domain, and cross-model evaluation against
-diverse experts before broader generalization claims are credible.
+transfer. It requires temporal, cross-domain, and cross-model evaluation plus
+independent construct validation before broader generalization claims are
+credible.
 
 The execution boundary is conservative: generated experiments have restricted
 imports and run with content-bound data and explicit resource limits. The local
@@ -533,7 +535,7 @@ Self-development also risks circular confirmation. It is useful for defects and
 process evidence but is excluded from headline metrics and policy training; a
 successful self-run does not show that recording caused better science.
 
-# Conclusion
+## Conclusion
 
 SciTaste reframes scientific taste as an outcome-updated policy over
 consequential actions throughout an autonomous-research trajectory. Its stable
@@ -546,14 +548,14 @@ state, Tool Intelligence observations, Generation as Content interventions,
 bounded execution, evidence, review, and paper production without granting any
 producer authority to certify its own lesson.
 
-The repository now implements the complete minimum method on authored fixtures
+The repository implements the minimum method on authored fixtures
 and can reconstruct exact project decisions without inventing rewards. Whether
-the method captures scientific judgment is deliberately unresolved. Prospective
-natural episodes, independent attribution, matched representation and credit
-controls, held-out objective progress, and a separate ecological comparison with
-accepted systems will determine whether the evidence supports escalating from
-*Grounded Scientific Taste* to the result-dependent claim that SciTaste improves
-autonomous research.
+the method captures scientific judgment remains unresolved. Prospective natural
+episodes, identity-bound AI-panel attribution, matched representation and credit
+controls, held-out objective progress, and ecological system comparisons can
+establish proxy and task-level effects. They cannot by themselves authorize a
+human-validity claim or the stronger *Improving Autonomous Research* title; that
+escalation requires separate independent construct validation.
 
 # AI Use Statement
 
@@ -574,8 +576,9 @@ amplify incorrect claims, unsafe generated code, licensing violations, privacy
 leakage, and inherited bias in retrieved precedents. SciTaste addresses these
 risks through provenance, explicit evidence scopes, fail-closed execution and
 publication gates, separation of retrieved knowledge from evaluative precedent,
-and human review for externally consequential actions. These controls reduce but
-do not eliminate misuse or automation bias; deployment beyond the bounded
+and explicit external authorization plus domain-appropriate review for
+consequential actions. These controls reduce but do not eliminate misuse or
+automation bias; deployment beyond the bounded
 research setting requires domain-specific safety and governance review.
 
 # Reproducibility Statement
@@ -584,10 +587,9 @@ The implementation records versioned configurations, seeds, content hashes,
 model and provider identities, token and cost telemetry, stage artifacts,
 interventions, and failure histories under project-owned manifests. The reported
 engineering checks are backed by executable tests and self-hashed acceptance
-records. The current causal evaluation is deliberately described as incomplete:
-the paper specifies provider-separated, endpoint-matched prelaunch contracts and
-exclusion rules so that the headline hypothesis can be assessed only after every
-required cell and blinded expert judgment is available. Hardware- and provider-
-specific results
-remain scoped to their recorded environments rather than asserted as universally
+records. The causal evaluation remains incomplete. Provider-separated,
+endpoint-matched prelaunch contracts and exclusion rules bind future AI-panel
+proxy judgments and scorer-owned outcomes. Human construct validation is outside
+the current AI-only study, and hardware- or provider-specific results remain
+scoped to their recorded environments rather than asserted as universally
 reproducible.
