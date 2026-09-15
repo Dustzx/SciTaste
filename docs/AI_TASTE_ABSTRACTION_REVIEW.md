@@ -29,10 +29,20 @@ are never exposed to reviewers. A failed entry retains its archived failure
 receipt, backend-started observation, and unknown-cost state where applicable.
 The bridge also reports accepted source-domain and decision-family coverage.
 
-Current natural-pilot sources do not yet bind Reference Quality qualification.
-Accordingly, bridge and final-review outputs authorize only pilot operations;
-they do not authorize formal benchmark admission, retrieval, training, or a
-human-validity claim.
+Schema-1.1 Track-A batches may bind AI-only operational Reference Quality
+qualification. The bridge replays every retained qualification receipt against
+its canonical quality ledger, uses `plan_ordinal` to verify the coverage-aware
+subset against the complete pilot plan, and binds the receipt in every admitted
+review item. It records four distinct counts: all planned sources, quality-
+eligible sources, runtime-accepted sources, and runtime-rejected sources. Only
+runtime-accepted generations enter either primary request; a rejected or
+missing generation is never regenerated, resampled, or exposed to reviewers.
+
+Schema-1.0 batches retain the original complete-batch requirement and semantic
+hash behavior. Both versions authorize only AI pilot operations; AI quality
+qualification does not authorize formal benchmark admission, retrieval,
+training, or a human-validity claim. Schema 1.1 therefore states
+`formal_human_validity=false` even when its operational quality gate passes.
 
 ## Commands
 

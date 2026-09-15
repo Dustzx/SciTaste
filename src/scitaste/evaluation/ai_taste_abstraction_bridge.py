@@ -24,6 +24,9 @@ from scitaste.evaluation.taste_mechanism_pilot import (
     PilotAbstractionInputRecord,
     load_taste_mechanism_pilot_plan,
 )
+from scitaste.evaluation.taste_reference_quality_batch import (
+    TasteReferenceQualityRuntimeBatch,
+)
 from scitaste.model_nodes.models import NodeResult, NodeResultStatus
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.registry import first_party_node_types
@@ -39,7 +42,16 @@ from scitaste.model_nodes.runtime import (
 from scitaste.model_nodes.runtime_config import load_model_node_runtime_config
 from scitaste.project import ProjectRuntime
 from scitaste.taste.intrinsic import TasteTask
-from scitaste.taste.semantic import is_verified_model_generation_entry
+from scitaste.taste.reference_quality import (
+    ReferenceQualityQualification,
+    ReferenceQualityVerdict,
+    compile_reference_quality_qualification,
+)
+from scitaste.taste.semantic import (
+    is_verified_model_generation_entry,
+    load_verified_taste_abstraction_ledger,
+    reference_quality_from_ledger,
+)
 from scitaste.taste.semantic_models import (
     GROUNDED_TASTE_ABSTRACTION_NODE,
     GroundedTasteCaseAbstraction,
@@ -79,16 +91,32 @@ class GroundedAbstractionBridgeAdmission(BaseModel):
     provider_execution_preexisting: Literal[True] = True
     provider_execution_fabricated: Literal[False] = False
     bridge_model_calls_performed: Literal[False] = False
-    source_quality_status: Literal["not-formally-qualified"] = "not-formally-qualified"
-    source_quality_missing_reason: Literal["no-reference-quality-qualification-bound"] = (
-        "no-reference-quality-qualification-bound"
-    )
+    source_quality_status: Literal[
+        "not-formally-qualified",
+        "ai-operational-qualified",
+    ] = "not-formally-qualified"
+    source_quality_missing_reason: (
+        Literal["no-reference-quality-qualification-bound"] | None
+    ) = "no-reference-quality-qualification-bound"
+    reference_quality_qualification: AIAbstractionFileBinding | None = None
+    reference_quality_report_sha256: str | None = Field(default=None, pattern=_SHA256)
+    operational_reference_quality_qualification_bound: bool = False
     formal_reference_quality_qualification_bound: Literal[False] = False
+    formal_human_validity: Literal[False] = False
 
     @model_validator(mode="after")
     def hashes_match_bindings(self) -> GroundedAbstractionBridgeAdmission:
         if self.raw_recording.sha256 != self.raw_recording_sha256:
             raise ValueError("bridge raw-recording hashes differ")
+        qualified = self.source_quality_status == "ai-operational-qualified"
+        if qualified != self.operational_reference_quality_qualification_bound:
+            raise ValueError("bridge operational quality status differs from its binding")
+        if qualified != (self.reference_quality_qualification is not None):
+            raise ValueError("bridge quality receipt presence differs from its status")
+        if qualified != (self.reference_quality_report_sha256 is not None):
+            raise ValueError("bridge quality report hash presence differs from its status")
+        if qualified == (self.source_quality_missing_reason is not None):
+            raise ValueError("bridge quality missing reason differs from its status")
         return self
 
 
@@ -138,7 +166,7 @@ class GroundedAbstractionReviewBridge(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     bridge_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     run_id: str = Field(pattern=_ID)
@@ -153,6 +181,10 @@ class GroundedAbstractionReviewBridge(BaseModel):
     batch_item_count: int = Field(gt=0)
     accepted_item_count: int = Field(gt=0)
     excluded_item_count: int = Field(ge=0)
+    planned_source_count: int | None = Field(default=None, ge=0)
+    eligible_source_count: int | None = Field(default=None, ge=0)
+    runtime_accepted_source_count: int | None = Field(default=None, ge=0)
+    runtime_rejected_source_count: int | None = Field(default=None, ge=0)
     accepted_counts_by_domain: dict[str, int]
     accepted_counts_by_decision_family: dict[str, int]
     formal_reference_quality_qualified_count: Literal[0] = 0
@@ -169,6 +201,8 @@ class GroundedAbstractionReviewBridge(BaseModel):
     natural_pilot_only: Literal[True] = True
     formal_evidence_eligible: Literal[False] = False
     formal_requires_reference_quality_qualification: Literal[True] = True
+    formal_human_validity: Literal[False] = False
+    replacement_sampling_performed: Literal[False] = False
 
     @model_validator(mode="after")
     def bridge_is_closed(self) -> GroundedAbstractionReviewBridge:
@@ -180,6 +214,34 @@ class GroundedAbstractionReviewBridge(BaseModel):
             raise ValueError("AI abstraction bridge exclusion count mismatch")
         if self.batch_item_count != self.accepted_item_count + self.excluded_item_count:
             raise ValueError("AI abstraction bridge does not cover its complete batch")
+        if self.schema_version == "1.1":
+            counts = (
+                self.planned_source_count,
+                self.eligible_source_count,
+                self.runtime_accepted_source_count,
+                self.runtime_rejected_source_count,
+            )
+            if any(value is None for value in counts):
+                raise ValueError("coverage-aware bridge requires all source counts")
+            planned, eligible, runtime_accepted, runtime_rejected = counts
+            assert planned is not None and eligible is not None
+            assert runtime_accepted is not None and runtime_rejected is not None
+            observed_rejected = sum(
+                item.disposition == "rejected" for item in self.exclusions
+            )
+            if (
+                not 0 < runtime_accepted <= eligible <= planned
+                or eligible != self.batch_item_count
+                or runtime_accepted != self.accepted_item_count
+                or runtime_rejected != observed_rejected
+                or runtime_accepted + runtime_rejected > eligible
+            ):
+                raise ValueError("coverage-aware bridge source counts are inconsistent")
+            if any(
+                not item.operational_reference_quality_qualification_bound
+                for item in self.admissions
+            ):
+                raise ValueError("coverage-aware bridge admission lacks quality qualification")
         admission_ids = {item.invocation_id for item in self.admissions}
         excluded_ids = {item.invocation_id for item in self.exclusions}
         if admission_ids.intersection(excluded_ids):
@@ -201,7 +263,26 @@ class GroundedAbstractionReviewBridge(BaseModel):
     @computed_field
     @property
     def bridge_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"bridge_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"bridge_sha256"})
+        if self.schema_version == "1.0":
+            for field in (
+                "planned_source_count",
+                "eligible_source_count",
+                "runtime_accepted_source_count",
+                "runtime_rejected_source_count",
+                "formal_human_validity",
+                "replacement_sampling_performed",
+            ):
+                payload.pop(field, None)
+            for admission in payload["admissions"]:
+                for field in (
+                    "reference_quality_qualification",
+                    "reference_quality_report_sha256",
+                    "operational_reference_quality_qualification_bound",
+                    "formal_human_validity",
+                ):
+                    admission.pop(field, None)
+        return _canonical_sha256(payload)
 
 
 def prepare_ai_taste_abstraction_review_from_batch(
@@ -227,8 +308,17 @@ def prepare_ai_taste_abstraction_review_from_batch(
     if plan.plan_sha256 != batch.pilot_plan_sha256:
         raise ValueError("Taste abstraction BATCH binds another pilot plan")
     plan_inputs = {item.input_id: item for item in plan.abstraction_inputs}
-    if set(plan_inputs) != {item.input_id for item in batch.items}:
-        raise ValueError("Taste abstraction BATCH differs from pilot abstraction inputs")
+    if batch.schema_version == "1.0":
+        if set(plan_inputs) != {item.input_id for item in batch.items}:
+            raise ValueError("Taste abstraction BATCH differs from pilot abstraction inputs")
+    else:
+        _verify_quality_qualified_subset(
+            root=root,
+            outputs=outputs,
+            batch=batch,
+            plan_file=plan_file,
+            plan_inputs=plan.abstraction_inputs,
+        )
 
     runtime = ModelNodeRuntime(ProjectRuntime(outputs), node_types=first_party_node_types())
     runtime.verify(project_id=batch.project_id, run_id=batch.run_id)
@@ -287,11 +377,24 @@ def prepare_ai_taste_abstraction_review_from_batch(
     if not admissions:
         raise ValueError("Taste abstraction BATCH has no accepted generation eligible for review")
 
+    runtime_rejected_count = sum(
+        item.disposition == "rejected" for item in exclusions
+    )
+
     request_pack = compile_ai_taste_abstraction_review_requests(
         evidence_root=root,
         runtime_receipt_paths=runtime_receipt_paths,
         protocol_path=protocol_file,
         output_dir=target / "review-pack",
+        planned_source_count=(
+            None if batch.schema_version == "1.0" else batch.planned_source_count
+        ),
+        eligible_source_count=(
+            None if batch.schema_version == "1.0" else batch.eligible_source_count
+        ),
+        runtime_rejected_source_count=(
+            None if batch.schema_version == "1.0" else runtime_rejected_count
+        ),
     )
     pack_file = target / "review-pack" / "PACK.json"
     when = prepared_at or datetime.now(UTC)
@@ -299,6 +402,7 @@ def prepare_ai_taste_abstraction_review_from_batch(
         [batch.batch_sha256, request_pack.pack_sha256, when.isoformat()]
     )
     bridge = GroundedAbstractionReviewBridge(
+        schema_version=batch.schema_version,
         bridge_id=f"grounded-abstraction-review-{bridge_identity[:24]}",
         project_id=batch.project_id,
         run_id=batch.run_id,
@@ -313,6 +417,18 @@ def prepare_ai_taste_abstraction_review_from_batch(
         batch_item_count=len(batch.items),
         accepted_item_count=len(admissions),
         excluded_item_count=len(exclusions),
+        planned_source_count=(
+            None if batch.schema_version == "1.0" else batch.planned_source_count
+        ),
+        eligible_source_count=(
+            None if batch.schema_version == "1.0" else batch.eligible_source_count
+        ),
+        runtime_accepted_source_count=(
+            None if batch.schema_version == "1.0" else len(admissions)
+        ),
+        runtime_rejected_source_count=(
+            None if batch.schema_version == "1.0" else runtime_rejected_count
+        ),
         accepted_counts_by_domain=_counts(item.source_domain for item in admissions),
         accepted_counts_by_decision_family=_counts(
             item.decision_family.value for item in admissions
@@ -433,6 +549,12 @@ def _admit_entry(
         cumulative_project_budget=(entry.intent.profile.cumulative_project.model_dump(mode="json")),
     )
     _write_new_json(receipt_file, receipt.model_dump(mode="json"))
+    quality = item.reference_quality_qualification
+    quality_receipt = (
+        None
+        if quality is None
+        else _binding(root, _bound_batch_file(root, quality.qualification_receipt))
+    )
     return GroundedAbstractionBridgeAdmission(
         ordinal=item.ordinal,
         input_id=item.input_id,
@@ -452,6 +574,21 @@ def _admit_entry(
         accepted_result_sha256=entry.result_sha256,
         raw_recording_sha256=entry.recording_sha256,
         source_projection_sha256=node_input.source_projection_sha256,
+        source_quality_status=(
+            "not-formally-qualified"
+            if quality is None
+            else "ai-operational-qualified"
+        ),
+        source_quality_missing_reason=(
+            "no-reference-quality-qualification-bound"
+            if quality is None
+            else None
+        ),
+        reference_quality_qualification=quality_receipt,
+        reference_quality_report_sha256=(
+            None if quality is None else quality.qualification_report_sha256
+        ),
+        operational_reference_quality_qualification_bound=(quality is not None),
     )
 
 
@@ -464,6 +601,121 @@ def _load_batch(path: Path) -> TasteAbstractionRuntimeBatch:
     if recorded != batch.batch_sha256:
         raise ValueError("Taste abstraction BATCH semantic hash mismatch")
     return batch
+
+
+def _verify_quality_qualified_subset(
+    *,
+    root: Path,
+    outputs: Path,
+    batch: TasteAbstractionRuntimeBatch,
+    plan_file: Path,
+    plan_inputs: tuple[PilotAbstractionInputRecord, ...],
+) -> None:
+    """Verify schema-1.1 coverage and every retained AI-only qualification."""
+
+    if (
+        batch.reference_quality_batch is None
+        or batch.reference_quality_batch_sha256 is None
+        or batch.planned_source_count != len(plan_inputs)
+        or batch.eligible_source_count != len(batch.items)
+        or batch.excluded_source_count != len(plan_inputs) - len(batch.items)
+    ):
+        raise ValueError("qualified abstraction BATCH coverage counts differ from its plan")
+    quality_batch_file = _bound_batch_file(root, batch.reference_quality_batch)
+    payload = json.loads(quality_batch_file.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("reference-quality BATCH must be a JSON object")
+    recorded_quality_sha256 = payload.pop("batch_sha256", None)
+    quality_batch = TasteReferenceQualityRuntimeBatch.model_validate(payload)
+    if (
+        recorded_quality_sha256 != quality_batch.batch_sha256
+        or batch.reference_quality_batch_sha256 != quality_batch.batch_sha256
+        or quality_batch.project_id != batch.project_id
+        or quality_batch.pilot_plan_sha256 != batch.pilot_plan_sha256
+        or len(quality_batch.items) != len(plan_inputs)
+    ):
+        raise ValueError("qualified abstraction BATCH binds another quality batch")
+    quality_plan_file = _regular_file(root, quality_batch.pilot_plan.locator)
+    if (
+        quality_plan_file != plan_file
+        or _sha256_file(quality_plan_file) != quality_batch.pilot_plan.file_sha256
+    ):
+        raise ValueError("reference-quality BATCH binds another pilot-plan file")
+
+    expected_plan_ordinals: list[int] = []
+    for item in batch.items:
+        qualification = item.reference_quality_qualification
+        if item.plan_ordinal is None or qualification is None:
+            raise ValueError("qualified abstraction item lacks plan/quality provenance")
+        plan_ordinal = item.plan_ordinal
+        if plan_ordinal > len(plan_inputs):
+            raise ValueError("qualified abstraction plan ordinal is out of range")
+        planned = plan_inputs[plan_ordinal - 1]
+        planned_input_file = _regular_file(plan_file.parent, planned.input_file.locator)
+        if _sha256_file(planned_input_file) != planned.input_file.file_sha256:
+            raise ValueError("qualified abstraction pilot input file hash drifted")
+        planned_input = TasteAbstractionInput.model_validate_json(
+            planned_input_file.read_bytes()
+        )
+        quality_item = quality_batch.items[plan_ordinal - 1]
+        if (
+            item.input_id != planned.input_id
+            or item.source_group_id != planned.source_group_id
+            or item.source_projection_sha256 != planned.source_projection_sha256
+            or quality_item.ordinal != plan_ordinal
+            or quality_item.input_id != item.input_id
+            or quality_item.source_group_id != item.source_group_id
+            or quality_item.precedent_projection_sha256
+            != item.source_projection_sha256
+            or qualification.quality_batch_ordinal != quality_item.ordinal
+            or qualification.screening_id != quality_item.screening_id
+            or qualification.source_id != planned_input.source_id
+            or qualification.quality_source_projection_sha256
+            != quality_item.source_projection_sha256
+        ):
+            raise ValueError("qualified abstraction item differs from plan/quality batch")
+
+        receipt_file = _bound_batch_file(root, qualification.qualification_receipt)
+        receipt_payload = json.loads(receipt_file.read_text(encoding="utf-8"))
+        if not isinstance(receipt_payload, dict):
+            raise ValueError("reference-quality qualification must be a JSON object")
+        recorded_report_sha256 = receipt_payload.pop("report_sha256", None)
+        report = ReferenceQualityQualification.model_validate(receipt_payload)
+        ledger_file = _bound_batch_file(root, qualification.quality_ledger)
+        expected_ledger_file = _regular_file(outputs, report.ledger_locator)
+        verified = reference_quality_from_ledger(
+            report.ledger_locator,
+            evidence_root=outputs,
+        )
+        entry, _, _ = load_verified_taste_abstraction_ledger(
+            report.ledger_locator,
+            evidence_root=outputs,
+        )
+        if (
+            recorded_report_sha256 != report.report_sha256
+            or report != compile_reference_quality_qualification(verified)
+            or report.verdict is not ReferenceQualityVerdict.QUALIFY
+            or not report.qualified_for_human_review
+            or report.report_sha256 != qualification.qualification_report_sha256
+            or report.screening_id != qualification.screening_id
+            or report.source_id != qualification.source_id
+            or report.proposal_sha256 != qualification.proposal_sha256
+            or report.source_projection_sha256
+            != qualification.quality_source_projection_sha256
+            or report.source_content_sha256
+            != qualification.quality_source_projection_sha256
+            or report.invocation_id != quality_item.invocation_id
+            or ledger_file != expected_ledger_file
+            or report.ledger_sha256 != qualification.quality_ledger.file_sha256
+            or entry.intent.project_id != quality_batch.project_id
+            or entry.intent.run_id != quality_batch.run_id
+            or entry.intent.project_revision != quality_batch.project_revision
+            or entry.intent.invocation_id != quality_item.invocation_id
+        ):
+            raise ValueError("qualified abstraction receipt differs from its verified ledger")
+        expected_plan_ordinals.append(plan_ordinal)
+    if expected_plan_ordinals != sorted(set(expected_plan_ordinals)):
+        raise ValueError("qualified abstraction subset does not retain unique plan order")
 
 
 def _verify_batch_sources(root: Path, batch: TasteAbstractionRuntimeBatch) -> None:

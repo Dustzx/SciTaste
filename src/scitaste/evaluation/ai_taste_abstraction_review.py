@@ -276,7 +276,7 @@ class AIAbstractionRequestPack(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     pack_id: str = Field(pattern=_ID)
     protocol: AIAbstractionFileBinding
     protocol_sha256: str = Field(pattern=_SHA256)
@@ -286,12 +286,18 @@ class AIAbstractionRequestPack(BaseModel):
     primary_reviewer_identity_sha256s: tuple[str, str]
     adjudicator_identity_sha256: str = Field(pattern=_SHA256)
     candidate_count: int = Field(gt=0)
+    planned_source_count: int | None = Field(default=None, ge=0)
+    eligible_source_count: int | None = Field(default=None, ge=0)
+    runtime_accepted_source_count: int | None = Field(default=None, ge=0)
+    runtime_rejected_source_count: int | None = Field(default=None, ge=0)
     reviewer_count: Literal[2] = 2
     generation_identity_absent_from_reviewer_requests: Literal[True] = True
     source_condition_absent_from_reviewer_requests: Literal[True] = True
     reviewer_kind: Literal["ai"] = "ai"
     not_human_review: Literal[True] = True
     no_human_or_expert_validity_claim: Literal[True] = True
+    formal_human_validity: Literal[False] = False
+    replacement_sampling_performed: Literal[False] = False
     no_external_action_performed: Literal[True] = True
     authorizes_model_calls: Literal[False] = False
 
@@ -304,12 +310,42 @@ class AIAbstractionRequestPack(BaseModel):
             "AI abstraction review items",
         )
         _require_unique((item.case_id for item in self.candidates), "AI abstraction cases")
+        if self.schema_version == "1.0":
+            return self
+        counts = (
+            self.planned_source_count,
+            self.eligible_source_count,
+            self.runtime_accepted_source_count,
+            self.runtime_rejected_source_count,
+        )
+        if any(value is None for value in counts):
+            raise ValueError("coverage-aware request packs require all source counts")
+        planned, eligible, accepted, rejected = counts
+        assert planned is not None and eligible is not None
+        assert accepted is not None and rejected is not None
+        if (
+            not 0 < accepted <= eligible <= planned
+            or accepted != self.candidate_count
+            or accepted + rejected > eligible
+        ):
+            raise ValueError("AI abstraction request-pack source counts are inconsistent")
         return self
 
     @computed_field
     @property
     def pack_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"pack_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"pack_sha256"})
+        if self.schema_version == "1.0":
+            for field in (
+                "planned_source_count",
+                "eligible_source_count",
+                "runtime_accepted_source_count",
+                "runtime_rejected_source_count",
+                "formal_human_validity",
+                "replacement_sampling_performed",
+            ):
+                payload.pop(field, None)
+        return _canonical_sha256(payload)
 
 
 class AIAbstractionCriterionAssessment(BaseModel):
@@ -846,6 +882,9 @@ def compile_ai_taste_abstraction_review_requests(
     runtime_receipt_paths: Sequence[str | Path],
     protocol_path: str | Path,
     output_dir: str | Path,
+    planned_source_count: int | None = None,
+    eligible_source_count: int | None = None,
+    runtime_rejected_source_count: int | None = None,
 ) -> AIAbstractionRequestPack:
     """Compile two complete blind request packs from accepted model-node receipts."""
 
@@ -855,6 +894,15 @@ def compile_ai_taste_abstraction_review_requests(
     target = _new_target(root, output_dir)
     if not runtime_receipt_paths:
         raise ValueError("at least one accepted grounded abstraction receipt is required")
+    coverage_values = (
+        planned_source_count,
+        eligible_source_count,
+        runtime_rejected_source_count,
+    )
+    if any(value is None for value in coverage_values) and any(
+        value is not None for value in coverage_values
+    ):
+        raise ValueError("coverage-aware review requests require all source counts")
 
     loaded = [
         _candidate_from_receipt(root, _regular_file(root, path)) for path in runtime_receipt_paths
@@ -929,6 +977,9 @@ def compile_ai_taste_abstraction_review_requests(
             [protocol.protocol_sha256, *(item.runtime_entry_sha256 for item in candidates)]
         )
         pack = AIAbstractionRequestPack(
+            schema_version=(
+                "1.0" if planned_source_count is None else "1.1"
+            ),
             pack_id=f"ai-taste-abstraction-{pack_identity[:24]}",
             protocol=_binding(root, protocol_file),
             protocol_sha256=protocol.protocol_sha256,
@@ -942,6 +993,12 @@ def compile_ai_taste_abstraction_review_requests(
             ),
             adjudicator_identity_sha256=protocol.adjudicator.identity_sha256,
             candidate_count=len(candidates),
+            planned_source_count=planned_source_count,
+            eligible_source_count=eligible_source_count,
+            runtime_accepted_source_count=(
+                None if planned_source_count is None else len(candidates)
+            ),
+            runtime_rejected_source_count=runtime_rejected_source_count,
         )
         _write_json(workspace / "PACK.json", pack.model_dump(mode="json", exclude={"pack_sha256"}))
         if target.exists() or target.is_symlink():
