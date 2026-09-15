@@ -13,10 +13,12 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from scitaste.evaluation.h4_execution import build_h4_benchmark_action_menu
 from scitaste.evaluation.interactive_research import (
+    InteractiveAgentDecision,
+    InteractiveAgentProposal,
     InteractiveGuidance,
     InteractiveGuidanceEnvelope,
     InteractiveResearchContext,
@@ -294,10 +296,17 @@ class DevelopmentTasteGuidanceProvider:
         self.expected_project_revision = expected_project_revision
         self.lock_root = resolved_lock_root
         self._locks: list[TasteProspectiveDecisionLockReceipt] = []
+        self._lock_paths: list[Path] = []
 
     @property
     def locks(self) -> tuple[TasteProspectiveDecisionLockReceipt, ...]:
         return tuple(self._locks)
+
+    @property
+    def lock_paths(self) -> tuple[Path, ...]:
+        """Return the effective lock for each turn, including accepted stop requests."""
+
+        return tuple(self._lock_paths)
 
     def guide(self, context: InteractiveResearchContext) -> InteractiveGuidanceEnvelope:
         self._validate_context(context)
@@ -339,6 +348,7 @@ class DevelopmentTasteGuidanceProvider:
             output=lock_path,
         )
         self._locks.append(lock)
+        self._lock_paths.append(lock_path)
         return InteractiveGuidanceEnvelope.create(
             guidance=guidance,
             audit={
@@ -350,6 +360,85 @@ class DevelopmentTasteGuidanceProvider:
                 "controller_decision": decision.model_dump(mode="json"),
             },
         )
+
+    def adjudicate_submission(
+        self,
+        context: InteractiveResearchContext,
+        initial_guidance: InteractiveGuidanceEnvelope,
+        decision: InteractiveAgentDecision,
+    ) -> InteractiveGuidanceEnvelope:
+        """Approve only a structured, evidence-covered request to stop early."""
+
+        self._validate_submission_adjudication_context(context, initial_guidance)
+        gate = _development_submission_stop_gate(context, decision.proposal)
+        if not gate["approved"]:
+            return initial_guidance
+        state = _interactive_state(
+            context,
+            max_experiments=self.protocol.max_experiments,
+            used_experiments=self.protocol.max_experiments - context.remaining_experiments,
+            target_domain=self.protocol.target_domain,
+            target_venue=self.protocol.target_venue,
+        )
+        actions, preferred_action_type = _development_bootstrap_actions(
+            context,
+            preferred_override="STOP",
+        )
+        stop_decision = self.controller.decide(
+            state=state,
+            candidate_actions=actions,
+            current_idea_revision=self.current_idea_revision,
+        )
+        if stop_decision.selected_action.type.value != preferred_action_type:
+            raise ValueError("development stop adjudication did not select STOP")
+        selected = stop_decision.selected_action
+        lock_path = self.lock_root / f"turn-{context.turn:03d}-stop-request" / "LOCK.json"
+        lock = lock_prospective_taste_decision(
+            self.sampling_plan,
+            runtime=self.runtime,
+            state=state,
+            decision=stop_decision,
+            current_idea_revision=self.current_idea_revision,
+            expected_project_revision=self.expected_project_revision,
+            output=lock_path,
+        )
+        initial_lock = self._locks[-1]
+        self._locks[-1] = lock
+        self._lock_paths[-1] = lock_path
+        guidance = InteractiveGuidance(
+            action_id=selected.action_id,
+            action_type="STOP",
+            instruction="Submit the strongest currently supported hypothesis.",
+            decision_sha256=content_sha256(selected),
+        )
+        return InteractiveGuidanceEnvelope.create(
+            guidance=guidance,
+            audit={
+                "schema_version": "1.0",
+                "development_only": True,
+                "protocol_sha256": self.protocol.protocol_sha256,
+                "sampling_plan_sha256": self.sampling_plan.plan_sha256,
+                "submission_adjudication": gate,
+                "agent_decision_sha256": decision.decision_sha256,
+                "agent_visible_guidance": initial_guidance.model_dump(mode="json"),
+                "initial_prospective_lock_sha256": initial_lock.lock_sha256,
+                "effective_prospective_lock_sha256": lock.lock_sha256,
+                "controller_decision": stop_decision.model_dump(mode="json"),
+            },
+        )
+
+    def _validate_submission_adjudication_context(
+        self,
+        context: InteractiveResearchContext,
+        initial_guidance: InteractiveGuidanceEnvelope,
+    ) -> None:
+        if context.turn != len(self._locks):
+            raise ValueError("submission adjudication must follow the current turn lock")
+        current_lock = self._locks[-1]
+        if current_lock.selected_action_id != initial_guidance.guidance.action_id:
+            raise ValueError("submission adjudication guidance differs from its initial lock")
+        if initial_guidance.guidance.action_type == "STOP":
+            raise ValueError("an existing STOP decision cannot request stop adjudication")
 
     def _validate_context(self, context: InteractiveResearchContext) -> None:
         if context.project_id != self.protocol.project_id:
@@ -894,10 +983,14 @@ def _outcome_summary(receipt: InteractiveResearchRunReceipt) -> str:
 
 def _development_bootstrap_actions(
     context: InteractiveResearchContext,
+    *,
+    preferred_override: Literal["STOP"] | None = None,
 ) -> tuple[tuple[ResearchAction, ...], str]:
     """Give pre-fit development decisions semantic rather than random tie-breaking."""
 
-    if context.remaining_experiments == 0:
+    if preferred_override is not None:
+        preferred = preferred_override
+    elif context.remaining_experiments == 0:
         preferred = "STOP"
     elif context.turn == 1:
         preferred = "PROBE"
@@ -930,6 +1023,60 @@ def _development_bootstrap_actions(
         for action in build_h4_benchmark_action_menu(iteration=context.turn)
     )
     return actions, preferred
+
+
+def _development_submission_stop_gate(
+    context: InteractiveResearchContext,
+    proposal: InteractiveAgentProposal,
+) -> dict[str, JsonValue]:
+    """Gate a stop request using structured belief plus observable evidence coverage."""
+
+    phases: list[str] = []
+    experiment_count = 0
+    distinct_experiments: set[str] = set()
+    observation_count = 0
+    for item in context.history:
+        phase = item.get("high_level_action")
+        if isinstance(phase, str):
+            phases.append(phase)
+        action = item.get("model_action")
+        if isinstance(action, dict) and action.get("action") == "run_experiments":
+            experiments = action.get("experiments")
+            if isinstance(experiments, list):
+                experiment_count += len(experiments)
+                distinct_experiments.update(content_sha256(value) for value in experiments)
+        observation = item.get("observation")
+        if isinstance(observation, dict):
+            results = observation.get("results")
+            if isinstance(results, list):
+                observation_count += len(results)
+            elif results is not None:
+                observation_count += 1
+    required_phases = ("PROBE", "ANALYZE", "EXPERIMENT")
+    phase_coverage = tuple(phases[: len(required_phases)]) == required_phases
+    checks = {
+        "submission_action": proposal.action == "submit_hypothesis",
+        "structured_support": proposal.evidence_status == "candidate-supported",
+        "confidence_threshold": proposal.evidence_confidence >= 0.9,
+        "low_next_experiment_value": proposal.next_experiment_value <= 0.1,
+        "minimum_turn": context.turn >= 4,
+        "phase_coverage": phase_coverage,
+        "minimum_experiment_count": experiment_count >= 6,
+        "minimum_distinct_experiments": len(distinct_experiments) >= 6,
+        "complete_observation_coverage": observation_count >= experiment_count > 0,
+    }
+    return {
+        "policy": "structured-belief-plus-observed-coverage-v1",
+        "approved": all(checks.values()),
+        "checks": checks,
+        "evidence_status": proposal.evidence_status,
+        "evidence_confidence": proposal.evidence_confidence,
+        "next_experiment_value": proposal.next_experiment_value,
+        "completed_phases": phases,
+        "experiment_count": experiment_count,
+        "distinct_experiment_count": len(distinct_experiments),
+        "observation_count": observation_count,
+    }
 
 
 def _bounded_summary(value: str, limit: int) -> str:

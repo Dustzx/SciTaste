@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+import scitaste.evaluation.interactive_development as interactive_development_module
 from scitaste.backends.base import Usage
 from scitaste.evaluation.e2_prelaunch import load_e2_prelaunch_manifest
 from scitaste.evaluation.interactive_research import (
@@ -14,6 +15,8 @@ from scitaste.evaluation.interactive_research import (
     InteractiveExperimentRequest,
     InteractiveGuidance,
     InteractiveGuidanceEnvelope,
+    InteractiveObjectiveScore,
+    InteractiveResearchContext,
     InteractiveResearchLimits,
     InteractiveResearchLoop,
     guidance_action_complied,
@@ -116,6 +119,155 @@ def test_guidance_mapping_fails_closed() -> None:
     assert guidance_action_complied("PROBE", "run_experiments")
     assert not guidance_action_complied("ANALYZE", "submit_hypothesis")
     assert not guidance_action_complied("UNKNOWN", "run_experiments")
+
+
+class _EvidenceBackedStopAgent:
+    fingerprint = "3" * 64
+
+    def decide(self, context, guidance):
+        del context, guidance
+        return InteractiveAgentDecision.create(
+            proposal=InteractiveAgentProposal(
+                action="submit_hypothesis",
+                submission="y = x",
+                rationale="Six controlled observations support the same law.",
+                evidence_status="candidate-supported",
+                evidence_confidence=0.97,
+                next_experiment_value=0.03,
+            ),
+            provider="scripted",
+            model="scripted-agent",
+            request_sha256="4" * 64,
+            response_sha256="5" * 64,
+            usage=Usage(input_tokens=3, output_tokens=2, cost_usd=0.0),
+            latency_ms=1.0,
+        )
+
+
+class _StopAdjudicatingGuidance(_AnalyzeGuidance):
+    def adjudicate_submission(self, context, initial_guidance, decision):
+        del context
+        assert initial_guidance.guidance.action_type == "ANALYZE"
+        assert decision.proposal.evidence_status == "candidate-supported"
+        return InteractiveGuidanceEnvelope.create(
+            guidance=InteractiveGuidance(
+                action_id="approved-stop",
+                action_type="STOP",
+                instruction="Submit the supported hypothesis.",
+                decision_sha256="6" * 64,
+            ),
+            audit={
+                "initial_guidance_sha256": initial_guidance.audit_sha256,
+                "agent_decision_sha256": decision.decision_sha256,
+            },
+        )
+
+
+class _ScoringToolbox(_NoCallToolbox):
+    def score(self, submission):
+        self.score_calls += 1
+        assert submission == "y = x"
+        return InteractiveObjectiveScore.create(
+            primary_metric="symbolic_accuracy",
+            primary_value=1.0,
+            metric_direction="higher",
+            metrics={"symbolic_accuracy": 1.0},
+            scorer_provider="scripted",
+            scorer_model="exact-scorer",
+            scorer_sha256="7" * 64,
+            usage=Usage(input_tokens=1, output_tokens=1, cost_usd=0.0),
+            latency_ms=1.0,
+        )
+
+
+def test_submission_is_scored_only_after_controller_adjudicates_stop() -> None:
+    toolbox = _ScoringToolbox()
+    receipt = InteractiveResearchLoop(
+        toolbox,
+        _EvidenceBackedStopAgent(),
+        _StopAdjudicatingGuidance(),
+        InteractiveResearchLimits(
+            max_turns=2,
+            max_experiments=2,
+            max_experiments_per_turn=1,
+            max_total_tokens=100,
+            max_api_cost_usd=1.0,
+        ),
+    ).run(
+        project_id="project-one",
+        run_id="run-stop-adjudication",
+        condition_id="development-foundation",
+    )
+
+    assert receipt.status == "completed"
+    assert receipt.turns[0].guidance.guidance.action_type == "STOP"
+    assert receipt.objective_score is not None
+    assert receipt.objective_score.primary_value == 1.0
+    assert toolbox.score_calls == 1
+
+
+def _stop_gate_context() -> InteractiveResearchContext:
+    history = tuple(
+        {
+            "turn": turn,
+            "high_level_action": phase,
+            "model_action": {
+                "action": "run_experiments",
+                "experiments": [
+                    {"parameters": {"x": 2 * turn - 1}},
+                    {"parameters": {"x": 2 * turn}},
+                ],
+                "code": None,
+                "submission": None,
+                "rationale": "Run a controlled test.",
+            },
+            "observation": {"results": [2 * turn - 1, 2 * turn]},
+        }
+        for turn, phase in enumerate(("PROBE", "ANALYZE", "EXPERIMENT"), start=1)
+    )
+    return InteractiveResearchContext(
+        project_id="project-one",
+        run_id="run-one",
+        condition_id="development-foundation",
+        task_id="task-one",
+        task_sha256="8" * 64,
+        environment_sha256="9" * 64,
+        toolbox_sha256="a" * 64,
+        resource_envelope_sha256="b" * 64,
+        research_agent_sha256="c" * 64,
+        task_prompt="Infer the hidden relationship.",
+        turn=4,
+        remaining_turns=5,
+        remaining_experiments=18,
+        max_experiments_per_turn=6,
+        remaining_code_calls=0,
+        history=history,
+    )
+
+
+def test_development_stop_gate_requires_belief_and_observed_coverage() -> None:
+    supported = InteractiveAgentProposal(
+        action="submit_hypothesis",
+        submission="y = x",
+        rationale="The controlled predictions all matched.",
+        evidence_status="candidate-supported",
+        evidence_confidence=0.95,
+        next_experiment_value=0.05,
+    )
+    gate = interactive_development_module._development_submission_stop_gate(
+        _stop_gate_context(),
+        supported,
+    )
+
+    assert gate["approved"] is True
+    assert gate["experiment_count"] == 6
+    conflicted = supported.model_copy(update={"evidence_status": "candidate-conflicted"})
+    rejected = interactive_development_module._development_submission_stop_gate(
+        _stop_gate_context(),
+        conflicted,
+    )
+    assert rejected["approved"] is False
+    assert rejected["checks"]["structured_support"] is False
 
 
 class _RandomNewtonModule:

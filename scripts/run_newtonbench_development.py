@@ -108,10 +108,9 @@ def run(args: argparse.Namespace):
     )
     receipt_path = run_root / "interactive_development" / "RESULT" / "RECEIPT.json"
     save_interactive_research_run_receipt(receipt, receipt_path)
-    lock_paths = tuple(
-        run_root / "interactive_development" / "taste_locks" / f"turn-{turn.turn:03d}" / "LOCK.json"
-        for turn in receipt.turns
-    )
+    lock_paths = provider.lock_paths
+    if len(lock_paths) != len(receipt.turns):
+        raise ValueError("effective prospective lock coverage differs from executed turns")
     batch = finalize_interactive_development_episodes(
         protocol,
         plan,

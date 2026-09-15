@@ -76,6 +76,15 @@ class InteractiveAgentProposal(BaseModel):
     code: str | None = Field(default=None, max_length=32_000)
     submission: str | None = Field(default=None, max_length=64_000)
     rationale: str = Field(min_length=1, max_length=8_000)
+    evidence_status: Literal[
+        "unassessed",
+        "no-candidate",
+        "candidate-untested",
+        "candidate-supported",
+        "candidate-conflicted",
+    ] = "unassessed"
+    evidence_confidence: float = Field(default=0.0, ge=0.0, le=1.0, allow_inf_nan=False)
+    next_experiment_value: float = Field(default=1.0, ge=0.0, le=1.0, allow_inf_nan=False)
 
     @model_validator(mode="after")
     def action_payload_is_exclusive(self) -> InteractiveAgentProposal:
@@ -170,9 +179,13 @@ class InteractiveAgentDecision(BaseModel):
 
     @model_validator(mode="after")
     def decision_hash_is_valid(self) -> InteractiveAgentDecision:
-        expected = content_sha256(self.model_dump(mode="json", exclude={"decision_sha256"}))
-        if self.decision_sha256 != expected:
-            raise ValueError("interactive agent decision hash mismatch")
+        payload = self.model_dump(mode="json", exclude={"decision_sha256"})
+        if self.decision_sha256 != content_sha256(payload):
+            if not _proposal_uses_legacy_evidence_schema(self.proposal):
+                raise ValueError("interactive agent decision hash mismatch")
+            _remove_evidence_state(payload["proposal"])
+            if self.decision_sha256 != content_sha256(payload):
+                raise ValueError("interactive agent decision hash mismatch")
         return self
 
     @classmethod
@@ -273,6 +286,7 @@ class InteractiveResearchRunReceipt(BaseModel):
         "cost_budget_exhausted",
         "agent_failure",
         "agent_noncompliance",
+        "controller_failure",
         "tool_failure",
         "scorer_failure",
     ]
@@ -310,9 +324,17 @@ class InteractiveResearchRunReceipt(BaseModel):
         # readable; every new loop execution supplies the commitment.
         if self.environment_sha256 is None:
             excluded.add("environment_sha256")
-        expected = content_sha256(self.model_dump(mode="json", exclude=excluded))
-        if self.receipt_sha256 != expected:
-            raise ValueError("interactive run receipt hash mismatch")
+        payload = self.model_dump(mode="json", exclude=excluded)
+        if self.receipt_sha256 != content_sha256(payload):
+            legacy_payload = self.model_dump(mode="json", exclude=excluded)
+            legacy_found = False
+            for record, record_payload in zip(self.turns, legacy_payload["turns"], strict=True):
+                proposal = record.decision.proposal
+                if _proposal_uses_legacy_evidence_schema(proposal):
+                    _remove_evidence_state(record_payload["decision"]["proposal"])
+                    legacy_found = True
+            if not legacy_found or self.receipt_sha256 != content_sha256(legacy_payload):
+                raise ValueError("interactive run receipt hash mismatch")
         return self
 
     @classmethod
@@ -425,6 +447,18 @@ class InteractiveGuidanceProvider(Protocol):
 
 
 @runtime_checkable
+class InteractiveSubmissionAdjudicator(Protocol):
+    """Optionally gate an evidence-backed stop request before scorer access."""
+
+    def adjudicate_submission(
+        self,
+        context: InteractiveResearchContext,
+        initial_guidance: InteractiveGuidanceEnvelope,
+        decision: InteractiveAgentDecision,
+    ) -> InteractiveGuidanceEnvelope: ...
+
+
+@runtime_checkable
 class InteractiveResearchAgent(Protocol):
     @property
     def fingerprint(self) -> str: ...
@@ -505,7 +539,7 @@ class StructuredInteractiveResearchAgent:
             {
                 "policy_id": self.policy_id,
                 "prompt_version": self.prompt_version,
-                "action_schema": "interactive-research-action-v1",
+                "action_schema": "interactive-research-action-v2-evidence-state",
             }
         )
         request = StructuredModelRequest(
@@ -522,7 +556,11 @@ class StructuredInteractiveResearchAgent:
                 "Use observations rather than guessing. The high-level guidance is a strategy "
                 "decision, not evidence. Return exactly one JSON action and never request more "
                 "experiments than the stated per-turn limit. Never claim access to the hidden "
-                "law or scorer."
+                "law or scorer. Report evidence_status, evidence_confidence, and the expected "
+                "information value of one more experiment from the visible history only. If a "
+                "candidate is strongly supported and another experiment has negligible value, "
+                "you may request an evidence-backed stop by submitting the hypothesis; the "
+                "controller will independently approve or reject that request before scoring."
             ),
             input_payload={
                 "task_prompt": context.task_prompt,
@@ -537,7 +575,16 @@ class StructuredInteractiveResearchAgent:
             },
             output_schema={
                 "type": "object",
-                "required": ["action", "experiments", "code", "submission", "rationale"],
+                "required": [
+                    "action",
+                    "experiments",
+                    "code",
+                    "submission",
+                    "rationale",
+                    "evidence_status",
+                    "evidence_confidence",
+                    "next_experiment_value",
+                ],
                 "properties": {
                     "action": {
                         "type": "string",
@@ -559,6 +606,26 @@ class StructuredInteractiveResearchAgent:
                     "code": {"type": ["string", "null"]},
                     "submission": {"type": ["string", "null"]},
                     "rationale": {"type": "string"},
+                    "evidence_status": {
+                        "type": "string",
+                        "enum": [
+                            "unassessed",
+                            "no-candidate",
+                            "candidate-untested",
+                            "candidate-supported",
+                            "candidate-conflicted",
+                        ],
+                    },
+                    "evidence_confidence": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                    },
+                    "next_experiment_value": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                    },
                 },
                 "additionalProperties": False,
             },
@@ -682,10 +749,44 @@ class InteractiveResearchLoop:
                 )
 
             proposal = decision.proposal
-            if self.limits.enforce_guidance_compliance and not guidance_action_complied(
+            complied = guidance_action_complied(
                 guidance.guidance.action_type,
                 proposal.action,
+            )
+            if (
+                self.limits.enforce_guidance_compliance
+                and not complied
+                and proposal.action == "submit_hypothesis"
+                and isinstance(self.guidance_provider, InteractiveSubmissionAdjudicator)
             ):
+                try:
+                    guidance = self.guidance_provider.adjudicate_submission(
+                        context,
+                        guidance,
+                        decision,
+                    )
+                except Exception as exc:
+                    records.append(
+                        InteractiveTurnRecord(turn=turn, guidance=guidance, decision=decision)
+                    )
+                    return self._receipt(
+                        project_id,
+                        run_id,
+                        condition_id,
+                        "controller_failure",
+                        records,
+                        experiment_count,
+                        code_call_count,
+                        input_tokens,
+                        output_tokens,
+                        total_cost,
+                        terminal_error=f"{type(exc).__name__}: {exc}",
+                    )
+                complied = guidance_action_complied(
+                    guidance.guidance.action_type,
+                    proposal.action,
+                )
+            if self.limits.enforce_guidance_compliance and not complied:
                 records.append(
                     InteractiveTurnRecord(turn=turn, guidance=guidance, decision=decision)
                 )
@@ -975,6 +1076,24 @@ def guidance_action_complied(action_type: str, model_action: str) -> bool:
     return False
 
 
+_EVIDENCE_STATE_FIELDS = {
+    "evidence_status",
+    "evidence_confidence",
+    "next_experiment_value",
+}
+
+
+def _proposal_uses_legacy_evidence_schema(proposal: InteractiveAgentProposal) -> bool:
+    return _EVIDENCE_STATE_FIELDS.isdisjoint(proposal.model_fields_set)
+
+
+def _remove_evidence_state(payload: object) -> None:
+    if not isinstance(payload, dict):
+        raise TypeError("interactive proposal hash payload is not an object")
+    for field_name in _EVIDENCE_STATE_FIELDS:
+        payload.pop(field_name, None)
+
+
 def save_interactive_research_run_receipt(
     receipt: InteractiveResearchRunReceipt,
     path: str | Path,
@@ -1041,6 +1160,7 @@ __all__ = [
     "InteractiveResearchLoop",
     "InteractiveResearchRunReceipt",
     "InteractiveResearchToolbox",
+    "InteractiveSubmissionAdjudicator",
     "InteractiveTurnRecord",
     "StructuredInteractiveResearchAgent",
     "guidance_action_complied",
