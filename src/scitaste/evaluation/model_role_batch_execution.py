@@ -195,25 +195,14 @@ def execute_local_model_role_batch(
             )
             receipt = result.receipt
             executed.append(request.request_id)
-            imported = False
-            task_succeeded: bool | None = None
-            if receipt.outcome in {RuntimeOutcome.ACCEPTED, RuntimeOutcome.REJECTED}:
-                imported_status = import_model_node_runtime_receipts(
-                    source,
-                    request_ids=(request.request_id,),
-                )
-                imported = imported_status.imported_entries == 1
-                task_succeeded = imported_status.task_succeeded_entries == 1
             rows.append(
                 _row(
                     request,
                     config,
                     outcome=receipt.outcome.value,
-                    task_succeeded=task_succeeded,
                     input_tokens=receipt.telemetry.input_tokens,
                     output_tokens=receipt.telemetry.output_tokens,
                     latency_ms=receipt.telemetry.latency_ms,
-                    imported=imported,
                     blockers=receipt.blockers,
                 )
             )
@@ -223,6 +212,31 @@ def execute_local_model_role_batch(
                     break
         if stop:
             break
+
+    importable = tuple(
+        item.request_id
+        for item in rows
+        if item.outcome in {RuntimeOutcome.ACCEPTED.value, RuntimeOutcome.REJECTED.value}
+    )
+    if importable:
+        import_model_node_runtime_receipts(source, request_ids=importable)
+        imported_ids = set(importable)
+        updated_rows = []
+        for item in rows:
+            if item.request_id not in imported_ids:
+                updated_rows.append(item)
+                continue
+            result_path = campaign_root / "receipts" / item.request_id / "RUN_RESULT.json"
+            payload = json.loads(result_path.read_bytes())
+            updated_rows.append(
+                item.model_copy(
+                    update={
+                        "imported": True,
+                        "task_succeeded": payload["measurements"]["success"] == 1.0,
+                    }
+                )
+            )
+        rows = updated_rows
 
     outcomes = [item.outcome for item in rows]
     return LocalBatchExecutionStatus(
