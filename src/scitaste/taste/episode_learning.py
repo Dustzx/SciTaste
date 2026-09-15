@@ -1034,11 +1034,13 @@ class LifecycleTastePolicyModel(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.3"
     policy_id: str
     config: LifecycleTastePolicyConfig
     source_episode_ids: tuple[str, ...]
     source_episode_sha256: tuple[str, ...]
+    source_group_keys: tuple[str, ...] = ()
+    source_group_count: int = Field(default=0, ge=0)
     training_episode_ids: tuple[str, ...]
     training_episode_sha256: tuple[str, ...]
     training_episode_count: int = Field(ge=0)
@@ -1075,6 +1077,17 @@ class LifecycleTastePolicyModel(BaseModel):
             raise ValueError("lifecycle Taste policy and config IDs differ")
         if len(self.source_episode_ids) != len(set(self.source_episode_ids)):
             raise ValueError("lifecycle Taste source episode IDs must be unique")
+        if self.schema_version == "1.3":
+            if self.source_group_count != len(self.source_group_keys):
+                raise ValueError("lifecycle Taste source-group count differs")
+            if self.source_group_keys != tuple(sorted(set(self.source_group_keys))):
+                raise ValueError("lifecycle Taste source groups must be sorted and unique")
+            if bool(self.source_episode_ids) != bool(self.source_group_keys):
+                raise ValueError("lifecycle Taste source episodes and source groups disagree")
+            if self.source_group_count > len(self.source_episode_ids):
+                raise ValueError("lifecycle Taste source groups exceed source episodes")
+        elif self.source_group_keys or self.source_group_count:
+            raise ValueError("legacy lifecycle Taste policy cannot carry source-group closure")
         if len(self.training_episode_ids) != self.training_episode_count:
             raise ValueError("lifecycle Taste training episode count differs")
         if self.training_source_group_count != len(self.training_source_group_keys):
@@ -1133,7 +1146,7 @@ class LifecycleTastePolicyModel(BaseModel):
             for item in self.feature_posteriors
         ):
             raise ValueError("lifecycle Taste posteriors differ from the configured prior")
-        if self.schema_version in {"1.1", "1.2"} and any(
+        if self.schema_version in {"1.1", "1.2", "1.3"} and any(
             item.support > self.effective_training_weight + 1e-9 for item in self.feature_posteriors
         ):
             raise ValueError("lifecycle Taste feature support exceeds source-group weight")
@@ -1146,7 +1159,7 @@ class LifecycleTastePolicyModel(BaseModel):
             self.shuffle_assignments,
         )
         if shuffled:
-            if self.schema_version == "1.2":
+            if self.schema_version in {"1.2", "1.3"}:
                 self._validate_shuffle_v2()
             elif self.shuffle_algorithm != "not-applicable" or any(shuffle_details):
                 raise ValueError("legacy shuffled-credit policy cannot carry v2 telemetry")
@@ -1154,6 +1167,9 @@ class LifecycleTastePolicyModel(BaseModel):
             raise ValueError("non-shuffled policy cannot carry shuffle telemetry")
         expected = content_sha256(self.model_dump(mode="json", exclude={"policy_sha256"}))
         legacy_payload = self.model_dump(mode="json", exclude={"policy_sha256"})
+        if self.schema_version != "1.3":
+            legacy_payload.pop("source_group_keys")
+            legacy_payload.pop("source_group_count")
         for field in (
             "shuffle_algorithm",
             "shuffle_block_count",
@@ -1176,7 +1192,7 @@ class LifecycleTastePolicyModel(BaseModel):
                 "effective_training_weight",
             ):
                 legacy_payload.pop(field)
-        legacy_expected = content_sha256(legacy_payload) if self.schema_version != "1.2" else None
+        legacy_expected = content_sha256(legacy_payload) if self.schema_version != "1.3" else None
         if self.policy_sha256 not in {expected, legacy_expected}:
             raise ValueError("lifecycle Taste policy hash mismatch")
         return self
@@ -1252,11 +1268,7 @@ class LifecycleTastePolicyModel(BaseModel):
         """Return policy-level eligibility; study sample/effects remain separate gates."""
 
         return (
-            self.schema_version == "1.2"
-            and self.source_review_evidence_kinds == ("ai",)
-            and self.source_ai_reviewed_episode_count == len(self.source_episode_ids)
-            and self.source_legacy_unverified_episode_count == 0
-            and len(self.ai_review_contract_sha256s) == 1
+            self.intervention_policy_artifact_eligible
             and self.config.update_mode
             in {
                 LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
@@ -1265,9 +1277,21 @@ class LifecycleTastePolicyModel(BaseModel):
             }
         )
 
+    @property
+    def intervention_policy_artifact_eligible(self) -> bool:
+        """Return common provenance eligibility for confirmatory or diagnostic arms."""
+
+        return (
+            self.schema_version == "1.3"
+            and self.source_review_evidence_kinds == ("ai",)
+            and self.source_ai_reviewed_episode_count == len(self.source_episode_ids)
+            and self.source_legacy_unverified_episode_count == 0
+            and len(self.ai_review_contract_sha256s) == 1
+        )
+
     @classmethod
     def create(cls, **values: object) -> LifecycleTastePolicyModel:
-        payload = {"schema_version": "1.2", **values}
+        payload = {"schema_version": "1.3", **values}
         payload.pop("policy_sha256", None)
         unsigned = cls.model_construct(policy_sha256="0" * 64, **payload)
         return cls(
@@ -1444,6 +1468,8 @@ def fit_lifecycle_taste_policy(
         config=config,
         source_episode_ids=tuple(ids),
         source_episode_sha256=tuple(item.admission_sha256 for item in episodes),
+        source_group_keys=tuple(sorted(group_partitions)),
+        source_group_count=len(group_partitions),
         training_episode_ids=tuple(item.admission_id for item in selected),
         training_episode_sha256=tuple(item.admission_sha256 for item in selected),
         training_episode_count=len(selected),

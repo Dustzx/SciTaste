@@ -165,6 +165,73 @@ class LifecycleTastePolicyTrace(BaseModel):
         return self
 
 
+class TasteInterventionTrace(BaseModel):
+    """Durable proof that a formal single-variable contract gated a decision."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    contract_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    hypothesis: Literal["H2b_taste_selection", "H3_lifecycle_credit", "H4_native_effect"]
+    condition_id: str = Field(min_length=1)
+    changed_dimension: Literal["selector-mode", "credit-update", "policy-weight"]
+    selector_mode: Literal["disabled", "lexical", "deliberative"]
+    lifecycle_update_mode: str | None = None
+    lifecycle_policy_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    policy_training_corpus_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+    lifecycle_policy_weight: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    action_menu_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    precedent_pool_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    policy_source_groups_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    precedent_source_groups_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    heldout_source_groups_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    credit_assignment_schedule_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+    selector_runtime_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    controller_backbone_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    state_snapshot_id: str = Field(pattern=r"^state-[0-9a-f]{64}$")
+    resource_budget_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    decision_provider: str = Field(min_length=1)
+    decision_model: str = Field(min_length=1)
+    prompt_version: str = Field(min_length=1)
+    seed: int = Field(ge=0)
+    source_identity_registry_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    tool_policy_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    repair_policy_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    executor_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    task_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    idea_revision_binding_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    trace_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def trace_is_closed(self) -> TasteInterventionTrace:
+        from scitaste.project.models import content_sha256
+
+        expected = content_sha256(self.model_dump(mode="json", exclude={"trace_sha256"}))
+        if self.trace_sha256 != expected:
+            raise ValueError("Taste intervention trace hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: Any) -> TasteInterventionTrace:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("trace_sha256", None)
+        from scitaste.project.models import content_sha256
+
+        unsigned = cls.model_construct(trace_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            trace_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"trace_sha256"})
+            ),
+        )
+
+
 class ResearchDecision(BaseModel):
     """Controller output and the unit of future taste memory."""
 
@@ -185,6 +252,7 @@ class ResearchDecision(BaseModel):
     model_candidate_generation: ModelCandidateGenerationTrace | None = None
     taste_deliberation: TasteDeliberationTrace | None = None
     lifecycle_taste_policy: LifecycleTastePolicyTrace | None = None
+    taste_intervention: TasteInterventionTrace | None = None
     model_decision: ModelDecisionTrace | None = None
     executor_result_id: str | None = None
     actual_outcome: dict[str, Any] | None = None
@@ -198,12 +266,16 @@ class ResearchDecision(BaseModel):
             payload.pop("taste_deliberation", None)
         if self.lifecycle_taste_policy is None:
             payload.pop("lifecycle_taste_policy", None)
+        if self.taste_intervention is None:
+            payload.pop("taste_intervention", None)
         if self.model_decision is None:
             payload.pop("model_decision", None)
         return payload
 
     @model_validator(mode="after")
     def selected_action_was_a_candidate(self) -> ResearchDecision:
+        from scitaste.project.models import content_sha256
+
         candidate_ids = {action.action_id for action in self.candidate_actions}
         if self.selected_action.action_id not in candidate_ids:
             raise ValueError("selected_action must belong to candidate_actions")
@@ -216,4 +288,45 @@ class ResearchDecision(BaseModel):
             self.model_candidate_generation.admitted_candidate_ids
         ).issubset(candidate_ids):
             raise ValueError("model-generated candidates must belong to candidate_actions")
+        intervention = self.taste_intervention
+        if intervention is not None:
+            action_menu = tuple(
+                {
+                    "action_id": action.action_id,
+                    "action_type": action.type.value,
+                    "action_sha256": content_sha256(action),
+                }
+                for action in self.candidate_actions
+            )
+            if content_sha256(action_menu) != intervention.action_menu_sha256:
+                raise ValueError("Taste intervention trace differs from final candidate actions")
+            if self.state_snapshot_id != intervention.state_snapshot_id:
+                raise ValueError("Taste intervention trace differs from decision state")
+            if self.model_candidate_generation is not None:
+                raise ValueError("formal Taste intervention cannot generate candidate actions")
+            deliberative = intervention.selector_mode == "deliberative"
+            if deliberative != (self.taste_deliberation is not None):
+                raise ValueError("Taste intervention selector and deliberation trace differ")
+            lifecycle_required = intervention.hypothesis in {
+                "H3_lifecycle_credit",
+                "H4_native_effect",
+            }
+            if lifecycle_required != (self.lifecycle_taste_policy is not None):
+                raise ValueError("Taste intervention and lifecycle policy trace differ")
+            if self.lifecycle_taste_policy is not None and (
+                self.lifecycle_taste_policy.policy_sha256
+                != intervention.lifecycle_policy_sha256
+            ):
+                raise ValueError("Taste intervention lifecycle policy identity differs")
+            if self.model_decision is not None and (
+                self.model_decision.backend != intervention.decision_provider
+                or self.model_decision.model != intervention.decision_model
+                or self.model_decision.prompt_version != intervention.prompt_version
+            ):
+                raise ValueError("Taste intervention model-decision identity differs")
+            if self.model_decision is None and (
+                intervention.decision_provider != "scitaste-native"
+                or intervention.decision_model != "deterministic-utility-controller"
+            ):
+                raise ValueError("Taste intervention lacks its declared model decision")
         return self

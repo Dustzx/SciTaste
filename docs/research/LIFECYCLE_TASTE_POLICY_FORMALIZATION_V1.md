@@ -297,6 +297,29 @@ Failure of H2/H2b rejects contextual applicability. Failure of H3 rejects the
 learned delayed-credit mechanism. Failure of H4 forbids the title-level
 “Improving Autonomous Research” claim even if local preferences improve.
 
+### Executable intervention boundary
+
+The controller now accepts a content-addressed `TasteInterventionContract` for
+H2b, H3, and H4. It freezes the benchmark-local state, exact action menu,
+retriever-derived broad precedent pool, selector execution identity, controller
+backbone, model and prompt, resource budget, Idea revision, policy artifact,
+and pairwise-disjoint policy/precedent/heldout source groups. H3 policies retain
+the complete source-group population even for the no-update arm, bind the
+shared estimator and source corpus separately from the changed update mode,
+and bind the actual shuffled assignment when applicable. H4 policy-off retains
+the identical policy artifact but gives it zero weight and does not expose its
+assessment to the decision model. Formal candidate generation and custom
+critic suites are rejected so the post-contract action menu cannot drift.
+
+This is currently a **controller-layer conditional result, not formal H4
+readiness**. A formal native run remains vetoed until the native cell runner
+derives the task, tool, repair, executor, and canonical source-registry hashes
+from the actual bound artifacts and persists the complete chain from campaign
+and comparison through contract, decision, patch/execution receipts, and
+scorer-owned objective measurement. Internal independent review of this layer
+used AI agents (`reviewer_kind=ai`, `not_human_review=true`); it is not human or
+expert validation.
+
 ## 9. Algorithmic summary
 
 ```text

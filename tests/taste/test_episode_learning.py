@@ -466,7 +466,23 @@ def test_two_ai_reviews_admit_training_but_forbid_human_validity_claim(
     assert policy.source_review_evidence_kinds == ("ai",)
     assert policy.ai_review_contract_sha256s == (contract.contract_sha256,)
     assert policy.human_validity_claim_allowed is False
+    assert policy.schema_version == "1.3"
+    assert policy.source_group_keys == (
+        "self-project:episode-project:source-group-01",
+    )
+    assert policy.source_group_count == 1
+    assert policy.intervention_policy_artifact_eligible is True
     assert policy.h3_policy_artifact_eligible is True
+    diagnostic = fit_lifecycle_taste_policy(
+        (admitted,),
+        LifecycleTastePolicyConfig(
+            policy_id="ai-reviewed-success-only-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.SUCCESS_ONLY,
+            idea_revision=_idea_binding(),
+        ),
+    )
+    assert diagnostic.intervention_policy_artifact_eligible is True
+    assert diagnostic.h3_policy_artifact_eligible is False
 
 
 def test_split_preference_requires_independent_adjudication(tmp_path: Path) -> None:
@@ -696,6 +712,8 @@ def test_success_and_failure_controls_use_disjoint_outcome_episodes(tmp_path: Pa
 
     assert success.training_episode_ids == ("admitted-episode-01",)
     assert failure.training_episode_ids == ("admitted-episode-02",)
+    assert success.h3_policy_artifact_eligible is False
+    assert failure.h3_policy_artifact_eligible is False
 
 
 def test_scientific_policy_excludes_execution_only_credit_by_default(tmp_path: Path) -> None:
@@ -808,6 +826,8 @@ def test_schema_10_policy_replays_under_its_original_hash(tmp_path: Path) -> Non
         "source_legacy_unverified_episode_count",
         "ai_review_contract_sha256s",
         "human_validity_claim_allowed",
+        "source_group_keys",
+        "source_group_count",
     ):
         payload.pop(field)
     legacy_sha256 = content_sha256(payload)
@@ -835,6 +855,8 @@ def test_schema_11_policy_replays_with_source_group_fields(tmp_path: Path) -> No
         "source_legacy_unverified_episode_count",
         "ai_review_contract_sha256s",
         "human_validity_claim_allowed",
+        "source_group_keys",
+        "source_group_count",
     ):
         payload.pop(field)
     legacy_sha256 = content_sha256(payload)
@@ -864,6 +886,8 @@ def test_legacy_shuffled_policy_loads_for_audit_but_is_not_h3_eligible(
         "source_legacy_unverified_episode_count",
         "ai_review_contract_sha256s",
         "human_validity_claim_allowed",
+        "source_group_keys",
+        "source_group_count",
     ):
         payload.pop(field)
     legacy_sha256 = content_sha256(payload)

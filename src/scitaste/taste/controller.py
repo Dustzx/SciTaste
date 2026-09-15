@@ -14,6 +14,7 @@ from scitaste.backends.base import (
     PreferenceResponse,
 )
 from scitaste.project.idea_revision import ProjectIdeaRevisionBinding
+from scitaste.project.models import content_sha256
 from scitaste.schema.actions import ResearchAction
 from scitaste.schema.decisions import (
     LifecycleTastePolicyTrace,
@@ -38,6 +39,12 @@ from scitaste.taste.episode_learning import (
     LifecycleTastePolicyAssessment,
     LifecycleTastePolicyModel,
     assess_lifecycle_taste_policy,
+)
+from scitaste.taste.intervention import (
+    TasteInterventionContract,
+    TasteSelectorMode,
+    taste_precedent_pool_sha256,
+    taste_precedent_source_group_ids,
 )
 from scitaste.taste.retriever import (
     RetrievedTasteCase,
@@ -95,6 +102,7 @@ class TasteController:
         self.precedent_weight = precedent_weight
         self.utility_enabled = utility_enabled
         self.critics_enabled = critics_enabled
+        self._custom_critic_suite = critic_suite is not None
         self.critic_suite = critic_suite or StageTasteCriticSuite()
         self.preference_backend = preference_backend
         self.preference_task = preference_task
@@ -146,6 +154,7 @@ class TasteController:
         budget: ResourceBudget | None = None,
         taste_deliberation: VerifiedTasteDeliberation | None = None,
         current_idea_revision: ProjectIdeaRevisionBinding | None = None,
+        intervention_contract: TasteInterventionContract | None = None,
     ) -> ResearchDecision:
         actions = list(candidate_actions)
         if not actions:
@@ -158,13 +167,82 @@ class TasteController:
             )
 
         active_budget = budget or remaining_budget(state.resource_budget, state.resource_usage)
+        intervention_trace = None
+        frozen_taste_pool: list[RetrievedTasteCase] | None = None
+        if intervention_contract is not None:
+            if self.candidate_generation_backend is not None:
+                raise ValueError(
+                    "formal Taste intervention requires a fixed candidate-action menu"
+                )
+            if self._custom_critic_suite:
+                raise ValueError(
+                    "formal Taste intervention requires the first-party critic suite"
+                )
+            if self.mode is TasteMode.AUGMENTED:
+                assert self.retriever is not None
+                frozen_taste_pool = self.retriever.retrieve(
+                    self._taste_query(state, actions),
+                    limit=self.deliberation_candidate_limit,
+                )
+            precedent_pool_sha256 = taste_precedent_pool_sha256(frozen_taste_pool or ())
+            precedent_source_group_ids = taste_precedent_source_group_ids(
+                frozen_taste_pool or ()
+            )
+            selector_runtime_sha256 = self._selector_runtime_sha256(
+                precedent_pool_sha256=precedent_pool_sha256,
+                taste_deliberation=taste_deliberation,
+            )
+            if self.preference_backend is None:
+                decision_provider = "scitaste-native"
+                decision_model = "deterministic-utility-controller"
+            else:
+                if (
+                    self.expected_preference_backend is None
+                    or self.expected_preference_model is None
+                ):
+                    raise ValueError("formal Taste intervention requires a pinned model identity")
+                decision_provider = self.expected_preference_backend
+                decision_model = self.expected_preference_model
+            intervention_trace = intervention_contract.validate_runtime(
+                state=state,
+                actions=tuple(actions),
+                budget=active_budget,
+                taste_deliberation=taste_deliberation,
+                selector_mode=(
+                    TasteSelectorMode.DELIBERATIVE
+                    if taste_deliberation is not None
+                    else (
+                        TasteSelectorMode.LEXICAL
+                        if self.mode is TasteMode.AUGMENTED
+                        else TasteSelectorMode.DISABLED
+                    )
+                ),
+                precedent_pool_sha256=precedent_pool_sha256,
+                precedent_source_group_ids=precedent_source_group_ids,
+                selector_runtime_sha256=selector_runtime_sha256,
+                controller_backbone_sha256=self.intervention_backbone_sha256,
+                lifecycle_policy=self.lifecycle_policy,
+                lifecycle_policy_weight=(
+                    self.lifecycle_policy_weight if self.lifecycle_policy is not None else 0.0
+                ),
+                idea_revision=current_idea_revision,
+                decision_provider=decision_provider,
+                decision_model=decision_model,
+                prompt_version=self.preference_prompt_version,
+                seed=self.seed,
+            )
         assessments = [self.policy.assess(action, active_budget) for action in actions]
         feasible = [item for item in assessments if item.feasible]
         if not feasible:
             details = "; ".join(reason for item in assessments for reason in item.reasons)
             raise NoViableActionError(f"all candidate actions exceed budget: {details}")
 
-        retrieved = self._retrieve(state, actions, deliberation=taste_deliberation)
+        retrieved = self._retrieve(
+            state,
+            actions,
+            deliberation=taste_deliberation,
+            broad_candidates=frozen_taste_pool,
+        )
         deliberation_trace = self._deliberation_trace(taste_deliberation)
         critic_findings = self.critic_suite.review(state, actions) if self.critics_enabled else ()
         generation_trace: ModelCandidateGenerationTrace | None = None
@@ -255,7 +333,9 @@ class TasteController:
                 utility_enabled=self.utility_enabled,
                 taste_enabled=self.mode is TasteMode.AUGMENTED,
                 critics_enabled=self.critics_enabled,
-                lifecycle_policy_assessment=lifecycle_assessment,
+                lifecycle_policy_assessment=(
+                    lifecycle_assessment if self.lifecycle_policy_weight > 0 else None
+                ),
             )
             request = PreferenceRequest(
                 request_id=_preference_request_id(state, feasible, seed=self.seed),
@@ -366,7 +446,112 @@ class TasteController:
             model_candidate_generation=generation_trace,
             taste_deliberation=deliberation_trace,
             lifecycle_taste_policy=_lifecycle_policy_trace(lifecycle_assessment),
+            taste_intervention=intervention_trace,
             model_decision=model_trace,
+        )
+
+    @property
+    def intervention_backbone_sha256(self) -> str:
+        """Fingerprint controller factors that are not an intervention treatment."""
+
+        retriever_payload = None
+        if self.retriever is not None:
+            retriever_payload = {
+                "domain_relation": self.retriever.domain_relation.value,
+                "library_sha256": content_sha256(
+                    tuple(item.model_dump(mode="json") for item in self.retriever.library.all())
+                ),
+            }
+        return content_sha256(
+            {
+                "utility_policy": {
+                    "value_weights": self.policy.value_weights,
+                    "cost_weights": self.policy.cost_weights,
+                    "unknown_value_weight": self.policy.unknown_value_weight,
+                    "unknown_cost_weight": self.policy.unknown_cost_weight,
+                },
+                "utility_enabled": self.utility_enabled,
+                "critics_enabled": self.critics_enabled,
+                "critic_ids": tuple(item.critic_id for item in self.critic_suite.critics),
+                "mode": self.mode.value,
+                "retriever": retriever_payload,
+                "retrieval_limit": self.retrieval_limit,
+                "deliberation_candidate_limit": self.deliberation_candidate_limit,
+                "precedent_weight": self.precedent_weight,
+                "preference_task": self.preference_task,
+                "preference_prompt_version": self.preference_prompt_version,
+                "expected_preference_backend": self.expected_preference_backend,
+                "expected_preference_model": self.expected_preference_model,
+                "candidate_generation_enabled": self.candidate_generation_backend is not None,
+                "candidate_generation_task": self.candidate_generation_task,
+                "candidate_generation_prompt_version": (
+                    self.candidate_generation_prompt_version
+                ),
+                "expected_candidate_generation_backend": (
+                    self.expected_candidate_generation_backend
+                ),
+                "expected_candidate_generation_model": (
+                    self.expected_candidate_generation_model
+                ),
+            }
+        )
+
+    def intervention_runtime_hashes(
+        self,
+        *,
+        state: ResearchState,
+        candidate_actions: Sequence[ResearchAction],
+        taste_deliberation: VerifiedTasteDeliberation | None = None,
+    ) -> tuple[str, str]:
+        """Observe the real broad pool and selector identity before contract creation."""
+
+        actions = list(candidate_actions)
+        pool: list[RetrievedTasteCase] = []
+        if self.mode is TasteMode.AUGMENTED:
+            assert self.retriever is not None
+            pool = self.retriever.retrieve(
+                self._taste_query(state, actions),
+                limit=self.deliberation_candidate_limit,
+            )
+        pool_sha256 = taste_precedent_pool_sha256(pool)
+        return pool_sha256, self._selector_runtime_sha256(
+            precedent_pool_sha256=pool_sha256,
+            taste_deliberation=taste_deliberation,
+        )
+
+    def _selector_runtime_sha256(
+        self,
+        *,
+        precedent_pool_sha256: str,
+        taste_deliberation: VerifiedTasteDeliberation | None,
+    ) -> str:
+        if taste_deliberation is not None:
+            selector = {
+                "mode": "deliberative",
+                "algorithm": "verified-taste-deliberation-v1",
+                "invocation_id": taste_deliberation.invocation_id,
+                "backend": taste_deliberation.backend,
+                "model": taste_deliberation.model,
+                "ledger_locator": taste_deliberation.ledger_locator,
+                "ledger_sha256": taste_deliberation.ledger_sha256,
+                "input_sha256": taste_deliberation.input.fingerprint,
+                "proposal_sha256": taste_deliberation.proposal.fingerprint,
+            }
+        elif self.mode is TasteMode.AUGMENTED:
+            selector = {
+                "mode": "lexical",
+                "algorithm": "stage-conditioned-lexical-similarity-v1",
+                "domain_relation": self.retriever.domain_relation.value,
+            }
+        else:
+            selector = {"mode": "disabled", "algorithm": "no-taste-retrieval-v1"}
+        return content_sha256(
+            {
+                "precedent_pool_sha256": precedent_pool_sha256,
+                "retrieval_limit": self.retrieval_limit,
+                "deliberation_candidate_limit": self.deliberation_candidate_limit,
+                "selector": selector,
+            }
         )
 
     def prepare_taste_deliberation(
@@ -399,6 +584,7 @@ class TasteController:
         actions: list[ResearchAction],
         *,
         deliberation: VerifiedTasteDeliberation | None = None,
+        broad_candidates: list[RetrievedTasteCase] | None = None,
     ):
         if self.mode == TasteMode.INTRINSIC:
             if deliberation is not None:
@@ -407,8 +593,13 @@ class TasteController:
         assert self.retriever is not None  # guarded by __init__
         query = self._taste_query(state, actions)
         if deliberation is None:
+            if broad_candidates is not None:
+                return broad_candidates[: self.retrieval_limit]
             return self.retriever.retrieve(query, limit=self.retrieval_limit)
-        broad = self.retriever.retrieve(query, limit=self.deliberation_candidate_limit)
+        broad = broad_candidates or self.retriever.retrieve(
+            query,
+            limit=self.deliberation_candidate_limit,
+        )
         expected_input = build_taste_deliberation_input(
             state=state,
             actions=actions,

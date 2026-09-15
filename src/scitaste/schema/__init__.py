@@ -6,6 +6,7 @@ from scitaste.schema.decisions import (
     ModelDecisionUsage,
     ResearchDecision,
     TasteDeliberationTrace,
+    TasteInterventionTrace,
 )
 from scitaste.schema.review import ConcernCategory, ConcernSeverity
 
@@ -18,4 +19,5 @@ __all__ = [
     "ResearchAction",
     "ResearchDecision",
     "TasteDeliberationTrace",
+    "TasteInterventionTrace",
 ]
