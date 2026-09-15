@@ -153,7 +153,7 @@ analysis:
   power_analysis_ref: null
   power_analysis_sha256: null
   objective_outcome_contract_ref: configs/evaluation/analysis/native_taste_mechanism_objective_v1.json
-  objective_outcome_contract_sha256: 85d5615d0f11f154a6b739c30f42b1b15c2266785d89d6d0cf451062a1ff66c2
+  objective_outcome_contract_sha256: 92b6d32edce0c46f1133d5e0686d7fc2177a1bffed9ccf89f7b8061538e289c6
   claim_admission:
     estimand_kind: native_taste_mechanisms
     lane_id: qwen3vl2b-native-mechanisms-local-gpu

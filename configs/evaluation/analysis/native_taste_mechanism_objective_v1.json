@@ -17,8 +17,8 @@
       "failure_normalized_score": -0.14462728540740696,
       "scorer_artifact": {
         "locator": "src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py",
-        "sha256": "253876d3bed83a72ebaee7d684db9b24f2d659b3ef90f462a7a2c3731115ca41",
-        "size_bytes": 6917
+        "sha256": "5484dff30e359ebf5dced186cbc1efd0615740dd83db324c969a0db60d701bb4",
+        "size_bytes": 6935
       }
     },
     {
@@ -34,8 +34,8 @@
       "failure_normalized_score": -0.20888470890297867,
       "scorer_artifact": {
         "locator": "src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py",
-        "sha256": "253876d3bed83a72ebaee7d684db9b24f2d659b3ef90f462a7a2c3731115ca41",
-        "size_bytes": 6917
+        "sha256": "5484dff30e359ebf5dced186cbc1efd0615740dd83db324c969a0db60d701bb4",
+        "size_bytes": 6935
       }
     }
   ],
@@ -52,5 +52,5 @@
   "monte_carlo_sign_flips": 100000,
   "multiplicity_method": "holm-confirmatory-only",
   "alpha": 0.05,
-  "contract_sha256": "7fcb5dd47697bff4e51256e0be7ff2add2ff57840683c7446264ace5970df3eb"
+  "contract_sha256": "98883ad546ac3c8078a285874333e7382472d2a3bca8bd21de63c99ba5e87765"
 }

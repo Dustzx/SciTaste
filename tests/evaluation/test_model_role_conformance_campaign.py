@@ -85,11 +85,18 @@ def test_prepare_builds_project_owned_exact_request_pack_without_execution(
         if request.runner_kind is ConformanceRunnerKind.MODEL_NODE_RUNTIME:
             assert request.existing_runner_binding is not None
             assert request.existing_runner_binding.materialized is False
-            assert request.readiness is CampaignReadiness.REQUEST_PREPARED
             assert "model-node runtime execute" in (request.existing_runner_binding.next_command)
             assert "<RUNTIME_CONFIG_JSON>" in request.existing_runner_binding.next_command
             if request.resource.execution_kind.value == "local":
+                assert request.resource.local_model_path is not None
                 assert request.resource.exact_checkpoint_hash_resolved is False
+                if Path(request.resource.local_model_path).is_dir():
+                    assert request.readiness is CampaignReadiness.REQUEST_PREPARED
+                else:
+                    assert request.readiness is CampaignReadiness.BLOCKED
+                    assert "local-model-directory-missing" in request.blockers
+            else:
+                assert request.readiness is CampaignReadiness.REQUEST_PREPARED
         else:
             assert request.existing_runner_binding is None
             assert request.readiness is CampaignReadiness.BLOCKED

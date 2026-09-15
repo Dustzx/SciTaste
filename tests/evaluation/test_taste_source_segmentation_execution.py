@@ -54,6 +54,16 @@ _SHA = "a" * 64
 
 
 def _protocol():
+    local_campaigns = (
+        _ROOT
+        / "outputs/projects/scitaste-self-development/evaluations/acquisitions"
+        / "aries-review-edit-population-v1/derived/taste-source-review-v1/CAMPAIGN.json",
+        _ROOT
+        / "outputs/projects/scitaste-self-development/evaluations/reviews"
+        / "f1000-multidomain-taste-source-review-v1/CAMPAIGN.json",
+    )
+    if any(not path.exists() for path in local_campaigns):
+        pytest.skip("local generated segmentation campaign fixtures are unavailable")
     return inspect_taste_source_segmentation_protocol(
         protocol_path=(
             _ROOT
@@ -68,10 +78,13 @@ def _protocol():
 
 
 def _packet():
-    return load_taste_source_segmentation_request_packet(
+    packet_path = (
         _PACK
         / "requests/scitastebench-segmentation-prospective-requests-v3-segmenter-a-shard-01.json"
     )
+    if not packet_path.exists():
+        pytest.skip("local generated segmentation request fixture is unavailable")
+    return load_taste_source_segmentation_request_packet(packet_path)
 
 
 def _v3_protocol():

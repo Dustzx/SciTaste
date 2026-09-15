@@ -230,7 +230,7 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
         if item.quick_intent_id == "review-taste-candidate-population"
     )
     assert published.report_sha256 == report.report_sha256
-    assert curation.target_ids == ("f1000-multidomain-review-response-v1",)
+    assert curation.target_ids == (report.population_id,)
     assert snapshot.revision == 2
 
     tracked_policy = load_taste_source_review_policy(

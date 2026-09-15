@@ -19,7 +19,7 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 2d8971c3efa46adc61bd4080f9264b6d686c16f998907441aa750adb3c81afcb
+    sha256: 7603ad10a08f194cdbad79312dadb3bd9fa2a6fd5d1a741fd44f0e0b37aedab4
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
     sha256: 97c9c42b567878a7ec5eff4514891bcc2374b1f959cb07770a811f26d55d0746
@@ -34,10 +34,10 @@ artifacts:
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: b025c576a599bfa4eea623ab779c7eb102ed0230cd34e40b58d91fa06e712876
+    sha256: 703c52389d5a818e6b1a8f3ace2414f6b8e4f134748b9a7011a2abec88eac484
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: 1bc24328c7d6dd570abc3128451c7a8c11081a65735fdb86a1badf6e1b2a6b21
+    sha256: ed57093e0f6047b093e45a2ffebef92205ab439aa4e3382ec25ddb3e71d4d8d5
   - artifact_id: scientific-reference-quality
     path: docs/SCIENTIFIC_REFERENCE_QUALITY.md
     sha256: 1b6d01a3e76ad79ee3a0773379ea683cdf73274fcba025f3c033c608e5df1a54
@@ -91,7 +91,7 @@ artifacts:
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
   - artifact_id: mechanism-governance
     path: docs/research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md
-    sha256: 030b3f17f570c8de577bd312b79f3d8a4b5f4709e59c347ff2a32214f8c7890f
+    sha256: 000b426c473163b1791fd8364ce40f6df50e0d3db5b53b17ae7eeeebd39cdddc
   - artifact_id: dual-estimand-governance
     path: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
     sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
@@ -112,7 +112,7 @@ artifacts:
     sha256: d091ece13eaa71e80bd9b9a51ba7babba2f4166b169c8033e18804a3632e373a
   - artifact_id: grounded-taste-distillation
     path: docs/GROUNDED_TASTE_DISTILLATION.md
-    sha256: 86887ffc9e6dc99036baace877abc5d956a6636238974260c609b41345af5457
+    sha256: e95c0160c4821fabf0759421ae5f4a46ed17e9644c589f6eeb3a3dc91a6de49d
   - artifact_id: decision-grounded-taste-selection
     path: docs/TASTE_DELIBERATIVE_SELECTION.md
     sha256: 8596879c8addadbe9bbb9788907e86ff6212c61aa57c63d80d0c1acf9bdb19fb
