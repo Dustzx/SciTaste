@@ -140,6 +140,10 @@ systems × tasks × seeds grid with only preregistered contrast-required cells.
 The scientific program and lifecycle contract are complete, but execution is
 correctly closed. SciTasteBench has zero formally admitted natural cases; the
 external task packages and external method adapters remain blocked; no primary
-model, B0 evidence, power result, exact prelaunch manifest, or owner-approved
-hash exists. The next artifact is one exact content-addressed B0 prelaunch
-manifest—not another redesign of the experiment matrix.
+model, B0 execution evidence, power result, or owner-approved launch hash exists.
+A project-owned B0 request pack now binds seven source-disjoint development cases
+and 46 role-scoped requests. Forty-four requests are prepared but none is launch
+ready because exact runtime/profile files and local checkpoint identities remain
+unbound; two embedding requests remain blocked on their real dispatcher. The
+next artifact is therefore the content-addressed executor-binding successor—not
+another redesign of the experiment matrix and not an implicit model launch.

@@ -28,6 +28,11 @@ semantic versioning.
   presence never selects a model, formal/heldout material is rejected,
   generator/judge identity conflicts are non-headline, and embedding/task
   models are selected per corpus or benchmark/task-family scope.
+  A project-owned byte-bound B0 successor now materializes seven source-disjoint
+  development cases and 46 exact request packages. It distinguishes prepared
+  requests from launch-ready execution: runtime/profile hashes and immutable
+  local checkpoint identities are still required, and the missing embedding
+  dispatcher remains an explicit blocker.
 - Replaced prospective decision capture authority with a backward-compatible
   two-phase v2 chain. The first command locks an outcome-free state, complete
   non-duplicate action menu, selection, rationale, timestamp, immutable decision
