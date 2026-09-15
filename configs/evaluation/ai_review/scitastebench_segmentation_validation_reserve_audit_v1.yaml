@@ -1,0 +1,55 @@
+schema_version: "1.0"
+audit_id: scitastebench-segmentation-validation-reserve-audit-v1
+project_id: scitaste-self-development
+audited_at: "2026-09-15T10:01:54+08:00"
+reviewer_kind: ai
+not_human_review: true
+policy_id: matched-calibration-size-per-campaign-v1
+purpose: >-
+  Prevent a development calibration from consuming the source-group-disjoint
+  population that its own protocol requires for independent validation.
+candidate_protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v6.yaml
+  file_sha256: 9211b5e5c72b9b21e980cca6b4a5cec783d9ab6fbd3768cd400ab15581d15a77
+candidate_sample:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v5.yaml
+  file_sha256: 8ddabcbb6fdada1ca11519d06518fd1092ebb12c8004f7cf8b47730ed162a9b2
+  sample_sha256: 118b3ade59e17bbc2f03d4e1a285f61da2cd016f29e9e062e673c771a34c2f57
+population_source_group_counts:
+  aries-taste-source-review-v1: 42
+  f1000-multidomain-taste-source-review-v1: 39
+prior_development_source_group_counts:
+  aries-taste-source-review-v1: 29
+  f1000-multidomain-taste-source-review-v1: 29
+candidate_selected_source_group_counts:
+  aries-taste-source-review-v1: 10
+  f1000-multidomain-taste-source-review-v1: 10
+remaining_after_candidate_source_group_counts:
+  aries-taste-source-review-v1: 3
+  f1000-multidomain-taste-source-review-v1: 0
+required_independent_validation_source_group_counts:
+  aries-taste-source-review-v1: 10
+  f1000-multidomain-taste-source-review-v1: 10
+minimum_new_source_groups_required:
+  aries-taste-source-review-v1: 7
+  f1000-multidomain-taste-source-review-v1: 10
+semantic_exposure:
+  sample_items_reviewed_by_ai: 20
+  decisions_emitted_by_ai: 117
+  provider_contact_performed: false
+  sample_may_return_to_validation_pool: false
+decision: veto-provider-contact
+blocker_codes:
+  - aries-taste-source-review-v1:independent-validation-source-group-reserve-below-calibration-size
+  - f1000-multidomain-taste-source-review-v1:independent-validation-source-group-reserve-below-calibration-size
+remediation: >-
+  Acquire and freeze at least seven new ARIES-compatible groups and ten new
+  F1000-compatible groups, or replace the two-campaign calibration population with
+  a newly acquired source-group-disjoint population. Do not resample from v5: its
+  twenty records received full AI-D semantic inventory review and are development data.
+authority:
+  provider_contact_authorized: false
+  calibration_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+  human_review_claim_allowed: false

@@ -14,6 +14,7 @@ from scitaste.evaluation.model_identity import ApiIdentityCallReceipt, ApiIdenti
 from scitaste.evaluation.taste_source_segmentation import (
     TasteSourceSegmentationAgreementItem,
     _normalize_raw_segments,
+    load_taste_source_segmentation_sample_manifest,
 )
 from scitaste.evaluation.taste_source_segmentation_execution import (
     SegmentationExecutionAuthority,
@@ -35,6 +36,7 @@ from scitaste.evaluation.taste_source_segmentation_protocol import (
     TasteSourceSegmentationProspectiveProtocol,
     TasteSourceSegmentationRequestItem,
     TasteSourceSegmentationRequestPacket,
+    assess_taste_source_segmentation_validation_reserve,
     inspect_taste_source_segmentation_protocol,
     load_taste_source_segmentation_request_packet,
     taste_source_comment_unit_offsets,
@@ -181,6 +183,32 @@ def _v15_protocol():
         }
     )
     return TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
+
+
+def test_v6_sample_cannot_consume_its_independent_validation_groups():
+    protocol_payload = yaml.safe_load(
+        (
+            _ROOT
+            / "configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v6.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    protocol = TasteSourceSegmentationProspectiveProtocol.model_validate(protocol_payload)
+    sample = load_taste_source_segmentation_sample_manifest(
+        _ROOT / protocol.sample.locator
+    ).sample
+
+    audit = assess_taste_source_segmentation_validation_reserve(protocol, sample)
+
+    assert audit.ready_for_provider_contact is False
+    assert audit.selected_source_group_counts == {
+        "aries-taste-source-review-v1": 10,
+        "f1000-multidomain-taste-source-review-v1": 10,
+    }
+    assert audit.remaining_source_group_counts == {
+        "aries-taste-source-review-v1": 3,
+        "f1000-multidomain-taste-source-review-v1": 0,
+    }
+    assert len(audit.blocker_codes) == 2
 
 
 def _anchored_packet(

@@ -773,6 +773,51 @@ class TasteSourceSegmentationProtocolInspection(BaseModel):
     calibration_execution_authorized: Literal[False] = False
 
 
+class TasteSourceSegmentationValidationReserveAudit(BaseModel):
+    """Fail-closed reserve for an equally sized independent validation cohort."""
+
+    model_config = _CONFIG
+
+    policy_id: Literal["matched-calibration-size-per-campaign-v1"] = (
+        "matched-calibration-size-per-campaign-v1"
+    )
+    selected_source_group_counts: dict[str, int]
+    eligible_source_group_counts: dict[str, int]
+    remaining_source_group_counts: dict[str, int]
+    required_validation_source_group_counts: dict[str, int]
+    ready_for_provider_contact: bool
+    blocker_codes: tuple[str, ...]
+
+
+def assess_taste_source_segmentation_validation_reserve(
+    protocol: TasteSourceSegmentationProspectiveProtocol,
+    sample: TasteSourceSegmentationSampleManifest,
+) -> TasteSourceSegmentationValidationReserveAudit:
+    """Require every campaign to retain a calibration-sized unseen validation cohort."""
+
+    selected = dict(sample.per_campaign_source_group_counts or {})
+    eligible = dict(protocol.sample.per_campaign_eligible_source_group_counts or {})
+    campaigns = sorted(set(selected) | set(eligible))
+    remaining = {
+        campaign_id: eligible.get(campaign_id, 0) - selected.get(campaign_id, 0)
+        for campaign_id in campaigns
+    }
+    required = {campaign_id: selected.get(campaign_id, 0) for campaign_id in campaigns}
+    blockers = tuple(
+        f"{campaign_id}:independent-validation-source-group-reserve-below-calibration-size"
+        for campaign_id in campaigns
+        if remaining[campaign_id] < required[campaign_id]
+    )
+    return TasteSourceSegmentationValidationReserveAudit(
+        selected_source_group_counts=selected,
+        eligible_source_group_counts=eligible,
+        remaining_source_group_counts=remaining,
+        required_validation_source_group_counts=required,
+        ready_for_provider_contact=not blockers,
+        blocker_codes=blockers,
+    )
+
+
 class TasteSourceEvidenceUnit(BaseModel):
     model_config = _CONFIG
 
@@ -1111,6 +1156,18 @@ def inspect_taste_source_segmentation_protocol(
     ):
         raise ValueError("Schema 1.5 protocol lacks a source-group-disjoint sample")
     if protocol.schema_version == "1.5":
+        reserve = assess_taste_source_segmentation_validation_reserve(
+            protocol,
+            sample_inspection.sample,
+        )
+        if (
+            protocol.scale_gate.new_source_groups_required_for_validation is True
+            and not reserve.ready_for_provider_contact
+        ):
+            raise ValueError(
+                "Segmentation calibration would consume its independent validation "
+                f"source-group reserve: {', '.join(reserve.blocker_codes)}"
+            )
         assert protocol.integrity_gate is not None
         assert protocol.authority_gate is not None
         integrity_gate = load_segmentation_post_audit_gate(
@@ -1720,6 +1777,8 @@ __all__ = [
     "TasteSourceSegmentationRequestItem",
     "TasteSourceSegmentationRequestPack",
     "TasteSourceSegmentationRequestPacket",
+    "TasteSourceSegmentationValidationReserveAudit",
+    "assess_taste_source_segmentation_validation_reserve",
     "inspect_taste_source_segmentation_protocol",
     "load_taste_source_segmentation_request_pack",
     "load_taste_source_segmentation_request_packet",

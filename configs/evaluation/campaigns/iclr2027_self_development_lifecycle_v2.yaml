@@ -10,15 +10,24 @@ central_question: >-
 claim_boundary: >-
   A title-level improvement claim requires positive source-group-disjoint H1
   grounding, H2 transfer, H2b selection, H3 delayed-credit, and H4 objective
-  progress evidence. The self-development case, repository tests, generated
-  papers, and external best-native systems cannot establish that causal effect.
+  progress evidence plus independent construct validation. The active AI-only
+  route can establish bounded proxy and objective effects, but cannot authorize
+  a human-validity or strong improvement title. The self-development case,
+  repository tests, generated papers, and external best-native systems cannot
+  establish that causal effect.
 artifacts:
   - artifact_id: lifecycle-evidence-program-v2
     path: configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml
-    sha256: c4006afd722319436cf2d2d5e339bec189fa27ac3bda9001609c6f247e528e9f
+    sha256: 481ee4a1257691239201d2ba1f01d5136819ce6b799f5321add9191d6647c6c9
   - artifact_id: lifecycle-evidence-review-v2
     path: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
-    sha256: 6f0f0322e259beef1b6825ea591a99485cff9b080ad5ddbe20b410dfdc2496c5
+    sha256: 02d5c550522d2c830cbc9476bdc8ae903de60047af403fab8ddebc428884a2d7
+  - artifact_id: segmentation-consumed-samples-v4
+    path: configs/evaluation/ai_review/scitastebench_segmentation_consumed_samples_v4.yaml
+    sha256: ae0d7eaa3a00ce173eab5fade944bf2f4f69686e0578f1a4b1484835d6faaeb5
+  - artifact_id: segmentation-validation-reserve-audit-v1
+    path: configs/evaluation/ai_review/scitastebench_segmentation_validation_reserve_audit_v1.yaml
+    sha256: b2c79d579e61b876ff5b0162172bc86754d68dc1c31d4ae9350886d08f797715
   - artifact_id: accepted-resource-corpus-v9
     path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
     sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
@@ -101,8 +110,9 @@ tracks:
       decisions beyond raw retrieval, and does independently reviewed delayed
       credit improve the same policy beyond no update and shuffled credit?
     primary_endpoint: >-
-      Condition-blinded expert preference over held-out actions and claim
-      calibration, with abstention, reversal, transfer error, and calibration diagnostics.
+      Condition-blinded independent AI-panel preference and natural-outcome
+      proxies over held-out actions, with abstention, reversal, transfer error,
+      and calibration diagnostics. No human or expert validity is claimed.
     comparison_design: >-
       H1 same-source grounding, H2 matched transfer, H2b decision-grounded
       selection, and H3 outcome-updated versus no-update policy with shuffled credit.
@@ -148,7 +158,8 @@ tracks:
       human_hours: null
       compute_unallocated: true
     claim_allowed: >-
-      A powered, independently reviewed formal split may support bounded H1--H3 effects.
+      A powered, source-group-disjoint AI-reviewed split may support bounded
+      H1--H3 proxy effects and natural-outcome associations.
     claim_forbidden: >-
       Fixtures, self-project episodes, automated judges, or an arbitrary cell count
       cannot establish learned Scientific Taste.
@@ -174,6 +185,8 @@ tracks:
       - scitastebench-segmentation-prospective-protocol-v2
       - scitastebench-segmentation-prospective-freeze-v2
       - scitastebench-segmentation-request-pack-v2
+      - segmentation-consumed-samples-v4
+      - segmentation-validation-reserve-audit-v1
     blocker_codes:
       - admitted-benchmark-population-below-formal-120-case-floor
       - raw-candidate-population-not-yet-scitastebench
@@ -183,8 +196,9 @@ tracks:
       - formal-split-not-frozen
       - primary-model-not-selected
       - power-analysis-not-complete
-      - reviewers-not-secured
+      - independent-ai-panel-runtime-not-frozen
       - compound-source-records-not-yet-segmented
+      - segmentation-independent-validation-groups-not-acquired
 
   - track_id: native-objective-progress
     role: native_taste_causal
@@ -245,7 +259,7 @@ tracks:
     scientific_question: >-
       Is SciTaste competitive with real accepted autonomous-research systems on
       common full-lifecycle tasks under disclosed best-native configurations?
-    primary_endpoint: Blinded expert preference over complete evidence-bearing packages.
+    primary_endpoint: Blinded independent AI-panel preference over complete evidence-bearing packages.
     comparison_design: >-
       SciTaste Native and at least two accepted unchanged-core systems; model and
       adapter confounding are disclosed and results are not pooled with H4.
@@ -276,7 +290,7 @@ tracks:
       output_storage_bytes: 107374182400
       human_hours: null
       compute_unallocated: true
-    claim_allowed: Supporting ecological competitiveness under fully disclosed conditions.
+    claim_allowed: Supporting AI-panel ecological competitiveness under fully disclosed conditions.
     claim_forbidden: External results cannot identify Taste causality or justify pooled superiority.
     evidence_artifact_ids:
       - lifecycle-evidence-review-v2
@@ -285,7 +299,7 @@ tracks:
       - external-adapters-not-qualified
       - common-task-assets-not-qualified
       - best-native-models-not-frozen
-      - blinded-reviewers-not-secured
+      - blinded-independent-ai-panel-not-frozen
 
 stages:
   - stage_id: freeze-lifecycle-science
@@ -299,25 +313,27 @@ stages:
     completion_artifact_ids: [lifecycle-evidence-program-v2, lifecycle-evidence-review-v2]
     next_decision: Preserve v2 science while materializing natural evidence and exact resources.
   - stage_id: admit-natural-lifecycle-episodes
-    kind: human_curation
+    kind: internal_model_review
     state: blocked
     track_ids: [lifecycle-decision-mechanism]
     depends_on: [freeze-lifecycle-science]
-    external_actions: [recruit_humans]
-    owner_approval_required: true
+    external_actions: []
+    owner_approval_required: false
     blocker_codes:
       - compound-source-records-not-yet-segmented
-      - reviewer-roster-not-bound
+      - independent-ai-panel-runtime-not-frozen
       - quality-privacy-abstraction-and-attribution-review-not-complete
       - formal-120-case-sampling-frame-not-frozen
+      - segmentation-independent-validation-groups-not-acquired
     completion_artifact_ids: []
     next_decision: >-
       First run two independent exact-span segmentation passes over the
       outcome-blind ARIES and F1000 source pool and route boundary or family
-      disagreements to explicit adjudication. Then staff the attributable
-      source-review campaigns and admit only independently reviewed,
-      source-group-disjoint atomic cases until the formal SciTasteBench floor
-      is met.
+      disagreements to explicit adjudication. First acquire a new independent
+      segmentation-validation group reserve, then use two distinct AI reviewer
+      identities plus bounded adjudication to admit source-group-disjoint atomic
+      cases until the formal SciTasteBench floor is met. Register all outcomes as
+      AI-panel proxies, never human or expert evidence.
   - stage_id: qualify-objective-and-external-assets
     kind: asset_acquisition
     state: blocked
@@ -334,16 +350,16 @@ stages:
       Reproduce the already materialized MLRC task environment and scorer before
       requesting additional task assets; qualify Agent Laboratory and
       DeepScientist without changing their research cores.
-  - stage_id: freeze-independent-review
-    kind: independent_review
+  - stage_id: freeze-ai-review-panel
+    kind: internal_model_review
     state: blocked
     track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
     depends_on: [freeze-lifecycle-science]
-    external_actions: [recruit_humans]
-    owner_approval_required: true
-    blocker_codes: [reviewer-roster-not-bound, blinding-and-adjudication-packet-not-frozen]
+    external_actions: []
+    owner_approval_required: false
+    blocker_codes: [distinct-ai-model-identities-not-bound, blinding-and-adjudication-packet-not-frozen]
     completion_artifact_ids: []
-    next_decision: Bind conflict-screened reviewers, blinding, adjudication, and endpoint rubrics.
+    next_decision: Bind distinct AI model identities, blinding, adjudication, artifact retention, and proxy endpoint rubrics.
   - stage_id: select-primary-model
     kind: runtime_preflight
     state: future
@@ -358,8 +374,8 @@ stages:
     kind: pilot_execution
     state: future
     track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
-    depends_on: [select-primary-model, freeze-independent-review]
-    external_actions: [call_api, run_gpu, recruit_humans]
+    depends_on: [select-primary-model, freeze-ai-review-panel]
+    external_actions: [call_api, run_gpu]
     owner_approval_required: true
     blocker_codes: [exact-pilot-manifest-not-approved]
     completion_artifact_ids: []
@@ -369,7 +385,7 @@ stages:
     state: future
     track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
     depends_on: [run-disjoint-pilots-and-power]
-    external_actions: [call_api, run_gpu, recruit_humans]
+    external_actions: [call_api, run_gpu]
     owner_approval_required: true
     blocker_codes: [formal-sample-size-not-powered, exact-scale-out-hash-not-approved]
     completion_artifact_ids: []
@@ -379,11 +395,11 @@ stages:
     state: future
     track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
     depends_on: [run-formal-evidence]
-    external_actions: [recruit_humans]
-    owner_approval_required: true
-    blocker_codes: [formal-results-not-admitted, independent-paper-review-not-complete]
+    external_actions: []
+    owner_approval_required: false
+    blocker_codes: [formal-results-not-admitted, independent-ai-paper-review-not-complete]
     completion_artifact_ids: []
-    next_decision: Bind admitted results, calibrate title and claims, then obtain independent review.
+    next_decision: Bind admitted results, calibrate title and claims, then obtain independent AI review with an explicit nonhuman boundary.
 
 authorizes_download: false
 authorizes_api_calls: false
