@@ -295,6 +295,9 @@ from scitaste.evaluation.reference_selection_comparison import (
     save_reference_selection_plan,
     save_reference_selection_report,
 )
+from scitaste.evaluation.taste_abstraction_batch import (
+    compile_taste_abstraction_runtime_batch,
+)
 from scitaste.evaluation.taste_mechanism_suite import (
     inspect_track_a_pilot_suite,
     materialize_track_a_pilot_suite,
@@ -2273,6 +2276,45 @@ def build_parser() -> argparse.ArgumentParser:
     abstraction_finalize.add_argument("--output", type=Path, required=True)
     _add_log_level_option(abstraction_finalize)
     abstraction_finalize.set_defaults(handler=_handle_evaluation_ai_abstraction_finalize)
+    track_a_abstraction_prepare = evaluation_commands.add_parser(
+        "track-a-qualified-abstraction-batch-prepare",
+        help=(
+            "Compile only reference-quality-qualified Track-A precedents into "
+            "zero-retry grounded-abstraction calls"
+        ),
+    )
+    track_a_abstraction_prepare.add_argument("--plan", type=Path, required=True)
+    track_a_abstraction_prepare.add_argument("--profile-set", type=Path, required=True)
+    track_a_abstraction_prepare.add_argument("--profile-id", required=True)
+    track_a_abstraction_prepare.add_argument("--backend-config", type=Path, required=True)
+    track_a_abstraction_prepare.add_argument("--project-id", required=True)
+    track_a_abstraction_prepare.add_argument("--run-id", required=True)
+    track_a_abstraction_prepare.add_argument("--project-revision", type=int, required=True)
+    track_a_abstraction_prepare.add_argument("--locator-root", type=Path, default=Path("."))
+    track_a_abstraction_prepare.add_argument(
+        "--outputs-root", type=Path, default=Path("outputs")
+    )
+    track_a_abstraction_prepare.add_argument(
+        "--reference-quality-batch",
+        type=Path,
+        required=True,
+        help="the exact quality-gate BATCH.json whose project/run ledger is authoritative",
+    )
+    track_a_abstraction_prepare.add_argument(
+        "--reference-quality-qualification",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "content-free qualification receipt; repeat for available accepted quality "
+            "ledgers (reject receipts remain excluded)"
+        ),
+    )
+    track_a_abstraction_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(track_a_abstraction_prepare)
+    track_a_abstraction_prepare.set_defaults(
+        handler=_handle_evaluation_track_a_abstraction_prepare
+    )
     track_a_suite_materialize = evaluation_commands.add_parser(
         "track-a-suite-materialize",
         help="Freeze available Track-A targets into no-call three-arm requests",
@@ -7940,6 +7982,46 @@ def _handle_evaluation_ai_abstraction_finalize(args: argparse.Namespace) -> int:
                     result.formal_benchmark_admission_authorized
                 ),
                 "output": str(args.output),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_track_a_abstraction_prepare(args: argparse.Namespace) -> int:
+    batch = compile_taste_abstraction_runtime_batch(
+        locator_root=args.locator_root,
+        outputs_root=args.outputs_root,
+        pilot_plan_path=args.plan,
+        profile_set_path=args.profile_set,
+        profile_id=args.profile_id,
+        backend_config_path=args.backend_config,
+        project_id=args.project_id,
+        run_id=args.run_id,
+        expected_project_revision=args.project_revision,
+        output_dir=args.output,
+        reference_quality_batch_path=args.reference_quality_batch,
+        reference_quality_qualification_paths=tuple(
+            args.reference_quality_qualification
+        ),
+    )
+    print(
+        json.dumps(
+            {
+                "batch_id": batch.batch_id,
+                "batch_sha256": batch.batch_sha256,
+                "planned_source_count": batch.planned_source_count,
+                "eligible_source_count": batch.eligible_source_count,
+                "excluded_source_count": batch.excluded_source_count,
+                "planned_call_count": batch.eligible_source_count,
+                "model_calls_performed": False,
+                "automatic_retry_permitted": False,
+                "reviewer_kind": batch.reviewer_kind,
+                "not_human_review": batch.not_human_review,
+                "formal_human_validity": batch.formal_human_validity,
+                "output": str(args.output / "BATCH.json"),
             },
             indent=2,
             ensure_ascii=False,

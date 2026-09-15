@@ -94,6 +94,40 @@ unknown cost still blocks acceptance. Selecting one primary model, calling an
 API, reading acquired content, or recruiting reviewers remains a separate exact
 approval.
 
+## Quality-qualified Track-A batch
+
+The operational Track-A path can now bind the abstraction batch to the exact
+preceding `reference-quality` batch and its content-free qualification receipts:
+
+```bash
+scitaste evaluation track-a-qualified-abstraction-batch-prepare \
+  --plan <PLAN.json> \
+  --profile-set <grounded-profile-set.yaml> \
+  --profile-id <profile-id> \
+  --backend-config <secret-free-backend.json> \
+  --project-id <project-id> --run-id <abstraction-run-id> \
+  --project-revision <revision> \
+  --reference-quality-batch <quality-BATCH.json> \
+  --reference-quality-qualification <qualification-01.json> \
+  --output <new-abstraction-batch-directory>
+```
+
+Compilation replays each supplied receipt against the canonical project-owned
+model-node ledger and fails closed on project, run, revision, invocation,
+source, quality-projection, proposal, or ledger-hash drift. It also verifies the
+quality batch against every precedent in the plan. Only `verdict=qualify`
+sources receive runtime configs; omitted and rejected sources are counted as
+excluded, and eligible sources retain plan order. A zero-eligible manifest is a
+valid no-call result and is never filled by regeneration or replacement
+sampling.
+
+This lane is explicitly AI-only operational qualification. Its manifest stores
+each receipt locator and byte hash, its semantic report hash, and the verified
+ledger locator and byte hash, together with planned, eligible, and excluded
+source counts. It always records `formal_human_validity=false`; it supports the
+deadline-bounded pilot but cannot establish human construct validity or a
+formal human-review claim.
+
 ## Scientific role
 
 This gate makes the H1 intervention identifiable: raw RAG and grounded Taste see
