@@ -1,0 +1,114 @@
+schema_version: '1.2'
+sample_id: scitastebench-segmentation-prospective-calibration-v6
+project_id: scitaste-self-development
+selection_timing: preregistered
+selection_rationale: Freeze an outcome-blind, source-balanced calibration sample before
+  either segmenter receives item text; all earlier calibration source groups are excluded.
+sampling_algorithm: 'sha256-ranked-source-group-disjoint-v3: exclude every source
+  group represented in prior samples; first rank remaining groups by a canonical SHA-256
+  binding the seed, campaign, and private source-group ID, then independently rank
+  records within each selected group and take one record.'
+random_seed: 2026091507
+selection_algorithm_version: sha256-ranked-source-group-disjoint-v3
+source_campaign_locators:
+  aries-validation-reserve-source-review-v2: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-validation-reserve-v1/derived/taste-source-review-v3/CAMPAIGN.json
+  f1000-validation-reserve-source-review-v2: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-validation-reserve-v2/derived/taste-source-review-v2/CAMPAIGN.json
+source_campaign_file_sha256s:
+  aries-validation-reserve-source-review-v2: 015d9a8a38b13462f0e109d4c984b30383e29bf677427b75e02e5a9dc5a400e4
+  f1000-validation-reserve-source-review-v2: b3c53b960577ed7bb5230725c708d96212658054cd685a9685c5d008a69218c6
+source_campaign_sha256s:
+  aries-validation-reserve-source-review-v2: 59c632ff0d4b329dac80decf3920e9dc4ce34a66569c2b63d47313d84cecfa63
+  f1000-validation-reserve-source-review-v2: 3af247c9022800ddf097341dfe961861591c44ed34127f3b7f88c1a704591883
+source_scientific_items_sha256s:
+  aries-validation-reserve-source-review-v2: 44d4b493f85f69bc5cb1e8e7bd276b3fbd50e6cc5453ecd276a893bac2791a04
+  f1000-validation-reserve-source-review-v2: ec2dbd3ff1e9fe29f78ae8aafe7b2476468508069b36c4c2e2f823e83dfb4f80
+excluded_sample_locators:
+  scitastebench-segmentation-calibration-sample-v1: configs/evaluation/ai_review/scitastebench_segmentation_calibration_sample_v1.yaml
+  scitastebench-segmentation-prospective-calibration-v1: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v1.yaml
+  scitastebench-segmentation-prospective-calibration-v2: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v2.yaml
+  scitastebench-segmentation-prospective-calibration-v3: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v3.yaml
+  scitastebench-segmentation-prospective-calibration-v4: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v4.yaml
+  scitastebench-segmentation-prospective-calibration-v5: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v5.yaml
+excluded_sample_file_sha256s:
+  scitastebench-segmentation-calibration-sample-v1: be8ee5edf23c52ad9d5385e7deae7200c58bafda9a42d600b0bd460d3e7c76f9
+  scitastebench-segmentation-prospective-calibration-v1: 77d6a74690ee11200c6f2099e2eb078e919216bc82af1cf3a57246870f161a41
+  scitastebench-segmentation-prospective-calibration-v2: 2820dc77ad3663f2d603a2cafb0c9deb27bd2e32e5849df2ca9f1363814700b7
+  scitastebench-segmentation-prospective-calibration-v3: da22ffd1c3a0273cdfad2b9604dedf7cbe4bbeaa9b578013e951dc6efdc1bf25
+  scitastebench-segmentation-prospective-calibration-v4: 0a878bf30b82e6a999b0e0ba6b706d11a65264f8c66136387eb8b480782b01dc
+  scitastebench-segmentation-prospective-calibration-v5: 8ddabcbb6fdada1ca11519d06518fd1092ebb12c8004f7cf8b47730ed162a9b2
+excluded_sample_sha256s:
+  scitastebench-segmentation-calibration-sample-v1: 96fb57bbfade9f0ff5ea29b9f2a09aae3b408f2e547a7def96093eea81e01b1c
+  scitastebench-segmentation-prospective-calibration-v1: 83abf856f011835714ee0cb2c9629584d55b402bbed82effb0d08fa7014c46cc
+  scitastebench-segmentation-prospective-calibration-v2: 7cb4fc5a23a43d231b257c94137492096ed9ac81e23f58a5871e2e2697d58fed
+  scitastebench-segmentation-prospective-calibration-v3: 394f7819ee0a463b383246b027ac8abea09adb8e4d7e5a2fedcb9eb095b6df60
+  scitastebench-segmentation-prospective-calibration-v4: 55e5ac8e4267a3af3b22961a62203a268454152551413992392a67477f970a95
+  scitastebench-segmentation-prospective-calibration-v5: 118b3ade59e17bbc2f03d4e1a285f61da2cd016f29e9e062e673c771a34c2f57
+per_campaign_item_counts:
+  aries-validation-reserve-source-review-v2: 10
+  f1000-validation-reserve-source-review-v2: 10
+source_private_map_file_sha256s:
+  aries-validation-reserve-source-review-v2: cad09b5677862dc7bb0e3a2d3cdedc20ab40500c5c3df619d893c7141023c95e
+  f1000-validation-reserve-source-review-v2: 6b5cf37b75b000848db7e3675596cd23627e13130d731d7a4556c5e29a06dfa8
+per_campaign_source_group_counts:
+  aries-validation-reserve-source-review-v2: 10
+  f1000-validation-reserve-source-review-v2: 10
+per_campaign_excluded_source_group_counts:
+  aries-validation-reserve-source-review-v2: 0
+  f1000-validation-reserve-source-review-v2: 0
+per_campaign_eligible_source_group_counts:
+  aries-validation-reserve-source-review-v2: 20
+  f1000-validation-reserve-source-review-v2: 40
+per_campaign_sampling_fraction_micros:
+  aries-validation-reserve-source-review-v2: 500000
+  f1000-validation-reserve-source-review-v2: 250000
+uncertainty_estimand: descriptive-calibration-superpopulation-work-model
+source_group_disjoint_from_exclusions: true
+maximum_items_per_source_group: 1
+source_group_ids_exposed_to_provider: false
+items:
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-054d919063c129a892be0e07
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-0f49e1ff7bbe8b163d0bc352
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-5240b83d46ea8aeaf9951651
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-7be136d50ab45f704f4532d3
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-81a20941e72adb14a381b36b
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-94f27e92d52e153b4ad7ffa2
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-9aefa67a56ecf9067edaefc0
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-a0b8fe9de2ea18360e245f50
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-acf2474ad31eff5d981f178e
+- campaign_id: aries-validation-reserve-source-review-v2
+  review_item_id: item-cf52e964c27f529e911903f5
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-182be8bb5a246c0c3979ea4d
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-189010d65ba3a3d69faf028d
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-21da51c392cd78c1711dd61f
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-2ddb9a362ccacda384587b6d
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-4dd7f104cd2759d21aa73107
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-7103dac0379020874e477975
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-ccd6d928c5100adf0289016c
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-d3aca620e3dcb1b86bd52a6e
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-dee65e4a602de90548c6335b
+- campaign_id: f1000-validation-reserve-source-review-v2
+  review_item_id: item-f436666101bd3343b28ddd46
+item_count: 20
+authority:
+  preregistered: true
+  confirmatory_calibration_authorized: false
+  scaled_execution_authorized: false
+  formal_evidence_eligible: false

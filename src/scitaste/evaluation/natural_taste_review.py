@@ -1301,7 +1301,10 @@ def _load_supported_population_report(
         raise ValueError("Taste source population report must contain a mapping")
     if "split_source_group_counts" in payload:
         return AriesTastePopulationReport.model_validate(payload)
-    if payload.get("population_id") == "aries-dev-review-reply-validation-reserve-v1":
+    population_id = payload.get("population_id")
+    if isinstance(population_id, str) and population_id.startswith(
+        "aries-dev-review-reply-validation-reserve-"
+    ):
         return AriesReplyReserveReport.model_validate(payload)
     if "domain_source_group_counts" in payload:
         return F1000TastePopulationReport.model_validate(payload)

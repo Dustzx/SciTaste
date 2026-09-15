@@ -66,7 +66,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.30 — native lifecycle-policy H4 execution | in progress | the native runner now consumes a protocol profile plus a replayed five-state manipulation report, creates campaign-bound arm requests before baseline/model/mutation, selects one high-level action through deterministic Taste on every round, retains typed terminal evidence and persistent task-seed-repetition pairs, closes public-analysis legacy/pair/evidence-chain bypasses and selective primary reruns, hides operational IDs from the model, reserves full-campaign budget, and supports task-specific guidance; formal launch re-admits the complete AI-reviewed episode population, refits the policy, replays a content-bound preparation manifest, and can now compile that manifest plus the canonical launch config from one project-owned locator request; AI red-team review is complete and no longer a functional blocker, while an authentic behaviorally active policy, accepted novelty-surviving Idea, frozen project artifacts, disclosed resources, and owner-authorized cells remain open |
 | Phase 9.31 — family-conditioned Scientific Taste | in progress | a seven-family scientific-judgment ontology, dual-AI assignment ledger, three-model split adjudication, independently fitted uncertainty-aware heads, explicit controller routing/trace, AI-reviewed grounded-corpus tier, H4 adaptive-allocation reproduction binding, and project-level corpus/refresh/readiness bundles are implemented; two real admitted self-project episodes now show both execution-only exclusion and eligible-but-under-supported abstention, including correction of a structural-readiness/minimum-support mismatch; next acquire scientific-outcome support across decision families, then freeze behaviorally active project artifacts before the one final Python 3.12 integration/debug pass |
 | Phase 9.32 — deadline-critical work routing | done | the venue countdown now compiles a snapshot-bound work order: claim/submission/release tasks survive critical pressure, prerequisites remain explicit, and noncritical polish or non-release verification is deferred without granting execution authority |
-| Phase 9.33 — independent SciTasteBench validation reserve | in progress | two exact official-source acquisitions add 40 F1000 and 7 ARIES dev source groups disjoint from every prior acquired/exposed group; both compile into identity-safe AI-review packages, satisfying the numeric reserve floor while retaining heuristic/nonhuman disclosure; next bind these campaigns into a new prospective segmentation protocol, complete the independent AI quality/privacy pass, and only then open the bounded GLM calibration window |
+| Phase 9.33 — independent SciTasteBench validation reserve | in progress | two exact official-source acquisitions provide 40 F1000 and 20 ARIES dev source groups disjoint from earlier calibration sources; v6 stopped correctly at request four on an overstrict own-trigger/context-overlap contract, and v7 now freezes a new 10+10 sample while retaining 10+30 groups for independent validation; next create the Git freeze and run the bounded GLM calibration, with AI-only review disclosed as nonhuman |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -1759,15 +1759,13 @@ citation/resource screen and exact adapters/licenses remain open.
   irreversible owner boundary. The next action is therefore not another
   technical preflight: it is the user's ethics, compensation, consent,
   conflict-screening, and three-reviewer decision before any human contact.
-- Next: use the prepared campaign with qualified independent people to confirm
-  the two publisher subjects as scientific-domain labels, complete free-text
-  privacy review, collect two conflict-cleared quality judgments, resolve any
-  disagreement, and review grounded Taste abstractions before freezing any
-  benchmark split. The six decision-family labels are collected by the review
-  instrument rather than inferred from publisher metadata. Publisher subjects,
-  reviewer recommendations, author replies, later versions, and publication are
-  observed context rather than quality gold. Neither natural population is a
-  benchmark or an effectiveness result.
+- Next: use two identity-distinct AI scientific judges and one separate AI
+  privacy judge, with a third AI adjudicator only for disagreement, before
+  freezing any benchmark split. These judgments complete the operational gate
+  without claiming human validity. The six decision-family labels come from the
+  review instrument rather than publisher metadata; recommendations, replies,
+  later versions, and publication remain context rather than quality gold.
+  Neither natural population is yet a benchmark or effectiveness result.
 
 ## Project controls
 

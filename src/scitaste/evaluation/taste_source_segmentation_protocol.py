@@ -145,7 +145,7 @@ class SegmentationProtocolSampleBinding(SegmentationProtocolFileBinding):
     item_count: int = Field(gt=0, le=100_000)
     prior_items_excluded: int = Field(gt=0, le=100_000)
     source_balanced: Literal[True] = True
-    prior_source_groups_excluded: int | None = Field(default=None, ge=1, le=100_000)
+    prior_source_groups_excluded: int | None = Field(default=None, ge=0, le=100_000)
     source_group_disjoint: bool | None = None
     maximum_items_per_source_group: int | None = Field(default=None, ge=1, le=1)
     per_campaign_eligible_source_group_counts: dict[str, int] | None = None
@@ -278,6 +278,7 @@ class SegmentationProtocolEvidenceUnitSelection(BaseModel):
     trigger_ranges_overlapping_allowed: bool | None = None
     context_ranges_may_overlap_across_decisions: bool | None = None
     context_may_overlap_another_decision_trigger: bool | None = None
+    own_trigger_context_overlap_allowed: bool | None = None
 
 
 class SegmentationProtocolInputFirewall(BaseModel):

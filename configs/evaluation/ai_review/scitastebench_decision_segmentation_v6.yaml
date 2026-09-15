@@ -1,0 +1,87 @@
+schema_version: "1.5"
+rubric_id: scitastebench-decision-segmentation-v6
+purpose: >-
+  Recover decision-trigger boundaries, shared interpretive context, and primary
+  decision families from structurally pseudonymized scientific review records.
+  This is an AI engineering annotation proposal, not a human validity judgment.
+input_boundary:
+  allowed:
+    - frozen segmentation rubric
+    - assigned structurally pseudonymized record abstract and review comment
+    - deterministic evidence-unit IDs and surfaces derived from that comment
+  forbidden:
+    - private item map
+    - structured publisher subject or source identity fields
+    - recommendation, author response, later revision, or population outcome
+    - another segmenter's prompt, messages, or output
+semantic_identity_limit: >-
+  Review text may itself mention authors, titles, projects, or public URLs.
+  Structured identifiers are pseudonymized, but semantic source recognition and
+  parametric memory cannot be ruled out.
+unit_definition: >-
+  One segment represents one independently actionable scientific decision change.
+  Its trigger_range is the shortest source range directly expressing the action,
+  request, or decision to change. context_ranges contain antecedents, objects,
+  conditions, or definitions needed to interpret that trigger. A context range
+  may include part of its own trigger when a clean evidence-unit boundary cannot
+  isolate the shared context; the runner retains that overlap exactly.
+zero_decision_definition: >-
+  Return zero segments when the comment contains no independently actionable
+  scientific decision change. Praise, summaries, future-value statements, and
+  standard checklists alone are not decisions. In that case provide a concise
+  no_decision_rationale and do not use cannot-assess as a placeholder.
+segmentation_rules:
+  - Read the entire review_comment before emitting any segment.
+  - Return every independently actionable request; exclude boilerplate and checklist-only assessment.
+  - For each decision select one trigger_range and zero or more context_ranges from the assigned evidence_units.
+  - Keep trigger ranges minimal, ordered, item-local, and non-overlapping with other trigger ranges.
+  - Keep each decision's context ranges ordered, unique, non-adjacent, and non-overlapping with one another.
+  - Context ranges may overlap their own trigger, be reused across decisions, or overlap another decision's trigger.
+  - Never hide an independently actionable request only inside context; it requires its own trigger.
+  - Split requests that are independently actionable, including same-family requests sharing one context.
+  - Do not return trigger text, context text, source-span transcriptions, or character offsets.
+  - atomic_decision_statement may briefly paraphrase the action; rationale may explain the family and context selection.
+  - Set residual_decision_bearing_text_possible whenever any potentially actionable request may remain unsegmented.
+runner_reconstruction_boundary:
+  provider_output_role: trigger-and-context-unit-selection-only
+  algorithm: unicode-word-punctuation-v1
+  token_pattern: "\\w+|[^\\w\\s]"
+  requirements:
+    - each Unicode word run is one surface unit
+    - each non-word non-whitespace codepoint is one surface unit
+    - unit IDs are unique within an item and bind runner-private exact source offsets
+    - final trigger and context text is copied from the original review_comment
+    - own-trigger context overlap is retained exactly and marked in normalized artifacts
+  forbidden:
+    - provider-authored trigger, context, or source-span text fields
+    - provider-visible character offsets
+    - normalization, fuzzy matching, insertion, deletion, or retry repair
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: an actionable decision trigger exists but visible text cannot identify one primary family
+required_item_fields:
+  - campaign_token
+  - review_item_id
+  - segments
+  - no_decision_rationale
+  - residual_decision_bearing_text_possible
+required_segment_fields:
+  - trigger_range
+  - context_ranges
+  - primary_decision_family
+  - atomic_decision_statement
+  - rationale
+  - uncertainty
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  human_agreement_claim_allowed: false
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false

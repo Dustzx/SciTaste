@@ -377,6 +377,7 @@ class TasteSourceDecisionSegment(BaseModel):
         max_length=8,
         exclude_if=lambda value: not value,
     )
+    own_trigger_context_overlap_allowed: bool = False
 
     @model_validator(mode="after")
     def span_is_well_formed(self) -> TasteSourceDecisionSegment:
@@ -395,7 +396,9 @@ class TasteSourceDecisionSegment(BaseModel):
             raise ValueError("Taste source context ranges must be ordered and unique")
         if any(first[1] > second[0] for first, second in pairwise(intervals)):
             raise ValueError("Taste source context ranges overlap")
-        if any(start < self.end_char and end > self.start_char for start, end in intervals):
+        if not self.own_trigger_context_overlap_allowed and any(
+            start < self.end_char and end > self.start_char for start, end in intervals
+        ):
             raise ValueError("Taste source context range overlaps its decision trigger")
         return self
 
@@ -2614,6 +2617,9 @@ def _normalize_raw_segments(
                     campaign_id=campaign_id,
                     review_item_id=review_item_id,
                     review_comment=review_comment,
+                ),
+                own_trigger_context_overlap_allowed=bool(
+                    raw_segment.get("own_trigger_context_overlap_allowed", False)
                 ),
             )
         )

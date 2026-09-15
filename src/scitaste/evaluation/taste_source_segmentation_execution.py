@@ -314,6 +314,7 @@ class SegmentationProviderSegment(BaseModel):
     context_ranges: tuple[SegmentationProviderContextRange, ...] = Field(
         default=(), max_length=8, exclude_if=lambda value: not value
     )
+    own_trigger_context_overlap_allowed: bool = False
 
     @model_validator(mode="before")
     @classmethod
@@ -339,7 +340,9 @@ class SegmentationProviderSegment(BaseModel):
                 raise ValueError("Segmentation provider context ranges are unordered or repeated")
             if any(first[1] > second[0] for first, second in pairwise(intervals)):
                 raise ValueError("Segmentation provider context ranges overlap")
-            if any(start < self.end_char and end > self.start_char for start, end in intervals):
+            if not self.own_trigger_context_overlap_allowed and any(
+                start < self.end_char and end > self.start_char for start, end in intervals
+            ):
                 raise ValueError("Segmentation provider context overlaps its trigger")
         return self
 
@@ -1875,6 +1878,10 @@ def validate_segmentation_provider_output(
             return _resolve_anchored_provider_output_v15(
                 anchored_output_v15,
                 packet=packet,
+                own_trigger_context_overlap_allowed=bool(
+                    protocol.evidence_unit_selection
+                    and protocol.evidence_unit_selection.own_trigger_context_overlap_allowed
+                ),
             )
         anchored_output = SegmentationAnchoredProviderOutput.model_validate(payload)
         observed = [(item.campaign_token, item.review_item_id) for item in anchored_output.items]
@@ -1933,6 +1940,10 @@ def validate_adjudication_provider_output(
             return _resolve_anchored_adjudication_output_v15(
                 anchored_output_v15,
                 expected_items=expected_items,
+                own_trigger_context_overlap_allowed=bool(
+                    protocol.evidence_unit_selection
+                    and protocol.evidence_unit_selection.own_trigger_context_overlap_allowed
+                ),
             )
         anchored_output = SegmentationAnchoredAdjudicationProviderOutput.model_validate(payload)
         observed = [(item.campaign_token, item.review_item_id) for item in anchored_output.items]
@@ -3252,6 +3263,7 @@ def _resolve_anchored_segments_v15(
     segments: tuple[SegmentationAnchoredProviderSegmentV15, ...],
     *,
     source: str,
+    own_trigger_context_overlap_allowed: bool = False,
 ) -> tuple[SegmentationProviderSegment, ...]:
     unit_rows = taste_source_comment_unit_offsets(source)
     units = {
@@ -3306,7 +3318,7 @@ def _resolve_anchored_segments_v15(
             raise ValueError(
                 "Segmentation provider context evidence-unit ranges overlap or are adjacent"
             )
-        if any(
+        if not own_trigger_context_overlap_allowed and any(
             context_start < end_char and context_end > start_char
             for context_start, context_end in context_intervals
         ):
@@ -3321,6 +3333,9 @@ def _resolve_anchored_segments_v15(
                 start_char=start_char,
                 end_char=end_char,
                 context_ranges=tuple(contexts),
+                own_trigger_context_overlap_allowed=(
+                    own_trigger_context_overlap_allowed
+                ),
             )
         )
     if trigger_intervals != sorted(trigger_intervals):
@@ -3361,6 +3376,7 @@ def _resolve_anchored_provider_output_v15(
     output: SegmentationAnchoredProviderOutputV15,
     *,
     packet: TasteSourceSegmentationRequestPacket,
+    own_trigger_context_overlap_allowed: bool = False,
 ) -> SegmentationProviderOutput:
     expected = {(item.campaign_token, item.review_item_id): item for item in packet.items}
     resolved = []
@@ -3375,6 +3391,9 @@ def _resolve_anchored_provider_output_v15(
                 segments=_resolve_anchored_segments_v15(
                     item.segments,
                     source=source_item.review_comment,
+                    own_trigger_context_overlap_allowed=(
+                        own_trigger_context_overlap_allowed
+                    ),
                 ),
                 no_decision_rationale=item.no_decision_rationale,
                 residual_decision_bearing_text_possible=(
@@ -3411,6 +3430,7 @@ def _resolve_anchored_adjudication_output_v15(
     output: SegmentationAnchoredAdjudicationProviderOutputV15,
     *,
     expected_items: dict[tuple[str, str], str],
+    own_trigger_context_overlap_allowed: bool = False,
 ) -> SegmentationAdjudicationProviderOutput:
     resolved = []
     for item in output.items:
@@ -3419,7 +3439,13 @@ def _resolve_anchored_adjudication_output_v15(
             SegmentationAdjudicationProviderItem(
                 campaign_token=item.campaign_token,
                 review_item_id=item.review_item_id,
-                segments=_resolve_anchored_segments_v15(item.segments, source=source),
+                segments=_resolve_anchored_segments_v15(
+                    item.segments,
+                    source=source,
+                    own_trigger_context_overlap_allowed=(
+                        own_trigger_context_overlap_allowed
+                    ),
+                ),
                 no_decision_rationale=item.no_decision_rationale,
                 residual_decision_bearing_text_possible=(
                     item.residual_decision_bearing_text_possible

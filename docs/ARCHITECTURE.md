@@ -4284,8 +4284,8 @@ support a human-validity claim.
 
 ### ADR-133: Calibration data and validation reserve are separate acquisitions
 
-Status: accepted and implemented through source compilation; protocol rebinding
-and AI review remain open.
+Status: accepted and implemented through a new source-disjoint v7 calibration
+sample; Git freeze, live execution, and later AI review remain open.
 
 Repeated segmentation calibration consumed nearly all source groups in the
 original ARIES and F1000 campaigns. Reusing those groups for validation would
@@ -4303,15 +4303,18 @@ still require supported CC-BY URIs.
 
 The ARIES reserve binds the separately acquired official public review/reply
 object to the original receipt-bound split, paper-edit, and S2ORC bytes. A fixed
-hash rank selects one review and one public author response from each of seven
+hash rank selects one review and one public author response from each of twenty
 dev groups. Raw forum, review, response, and document IDs remain in a private
 map; model-visible candidates expose only canonical group identities and
 de-identified text. Because train/dev reply-to-edit association is heuristic,
 the report forbids human-gold, scientific-correctness, or preferred-action
 claims.
 
-Both reserve populations can be rendered through the existing outcome-blind
-source-review interface. That makes them operational inputs for independent AI
-quality/privacy review, not benchmark admissions. A new content-bound protocol
-and Git freeze must link the reserve campaigns before any previous provider
-authorization can be reused.
+Both reserve populations render through the existing outcome-blind source-review
+interface. V7 selects ten groups from each population and retains ten ARIES plus
+thirty F1000 groups for a later independent validation cohort. The previous v6
+live run stopped at request four because its frozen contract rejected a context
+range overlapping its own trigger. V7 changes only that contract: exact source
+unit ranges are retained and explicitly marked, with no fuzzy reconstruction,
+response repair, or retry. AI quality/privacy review remains operational
+nonhuman evidence and cannot itself admit the benchmark.

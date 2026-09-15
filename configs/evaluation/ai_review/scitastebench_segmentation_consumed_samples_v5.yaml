@@ -1,0 +1,72 @@
+schema_version: '1.2'
+registry_id: scitastebench-segmentation-consumed-samples-v5
+project_id: scitaste-self-development
+supersedes: scitastebench-segmentation-consumed-samples-v4
+consumed_samples:
+- sample_id: scitastebench-segmentation-prospective-calibration-v1
+  sample_sha256: 83abf856f011835714ee0cb2c9629584d55b402bbed82effb0d08fa7014c46cc
+  protocol_id: scitastebench-segmentation-prospective-calibration-v2
+  request_pack_sha256: cf6336d17c65e2e22abef08f1e153cae86cd816ebaf99d559a01983c2a6b4985
+  run_id: segmentation-prospective-calibration-20260915-v1
+  status: failed-consumed-no-recalibration
+  provider_request_count: 2
+  failed_call_sequence: 2
+  same_sample_recalibration_allowed: false
+- sample_id: scitastebench-segmentation-prospective-calibration-v2
+  sample_sha256: 7cb4fc5a23a43d231b257c94137492096ed9ac81e23f58a5871e2e2697d58fed
+  protocol_id: scitastebench-segmentation-prospective-calibration-v3
+  request_pack_sha256: c1a844a0061072f3237c748cc151a1034c5dc01eee508bba360565d1379d6a5c
+  run_id: segmentation-prospective-calibration-20260915-v3
+  status: failed-consumed-no-recalibration
+  provider_request_count: 5
+  failed_call_sequence: 5
+  same_sample_recalibration_allowed: false
+- sample_id: scitastebench-segmentation-prospective-calibration-v3
+  sample_locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v3.yaml
+  sample_file_sha256: da22ffd1c3a0273cdfad2b9604dedf7cbe4bbeaa9b578013e951dc6efdc1bf25
+  sample_sha256: 394f7819ee0a463b383246b027ac8abea09adb8e4d7e5a2fedcb9eb095b6df60
+  protocol_id: scitastebench-segmentation-prospective-calibration-v5
+  protocol_file_sha256: bc91100ffc21f2e2c0f5998be06b9335a2af1b7f04e8c953c899c2147727ae2e
+  freeze_receipt_id: scitastebench-segmentation-prospective-freeze-v7
+  freeze_receipt_file_sha256: bf36c07a114ecf6fb327a06a4a3b072e706cae0d38f3aab75e0f1f9e43f83124
+  request_pack_id: scitastebench-segmentation-prospective-requests-v7
+  request_pack_sha256: 87b3ca65766acf6abd23cb77f8a5122a136950001580b6a534fde6ed1e76b29f
+  status: design-observed-consumed-no-calibration
+  exposure_kind: veto-only-ai-semantic-and-science-gate
+  provider_contact_performed: false
+  provider_request_count: 0
+  failed_call_sequence: null
+  consumed_item_count: 24
+  same_sample_recalibration_allowed: false
+- sample_id: scitastebench-segmentation-prospective-calibration-v5
+  sample_locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v5.yaml
+  sample_file_sha256: 8ddabcbb6fdada1ca11519d06518fd1092ebb12c8004f7cf8b47730ed162a9b2
+  sample_sha256: 118b3ade59e17bbc2f03d4e1a285f61da2cd016f29e9e062e673c771a34c2f57
+  protocol_id: scitastebench-segmentation-prospective-calibration-v6
+  protocol_file_sha256: 9211b5e5c72b9b21e980cca6b4a5cec783d9ab6fbd3768cd400ab15581d15a77
+  freeze_receipt_id: scitastebench-segmentation-prospective-freeze-v8
+  freeze_receipt_file_sha256: 1deac153e20c694c87ed6acdc6c5755125ce6e9fd9446b846d37febc5f17878e
+  request_pack_id: scitastebench-segmentation-prospective-requests-v8
+  request_pack_file_sha256: 944e772246051a892551dafd933ba43d9c0ce35e6914fed4d0d16f5c4d6b251e
+  request_pack_sha256: 97b3d673a054aba1fcaab856626b4b9fd9b99bb839872a8c95d6d9713cdc21e8
+  ai_semantic_review_receipt_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-d-sealed-inventory-v2/REVIEW_RECEIPT.yaml
+  ai_semantic_review_receipt_file_sha256: 4f6e3bbfb47c36353879d6d34716fbe0ef85429c576772c11bfca12ae2182074
+  status: failed-consumed-no-recalibration
+  exposure_kind: ai-d-full-semantic-inventory-and-live-provider-execution
+  reviewer_kind: ai
+  not_human_review: true
+  provider_contact_performed: true
+  provider_request_count: 4
+  reviewed_item_count: 20
+  reviewed_decision_count: 117
+  same_sample_recalibration_allowed: false
+  run_id: segmentation-prospective-calibration-20260915-v6
+  failed_call_sequence: 4
+  failed_reason: provider-context-range-overlapped-own-trigger-under-frozen-v6-contract
+  failure_receipt_file_sha256: 48499dfe9153b4cf84727bdcb6b8bf6564b78d2732d15fac950afb555c90cbdc
+authority:
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  authorizes_scaled_execution: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false

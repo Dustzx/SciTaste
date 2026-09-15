@@ -5,13 +5,21 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Ran the frozen v6 GLM-5.3-Flash decision-segmentation calibration until its
+  preregistered fail-closed policy stopped at request four: one valid response
+  selected a shared context range overlapping its own decision trigger. The
+  consumed-sample registry now records that immutable failure. V7 uses twenty
+  new source groups, retains own-trigger/context overlap exactly with an
+  explicit normalized marker, keeps text reconstruction deterministic, and
+  leaves ten ARIES plus thirty F1000 groups untouched for independent
+  validation. No failed sample or response is retried or repaired.
 - Added source-group-disjoint validation-reserve acquisition for the AI-only
   SciTasteBench construction path. A second official F1000 XML transaction
   excludes all forty previously acquired works and yields forty new usable
   review/reply/revision groups; the parser now recognizes the publisher's
   historical CC-BY 3.0 IGO URI as well as CC-BY 3.0/4.0. A separately
   hash-approved ARIES reply acquisition and deterministic dev-split compiler
-  yield seven additional public review/author-response groups, explicitly
+  now yields twenty additional public review/author-response groups, explicitly
   labelled as heuristic rather than human gold. Both populations produce
   outcome-blind AI-review packages while provider contact, admission, and paper
   effects remain closed.

@@ -44,7 +44,7 @@ _BASE_REQUEST_ID = "aries-review-edit-population-v1"
 _REPLY_REQUEST_ID = "aries-validation-reserve-v1"
 _POPULATION_ID = "aries-dev-review-reply-validation-reserve-v1"
 _SELECTION_SALT = "aries-validation-reserve-v1-20260915"
-_TARGET_GROUPS = 7
+_DEFAULT_TARGET_GROUPS = 7
 _MAX_JSON_LINE_BYTES = 4 * 1024 * 1024
 _MAX_TEXT_CHARS = 8_000
 
@@ -105,8 +105,8 @@ class AriesReplyReserveReport(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
-    population_id: Literal[_POPULATION_ID] = _POPULATION_ID
+    schema_version: Literal["1.0", "1.1"] = "1.0"
+    population_id: str = Field(default=_POPULATION_ID, pattern=_ID)
     project_id: str = Field(pattern=_ID)
     base_request_file_sha256: str = Field(pattern=_SHA256)
     base_request_sha256: str = Field(pattern=_SHA256)
@@ -127,11 +127,11 @@ class AriesReplyReserveReport(BaseModel):
         "sha256-ranked-source-group-and-review-v1"
     )
     selection_salt_sha256: str = Field(pattern=_SHA256)
-    target_source_group_count: Literal[7] = 7
-    eligible_source_group_count: int = Field(ge=7)
-    eligible_review_row_count: int = Field(ge=7)
-    candidate_count: Literal[7] = 7
-    source_group_count: Literal[7] = 7
+    target_source_group_count: int = Field(default=7, ge=1, le=100_000)
+    eligible_source_group_count: int = Field(ge=1)
+    eligible_review_row_count: int = Field(ge=1)
+    candidate_count: int = Field(default=7, ge=1, le=100_000)
+    source_group_count: int = Field(default=7, ge=1, le=100_000)
     maximum_items_per_source_group: Literal[1] = 1
     source_group_overlap_with_upstream_test: Literal[0] = 0
     exact_acquisition_verified: Literal[True] = True
@@ -159,6 +159,23 @@ class AriesReplyReserveReport(BaseModel):
 
     @model_validator(mode="after")
     def report_is_closed(self) -> AriesReplyReserveReport:
+        if (
+            self.candidate_count != self.target_source_group_count
+            or self.source_group_count != self.target_source_group_count
+            or self.eligible_source_group_count < self.target_source_group_count
+            or self.eligible_review_row_count < self.target_source_group_count
+        ):
+            raise ValueError("ARIES reply reserve counts are inconsistent")
+        if self.schema_version == "1.0" and (
+            self.population_id != _POPULATION_ID
+            or self.target_source_group_count != _DEFAULT_TARGET_GROUPS
+        ):
+            raise ValueError("ARIES reply reserve schema 1.0 identity drifted")
+        if self.schema_version == "1.1" and self.population_id != (
+            f"aries-dev-review-reply-validation-reserve-"
+            f"{self.target_source_group_count}-v2"
+        ):
+            raise ValueError("ARIES reply reserve schema 1.1 identity drifted")
         if len(set(self.blockers)) != 4:
             raise ValueError("ARIES reply reserve blockers must be complete and unique")
         expected = content_sha256(self.model_dump(mode="json", exclude={"report_sha256"}))
@@ -187,9 +204,13 @@ def materialize_aries_reply_validation_reserve(
     reply_receipt_path: str | Path,
     workspace_root: str | Path,
     output_directory: str | Path,
+    target_source_group_count: int = _DEFAULT_TARGET_GROUPS,
     compiled_at: datetime | None = None,
 ) -> AriesReplyReserveReport:
-    """Select seven new dev trajectories and publish an immutable local population."""
+    """Select ranked dev trajectories and publish an immutable local population."""
+
+    if not 1 <= target_source_group_count <= 100_000:
+        raise ValueError("ARIES reserve target source-group count is out of bounds")
 
     root = Path(workspace_root).resolve(strict=True)
     base_request_inspection = load_dataset_acquisition_request(base_request_path)
@@ -249,7 +270,7 @@ def materialize_aries_reply_validation_reserve(
         normalized["author_replies"] = usable_replies
         eligible[forum].append(normalized)
         eligible_rows += 1
-    if len(eligible) < _TARGET_GROUPS:
+    if len(eligible) < target_source_group_count:
         raise ValueError("ARIES reply reserve lacks enough eligible dev source groups")
 
     ranked_forums = sorted(
@@ -258,7 +279,7 @@ def materialize_aries_reply_validation_reserve(
             _rank(_SELECTION_SALT, canonical_openreview_source_group_id(forum)),
             canonical_openreview_source_group_id(forum),
         ),
-    )[:_TARGET_GROUPS]
+    )[:target_source_group_count]
     selected_rows: list[tuple[str, dict[str, object], dict[str, object]]] = []
     for forum in ranked_forums:
         group = canonical_openreview_source_group_id(forum)
@@ -358,6 +379,13 @@ def materialize_aries_reply_validation_reserve(
         _write_new(staging / "CANDIDATES.jsonl", candidate_bytes)
         _write_new(staging / "PRIVATE_SOURCE_MAP.json", private_bytes)
         report = AriesReplyReserveReport.create(
+            schema_version=("1.0" if target_source_group_count == 7 else "1.1"),
+            population_id=(
+                _POPULATION_ID
+                if target_source_group_count == 7
+                else f"aries-dev-review-reply-validation-reserve-"
+                f"{target_source_group_count}-v2"
+            ),
             project_id=base_request.project_id,
             base_request_file_sha256=base_request_inspection.file_sha256,
             base_request_sha256=base_request.request_sha256,
@@ -374,6 +402,9 @@ def materialize_aries_reply_validation_reserve(
             selection_salt_sha256=hashlib.sha256(_SELECTION_SALT.encode()).hexdigest(),
             eligible_source_group_count=len(eligible),
             eligible_review_row_count=eligible_rows,
+            target_source_group_count=target_source_group_count,
+            candidate_count=target_source_group_count,
+            source_group_count=target_source_group_count,
             blockers=(
                 "independent-ai-quality-review-pending",
                 "independent-ai-privacy-review-pending",
