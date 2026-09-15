@@ -1,0 +1,77 @@
+schema_version: "1.0"
+spec_id: scitastebench-track-a-ai-suite-v1
+project_id: scitaste-self-development
+provider: zhipu-direct
+model: glm-5.3-flash
+model_identity_status: declared-exact-name-runtime-attestation-required
+study_mode: natural-ai-pilot
+system_instruction: >-
+  You are selecting a scientifically defensible next action for a historical
+  research decision. Treat both listed actions as candidates, not labels. The
+  precedent may or may not transfer to the target. Use only the target and
+  precedent content supplied in the request. Do not infer a correct, gold,
+  expert, source-observed, matched, or mismatched answer. Return exactly one
+  JSON object satisfying the supplied response schema and no other text.
+target_instruction: >-
+  Compare option-a and option-b under the target's predecision evidence. Use
+  the precedent only when its decision principle and transfer boundary apply.
+  Select one option or abstain; explain the decisive evidence and uncertainty
+  without claiming objective correctness.
+output_schema:
+  type: object
+  additionalProperties: false
+  required:
+    - selected_action_id
+    - abstained
+    - confidence
+    - rationale
+  properties:
+    selected_action_id:
+      type: string
+      enum:
+        - option-a
+        - option-b
+        - abstain
+    abstained:
+      type: boolean
+    confidence:
+      type: number
+      minimum: 0
+      maximum: 1
+    rationale:
+      type: string
+      minLength: 1
+      maxLength: 4000
+sampling:
+  seed: 20260915
+  temperature: 0
+  top_p: 1
+  maximum_output_tokens: 4096
+  response_schema: scitaste-track-a-observed-action-selection-v1
+context_budget:
+  maximum_target_prompt_bytes: 131072
+  maximum_precedent_context_bytes: 524288
+  maximum_request_bytes: 786432
+  maximum_input_tokens: 131072
+  tokenizer_count_required_before_execution: true
+  no_silent_truncation: true
+condition_order:
+  - raw-source-rag
+  - abstracted-matched-taste
+  - abstracted-mismatched-taste
+tools_allowed: false
+automatic_retry_allowed: false
+relation_labels_hidden_from_model: true
+source_identity_hidden_from_model: true
+source_observed_action_is_natural_proxy_not_truth: true
+formal_reference_quality_qualification_required: true
+natural_pilot_reference_quality_override: true
+objective_correctness_claim_allowed: false
+reviewer_kind: ai
+not_human_review: true
+human_or_expert_validity_claim_allowed: false
+formal_evidence_eligible: false
+authorizes_model_calls: false
+authorizes_api_spend: false
+authorizes_gpu_work: false
+authorizes_experiment_execution: false

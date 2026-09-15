@@ -292,6 +292,10 @@ from scitaste.evaluation.reference_selection_comparison import (
     save_reference_selection_plan,
     save_reference_selection_report,
 )
+from scitaste.evaluation.taste_mechanism_suite import (
+    inspect_track_a_pilot_suite,
+    materialize_track_a_pilot_suite,
+)
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
@@ -2266,6 +2270,54 @@ def build_parser() -> argparse.ArgumentParser:
     abstraction_finalize.add_argument("--output", type=Path, required=True)
     _add_log_level_option(abstraction_finalize)
     abstraction_finalize.set_defaults(handler=_handle_evaluation_ai_abstraction_finalize)
+    track_a_suite_materialize = evaluation_commands.add_parser(
+        "track-a-suite-materialize",
+        help="Freeze available Track-A targets into no-call three-arm requests",
+    )
+    track_a_suite_materialize.add_argument("--plan", type=Path, required=True)
+    track_a_suite_materialize.add_argument(
+        "--spec",
+        type=Path,
+        default=Path(
+            "configs/evaluation/pilots/scitastebench_track_a_ai_suite_v1.yaml"
+        ),
+    )
+    track_a_suite_materialize.add_argument("--accepted-set", type=Path, default=None)
+    track_a_suite_materialize.add_argument(
+        "--reference-quality-qualification",
+        type=Path,
+        action="append",
+        default=[],
+        help="formal-candidate only; provide one qualification per planned precedent",
+    )
+    track_a_suite_materialize.add_argument(
+        "--evidence-root", type=Path, default=Path(".")
+    )
+    track_a_suite_materialize.add_argument("--output", type=Path, required=True)
+    track_a_suite_materialize.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="return nonzero unless all twenty-four targets are runnable",
+    )
+    _add_log_level_option(track_a_suite_materialize)
+    track_a_suite_materialize.set_defaults(
+        handler=_handle_evaluation_track_a_suite_materialize
+    )
+    track_a_suite_inspect = evaluation_commands.add_parser(
+        "track-a-suite-inspect",
+        help="Replay a Track-A suite status, manifest, and generated request bindings",
+    )
+    track_a_suite_inspect.add_argument("--status", type=Path, required=True)
+    track_a_suite_inspect.add_argument(
+        "--evidence-root", type=Path, default=Path(".")
+    )
+    track_a_suite_inspect.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="return nonzero unless all twenty-four targets are runnable",
+    )
+    _add_log_level_option(track_a_suite_inspect)
+    track_a_suite_inspect.set_defaults(handler=_handle_evaluation_track_a_suite_inspect)
     ai_preference_pack = evaluation_commands.add_parser(
         "ai-preference-pack-prepare",
         help="Compile two identity-distinct AI-only requests from a public H1/H2 blind pack",
@@ -7847,6 +7899,68 @@ def _handle_evaluation_ai_abstraction_finalize(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _handle_evaluation_track_a_suite_materialize(args: argparse.Namespace) -> int:
+    result = materialize_track_a_pilot_suite(
+        evidence_root=args.evidence_root,
+        pilot_plan_path=args.plan,
+        suite_spec_path=args.spec,
+        output_dir=args.output,
+        accepted_abstraction_set_path=args.accepted_set,
+        reference_quality_qualification_paths=tuple(
+            args.reference_quality_qualification
+        ),
+    )
+    print(
+        json.dumps(
+            {
+                "status": result.status,
+                "preparation_sha256": result.preparation_sha256,
+                "accepted_abstraction_count": result.accepted_abstraction_count,
+                "runnable_target_count": result.runnable_target_count,
+                "generated_arm_config_count": result.generated_arm_config_count,
+                "reference_quality_status": result.reference_quality_status,
+                "blocker_codes": result.blocker_codes,
+                "missing_abstraction_input_ids": result.missing_abstraction_input_ids,
+                "model_calls_performed": False,
+                "formal_evidence_eligible": False,
+                "output": str(args.output / "STATUS.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return int(args.require_ready and result.status != "ready")
+
+
+def _handle_evaluation_track_a_suite_inspect(args: argparse.Namespace) -> int:
+    inspection = inspect_track_a_pilot_suite(
+        args.status,
+        evidence_root=args.evidence_root,
+    )
+    result = inspection.preparation
+    print(
+        json.dumps(
+            {
+                "status": result.status,
+                "preparation_sha256": result.preparation_sha256,
+                "accepted_abstraction_count": result.accepted_abstraction_count,
+                "runnable_target_count": result.runnable_target_count,
+                "generated_arm_config_count": result.generated_arm_config_count,
+                "reference_quality_status": result.reference_quality_status,
+                "blocker_codes": result.blocker_codes,
+                "manifest_verified": inspection.manifest_verified,
+                "arm_configs_verified": inspection.arm_configs_verified,
+                "model_calls_performed": False,
+                "formal_evidence_eligible": False,
+                "status_path": str(inspection.path),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return int(args.require_ready and result.status != "ready")
 
 
 def _handle_evaluation_ai_preference_pack(args: argparse.Namespace) -> int:
