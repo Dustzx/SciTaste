@@ -5,6 +5,19 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a project-owned complete AutoResearch controller for the ICLR 2027
+  program. Its 17 hash-chained states span acquisition through hidden scoring,
+  evidence-linked paper construction, independent dual-AI review, conditional
+  adjudication, review-driven revision, and final package freeze. Planning never
+  grants API/GPU/download/external-system authority, while model selection,
+  hidden scoring, evidence admission, and review closure replay typed native
+  validators rather than accepting arbitrary files.
+- Added MLR-Bench and EXP-Bench lifecycle task bridges. Existing acquired bytes
+  now compile into separate agent-visible task packages and scorer-only
+  boundaries: the current MLR package is explicitly ten-brief development-only,
+  and EXP-Bench preserves 461 tasks in 51 paper groups without exposing expected
+  outcomes. Both remain blocked from formal admission until runtime, license,
+  split, and scorer requirements are satisfied.
 - Added task-excluded, multi-role model conformance and evidence-only selection.
   A no-run B0 suite considers registered API models and local multi-size models
   independently for research, code, judge, embedding, and task-training roles.

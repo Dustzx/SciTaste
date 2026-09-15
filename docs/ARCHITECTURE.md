@@ -4531,3 +4531,42 @@ content-bound parity receipt against the fixed upstream metric, in addition to
 source, data, environment-import, and projection integrity. This adapter gate
 does not imply a reproduced GPU baseline, formal execution authority, or a
 scientific result.
+
+### ADR-140: A complete research program selects resources by role and closes on typed evidence
+
+Status: accepted and implemented at the orchestration boundary; B0 execution and
+formal evidence remain open.
+
+SciTaste Native is the method under study and owns the complete research
+lifecycle. External benchmarks provide task environments and scorer-owned
+endpoints; accepted external systems provide unchanged-core comparison rows.
+Neither AutoResearchClaw nor any other framework is a mandatory runtime parent of
+SciTaste. A blocked external row remains visibly blocked and is never replaced by
+a prompt-level imitation.
+
+The ICLR 2027 program is a project-owned, hash-chained state machine spanning task
+acquisition, admission and split freeze, role-scoped model selection, idea and
+experiment decisions, development execution, candidate freeze, hidden scoring,
+evidence admission, paper construction, two independent AI reviews, conditional
+third-AI adjudication, review-driven revision, final review, and immutable package
+closure. Ordinary planning records are content-bound, while title-critical gates
+must replay their native typed validators. Consequently an arbitrary non-empty
+JSON file cannot claim model freeze, hidden score, admitted scientific evidence,
+or operational review finality.
+
+Model choice is not a single global switch. Research-agent, code-agent, judge,
+embedding, and task-training resources are qualified independently on a
+task-excluded conformance suite; task-training choices are additionally scoped to
+the benchmark or task family. Existing checkpoints, hosted APIs, and later
+downloads are all candidates until exact identity, license, load/execution, case,
+and result receipts are bound. Small local checkpoints therefore remain useful
+for cost and failure baselines without becoming the default scientific engine.
+
+MLR-Bench and EXP-Bench assets are projected into separate model-visible and
+scorer-only packages. The MLR acquisition currently supports a brief-only
+development pilot and cannot claim formal benchmark coverage. EXP-Bench preserves
+461 tasks grouped by 51 source papers; expected outcomes remain scorer-only. The
+controller reports the exact next interface and authority flags, but performs no
+implicit download, API call, GPU job, hidden scoring, or external-system launch.
+Those operations belong to explicit executors whose receipts are then admitted by
+the controller.
