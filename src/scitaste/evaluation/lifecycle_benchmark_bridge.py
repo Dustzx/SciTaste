@@ -729,8 +729,8 @@ def inspect_lifecycle_benchmark_bridge(
     materialized = False
     package_valid = False
     if package_root is not None:
-        package = Path(package_root)
-        materialized = package.is_dir() and not package.is_symlink()
+        package = _existing_owned_directory_path(root, package_root)
+        materialized = package is not None
         if not materialized:
             _add(
                 findings,
@@ -741,6 +741,7 @@ def inspect_lifecycle_benchmark_bridge(
                 admission=True,
             )
         else:
+            assert package is not None
             package_valid = _verify_materialized_package(plan, package, findings)
 
     task_count = len(plan.task_package.tasks) if plan.task_package else 0
@@ -1498,9 +1499,24 @@ def _existing_owned_directory(root: Path, ref: str) -> Path | None:
     pure = PurePosixPath(ref)
     if pure.is_absolute() or not pure.parts or any(part in {"", ".", ".."} for part in pure.parts):
         return None
-    candidate = root.joinpath(*pure.parts)
-    if candidate.is_symlink():
+    return _existing_owned_directory_path(root, root.joinpath(*pure.parts))
+
+
+def _existing_owned_directory_path(root: Path, path: str | Path) -> Path | None:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError:
         return None
+    if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+        return None
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            return None
     try:
         resolved = candidate.resolve(strict=True)
     except (OSError, ValueError):

@@ -25,6 +25,7 @@ from scitaste.evaluation.lifecycle_benchmark_bridge import (
     StageOutput,
     StageStatus,
     inspect_lifecycle_benchmark_bridge,
+    load_lifecycle_benchmark_bridge_plan,
     materialize_lifecycle_task_package,
     plan_lifecycle_benchmark_bridge,
 )
@@ -364,3 +365,91 @@ def test_standalone_cli_exposes_plan_materialize_and_blocked_status(
         == 1
     )
     assert '"formal_task_ready": false' in capsys.readouterr().out
+
+
+def test_cli_status_resolves_relative_package_root_within_workspace(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    request, acquisition, program = _mlr_fixture(tmp_path)
+    plan_path = tmp_path / "relative-bridge-plan.json"
+    package_ref = "relative-bridge-package"
+
+    assert (
+        bridge_main(
+            [
+                "plan",
+                "--benchmark",
+                "mlr-bench",
+                "--request",
+                str(request),
+                "--acquisition-root",
+                str(acquisition),
+                "--program",
+                str(program),
+                "--workspace-root",
+                str(tmp_path),
+                "--output",
+                str(plan_path),
+            ]
+        )
+        == 0
+    )
+    assert (
+        bridge_main(
+            [
+                "materialize",
+                "--plan",
+                str(plan_path),
+                "--workspace-root",
+                str(tmp_path),
+                "--output",
+                package_ref,
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        bridge_main(
+            [
+                "status",
+                "--plan",
+                str(plan_path),
+                "--workspace-root",
+                str(tmp_path),
+                "--package-root",
+                package_ref,
+                "--require-acquisition-ready",
+            ]
+        )
+        == 0
+    )
+    status = json.loads(capsys.readouterr().out)
+    assert status["materialized"] is True
+    assert status["materialized_package_valid"] is True
+    assert "materialized-package-drift" not in {
+        finding["code"] for finding in status["findings"]
+    }
+
+    package = tmp_path / package_ref
+    saved_plan = load_lifecycle_benchmark_bridge_plan(plan_path)
+    link = tmp_path / "relative-bridge-package-link"
+    link.symlink_to(package, target_is_directory=True)
+    unsafe = inspect_lifecycle_benchmark_bridge(
+        saved_plan,
+        workspace_root=tmp_path,
+        package_root=link.relative_to(tmp_path),
+    )
+    assert unsafe.materialized is False
+    assert unsafe.materialized_package_valid is False
+    assert "materialized-package-missing" in {item.code for item in unsafe.findings}
+
+    escaped = inspect_lifecycle_benchmark_bridge(
+        saved_plan,
+        workspace_root=tmp_path,
+        package_root=tmp_path.parent,
+    )
+    assert escaped.materialized is False
+    assert escaped.materialized_package_valid is False
