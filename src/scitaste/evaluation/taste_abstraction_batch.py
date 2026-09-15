@@ -206,19 +206,13 @@ def compile_taste_abstraction_runtime_batch(
                 node_input=abstraction_input.model_dump(mode="json"),
                 state_projection=ImmutableStateProjection(
                     project_id=project_id,
-                    state_snapshot_id=plan.plan_sha256,
+                    state_snapshot_id=abstraction_input.source_projection_sha256,
                     state_revision=expected_project_revision,
-                    stage="TASTE_ABSTRACTION",
-                    metadata={
-                        "pilot_plan_sha256": plan.plan_sha256,
-                        "input_id": record.input_id,
-                        "source_group_id": record.source_group_id,
-                        "source_projection_sha256": record.source_projection_sha256,
-                        "natural_pilot": True,
-                        "formal_evidence_eligible": False,
-                        "reviewer_kind": "ai",
-                        "not_human_review": True,
-                    },
+                    stage=abstraction_input.stage,
+                    evidence_ids=(abstraction_input.source_id,),
+                    # The model sees only the canonical TasteAbstractionInput. Pilot,
+                    # relation, and source-group metadata remain controller-side.
+                    metadata={},
                 ),
                 trigger=ModelNodeTrigger(
                     trigger_id=invocation_id,

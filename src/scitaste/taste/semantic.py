@@ -84,13 +84,18 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
     """Distill a source-traceable principle with explicit transfer limits."""
 
     node_name = GROUNDED_TASTE_ABSTRACTION_NODE
-    prompt_version = "grounded-taste-abstraction-v1"
+    prompt_version = "grounded-taste-abstraction-v2"
     system_instruction = (
         "Distill one transferable scientific decision precedent from only the supplied canonical "
         "source projection. Return a closed decision with alternatives, selected action, "
         "rationale, and outcome only when available. Ground context, evidence, alternatives, "
-        "choice, principle, and any outcome with exact verbatim excerpts and their "
-        "projection-field names. The decision "
+        "choice, principle, and any outcome with exact, byte-for-byte verbatim excerpts and their "
+        "projection-field names. Never cite request identity, controller context, metadata, or a "
+        "field outside source_projection. A context grounding may use only a problem_context or "
+        "source_metadata field; evidence_state only evidence or limitation; alternatives only "
+        "alternative; choice only scientific_action; outcome only outcome. Do not add a second "
+        "support to a target when its semantic role is incompatible. Preserve Unicode punctuation "
+        "exactly in every verbatim_evidence string. The decision "
         "principle must contrastively synthesize at least two semantic source roles, including a "
         "scientific action and evidential, justificatory, limitation, or outcome support. State at "
         "least two applicability conditions, two failure conditions, a counterfactual probe that "
@@ -98,7 +103,8 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         "transfer. Preserve controller-issued identities internally but never expose source, "
         "candidate, relation, condition, or held-out-task identity in the abstraction. Do not use "
         "outside facts, admit memory, call tools, execute actions, or claim that SciTaste works. "
-        "This is an untrusted proposal for independent human review."
+        "This is an untrusted proposal for independent review; a reviewer may be AI and must never "
+        "be represented as human."
     )
     input_model = TasteAbstractionInput
     output_model = GroundedTasteCaseAbstraction
