@@ -12,6 +12,13 @@ resource_binding:
   corpus_path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
   corpus_file_sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
   inherited_semantic_sha256: bb53a816b3a5479713f7cd6b9ccd027ef0e5ea5d9bd879941ce268228de0f010
+model_inventory_binding:
+  inventory_id: scitaste-model-role-inventory-20260915-v1
+  inventory_path: configs/resources/assets/model_role_inventory_v1.yaml
+  inventory_file_sha256: fafdbc2cf1912b0bcfa3c168db9e65c445f6fff8010c655f4a0b3f6a44a11a6b
+  role_partition: [research_agent, code_agent, judge, embedding, task_training]
+  inventory_presence_selects_model: false
+  candidate_pool_may_expand_after_scientific_design: true
 
 scientific_boundaries:
   benchmark_is_method: false
@@ -306,6 +313,8 @@ model_selection:
     - cost-throughput-and-capacity
   fixed_primary_model_id: null
   qwen3_vl_2b_privileged: false
+  per_role_selection_required: true
+  one_model_for-all_roles_required: false
 
 lifecycle_state_machine:
   initial_state: task-acquisition-proposed

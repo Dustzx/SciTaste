@@ -5,7 +5,7 @@ Status: **complete planning contract; no execution authorized**.
 The machine-readable authority is
 [`iclr2027_scitaste_complete_autoresearch_program_v3.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_complete_autoresearch_program_v3.yaml),
 with file SHA-256
-`76f2f5034717239c6d1957f2f3403a146860eda35f7e1652fb872e94da5ad52f`.
+`b7e2b78f7ebe96117b6e270c0813fe1e97bb53ac54980630103719fc990ca908`.
 It is additive to lifecycle program v2 and does not rewrite v1, v2, historical
 runs, model inventories, or the public Roadmap. It authorizes no download, API
 call, GPU use, installation, or experiment.
@@ -40,6 +40,13 @@ The research agent itself may be a hosted API model or a qualified local model.
 Local inventory and newly downloadable models are candidates after task fit,
 identity, conformance, and authorization checks; neither Qwen3-VL-2B nor one RTX
 3090 is privileged or hard-coded into the main design.
+
+The program binds the complete role inventory in
+`configs/resources/assets/model_role_inventory_v1.yaml`, not a single
+checkpoint. Research, coding, judging, embedding, and task-training roles are
+selected separately; one model is not required to fill every role. The current
+local and API assets are candidates, and the pool may expand with newly
+downloaded models when the scientific task requires it.
 
 ## Compact causal design
 
