@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from scitaste.evaluation.embedding_conformance import execute_embedding_conformance
 from scitaste.evaluation.model_role_batch_execution import (
     execute_local_model_role_batch,
 )
@@ -126,6 +127,16 @@ def register_model_role_cli(
     _add_log_level_option(execute_local_batch)
     execute_local_batch.set_defaults(handler=_handle_execute_local_batch)
 
+    execute_embedding = subcommands.add_parser(
+        "execute-embedding",
+        help="Execute a frozen local embedding candidate and emit conformance evidence",
+    )
+    execute_embedding.add_argument("--plan", type=Path, required=True)
+    execute_embedding.add_argument("--candidate-id", required=True)
+    execute_embedding.add_argument("--allow-local", action="store_true")
+    _add_log_level_option(execute_embedding)
+    execute_embedding.set_defaults(handler=_handle_execute_embedding)
+
 
 def _add_log_level_option(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
@@ -240,6 +251,16 @@ def _handle_execute_local_batch(args: argparse.Namespace) -> int:
     )
     print(status.model_dump_json(indent=2))
     return 0 if status.failed_count == 0 else 1
+
+
+def _handle_execute_embedding(args: argparse.Namespace) -> int:
+    status = execute_embedding_conformance(
+        args.plan,
+        candidate_id=args.candidate_id,
+        allow_local=args.allow_local,
+    )
+    print(status.model_dump_json(indent=2))
+    return 0 if status.successful_cases == status.total_cases else 1
 
 
 __all__ = ["register_model_role_cli"]
