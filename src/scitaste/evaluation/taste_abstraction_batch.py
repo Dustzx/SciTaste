@@ -233,7 +233,10 @@ def compile_taste_abstraction_runtime_batch(
             )
             relative = Path("runtime-configs") / f"{ordinal:02d}-{record.input_id}.json"
             runtime_path = workspace / relative
-            _write_json(runtime_path, runtime_config.model_dump(mode="json"))
+            _write_json(
+                runtime_path,
+                runtime_config.model_dump(mode="json", exclude_computed_fields=True),
+            )
             items.append(
                 TasteAbstractionBatchItem(
                     ordinal=ordinal,
