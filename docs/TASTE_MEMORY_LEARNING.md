@@ -165,6 +165,9 @@ The profile set also includes `bailian-qwen38max-taste-review` for the current
 `qwen3.8-max` API. It is a distinct strong-model primary when DeepSeek is not
 configured, and uses the same `--backend-mode live` execution path. Credentials
 remain environment-only and raw provider responses remain project-owned.
+When the two family primaries split, `bailian-qwen3max-taste-adjudicator` provides
+a third model identity with a smaller, non-thinking family-review envelope. It
+is adjudication-only and cannot replace either attribution primary.
 
 ## Scientific decision-family conditioning
 
@@ -251,11 +254,13 @@ because execution-only credit is excluded from the scientific policy by default.
 The implementation proves that unreviewed self-reflections cannot enter the
 production retriever and that decision or outcome drift, producer-review conflict,
 missing adjudication, temporal inconsistency, and replay over an admitted record
-fail closed. One natural self-development decision has completed cross-model
-attribution and outcome-blind family review, admission, project-corpus sealing,
-and policy refresh. It is development-only process evidence: its execution-only
-outcome is intentionally ineligible for scientific policy learning, so no
-longitudinal effectiveness result exists. The ICLR claim still requires held-out
-H1/H2/H3/H4 experiments and disclosed independent AI review; this mechanism makes
-future continual-learning evidence admissible rather than supplying that evidence
-itself.
+fail closed. Two natural self-development decisions have completed cross-model
+attribution, outcome-blind family review, admission, project-corpus sealing, and
+policy refresh. They remain development-only process evidence: the first one's
+execution-only outcome is intentionally ineligible for scientific policy
+learning, while the second adaptation episode is training-eligible but below the
+precommitted support threshold. The project policy therefore still abstains and
+no longitudinal effectiveness result exists. The ICLR claim still requires
+held-out H1/H2/H3/H4 experiments and disclosed independent AI review; this
+mechanism makes future continual-learning evidence admissible rather than
+supplying that evidence itself.

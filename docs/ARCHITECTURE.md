@@ -4275,6 +4275,8 @@ The separate refresh transaction atomically publishes canonical corpus and confi
 copies, the family-conditioned policy, a readiness report spanning all seven
 families, and a receipt. Readiness distinguishes family observation, outcome-
 eligible training, minimum support, and behaviorally actionable adaptive heads.
+Structural H4 eligibility is necessary but cannot bypass the configured minimum
+feature support.
 Even a ready head receives no application authority from this compiler, and the
 report always requires a separate formal effect evaluation. AI reviews satisfy
 the configured operational gate but retain `not_human_review=true` and cannot

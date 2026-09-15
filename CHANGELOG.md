@@ -13,6 +13,11 @@ semantic versioning.
   config, family-conditioned policy, seven-family readiness report, and receipt.
   Policy application remains unauthorized until an actionable head has enough
   support, and formal effectiveness always remains a separate experiment.
+- Added a bounded `qwen3-max` family-adjudicator profile for real splits between
+  the GLM-5.3-Flash and Qwen3.8-Max primaries. A self-development split exercised
+  the three-model path, and the resulting two-episode refresh exposed and fixed
+  an activation bug: structural H4 eligibility can no longer bypass the policy's
+  configured minimum feature support.
 - Added first-class prospective natural-decision capture. A project can now
   persist an exact pre-decision state, multi-alternative decision, and immediate
   executor outcome only after its sampling plan was frozen and source run was

@@ -157,6 +157,12 @@ class ProjectTastePolicyFamilyReadiness(BaseModel):
     support_sufficient: bool
     adaptive_head_ready: bool
 
+    @model_validator(mode="after")
+    def actionability_requires_support(self) -> ProjectTastePolicyFamilyReadiness:
+        if self.adaptive_head_ready and not self.support_sufficient:
+            raise ValueError("adaptive project Taste head cannot bypass minimum support")
+        return self
+
 
 class ProjectTastePolicyReadiness(BaseModel):
     """Conservative activation gate; it never substitutes for an effect experiment."""
@@ -463,18 +469,21 @@ def refresh_project_taste_policy(
             (item.support for item in (() if head is None else head.feature_posteriors)),
             default=0.0,
         )
+        support_sufficient = (
+            head is not None
+            and bool(head.feature_posteriors)
+            and maximum_support >= head.config.minimum_feature_support
+        )
         families.append(
             ProjectTastePolicyFamilyReadiness(
                 decision_family=family,
                 source_episode_count=(0 if head is None else len(head.source_episode_ids)),
                 training_episode_count=(0 if head is None else head.training_episode_count),
                 maximum_feature_support=maximum_support,
-                support_sufficient=(
-                    head is not None
-                    and bool(head.feature_posteriors)
-                    and maximum_support >= head.config.minimum_feature_support
+                support_sufficient=support_sufficient,
+                adaptive_head_ready=(
+                    support_sufficient and head is not None and head.h4_adaptive_policy_eligible
                 ),
-                adaptive_head_ready=(head is not None and head.h4_adaptive_policy_eligible),
             )
         )
     family_readiness = tuple(families)

@@ -18,3 +18,6 @@ profiles:
   - path: profile_bailian_qwen38max_taste_review_v1.yaml
     sha256: a89a76ee0460ca16ddf9e8b5bcec4983a3d278003cf0ced3e30e13aa72f2a3e9
     profile_sha256: f33dbb8574d4228ab6df1c34161db65e49526ae43776dea878cd6691ae89ae36
+  - path: profile_bailian_qwen3max_taste_adjudicator_v1.yaml
+    sha256: a247f08a16114f7d1b5463d618f1880c91f7f1e5679ee8965517a7440a8858df
+    profile_sha256: 3f22f7825a6a99c36318226aab15fb4e4e579ad6661430094a9dea3b58550ef7
