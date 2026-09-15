@@ -18,6 +18,11 @@ semantic versioning.
   run-owned outcome evidence. Compilation produces only a quarantined Taste
   episode ready for the existing cross-model attribution panel; proposal and
   compilation perform no model call and cannot admit or update a policy.
+- Extended attribution and outcome-blind decision-family review configs to
+  accept an explicitly enabled, checkpoint-pinned local Transformers backend.
+  The bundled Qwen3-VL-2B profile can serve as one disclosed AI panel member
+  alongside a distinct live model, retaining zero API cost and local-generation
+  provenance without weakening the distinct-model or nonhuman-review rules.
 - Added the missing production bridge from project-owned Taste episodes to a
   disclosed cross-model AI attribution panel. One shared, condition- and
   claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and

@@ -1708,6 +1708,11 @@ def build_parser() -> argparse.ArgumentParser:
     ai_review_prepare.add_argument("--profile-set", type=Path, required=True)
     ai_review_prepare.add_argument("--profile-id", required=True)
     ai_review_prepare.add_argument("--backend-config", type=Path, required=True)
+    ai_review_prepare.add_argument(
+        "--backend-mode",
+        choices=("live", "local"),
+        default="live",
+    )
     ai_review_prepare.add_argument("--seed", type=int, default=0)
     ai_review_prepare.add_argument("--output", type=Path, required=True)
     ai_review_prepare.add_argument("--outputs-root", type=Path, default=Path("outputs"))
@@ -1759,6 +1764,11 @@ def build_parser() -> argparse.ArgumentParser:
     family_review_prepare.add_argument("--profile-set", type=Path, required=True)
     family_review_prepare.add_argument("--profile-id", required=True)
     family_review_prepare.add_argument("--backend-config", type=Path, required=True)
+    family_review_prepare.add_argument(
+        "--backend-mode",
+        choices=("live", "local"),
+        default="live",
+    )
     family_review_prepare.add_argument("--output", type=Path, required=True)
     family_review_prepare.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(family_review_prepare)
@@ -6083,7 +6093,11 @@ def _handle_taste_prepare_ai_attribution_review(args: argparse.Namespace) -> int
     config = build_ai_taste_attribution_runtime_config(
         material,
         profile=profile,
-        backend_config=load_structured_openai_compatible_config(args.backend_config),
+        backend_config=(
+            load_local_transformers_config(args.backend_config)
+            if args.backend_mode == "local"
+            else load_structured_openai_compatible_config(args.backend_config)
+        ),
     )
     output = save_runtime_config(config, args.output)
     print(
@@ -6097,6 +6111,7 @@ def _handle_taste_prepare_ai_attribution_review(args: argparse.Namespace) -> int
                 "review_packet_sha256": material.node_input.review_packet_sha256,
                 "profile_id": profile.profile_id,
                 "profile_fingerprint": profile.fingerprint,
+                "backend_mode": args.backend_mode,
                 "runtime_config": str(output),
                 "runtime_config_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
                 "reviewer_kind": "ai",
@@ -6232,7 +6247,11 @@ def _handle_taste_prepare_decision_family_review(args: argparse.Namespace) -> in
     config = build_scientific_decision_family_runtime_config(
         material,
         profile=profile,
-        backend_config=load_structured_openai_compatible_config(args.backend_config),
+        backend_config=(
+            load_local_transformers_config(args.backend_config)
+            if args.backend_mode == "local"
+            else load_structured_openai_compatible_config(args.backend_config)
+        ),
     )
     output = save_runtime_config(config, args.output)
     print(
@@ -6246,6 +6265,7 @@ def _handle_taste_prepare_decision_family_review(args: argparse.Namespace) -> in
                 "packet_sha256": material.node_input.packet_sha256,
                 "outcomes_exposed": False,
                 "profile_id": profile.profile_id,
+                "backend_mode": args.backend_mode,
                 "runtime_config": str(output),
                 "reviewer_kind": "ai",
                 "not_human_review": True,

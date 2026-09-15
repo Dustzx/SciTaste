@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from scitaste.backends.local_transformers import LocalTransformersConfig
 from scitaste.model_nodes.facade import ImmutableStateProjection
 from scitaste.model_nodes.models import NodeContext, NodePolicy, NodeResult, NodeResultStatus
 from scitaste.model_nodes.nodes import ModelNode
@@ -18,7 +19,11 @@ from scitaste.model_nodes.runtime import (
     RuntimeBackendMode,
     RuntimeOutcome,
 )
-from scitaste.model_nodes.runtime_config import LiveRuntimeBackend, ModelNodeRuntimeConfig
+from scitaste.model_nodes.runtime_config import (
+    LiveRuntimeBackend,
+    LocalRuntimeBackend,
+    ModelNodeRuntimeConfig,
+)
 from scitaste.project import ProjectRuntime
 from scitaste.project.idea_revision import ProjectIdeaRevisionBinding, idea_binding_matches_current
 from scitaste.project.models import content_sha256
@@ -206,13 +211,19 @@ def build_scientific_decision_family_runtime_config(
     material: ScientificDecisionFamilyReviewMaterial,
     *,
     profile: ModelNodeProfile,
-    backend_config: StructuredOpenAICompatibleConfig,
+    backend_config: StructuredOpenAICompatibleConfig | LocalTransformersConfig,
 ) -> ModelNodeRuntimeConfig:
     """Build one provider-bound, no-secret family-review runtime config."""
 
     if SCIENTIFIC_DECISION_FAMILY_REVIEW_NODE not in profile.allowed_node_names:
         raise ValueError("selected model profile does not permit decision-family review")
-    if (backend_config.provider, backend_config.model) != (profile.provider, profile.model):
+    if isinstance(backend_config, StructuredOpenAICompatibleConfig):
+        backend_identity = (backend_config.provider, backend_config.model)
+        backend = LiveRuntimeBackend(config=backend_config)
+    else:
+        backend_identity = (backend_config.provider, backend_config.model_identity)
+        backend = LocalRuntimeBackend(config=backend_config)
+    if backend_identity != (profile.provider, profile.model):
         raise ValueError("decision-family review backend identity differs from its profile")
     if backend_config.max_output_tokens < profile.generation.max_output_tokens:
         raise ValueError("decision-family review backend output ceiling is below its profile")
@@ -254,7 +265,7 @@ def build_scientific_decision_family_runtime_config(
             reason="Outcome-blind AI assignment to the fixed Scientific Taste ontology.",
         ),
         policy=policy,
-        backend=LiveRuntimeBackend(config=backend_config),
+        backend=backend,
         seed=0,
     )
 

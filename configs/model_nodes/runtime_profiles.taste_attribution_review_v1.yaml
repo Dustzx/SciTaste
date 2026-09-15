@@ -12,3 +12,6 @@ profiles:
   - path: profile_deepseek_v4flash_taste_attribution_review_v1.yaml
     sha256: 50ee1755cddc30290336bae20c01c0f5785898d60678a5e0090d698c20f27006
     profile_sha256: 1ba62c759292eb4a482eb5fa4864d63858600a36ba7b03835acf1bd637e2253c
+  - path: profile_local_qwen3vl2b_taste_review_v1.yaml
+    sha256: c9750cdcad583d453303be5445d57558b3e3d66e28292a1249cc8aa1c1347936
+    profile_sha256: 45dc0555ab99ff1cd16a7d63f8baf5bb13f99807fe747d09f168c66b619b67f6

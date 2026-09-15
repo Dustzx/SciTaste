@@ -4085,6 +4085,9 @@ plan, capture, inventory, exact decision line, and state binding before hashing
 the evidence and producing a quarantined `TasteEpisodeCandidate`. The proposal
 is not a review: the existing cross-model attribution panel must still accept or
 reject its causal interpretation before admission can authorize a policy update.
+That panel may combine a live provider with a separately pinned local checkpoint;
+both paths use the same semantic packet and durable ledger, and neither is
+represented as human review.
 
 ### ADR-130: Venue deadlines are project state, not remembered dates
 

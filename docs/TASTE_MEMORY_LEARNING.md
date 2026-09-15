@@ -153,6 +153,14 @@ ledger entries. Raw responses must differ, both calls must be real live/local
 generation rather than replay or scripted fixtures, and a disagreement still
 requires a third independent adjudicator.
 
+When a second live-provider credential is unavailable, the pinned local
+Qwen3-VL-2B checkpoint may be used as one operational AI panel member. Select
+`local-qwen3vl2b-taste-review`, pass
+`configs/backends/local_transformers_qwen3vl2b_reference_quality_v1.yaml`, and
+add `--backend-mode local` during preparation plus `--allow-local` during model
+node execution. The other primary must still use a distinct model; local review
+does not become human or expert evidence.
+
 ## Scientific decision-family conditioning
 
 Admitted episodes are not pooled into one generic quality score. A fixed
