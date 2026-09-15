@@ -68,7 +68,7 @@ model_selection:
     sha256: 4b7ceaa3038acf2c1d45d37d1116a67a41a6c97bce1f66399d042058906f3e63
   candidate_catalog:
     locator: configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml
-    sha256: c17bea9657593aa82cee9766e668024ac1a75cf958de36b83cdbb00dd22682fd
+    sha256: c1c7fbb9458048a0eaf768cefa90747f01c11fb10342c3188c94653cfcf521b6
   candidates:
     - candidate_id: zhipu-glm53-flash
       model_id: glm-5.3-flash

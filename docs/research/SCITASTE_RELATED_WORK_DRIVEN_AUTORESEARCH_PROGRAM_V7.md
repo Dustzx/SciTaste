@@ -28,24 +28,30 @@ The executable candidate authority is now
 [`scitaste_iclr27_related_work_candidates_v1.yaml`](../../configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml).
 It starts with the two direct 2026 Scientific Taste neighbors before using the
 broader AutoResearch literature to assign research, coding, figure, review, and
-task-model roles. Its twelve candidates span eleven model families, including
+task-model roles. Its sixteen candidates span fourteen model families, including
 models for which access is not configured. This is intentional: access state is
 recorded but cannot select or exclude a scientifically required model.
 
-The closest released baselines have narrow roles. `SciJudge-4B-2605` is an
-external impact-preference baseline and `SciThinker-4B` is an external ideation
-baseline. Neither is evidence of a complete lifecycle policy, and SciJudge's
-citation-impact objective cannot make it a full-paper peer reviewer. Conversely,
-the MLRC `LocPointTransformer` is owned by the benchmark task recipe and cannot
-act as a scientific agent.
+The closest released baselines have narrow roles. `SciJudge-4B-2605` and
+`SciJudge-30B-2605` are external impact-preference baselines;
+`SciThinker-4B` and `SciThinker-30B` are external ideation baselines. Each is
+paired with its exact Qwen3 architecture/scale base. The 4B pairs provide the
+minimum reproduction, while the 30B MoE pairs test whether the Taste-training
+effect survives the stronger scale reported by the direct neighbor. This
+choice precedes local-resource inspection: the 30B checkpoints remain in the
+candidate universe even though they are not currently acquired. None is
+evidence of a complete lifecycle policy, and SciJudge's citation-impact
+objective cannot make it a full-paper peer reviewer. Conversely, the MLRC
+`LocPointTransformer` is owned by the benchmark task recipe and cannot act as a
+scientific agent.
 
 The no-run direct-neighbor study extension is
 [`iclr2027_scitaste_direct_neighbor_extension_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_direct_neighbor_extension_v1.yaml),
-SHA-256 `75044c803d06c644df396cb5977a139da279bedbd5f8363dddb59cd8c5f72ba2`.
-It reports native impact-prediction reproduction, ideation training effect,
-lifecycle transfer, SciTaste mechanisms, and downstream objective progress as
-separate estimands. Aggregating those heterogeneous tasks into one score is
-forbidden.
+SHA-256 `19b66d053658a72506e674eea6992ff36069270f48d35ada3b63f9c3ce4dc77d`.
+It reports 4B native-task reproduction, conditional 30B scale-by-training
+robustness, lifecycle transfer, SciTaste mechanisms, and downstream objective
+progress as separate estimands. Aggregating those heterogeneous tasks into one
+score is forbidden.
 
 The program records MLR-Bench, AI Scientist-v2, SciNav, DeepScientist,
 AutoResearchClaw, SAGE/MHFA, and SGHA as current design anchors. Their combined
@@ -137,7 +143,7 @@ The immediate critical path is therefore:
 
 The current no-run E2 handoff is
 [`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
-SHA-256 `804f0957c40b4ef19b37a7a66c6110f20062b4093ecb852e9997d2bebfb4ecb0`.
+SHA-256 `4377ccafc1371fb2f6bfc8613d588f244feaf97cfd740d1e0339211a3f2ca35b`.
 Its eleven static scientific and execution boundaries pass, including exact
 bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
 and the related-work candidate catalog. The E2 pool now includes unconfigured

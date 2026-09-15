@@ -5,6 +5,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Expanded the related-work-first model universe to include the released 30B
+  Scientific Judge and Thinker checkpoints plus their exact architecture/scale
+  Qwen3 bases even though those weights are not locally present. The direct
+  neighbor program now treats 4B as minimum reproduction and 30B as a
+  conditional scale-by-Taste-training robustness test, so available inventory
+  cannot silently narrow the scientific comparison.
 - Added a remote Python 3.12 development GPU environment with the exact
   Transformers 4.57.6 stack required by the direct-neighbor Qwen3 checkpoints,
   replacing neither the formal environment lock nor any benchmark execution.

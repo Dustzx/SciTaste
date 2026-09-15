@@ -116,6 +116,38 @@ candidates:
     availability_may_select_model: false
     limitations:
       - Generates title-and-abstract follow-ups only and does not execute or revise research.
+  - candidate_id: scijudge-30b-2605-external
+    model_id: OpenMOSS-Team/SciJudge-30B-2605
+    model_family: qwen3-moe-scijudge
+    source_kind: released-open-checkpoint
+    planes: [taste-impact-judge]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Direct 31B MoE learned-Taste baseline needed to determine whether conclusions from the low-cost 4B reproduction survive the scale used by the strongest released Scientific Judge.
+    access_state: access-not-configured
+    resource_locator: null
+    exact_revision: null
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - The BF16 checkpoint is not yet acquired; acquisition and a multi-GPU serving plan require a separately disclosed resource window.
+      - It remains a paired citation-impact predictor, not a full-paper reviewer.
+  - candidate_id: scithinker-30b-external
+    model_id: OpenMOSS-Team/SciThinker-30B
+    model_family: qwen3-moe-scithinker
+    source_kind: released-open-checkpoint
+    planes: [taste-ideator]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Direct 31B MoE ideation baseline needed to separate the released training-based Scientific Thinker result from a small-checkpoint artifact before lifecycle transfer is assessed.
+    access_state: access-not-configured
+    resource_locator: null
+    exact_revision: null
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - It generates title-and-abstract follow-ups and does not execute, review, or revise a complete research program.
+      - The BF16 checkpoint is not yet acquired and is not admitted merely because eight GPUs are available.
   - candidate_id: qwen3-4b-instruct-2507-impact-base
     model_id: Qwen/Qwen3-4B-Instruct-2507
     model_family: qwen3-base
@@ -146,6 +178,36 @@ candidates:
     availability_may_select_model: false
     limitations:
       - Base-policy comparison isolates direct-neighbor training and cannot establish an end-to-end AutoResearch effect.
+  - candidate_id: qwen3-30b-a3b-instruct-2507-impact-base
+    model_id: Qwen/Qwen3-30B-A3B-Instruct-2507
+    model_family: qwen3-moe-base
+    source_kind: released-open-checkpoint
+    planes: [taste-impact-judge]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Exact architecture-matched base required to attribute any 30B Scientific Judge gain to Taste training rather than model family, scale, or MoE capacity.
+    access_state: access-not-configured
+    resource_locator: null
+    exact_revision: null
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - Narrow impact-task control only; it is not a SciTaste system baseline.
+  - candidate_id: qwen3-30b-a3b-thinking-2507-ideation-base
+    model_id: Qwen/Qwen3-30B-A3B-Thinking-2507
+    model_family: qwen3-moe-base
+    source_kind: released-open-checkpoint
+    planes: [taste-ideator]
+    experimental_role: external-neighbor-baseline
+    evidence_anchor_ids: [ai-can-learn-scientific-taste]
+    task_fit_rationale: Exact architecture-matched thinking base required to isolate Scientific Thinker alignment effects at 30B before comparing training-based ideation with SciTaste's training-free policy.
+    access_state: access-not-configured
+    resource_locator: null
+    exact_revision: null
+    selection_state: external-baseline-pending-execution
+    availability_may_select_model: false
+    limitations:
+      - This is an ideation control, not an end-to-end autonomous-research agent.
   - candidate_id: gpt54-thinking-frontier
     model_id: GPT-5.4-Thinking
     model_family: openai-gpt

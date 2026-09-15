@@ -10,7 +10,7 @@ idea:
   sha256: 4b592572eb58236def8d273329995472b9f05ce0435fa16b7b551d758b13a765
 model_candidates:
   locator: configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml
-  sha256: c17bea9657593aa82cee9766e668024ac1a75cf958de36b83cdbb00dd22682fd
+  sha256: c1c7fbb9458048a0eaf768cefa90747f01c11fb10342c3188c94653cfcf521b6
 dataset:
   locator: docs/research/data/scijudgebench_eval_assets_v1.yaml
   sha256: 4beeec37322b304a13046a47640d9807e8ad5339e460edc245171cf52d275e86
@@ -30,6 +30,16 @@ studies:
     endpoint: position-swap-consistent-pairwise-accuracy-per-split
     interpretation: direct-neighbor-method-reproduction-and-transfer
     title_authority: false
+  - study_id: N1b-impact-preference-scale-robustness
+    task: paired-paper-impact-preference
+    systems:
+      - OpenMOSS-Team/SciJudge-30B-2605
+      - Qwen/Qwen3-30B-A3B-Instruct-2507
+    data_splits: [test, test_ood_year, test_ood_iclr]
+    endpoint: architecture-matched-taste-training-effect-and-four-to-thirty-billion-scale-interaction
+    activation_rule: execute-after-N1-reproduction-and-exact-identity-resource-disclosure
+    interpretation: direct-neighbor-scale-robustness-not-resource-driven-model-selection
+    title_authority: false
   - study_id: N2-followup-ideation-training-effect
     task: seed-paper-to-followup-title-and-abstract
     systems:
@@ -38,6 +48,16 @@ studies:
     inputs: source-disjoint-seed-papers-frozen-before-generation
     endpoint: generator-blinded-independent-panel-pairwise-preference-with-position-swap
     interpretation: direct-neighbor-preference-alignment-effect
+    title_authority: false
+  - study_id: N2b-followup-ideation-scale-robustness
+    task: seed-paper-to-followup-title-and-abstract
+    systems:
+      - OpenMOSS-Team/SciThinker-30B
+      - Qwen/Qwen3-30B-A3B-Thinking-2507
+    inputs: same-frozen-source-disjoint-seed-papers-as-N2
+    endpoint: same-generator-blinded-panel-with-scale-by-taste-training-analysis
+    activation_rule: execute-after-N2-and-exact-identity-resource-disclosure
+    interpretation: direct-neighbor-scale-robustness-not-a-lifecycle-effect
     title_authority: false
   - study_id: N3-lifecycle-transfer-diagnostic
     task: fixed-alternative-lifecycle-action-choice
@@ -70,6 +90,7 @@ reporting:
   formal_model_selection_from_test_or_hidden_scores: forbidden
   required_tables:
     - direct-neighbor-native-task-reproduction
+    - direct-neighbor-scale-by-taste-training-effects
     - lifecycle-transfer-boundaries
     - scitaste-core-mechanism-contrasts
     - downstream-objective-progress
