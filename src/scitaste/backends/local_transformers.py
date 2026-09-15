@@ -52,6 +52,7 @@ class LocalTransformersConfig(BaseModel):
     max_retries: int = Field(default=1, ge=0, le=3)
     require_cuda: bool = True
     execution_enabled: bool = False
+    enable_thinking: bool = True
 
     @model_validator(mode="after")
     def generation_fits_context(self) -> LocalTransformersConfig:
@@ -140,11 +141,13 @@ class TransformersTextRuntime:
         tokenizer = self._tokenizer
         assert torch is not None and model is not None and tokenizer is not None
 
-        prompt = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
+        template_options: dict[str, object] = {
+            "tokenize": False,
+            "add_generation_prompt": True,
+        }
+        if not self.config.enable_thinking:
+            template_options["enable_thinking"] = False
+        prompt = tokenizer.apply_chat_template(messages, **template_options)
         inputs = tokenizer(prompt, return_tensors="pt")
         inputs = {key: value.to(self.config.device) for key, value in inputs.items()}
         input_tokens = int(inputs["input_ids"].shape[-1])

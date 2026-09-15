@@ -23,6 +23,9 @@ semantic versioning.
   The bundled Qwen3-VL-2B profile can serve as one disclosed AI panel member
   alongside a distinct live model, retaining zero API cost and local-generation
   provenance without weakening the distinct-model or nonhuman-review rules.
+  The review-specific local config disables Qwen thinking tokens and bounds one
+  response to 2,048 tokens after a real 8,192-token attempt exposed repetitive
+  post-JSON generation; the rejected attempt remains in the project ledger.
 - Added the missing production bridge from project-owned Taste episodes to a
   disclosed cross-model AI attribution panel. One shared, condition- and
   claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and

@@ -12,7 +12,7 @@ unrestricted_code_generation: false
 generation:
   schema_version: "1.0"
   max_request_bytes: 1048576
-  max_output_tokens: 8192
+  max_output_tokens: 2048
   context_window_tokens: 131072
   structured_json: true
   deterministic_seed_supported: true
@@ -20,8 +20,8 @@ admission:
   schema_version: "1.0"
   max_request_bytes: 1000000
   max_input_tokens: 100000
-  max_output_tokens: 8192
-  max_total_tokens: 108192
+  max_output_tokens: 2048
+  max_total_tokens: 102048
   max_latency_ms: 900000
   max_response_cost_usd: 0.0
   allowed_tool_names: []
