@@ -1,0 +1,79 @@
+schema_version: "1.0"
+seal_id: scitastebench-segmentation-precontact-audit-seal-v2
+project_id: scitaste-self-development
+sealed_at: "2026-09-15T19:24:45+08:00"
+purpose: >-
+  Bind the frozen prospective-v7 calibration inputs, decision-boundary routing,
+  complete runtime source closure, and independent AI/nonhuman launch reviews
+  before using the project owner's exact bounded authorization.
+
+protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v7.yaml
+  file_sha256: 2b7edbb706cc071bc2bfbddae3a9496fe1de9b15e2659e4847d764b8a4b8f68d
+freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v10.yaml
+  file_sha256: 57a5e5264b7f25e26b953caae7b45b85960ec6b9d7fa6dcb6963b18f24496e66
+request_pack:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/request-pack-v10/REQUEST_PACK.json
+  file_sha256: 47b018c5ca798b5226b7aad74469dd9c9b7d5c2aa2c187337104b4fca690d98e
+  pack_sha256: 9043a80b2b51b3c790d51f46f45a273e7d94211e01a21635a83a41f3b94c42c6
+routing_amendment:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v7_routing_amendment_v2.yaml
+  file_sha256: 3e7a2d12b6136c9074dadd9a7318d84a71f178c5f89c5f23f8f09a9b9697a304
+predecessor_seal:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_precontact_audit_seal_v1_v7.yaml
+  file_sha256: 9af373c69b228e4dc6727094020c8bb2e83f80b252e363b58ecff149ba22e77f
+
+execution_runner:
+  locator: src/scitaste/evaluation/taste_source_segmentation_execution.py
+  file_sha256: edd5ab85a5bcbd402fbed98e2c23524f9c5a661892f8322ecd10ef8449333091
+  git_commit: 0f608726cae35263b91b2fd355744ab122b874ca
+  cli_locator: src/scitaste/cli.py
+  cli_file_sha256: 3b35564631a080c1c5cbf197864a89a9013722f9b6a01263005945fe481ed9cd
+  runtime_modules:
+    - locator: src/scitaste/evaluation/taste_source_segmentation.py
+      file_sha256: f2189318f9d74fb6c1d4a07f5f73896fcab7cd6e4defb801c1d97ea81840c6d6
+    - locator: src/scitaste/evaluation/taste_source_segmentation_protocol.py
+      file_sha256: 17f66ff6fe92c8e5839cc02d3242ed077a49b3f20335116688482a82fd563c53
+    - locator: src/scitaste/evaluation/taste_source_segmentation_post_audit.py
+      file_sha256: 2ea282430a7564169bd5369365252cf9bc93b0b6a8ef2bfba820678d18a52f55
+    - locator: src/scitaste/evaluation/model_identity.py
+      file_sha256: 5acf2d5187075c6812b8b0985b17b3db4cb84491033594e6ebdac2a412e68c9e
+    - locator: src/scitaste/project/models.py
+      file_sha256: 9edc0775f03e54addf0c2dc9ef0a2c64db21ff288b20c64ba5c18425493fb7be
+    - locator: src/scitaste/resources/__init__.py
+      file_sha256: 8cfc2f4cb8ea464515b6c1b70445f2d45f00ad6e4a432b0fbf0deb2b15d88571
+    - locator: src/scitaste/resources/registry.py
+      file_sha256: dd2d5788efa9d04144eda670f7f89e2b3a0163bc5e89b1405401f48335b53fec
+
+ai_e_authority_review:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/ai-e-execution-authority-v1/REPORT.yaml
+  file_sha256: b68397b9ac5849231e7989fab0abc2e6b9ad942b26aace101819fa72fa2c8fc4
+
+execution_boundary:
+  provider_contact_performed: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+  human_review_claim_allowed: false
+  fresh_exact_owner_authorization_required: true
+
+required_authorization_scope:
+  provider: zhipu
+  model: glm-5.3-flash
+  unique_item_count: 20
+  segmenter_requests: 10
+  maximum_adjudication_requests: 5
+  identity_sentinel_requests: 2
+  maximum_provider_requests: 17
+  maximum_input_tokens: 300000
+  maximum_output_tokens: 140000
+  retry_count: 0
+  owner_maximum_liability_usd: 10.0
+
+claim_boundary: >-
+  This seal is AI/nonhuman process evidence only. It permits one exact bounded
+  owner authorization but does not itself authorize provider contact, scale,
+  benchmark admission, formal scientific evidence, or human-validity claims.
