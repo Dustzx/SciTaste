@@ -1,0 +1,45 @@
+schema_version: '1.0'
+amendment_id: scitastebench-segmentation-prospective-v7-routing-amendment-v2
+project_id: scitaste-self-development
+amended_at: '2026-09-15T19:09:00+08:00'
+reason: 'Preserve the frozen decision-boundary estimand: literal differences in explanatory
+  prose must not route otherwise identical decision boundaries to adjudication. Own-trigger/context
+  overlap is part of the exact range set under v7 and is compared without textual
+  repair.'
+base_protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v7.yaml
+  file_sha256: 2b7edbb706cc071bc2bfbddae3a9496fe1de9b15e2659e4847d764b8a4b8f68d
+base_freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v10.yaml
+  file_sha256: 57a5e5264b7f25e26b953caae7b45b85960ec6b9d7fa6dcb6963b18f24496e66
+request_pack:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v7/request-pack-v10/REQUEST_PACK.json
+  file_sha256: 47b018c5ca798b5226b7aad74469dd9c9b7d5c2aa2c187337104b4fca690d98e
+  pack_sha256: 9043a80b2b51b3c790d51f46f45a273e7d94211e01a21635a83a41f3b94c42c6
+routing_contract: decision-boundary-only-v2
+adjudication_blocker_fields:
+- decision-presence
+- segment-count
+- trigger-boundary
+- context-range-set
+- primary-decision-family
+- residual-decision-risk
+diagnostic_only_fields:
+- atomic-decision-statement
+- rationale
+- uncertainty
+- no-decision-rationale
+selection_rule: Explanatory free text, uncertainty labels, and zero-decision rationales
+  remain persisted for audit but cannot create an adjudication request. Non-adjudicated
+  items copy segmenter A's complete record and disclose that deterministic rule.
+sample_or_outcome_changed: false
+provider_contact_performed: false
+authority:
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  authorizes_scaled_execution: false
+  authorizes_benchmark_admission: false
+  formal_evidence_eligible: false
+  human_review_claim_allowed: false
+claim_boundary: This routing amendment changes no sample, threshold, model, outcome,
+  or resource ceiling and grants no execution or scientific-claim authority.
