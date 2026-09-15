@@ -377,6 +377,7 @@ from scitaste.project import (
 )
 from scitaste.project.models import validate_entry_id, validate_relative_locator
 from scitaste.project_substrate_cli import register_project_substrate_cli
+from scitaste.research_program_cli import register_research_program_cli
 from scitaste.resource_cli import register_resource_cli
 from scitaste.review import (
     VenueReviewReport,
@@ -674,6 +675,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     project = commands.add_parser("project", help="Project-owned run and paper management")
     project_commands = project.add_subparsers(dest="project_command", required=True)
+    register_research_program_cli(project_commands)
     project_init = project_commands.add_parser("init", help="Create a canonical project tree")
     project_init.add_argument("--project-id", required=True)
     project_init.add_argument("--title", required=True)
