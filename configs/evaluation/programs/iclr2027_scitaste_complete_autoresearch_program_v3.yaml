@@ -23,6 +23,11 @@ scientific_boundaries:
   self_development_in_headline_estimate: false
   inventory_can_select_scientific_design: false
   pseudo_implementation_of_blocked_system_allowed: false
+  method_object: unified-lifecycle-scientific-taste-policy
+  cross_cutting_improvement_planes:
+    tool_intelligence: endogenous-process-cost-failure-and-outcome-evidence
+    generation_as_content: exogenous-user-correction-and-counterfactual-intervention
+  detached_three_innovation_pitch_allowed: false
 
 research_paradigms:
   - paradigm_id: parameter-training-free-taste
@@ -131,6 +136,31 @@ E1_scitastebench:
     treatment: full
     comparator: base
     interpretation: bundled-training-free-system-effect-not-a-mechanism-identifier
+  supporting_component_questions:
+    inference_role: supporting-not-title-critical
+    run_rule: >-
+      Run only on the powered subset needed to distinguish the named component
+      effect; do not expand every main condition into a Cartesian factorial.
+    contrasts:
+      - question_id: tool-intelligence-increment
+        treatment: full
+        comparator: full.with-endogenous-tool-intelligence-disabled
+        keeps_fixed: [agent-model, taste-policy, user-interventions, tools, budget]
+        endpoint: hidden-objective-progress-and-action-calibration
+      - question_id: generation-as-content-increment
+        treatment: full.with-prospectively-locked-user-interventions
+        comparator: full.with-the-same-intervention-opportunities-hidden
+        keeps_fixed: [agent-model, taste-policy, tool-intelligence, tools, budget]
+        endpoint: correction-uptake-decision-quality-and-downstream-objective-progress
+        availability_rule: >-
+          Estimate only from authentic prospectively locked user interventions;
+          an AI surrogate cannot establish a human-intervention effect.
+      - question_id: cross-plane-interaction
+        treatment: full.with-both-improvement-planes
+        comparator: minimal-two-by-two-main-effects-and-interaction-subset
+        keeps_fixed: [agent-model, base-taste-policy, tasks, tools, budget]
+        endpoint: preregistered-interaction-effect-on-objective-progress
+        run_rule: contingent-on-main-effects-and-power-not-a-default-full-grid
   common_controls:
     - frozen-model-and-serving-revision
     - candidate-action-set-and-order-counterbalance
@@ -357,6 +387,8 @@ execution_blocks:
       - E4-full-experiment-chain-for-scitaste-native-and-native-base
       - one-success-one-failure-or-natural-failure-retention-path
       - dual-ai-review-and-review-driven-revision
+      - tool-intelligence-increment-on-a-preregistered-supporting-subset
+      - generation-as-content-contract-and-authentic-intervention-path
     unavailable_external_system_policy: keep-row-blocked-and-do-not-fabricate-output
     scale_out_allowed: false
   - block_id: B2-powered-source-disjoint-expansion

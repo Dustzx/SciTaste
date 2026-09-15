@@ -5,7 +5,7 @@ Status: **complete planning contract; no execution authorized**.
 The machine-readable authority is
 [`iclr2027_scitaste_complete_autoresearch_program_v3.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_complete_autoresearch_program_v3.yaml),
 with file SHA-256
-`32d07080c99c34e49e974df3b5eeeaeff13321b204f723193b1a5e19399d4dad`.
+`76f2f5034717239c6d1957f2f3403a146860eda35f7e1652fb872e94da5ad52f`.
 It is additive to lifecycle program v2 and does not rewrite v1, v2, historical
 runs, model inventories, or the public Roadmap. It authorizes no download, API
 call, GPU use, installation, or experiment.
@@ -64,6 +64,17 @@ endpoint, with one distinct AI adjudicator only on disagreement. The same review
 finality governs package review and paper revision. This removes human staffing
 from the critical path but does not create human/expert validity. Only a held-out
 objective scorer may support the title-level effectiveness claim.
+
+Tool Intelligence and Generation as Content are not detached headline methods.
+They are two cross-cutting ways to improve the same lifecycle Taste policy:
+Tool Intelligence supplies endogenous process, cost, failure, and outcome
+evidence; Generation as Content exposes the policy to exogenous user correction
+and counterfactual intervention. A supporting ablation measures each incremental
+effect while holding the other plane fixed. Their interaction is tested only on
+a powered minimal 2x2 subset, not by multiplying the entire experiment matrix.
+The Generation-as-Content effect requires authentic, prospectively locked user
+interventions; AI stand-ins may exercise the software path but cannot establish
+a human-intervention claim.
 
 ## Full automation boundary
 
