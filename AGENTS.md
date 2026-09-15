@@ -17,6 +17,23 @@ make check
 make demo
 ```
 
+## Deadline-critical validation discipline
+
+- During an active feature-completion sprint, validate the changed path with
+  syntax/type construction, Ruff on touched modules, `git diff --check`, and at
+  most one representative no-call or bounded smoke execution.
+- Do not repeatedly run the full repository test suite, coverage, wheel build,
+  or duplicate Python-version matrices after each small change. Run them once at
+  the final integration gate after the feature set is frozen; SciTaste currently
+  targets Python 3.12.
+- A cheap check is not automatically useful. Route optional verification through
+  Tool Intelligence and skip it when its expected detection value does not exceed
+  its time/resource cost.
+- Never defer a check whose failure could expose credentials, corrupt or destroy
+  project evidence, contaminate a formal split, or irreversibly consume a formal
+  experiment assignment. Those safety and scientific-integrity gates remain
+  fail-closed.
+
 ## Change discipline
 
 - Treat the submodule pin as immutable except in a dedicated dependency update.
