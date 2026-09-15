@@ -1,0 +1,34 @@
+schema_version: "1.0"
+contract_id: scitaste-b0-model-role-contracts-v1
+purpose: task-excluded model-role conformance only
+selection_input_policy:
+  formal_tasks_allowed: false
+  heldout_tasks_allowed: false
+  formal_source_groups_allowed: false
+  heldout_source_groups_allowed: false
+  inventory_presence_is_quality_evidence: false
+roles:
+  research_agent:
+    prompt_contract_id: b0-research-agent-v1
+    required_output: structured research decision with evidence and uncertainty
+    tools: bounded project evidence and literature tools only
+  code_agent:
+    prompt_contract_id: b0-code-agent-v1
+    required_output: bounded patch proposal plus executable verification record
+    tools: repository-scoped read, edit, and execution tools only
+  judge:
+    prompt_contract_id: b0-judge-v1
+    required_output: blinded structured verdict with criterion-level rationale
+    tools: read-only blinded evidence tools only
+  embedding:
+    prompt_contract_id: b0-embedding-v1
+    required_output: fixed-dimensional vectors with stable ordering
+    tools: none
+  task_training:
+    prompt_contract_id: b0-task-training-v1
+    required_output: benchmark-owned checkpoint or deterministic task output
+    tools: task sandbox only; never SciTaste decision authority
+independence:
+  generator_roles: [research_agent, code_agent]
+  headline_judge_must_be_identity_distinct: true
+execution_authority: false

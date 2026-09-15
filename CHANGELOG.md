@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added task-excluded, multi-role model conformance and evidence-only selection.
+  A no-run B0 suite considers registered API models and local multi-size models
+  independently for research, code, judge, embedding, and task-training roles.
+  Frozen schema/tool adherence, success, context, latency/cost,
+  reproducibility, and task-fit criteria compile only validator-parsed executor
+  receipts plus byte-bound case manifests and case-level results into
+  controller-ready exact identity/profile/budget/evidence bindings. Inventory
+  presence never selects a model, formal/heldout material is rejected,
+  generator/judge identity conflicts are non-headline, and embedding/task
+  models are selected per corpus or benchmark/task-family scope.
 - Replaced prospective decision capture authority with a backward-compatible
   two-phase v2 chain. The first command locks an outcome-free state, complete
   non-duplicate action menu, selection, rationale, timestamp, immutable decision
