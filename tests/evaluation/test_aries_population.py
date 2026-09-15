@@ -481,6 +481,11 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         group_disjoint_sample.uncertainty_estimand
         == "descriptive-calibration-superpopulation-work-model"
     )
+    group_disjoint_sample_path = tmp_path / "group-disjoint-sample.yaml"
+    save_taste_source_segmentation_sample_manifest(
+        group_disjoint_sample,
+        group_disjoint_sample_path,
+    )
     prospective_sample_path = tmp_path / "prospective-sample.yaml"
     save_taste_source_segmentation_sample_manifest(
         prospective_sample,
@@ -604,6 +609,22 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         campaign_root / "CAMPAIGN.json",
         locator_root=tmp_path,
     )
+    group_boundary_snapshot = (
+        segmentation_module.snapshot_taste_source_segmentation_group_boundary(
+            sample_inspection=load_taste_source_segmentation_sample_manifest(
+                group_disjoint_sample_path
+            ),
+            sample_manifest_locator=group_disjoint_sample_path.relative_to(
+                tmp_path
+            ).as_posix(),
+            campaign_snapshots=(campaign_snapshot,),
+            locator_root=tmp_path,
+        )
+    )
+    assert group_boundary_snapshot is not None
+    assert group_boundary_snapshot.per_campaign_source_group_counts == {
+        campaign.campaign_id: 1
+    }
     sample_snapshot = load_taste_source_segmentation_sample_manifest(segmentation_sample)
 
     def reject_late_input_read(*_args: object, **_kwargs: object) -> None:
@@ -676,6 +697,49 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
     )
     second_segmentation_path = tmp_path / "segmentation-b.json"
     save_taste_source_decision_segmentation_run(second_segmentation, second_segmentation_path)
+    group_updates = {
+        "schema_version": "1.1",
+        "sample_manifest_locator": group_disjoint_sample_path.relative_to(tmp_path).as_posix(),
+        "sample_manifest_file_sha256": hashlib.sha256(
+            group_disjoint_sample_path.read_bytes()
+        ).hexdigest(),
+        "sample_sha256": group_disjoint_sample.sample_sha256,
+        "sample_selection_timing": "preregistered",
+    }
+    group_segmentation_a_path = tmp_path / "group-segmentation-a.json"
+    group_segmentation_b_path = tmp_path / "group-segmentation-b.json"
+    save_taste_source_decision_segmentation_run(
+        segmentation.model_copy(update=group_updates),
+        group_segmentation_a_path,
+    )
+    save_taste_source_decision_segmentation_run(
+        second_segmentation.model_copy(update=group_updates),
+        group_segmentation_b_path,
+    )
+    with monkeypatch.context() as snapshot_guard:
+        snapshot_guard.setattr(
+            segmentation_module,
+            "load_taste_source_segmentation_sample_manifest",
+            reject_late_input_read,
+        )
+        snapshot_guard.setattr(
+            segmentation_module,
+            "verify_taste_source_segmentation_sample_bindings",
+            reject_late_input_read,
+        )
+        snapshot_guard.setattr(
+            segmentation_module,
+            "load_taste_source_review_private_map",
+            reject_late_input_read,
+        )
+        group_agreement = compile_taste_source_segmentation_agreement(
+            report_id="aries-group-snapshot-agreement-v1",
+            segmentation_paths=(group_segmentation_a_path, group_segmentation_b_path),
+            compiled_at=datetime(2026, 9, 14, 0, 9, tzinfo=UTC),
+            locator_root=tmp_path,
+            prevalidated_group_boundary=group_boundary_snapshot,
+        )
+    assert group_agreement.group_uncertainty is not None
     mismatched_rubric_segmentation = second_segmentation.model_copy(
         update={
             "rubric_locator": "different-rubric.yaml",

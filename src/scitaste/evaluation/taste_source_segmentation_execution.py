@@ -44,6 +44,7 @@ from scitaste.evaluation.taste_source_segmentation import (
     TasteSourceDecisionSegmentationRun,
     TasteSourceSegmentationAgreementReport,
     TasteSourceSegmentationCampaignSnapshot,
+    TasteSourceSegmentationGroupBoundarySnapshot,
     TasteSourceSegmentationGroupUncertainty,
     TasteSourceSegmentationRubricSnapshot,
     TasteSourceSegmentationSampleInspection,
@@ -54,6 +55,7 @@ from scitaste.evaluation.taste_source_segmentation import (
     save_taste_source_segmentation_agreement_report,
     save_taste_source_segmentation_resolution_run,
     snapshot_taste_source_segmentation_campaign,
+    snapshot_taste_source_segmentation_group_boundary,
     snapshot_taste_source_segmentation_rubric,
 )
 from scitaste.evaluation.taste_source_segmentation_protocol import (
@@ -260,6 +262,7 @@ class TasteSourceSegmentationExecutionInspection(BaseModel):
     segmentation_rubric: TasteSourceSegmentationRubricSnapshot = Field(exclude=True)
     adjudication_rubric: TasteSourceSegmentationRubricSnapshot = Field(exclude=True)
     campaigns: tuple[TasteSourceSegmentationCampaignSnapshot, ...] = Field(exclude=True)
+    group_boundary: TasteSourceSegmentationGroupBoundarySnapshot = Field(exclude=True)
     packet_count: int = Field(gt=0)
     unique_item_count: int = Field(gt=0)
     runner_git_binding_verified: Literal[True] = True
@@ -1705,6 +1708,14 @@ def inspect_taste_source_segmentation_execution_authorization(
         scientific_by_campaign[campaign_id] = {
             item.review_item_id: item for item in snapshot.scientific_items
         }
+    group_boundary = snapshot_taste_source_segmentation_group_boundary(
+        sample_inspection=sample_inspection,
+        sample_manifest_locator=protocol.protocol.sample.locator,
+        campaign_snapshots=campaign_snapshots,
+        locator_root=root,
+    )
+    if group_boundary is None:
+        raise ValueError("Live segmentation execution requires a group-boundary snapshot")
 
     pack_root = pack_path.parent
     packets = []
@@ -1762,16 +1773,16 @@ def inspect_taste_source_segmentation_execution_authorization(
     for packet in packets:
         for item in packet.items:
             campaign_id = token_to_campaign.get(item.campaign_token)
-            source = (
+            scientific_source = (
                 scientific_by_campaign.get(campaign_id, {}).get(item.review_item_id)
                 if campaign_id is not None
                 else None
             )
             if (
-                source is None
+                scientific_source is None
                 or (campaign_id, item.review_item_id) not in sample_keys
-                or item.reviewed_abstract != source.reviewed_abstract
-                or item.review_comment != source.review_comment
+                or item.reviewed_abstract != scientific_source.reviewed_abstract
+                or item.review_comment != scientific_source.review_comment
             ):
                 raise ValueError("Segmentation packet source differs from campaign snapshot")
             observed_by_slot[packet.segmenter_slot].add((campaign_id, item.review_item_id))
@@ -1790,6 +1801,7 @@ def inspect_taste_source_segmentation_execution_authorization(
         segmentation_rubric=segmentation_rubric,
         adjudication_rubric=adjudication_rubric,
         campaigns=campaign_snapshots,
+        group_boundary=group_boundary,
         packet_count=len(packets),
         unique_item_count=pack.unique_item_count,
     )
@@ -2457,8 +2469,12 @@ def run_taste_source_segmentation_calibration(
         updated_at=started_at,
     )
     _claim_execution_ledger(ledger_path, ledger)
-    output_root.mkdir(parents=True, mode=0o700)
-    os.chmod(output_root, 0o700)
+    try:
+        output_root.mkdir(parents=True, mode=0o700)
+        os.chmod(output_root, 0o700)
+    except Exception as error:
+        _fail_execution_ledger(ledger_path, ledger, output_root, error)
+        raise
     segmenter_outputs: dict[str, list[SegmentationProviderItem]] = {
         "segmenter-a": [],
         "segmenter-b": [],
@@ -2865,6 +2881,7 @@ def run_taste_source_segmentation_calibration(
             compiled_at=datetime.now(UTC),
             locator_root=root,
             routing_contract="decision-boundary-only-v2",
+            prevalidated_group_boundary=inspection.group_boundary,
         )
         agreement_path = output_root / "derived" / "agreement.json"
         save_taste_source_segmentation_agreement_report(agreement, agreement_path)
@@ -4091,7 +4108,7 @@ def _fail_execution_ledger(
     )
     _replace_execution_ledger(ledger_path, failed)
     marker = output_root / "FAILED.json"
-    if not marker.exists():
+    if output_root.is_dir() and not output_root.is_symlink() and not marker.exists():
         _write_json_new(
             marker,
             {

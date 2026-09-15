@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, mo
 
 from scitaste.evaluation.natural_taste_review import (
     ScientificTasteSourceReviewItem,
+    TasteSourcePrivateMapItem,
     TasteSourceReviewCampaign,
     TasteSourceReviewRole,
     load_taste_source_review_campaign,
@@ -302,6 +303,38 @@ class TasteSourceSegmentationCampaignSnapshot(BaseModel):
         item_ids = [item.review_item_id for item in self.scientific_items]
         if len(item_ids) != len(set(item_ids)):
             raise ValueError("Segmentation campaign snapshot contains duplicate items")
+        return self
+
+
+class TasteSourceSegmentationGroupBoundarySnapshot(BaseModel):
+    """Privacy-preserving aggregate needed for source-group uncertainty replay."""
+
+    model_config = _EXACT_CONFIG
+
+    sample_manifest_locator: str = Field(min_length=1, max_length=2_000)
+    sample_manifest_file_sha256: str = Field(pattern=_SHA256)
+    sample_sha256: str = Field(pattern=_SHA256)
+    selected_items_sha256: str = Field(pattern=_SHA256)
+    campaign_file_sha256s: dict[str, str]
+    campaign_sha256s: dict[str, str]
+    private_map_file_sha256s: dict[str, str]
+    selected_group_assignments_sha256: str = Field(pattern=_SHA256)
+    per_campaign_source_group_counts: dict[str, int]
+    per_campaign_eligible_source_group_counts: dict[str, int]
+    per_campaign_sampling_fraction_micros: dict[str, int]
+
+    @model_validator(mode="after")
+    def group_boundary_is_closed(self) -> TasteSourceSegmentationGroupBoundarySnapshot:
+        campaign_ids = set(self.campaign_file_sha256s)
+        maps = (
+            self.campaign_sha256s,
+            self.private_map_file_sha256s,
+            self.per_campaign_source_group_counts,
+            self.per_campaign_eligible_source_group_counts,
+            self.per_campaign_sampling_fraction_micros,
+        )
+        if not campaign_ids or any(set(value) != campaign_ids for value in maps):
+            raise ValueError("Segmentation group-boundary snapshot maps differ")
         return self
 
 
@@ -1161,6 +1194,114 @@ def snapshot_taste_source_segmentation_campaign(
     )
 
 
+def snapshot_taste_source_segmentation_group_boundary(
+    *,
+    sample_inspection: TasteSourceSegmentationSampleInspection,
+    sample_manifest_locator: str,
+    campaign_snapshots: tuple[TasteSourceSegmentationCampaignSnapshot, ...],
+    locator_root: str | Path,
+) -> TasteSourceSegmentationGroupBoundarySnapshot | None:
+    """Verify private source-group bindings once, retaining only aggregate evidence."""
+
+    sample = sample_inspection.sample
+    if sample.schema_version != "1.2":
+        return None
+    if (
+        sample.selection_algorithm_version != "sha256-ranked-source-group-disjoint-v3"
+        or sample.uncertainty_estimand
+        != "descriptive-calibration-superpopulation-work-model"
+    ):
+        raise ValueError("Segmentation group uncertainty requires group-first v3 sampling")
+    root = Path(locator_root).resolve(strict=True)
+    snapshots_by_id = {
+        snapshot.campaign.campaign_id: snapshot for snapshot in campaign_snapshots
+    }
+    if len(snapshots_by_id) != len(campaign_snapshots) or set(snapshots_by_id) != set(
+        sample.source_campaign_locators or {}
+    ):
+        raise ValueError("Segmentation group-boundary campaign coverage drifted")
+    selected_by_campaign: dict[str, set[str]] = {}
+    for item in sample.items:
+        selected_by_campaign.setdefault(item.campaign_id, set()).add(item.review_item_id)
+    observed_groups: set[tuple[str, str]] = set()
+    counts: dict[str, int] = {}
+    private_hashes: dict[str, str] = {}
+    selected_assignments: list[tuple[str, str, str]] = []
+    for campaign_id, snapshot in sorted(snapshots_by_id.items()):
+        campaign = snapshot.campaign
+        if (
+            snapshot.locator != (sample.source_campaign_locators or {})[campaign_id]
+            or snapshot.file_sha256
+            != (sample.source_campaign_file_sha256s or {})[campaign_id]
+            or campaign.campaign_sha256
+            != (sample.source_campaign_sha256s or {})[campaign_id]
+        ):
+            raise ValueError("Segmentation group-boundary campaign binding drifted")
+        campaign_root = root.joinpath(*PurePosixPath(snapshot.locator).parent.parts)
+        private_path = _bounded_file(
+            campaign_root.joinpath(*PurePosixPath(campaign.private_item_map.locator).parts),
+            _MAX_ARTIFACT_BYTES,
+        )
+        private_raw = private_path.read_bytes()
+        private_sha256 = hashlib.sha256(private_raw).hexdigest()
+        if (
+            len(private_raw) != campaign.private_item_map.bytes
+            or private_sha256 != campaign.private_item_map.sha256
+            or private_sha256
+            != (sample.source_private_map_file_sha256s or {})[campaign_id]
+        ):
+            raise ValueError("Segmentation group-boundary private map drifted")
+        payload = json.loads(private_raw)
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != "1.0"
+            or not isinstance(payload.get("items"), list)
+        ):
+            raise ValueError("Segmentation group-boundary private map is invalid")
+        private_items = tuple(
+            TasteSourcePrivateMapItem.model_validate(item) for item in payload["items"]
+        )
+        private_by_id = {item.review_item_id: item for item in private_items}
+        if len(private_by_id) != len(private_items):
+            raise ValueError("Segmentation group-boundary private map contains duplicates")
+        selected_ids = selected_by_campaign.get(campaign_id, set())
+        if not selected_ids.issubset(private_by_id):
+            raise ValueError("Segmentation group boundary lacks selected private-map rows")
+        groups = {
+            (campaign_id, private_by_id[item_id].source_group_id) for item_id in selected_ids
+        }
+        if len(groups) != len(selected_ids) or observed_groups & groups:
+            raise ValueError("Segmentation sample is not source-group disjoint")
+        observed_groups.update(groups)
+        counts[campaign_id] = len(groups)
+        private_hashes[campaign_id] = private_sha256
+        selected_assignments.extend(
+            (campaign_id, item_id, private_by_id[item_id].source_group_id)
+            for item_id in sorted(selected_ids)
+        )
+    if counts != (sample.per_campaign_source_group_counts or {}):
+        raise ValueError("Segmentation source-group sample counts drifted")
+    eligible_counts = sample.per_campaign_eligible_source_group_counts or {}
+    sampling_fractions = sample.per_campaign_sampling_fraction_micros or {}
+    if set(eligible_counts) != set(counts) or set(sampling_fractions) != set(counts):
+        raise ValueError("Segmentation group uncertainty sampling boundary is incomplete")
+    return TasteSourceSegmentationGroupBoundarySnapshot(
+        sample_manifest_locator=sample_manifest_locator,
+        sample_manifest_file_sha256=sample_inspection.file_sha256,
+        sample_sha256=sample.sample_sha256,
+        selected_items_sha256=_canonical_sha256(
+            sorted((item.campaign_id, item.review_item_id) for item in sample.items)
+        ),
+        campaign_file_sha256s=dict(sorted(sample.source_campaign_file_sha256s.items())),
+        campaign_sha256s=dict(sorted(sample.source_campaign_sha256s.items())),
+        private_map_file_sha256s=dict(sorted(private_hashes.items())),
+        selected_group_assignments_sha256=_canonical_sha256(sorted(selected_assignments)),
+        per_campaign_source_group_counts=dict(sorted(counts.items())),
+        per_campaign_eligible_source_group_counts=dict(sorted(eligible_counts.items())),
+        per_campaign_sampling_fraction_micros=dict(sorted(sampling_fractions.items())),
+    )
+
+
 def plan_taste_source_segmentation_sample(
     *,
     sample_id: str,
@@ -1809,6 +1950,7 @@ def compile_taste_source_segmentation_agreement(
     routing_contract: Literal[
         "legacy-exact-all-fields-v1", "decision-boundary-only-v2"
     ] = "legacy-exact-all-fields-v1",
+    prevalidated_group_boundary: TasteSourceSegmentationGroupBoundarySnapshot | None = None,
 ) -> TasteSourceSegmentationAgreementReport:
     """Compare two segmenters under an explicit, artifact-visible routing rule."""
 
@@ -2030,7 +2172,11 @@ def compile_taste_source_segmentation_agreement(
         scale_blockers.add("overlap-family-agreement-below-calibration-threshold")
     if count_a == count_b == 0:
         scale_blockers.add("calibration-no-positive-decisions")
-    group_boundary = _verify_group_disjoint_segmentation_sample(first, root=root)
+    group_boundary = (
+        _group_boundary_from_snapshot(first, prevalidated_group_boundary)
+        if prevalidated_group_boundary is not None
+        else _verify_group_disjoint_segmentation_sample(first, root=root)
+    )
     group_uncertainty = (
         _compile_group_uncertainty(
             tuple(compared),
@@ -2610,6 +2756,31 @@ def _verify_group_disjoint_segmentation_sample(
         dict(sorted(counts.items())),
         dict(sorted(eligible_counts.items())),
         dict(sorted(sampling_fractions.items())),
+    )
+
+
+def _group_boundary_from_snapshot(
+    run: TasteSourceDecisionSegmentationRun,
+    snapshot: TasteSourceSegmentationGroupBoundarySnapshot,
+) -> tuple[dict[str, int], dict[str, int], dict[str, int]]:
+    """Bind an in-memory private-map aggregate to the normalized run without I/O."""
+
+    if (
+        snapshot.sample_manifest_locator != run.sample_manifest_locator
+        or snapshot.sample_manifest_file_sha256 != run.sample_manifest_file_sha256
+        or snapshot.sample_sha256 != run.sample_sha256
+        or snapshot.campaign_file_sha256s != run.campaign_file_sha256s
+        or snapshot.campaign_sha256s != run.campaign_sha256s
+        or snapshot.selected_items_sha256
+        != _canonical_sha256(
+            sorted((item.campaign_id, item.review_item_id) for item in run.items)
+        )
+    ):
+        raise ValueError("Segmentation in-memory group boundary differs from normalized run")
+    return (
+        snapshot.per_campaign_source_group_counts,
+        snapshot.per_campaign_eligible_source_group_counts,
+        snapshot.per_campaign_sampling_fraction_micros,
     )
 
 
