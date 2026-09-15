@@ -109,6 +109,8 @@ from scitaste.evaluation import (
     execute_ai_preference_adjudicator,
     execute_ai_preference_primary_panel,
     finalize_ai_preference_reviews,
+    finalize_ai_taste_abstraction_reviews,
+    import_codex_agent_abstraction_review,
     inspect_acquired_json_content,
     inspect_acquired_structured_metadata,
     inspect_acquired_task_cohort,
@@ -190,6 +192,7 @@ from scitaste.evaluation import (
     load_taste_corpus_curation_package,
     load_taste_corpus_pair_manifest,
     lock_ai_preference_primary_reviews,
+    lock_ai_taste_abstraction_primary_reviews,
     lock_human_reviewer_submissions,
     materialize_aaar_quality_calibration_plan,
     materialize_aaar_quality_projections,
@@ -210,6 +213,7 @@ from scitaste.evaluation import (
     plan_taste_source_review_assignments,
     plan_taste_source_segmentation_sample,
     prepare_agent_laboratory_adapter,
+    prepare_ai_taste_abstraction_review_from_batch,
     prepare_human_outcome_study,
     prepare_human_reviewer_session,
     prepare_project_evaluation,
@@ -2193,6 +2197,75 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(taste_corpus_curation)
     taste_corpus_curation.set_defaults(handler=_handle_evaluation_taste_corpus_curation)
+    abstraction_review_prepare = evaluation_commands.add_parser(
+        "ai-abstraction-review-prepare",
+        help="Bridge accepted grounded abstractions into two AI-only review requests",
+    )
+    abstraction_review_prepare.add_argument("--batch", type=Path, required=True)
+    abstraction_review_prepare.add_argument("--protocol", type=Path, required=True)
+    abstraction_review_prepare.add_argument("--locator-root", type=Path, default=Path("."))
+    abstraction_review_prepare.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    abstraction_review_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(abstraction_review_prepare)
+    abstraction_review_prepare.set_defaults(
+        handler=_handle_evaluation_ai_abstraction_review_prepare
+    )
+    abstraction_agent_import = evaluation_commands.add_parser(
+        "ai-abstraction-review-agent-import",
+        help="Hash-bind a Codex-agent review without claiming an API or human review",
+    )
+    abstraction_agent_import.add_argument("--request", type=Path, required=True)
+    abstraction_agent_import.add_argument("--raw-response", type=Path, required=True)
+    abstraction_agent_import.add_argument("--agent-session-id", required=True)
+    abstraction_agent_import.add_argument("--agent-runtime", required=True)
+    abstraction_agent_import.add_argument(
+        "--started-at",
+        required=True,
+        help="timezone-aware ISO-8601 start time",
+    )
+    abstraction_agent_import.add_argument(
+        "--completed-at",
+        required=True,
+        help="timezone-aware ISO-8601 completion time",
+    )
+    abstraction_agent_import.add_argument("--evidence-root", type=Path, default=Path("."))
+    abstraction_agent_import.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(abstraction_agent_import)
+    abstraction_agent_import.set_defaults(handler=_handle_evaluation_ai_abstraction_agent_import)
+    abstraction_primary_lock = evaluation_commands.add_parser(
+        "ai-abstraction-review-primary-lock",
+        help="Lock two AI-only abstraction reviews and prepare disputed-only adjudication",
+    )
+    abstraction_primary_lock.add_argument("--pack", type=Path, required=True)
+    abstraction_primary_lock.add_argument(
+        "--raw-response",
+        type=Path,
+        action="append",
+        required=True,
+        help="exact AI response JSON; provide exactly twice",
+    )
+    abstraction_primary_lock.add_argument(
+        "--execution-receipt",
+        type=Path,
+        action="append",
+        required=True,
+        help="API, local-model, or agent receipt; provide exactly twice",
+    )
+    abstraction_primary_lock.add_argument("--evidence-root", type=Path, default=Path("."))
+    abstraction_primary_lock.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(abstraction_primary_lock)
+    abstraction_primary_lock.set_defaults(handler=_handle_evaluation_ai_abstraction_primary_lock)
+    abstraction_finalize = evaluation_commands.add_parser(
+        "ai-abstraction-review-finalize",
+        help="Finalize AI-only acceptance, using a third AI only for disputes",
+    )
+    abstraction_finalize.add_argument("--primary-reviews", type=Path, required=True)
+    abstraction_finalize.add_argument("--adjudication-raw-response", type=Path, default=None)
+    abstraction_finalize.add_argument("--adjudication-receipt", type=Path, default=None)
+    abstraction_finalize.add_argument("--evidence-root", type=Path, default=Path("."))
+    abstraction_finalize.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(abstraction_finalize)
+    abstraction_finalize.set_defaults(handler=_handle_evaluation_ai_abstraction_finalize)
     ai_preference_pack = evaluation_commands.add_parser(
         "ai-preference-pack-prepare",
         help="Compile two identity-distinct AI-only requests from a public H1/H2 blind pack",
@@ -7639,6 +7712,140 @@ def _handle_evaluation_taste_corpus_curation(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_ready and not report.ready_to_materialize:
         return 1
+    return 0
+
+
+def _handle_evaluation_ai_abstraction_review_prepare(args: argparse.Namespace) -> int:
+    bridge = prepare_ai_taste_abstraction_review_from_batch(
+        locator_root=args.locator_root,
+        outputs_root=args.outputs_root,
+        batch_path=args.batch,
+        protocol_path=args.protocol,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "bridge_id": bridge.bridge_id,
+                "bridge_sha256": bridge.bridge_sha256,
+                "batch_item_count": bridge.batch_item_count,
+                "accepted_item_count": bridge.accepted_item_count,
+                "excluded_item_count": bridge.excluded_item_count,
+                "review_request_pack_sha256": bridge.review_request_pack_sha256,
+                "reviewer_kind": bridge.reviewer_kind,
+                "not_human_review": bridge.not_human_review,
+                "human_validity_claim_allowed": bridge.human_validity_claim_allowed,
+                "provider_execution_fabricated": bridge.provider_execution_fabricated,
+                "model_calls_performed": bridge.bridge_model_calls_performed,
+                "formal_evidence_eligible": bridge.formal_evidence_eligible,
+                "output": str(args.output / "BRIDGE.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_ai_abstraction_agent_import(args: argparse.Namespace) -> int:
+    receipt = import_codex_agent_abstraction_review(
+        evidence_root=args.evidence_root,
+        request_path=args.request,
+        raw_response_path=args.raw_response,
+        agent_session_id=args.agent_session_id,
+        agent_runtime=args.agent_runtime,
+        started_at=datetime.fromisoformat(args.started_at),
+        completed_at=datetime.fromisoformat(args.completed_at),
+        output_path=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "receipt_sha256": receipt.receipt_sha256,
+                "provider_kind": receipt.provider_kind,
+                "reviewer_kind": receipt.reviewer_kind,
+                "not_human_review": receipt.not_human_review,
+                "human_validity_claim_allowed": receipt.human_validity_claim_allowed,
+                "model_call_observed": receipt.model_call_observed,
+                "agent_execution_observed": receipt.agent_execution_observed,
+                "exact_model_identity_verified": receipt.exact_model_identity_verified,
+                "provider_execution_fabricated": receipt.provider_execution_fabricated,
+                "output": str(args.output),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_ai_abstraction_primary_lock(args: argparse.Namespace) -> int:
+    if len(args.raw_response) != 2 or len(args.execution_receipt) != 2:
+        raise ValueError("--raw-response and --execution-receipt must each be provided twice")
+    locked = lock_ai_taste_abstraction_primary_reviews(
+        evidence_root=args.evidence_root,
+        request_pack_path_or_dir=args.pack,
+        raw_response_paths=tuple(args.raw_response),
+        execution_receipt_paths=tuple(args.execution_receipt),
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "review_set_sha256": locked.review_set_sha256,
+                "normalized_row_count": len(locked.normalized_rows),
+                "dispute_count": len(locked.disputes),
+                "adjudication_request": (
+                    None
+                    if locked.adjudication_request is None
+                    else locked.adjudication_request.model_dump(mode="json")
+                ),
+                "reviewer_kind": locked.reviewer_kind,
+                "not_human_review": locked.not_human_review,
+                "human_validity_claim_allowed": False,
+                "additional_model_calls_performed": False,
+                "output": str(args.output / "LOCK.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_ai_abstraction_finalize(args: argparse.Namespace) -> int:
+    result = finalize_ai_taste_abstraction_reviews(
+        evidence_root=args.evidence_root,
+        locked_primary_reviews_path_or_dir=args.primary_reviews,
+        output_path=args.output,
+        adjudication_response_path=args.adjudication_raw_response,
+        adjudication_execution_receipt_path=args.adjudication_receipt,
+    )
+    print(
+        json.dumps(
+            {
+                "accepted_set_sha256": result.accepted_set_sha256,
+                "input_candidate_count": result.input_candidate_count,
+                "accepted_count": result.accepted_count,
+                "rejected_count": result.rejected_count,
+                "unresolved_count": result.unresolved_count,
+                "reviewer_kind": result.reviewer_kind,
+                "not_human_review": result.not_human_review,
+                "human_review_replacement_claim_allowed": (
+                    result.human_review_replacement_claim_allowed
+                ),
+                "formal_construct_validity_established": (
+                    result.formal_construct_validity_established
+                ),
+                "formal_benchmark_admission_authorized": (
+                    result.formal_benchmark_admission_authorized
+                ),
+                "output": str(args.output),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

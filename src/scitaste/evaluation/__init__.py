@@ -115,6 +115,12 @@ from scitaste.evaluation.ai_preference_panel import (
     load_ai_preference_request_pack,
     lock_ai_preference_primary_reviews,
 )
+from scitaste.evaluation.ai_taste_abstraction_bridge import (
+    GroundedAbstractionBridgeAdmission,
+    GroundedAbstractionBridgeExclusion,
+    GroundedAbstractionReviewBridge,
+    prepare_ai_taste_abstraction_review_from_batch,
+)
 from scitaste.evaluation.ai_taste_abstraction_review import (
     AIAbstractionAdjudicationRequest,
     AIAbstractionAdjudicationResponse,
@@ -129,6 +135,7 @@ from scitaste.evaluation.ai_taste_abstraction_review import (
     LockedAIAbstractionPrimaryReviews,
     compile_ai_taste_abstraction_review_requests,
     finalize_ai_taste_abstraction_reviews,
+    import_codex_agent_abstraction_review,
     load_ai_abstraction_request_pack,
     load_ai_taste_abstraction_review_protocol,
     lock_ai_taste_abstraction_primary_reviews,
@@ -1548,6 +1555,9 @@ __all__ = [
     "GpuModelResource",
     "GpuRuntimeInventory",
     "GpuStorageInventory",
+    "GroundedAbstractionBridgeAdmission",
+    "GroundedAbstractionBridgeExclusion",
+    "GroundedAbstractionReviewBridge",
     "GroundedTasteCaseAbstraction",
     "H4ArmRunRequest",
     "H4BenchmarkResearchActionProvider",
@@ -1914,6 +1924,7 @@ __all__ = [
     "hash_benchmark_tree",
     "hash_editable_surface",
     "hash_protected_surface",
+    "import_codex_agent_abstraction_review",
     "inspect_acquired_json_content",
     "inspect_acquired_structured_metadata",
     "inspect_acquired_task_cohort",
@@ -2097,6 +2108,7 @@ __all__ = [
     "plan_taste_source_review_assignments",
     "plan_taste_source_segmentation_sample",
     "prepare_agent_laboratory_adapter",
+    "prepare_ai_taste_abstraction_review_from_batch",
     "prepare_benchmark_workspace",
     "prepare_human_outcome_study",
     "prepare_human_reviewer_session",

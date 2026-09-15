@@ -393,18 +393,25 @@ class AIAbstractionReviewExecutionReceipt(BaseModel):
     provider: str = Field(min_length=1, max_length=200)
     model: str = Field(min_length=1, max_length=300)
     model_revision: str = Field(min_length=1, max_length=300)
+    provider_kind: Literal["api", "local-model", "agent"] = "api"
     reviewer_identity_sha256: str = Field(pattern=_SHA256)
     request: AIAbstractionFileBinding
     request_sha256: str = Field(pattern=_SHA256)
     raw_response: AIAbstractionFileBinding
     started_at: datetime
     completed_at: datetime
-    provider_request_id: str = Field(min_length=1, max_length=1_000)
-    http_status: int = Field(ge=100, le=599)
-    model_call_observed: Literal[True] = True
+    provider_request_id: str | None = Field(default=None, min_length=1, max_length=1_000)
+    http_status: int | None = Field(default=None, ge=100, le=599)
+    agent_session_id: str | None = Field(default=None, min_length=1, max_length=1_000)
+    agent_runtime: str | None = Field(default=None, min_length=1, max_length=1_000)
+    model_call_observed: bool
+    agent_execution_observed: bool = False
+    exact_model_identity_verified: bool = True
+    provider_execution_fabricated: Literal[False] = False
     reviewer_kind: Literal["ai"] = "ai"
     not_human_review: Literal[True] = True
     no_human_or_expert_validity_claim: Literal[True] = True
+    human_validity_claim_allowed: Literal[False] = False
     authorizes_additional_model_calls: Literal[False] = False
 
     @model_validator(mode="after")
@@ -413,7 +420,45 @@ class AIAbstractionReviewExecutionReceipt(BaseModel):
             raise ValueError("AI abstraction receipt times must include a timezone")
         if self.completed_at < self.started_at:
             raise ValueError("AI abstraction receipt cannot complete before it starts")
+        if self.provider_kind == "api":
+            if (
+                self.provider_request_id is None
+                or self.http_status is None
+                or not 200 <= self.http_status < 300
+                or not self.model_call_observed
+                or self.agent_execution_observed
+                or self.agent_session_id is not None
+                or self.agent_runtime is not None
+                or not self.exact_model_identity_verified
+            ):
+                raise ValueError("API review receipt lacks exact successful provider evidence")
+        elif self.provider_kind == "local-model":
+            if (
+                self.provider_request_id is not None
+                or self.http_status is not None
+                or not self.model_call_observed
+                or self.agent_execution_observed
+                or self.agent_session_id is not None
+                or self.agent_runtime is not None
+                or not self.exact_model_identity_verified
+            ):
+                raise ValueError("local-model receipt mixes API or agent execution evidence")
+        elif (
+            self.provider_request_id is not None
+            or self.http_status is not None
+            or self.model_call_observed
+            or not self.agent_execution_observed
+            or self.agent_session_id is None
+            or self.agent_runtime is None
+            or self.exact_model_identity_verified
+        ):
+            raise ValueError("agent receipt must disclose import-only, non-provider execution")
         return self
+
+    @computed_field
+    @property
+    def receipt_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
 
 
 class AINormalizedAbstractionReview(BaseModel):
@@ -701,6 +746,98 @@ def load_ai_abstraction_request_pack(path: str | Path) -> AIAbstractionRequestPa
     if source.is_dir():
         source = source / "PACK.json"
     return AIAbstractionRequestPack.model_validate_json(source.read_text(encoding="utf-8"))
+
+
+def import_codex_agent_abstraction_review(
+    *,
+    evidence_root: str | Path,
+    request_path: str | Path,
+    raw_response_path: str | Path,
+    agent_session_id: str,
+    agent_runtime: str,
+    started_at: datetime,
+    completed_at: datetime,
+    output_path: str | Path,
+) -> AIAbstractionReviewExecutionReceipt:
+    """Bind a Codex-agent JSON result without inventing an API/provider execution.
+
+    The reviewer identity in the request must explicitly declare an agent provider.
+    The imported raw bytes remain untouched, and the receipt records that the exact
+    underlying model identity is not independently verified by this process.
+    """
+
+    root = Path(evidence_root).resolve(strict=True)
+    request_file = _regular_file(root, request_path)
+    raw_file = _regular_file(root, raw_response_path)
+    if request_file == raw_file:
+        raise ValueError("Codex-agent request and response must be distinct files")
+    request_payload = json.loads(request_file.read_text(encoding="utf-8"))
+    if not isinstance(request_payload, dict):
+        raise ValueError("Codex-agent abstraction-review request must be a JSON object")
+    if request_payload.get("disputed_items_only") is True:
+        request: AIAbstractionPrimaryRequest | AIAbstractionAdjudicationRequest = (
+            AIAbstractionAdjudicationRequest.model_validate(request_payload)
+        )
+        response: AIAbstractionRawReviewResponse | AIAbstractionAdjudicationResponse = (
+            AIAbstractionAdjudicationResponse.model_validate_json(
+                raw_file.read_text(encoding="utf-8")
+            )
+        )
+        identity = request.adjudicator
+    else:
+        request = AIAbstractionPrimaryRequest.model_validate(request_payload)
+        response = AIAbstractionRawReviewResponse.model_validate_json(
+            raw_file.read_text(encoding="utf-8")
+        )
+        identity = request.reviewer
+    if "agent" not in identity.provider.casefold():
+        raise ValueError("Codex-agent import requires an explicitly agent-labelled provider")
+    if "codex" not in agent_runtime.casefold():
+        raise ValueError("Codex-agent import runtime must explicitly identify Codex")
+    if (
+        response.reviewer_id != identity.reviewer_id
+        or response.reviewer_identity_sha256 != identity.identity_sha256
+        or response.request_sha256 != request.request_sha256
+    ):
+        raise ValueError("Codex-agent response does not bind its request and declared identity")
+    if {item.review_item_id for item in response.responses} != {
+        item.review_item_id for item in request.items
+    }:
+        raise ValueError("Codex-agent response does not cover its exact review request")
+    if any(
+        len(item.rationale) > request.maximum_rationale_characters for item in response.responses
+    ):
+        raise ValueError("Codex-agent response rationale exceeds the protocol bound")
+    invocation_identity = _canonical_sha256(
+        [request.request_sha256, _sha256(raw_file), agent_session_id]
+    )
+    receipt = AIAbstractionReviewExecutionReceipt(
+        invocation_id=f"codex-agent-review-{invocation_identity[:24]}",
+        reviewer_id=identity.reviewer_id,
+        provider=identity.provider,
+        model=identity.model,
+        model_revision=identity.model_revision,
+        provider_kind="agent",
+        reviewer_identity_sha256=identity.identity_sha256,
+        request=_binding(root, request_file),
+        request_sha256=request.request_sha256,
+        raw_response=_binding(root, raw_file),
+        started_at=started_at,
+        completed_at=completed_at,
+        provider_request_id=None,
+        http_status=None,
+        agent_session_id=agent_session_id,
+        agent_runtime=agent_runtime,
+        model_call_observed=False,
+        agent_execution_observed=True,
+        exact_model_identity_verified=False,
+    )
+    target = _new_file(root, output_path)
+    _write_new_json(
+        target,
+        receipt.model_dump(mode="json", exclude={"receipt_sha256"}),
+    )
+    return receipt
 
 
 def compile_ai_taste_abstraction_review_requests(
@@ -1265,8 +1402,6 @@ def _verify_review_evidence(
         raise ValueError("AI abstraction receipt binds a different request")
     if receipt_file in {request_path, raw_file}:
         raise ValueError("AI abstraction request, response, and receipt must be distinct files")
-    if not 200 <= receipt.http_status < 300:
-        raise ValueError("AI abstraction review call did not complete successfully")
     expected_ids = {item.review_item_id for item in request.items}
     if {item.review_item_id for item in response.responses} != expected_ids:
         raise ValueError("AI abstraction response does not cover its exact request")
@@ -1492,6 +1627,7 @@ __all__ = [
     "LockedAIAbstractionPrimaryReviews",
     "compile_ai_taste_abstraction_review_requests",
     "finalize_ai_taste_abstraction_reviews",
+    "import_codex_agent_abstraction_review",
     "load_ai_abstraction_request_pack",
     "load_ai_taste_abstraction_review_protocol",
     "lock_ai_taste_abstraction_primary_reviews",
