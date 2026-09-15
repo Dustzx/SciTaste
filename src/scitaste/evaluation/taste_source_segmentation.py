@@ -61,11 +61,14 @@ class TasteSourceSegmentationSampleManifest(BaseModel):
     selection_rationale: str = Field(min_length=1, max_length=4_000)
     sampling_algorithm: str = Field(min_length=1, max_length=500)
     random_seed: int | None = None
-    selection_algorithm_version: Literal[
-        "sha256-ranked-balanced-v1",
-        "sha256-ranked-source-group-disjoint-v2",
-        "sha256-ranked-source-group-disjoint-v3",
-    ] | None = None
+    selection_algorithm_version: (
+        Literal[
+            "sha256-ranked-balanced-v1",
+            "sha256-ranked-source-group-disjoint-v2",
+            "sha256-ranked-source-group-disjoint-v3",
+        ]
+        | None
+    ) = None
     source_campaign_locators: dict[str, str] | None = None
     source_campaign_file_sha256s: dict[str, str] | None = None
     source_campaign_sha256s: dict[str, str] | None = None
@@ -79,9 +82,9 @@ class TasteSourceSegmentationSampleManifest(BaseModel):
     per_campaign_excluded_source_group_counts: dict[str, int] | None = None
     per_campaign_eligible_source_group_counts: dict[str, int] | None = None
     per_campaign_sampling_fraction_micros: dict[str, int] | None = None
-    uncertainty_estimand: Literal[
-        "descriptive-calibration-superpopulation-work-model"
-    ] | None = None
+    uncertainty_estimand: Literal["descriptive-calibration-superpopulation-work-model"] | None = (
+        None
+    )
     source_group_disjoint_from_exclusions: bool | None = None
     maximum_items_per_source_group: int | None = Field(default=None, ge=1, le=1)
     source_group_ids_exposed_to_provider: bool | None = None
@@ -137,8 +140,10 @@ class TasteSourceSegmentationSampleManifest(BaseModel):
             ):
                 raise ValueError("Schema 1.0 cannot carry prospective selection receipts")
             return self
-        if not preregistered or self.random_seed is None or any(
-            value is None for value in prospective_fields
+        if (
+            not preregistered
+            or self.random_seed is None
+            or any(value is None for value in prospective_fields)
         ):
             raise ValueError("Schema 1.1+ requires a complete preregistered selection receipt")
         source_maps = (
@@ -181,9 +186,7 @@ class TasteSourceSegmentationSampleManifest(BaseModel):
             ):
                 raise ValueError("Prospective sample binding locator is unsafe")
         if self.schema_version == "1.1":
-            if any(
-                value is not None for value in (*source_group_fields, *extended_group_fields)
-            ):
+            if any(value is not None for value in (*source_group_fields, *extended_group_fields)):
                 raise ValueError("Schema 1.1 cannot carry source-group selection receipts")
             return self
         if any(value is None for value in source_group_fields):
@@ -211,16 +214,19 @@ class TasteSourceSegmentationSampleManifest(BaseModel):
         if self.selection_algorithm_version == "sha256-ranked-source-group-disjoint-v3":
             if any(value is None for value in extended_group_fields):
                 raise ValueError("Source-group v3 sample lacks its sampling-fraction boundary")
-            if set(self.per_campaign_eligible_source_group_counts or {}) != campaign_ids or set(
-                self.per_campaign_sampling_fraction_micros or {}
-            ) != campaign_ids:
+            if (
+                set(self.per_campaign_eligible_source_group_counts or {}) != campaign_ids
+                or set(self.per_campaign_sampling_fraction_micros or {}) != campaign_ids
+            ):
                 raise ValueError("Source-group v3 sampling-fraction campaigns drifted")
             for campaign_id in campaign_ids:
                 selected = (self.per_campaign_source_group_counts or {})[campaign_id]
                 eligible = (self.per_campaign_eligible_source_group_counts or {})[campaign_id]
-                if eligible < selected or (
-                    self.per_campaign_sampling_fraction_micros or {}
-                )[campaign_id] != (selected * 1_000_000) // eligible:
+                if (
+                    eligible < selected
+                    or (self.per_campaign_sampling_fraction_micros or {})[campaign_id]
+                    != (selected * 1_000_000) // eligible
+                ):
                     raise ValueError("Source-group v3 sampling fraction is inconsistent")
         elif any(value is not None for value in extended_group_fields):
             raise ValueError("Source-group v2 cannot carry v3 sampling-fraction receipts")
@@ -510,9 +516,10 @@ class TasteSourceSegmentationAgreementItem(BaseModel):
     campaign_id: str = Field(pattern=_ID)
     review_item_id: str = Field(pattern=_ID)
     review_item_sha256: str = Field(pattern=_SHA256)
-    routing_contract: Literal[
-        "legacy-exact-all-fields-v1", "decision-boundary-only-v2"
-    ] = "legacy-exact-all-fields-v1"
+    routing_contract: Literal["legacy-exact-all-fields-v1", "decision-boundary-only-v2"] = Field(
+        default="legacy-exact-all-fields-v1",
+        exclude_if=lambda value: value == "legacy-exact-all-fields-v1",
+    )
     segmenter_a_count: int = Field(ge=0, le=128)
     segmenter_b_count: int = Field(ge=0, le=128)
     exact_span_agreement_count: int = Field(ge=0, le=128)
@@ -623,16 +630,17 @@ class TasteSourceSegmentationGroupUncertainty(BaseModel):
         if (
             campaigns != set(self.per_campaign_eligible_source_group_counts)
             or campaigns != set(self.per_campaign_sampling_fraction_micros)
-            or sum(self.per_campaign_source_group_counts.values())
-            != self.source_group_count
+            or sum(self.per_campaign_source_group_counts.values()) != self.source_group_count
         ):
             raise ValueError("Segmentation uncertainty campaign bindings drifted")
         for campaign_id in campaigns:
             selected = self.per_campaign_source_group_counts[campaign_id]
             eligible = self.per_campaign_eligible_source_group_counts[campaign_id]
-            if eligible < selected or self.per_campaign_sampling_fraction_micros[
-                campaign_id
-            ] != (selected * 1_000_000) // eligible:
+            if (
+                eligible < selected
+                or self.per_campaign_sampling_fraction_micros[campaign_id]
+                != (selected * 1_000_000) // eligible
+            ):
                 raise ValueError("Segmentation uncertainty sampling fraction drifted")
         return self
 
@@ -654,9 +662,10 @@ class TasteSourceSegmentationAgreementReport(BaseModel):
     sample_manifest_file_sha256: str = Field(pattern=_SHA256)
     sample_sha256: str = Field(pattern=_SHA256)
     sample_selection_timing: Literal["preregistered", "retrospective-pilot-binding"]
-    routing_contract: Literal[
-        "legacy-exact-all-fields-v1", "decision-boundary-only-v2"
-    ] = "legacy-exact-all-fields-v1"
+    routing_contract: Literal["legacy-exact-all-fields-v1", "decision-boundary-only-v2"] = Field(
+        default="legacy-exact-all-fields-v1",
+        exclude_if=lambda value: value == "legacy-exact-all-fields-v1",
+    )
     items: tuple[TasteSourceSegmentationAgreementItem, ...] = Field(min_length=1)
     source_item_count: int = Field(gt=0)
     segmenter_a_decision_count: int = Field(ge=0)
@@ -713,9 +722,7 @@ class TasteSourceSegmentationAgreementReport(BaseModel):
             raise ValueError("Segmentation agreement items must be sorted and unique")
         if any(item.routing_contract != self.routing_contract for item in self.items):
             raise ValueError("Segmentation agreement routing contracts differ")
-        if (self.schema_version == "1.2") != (
-            self.routing_contract == "decision-boundary-only-v2"
-        ):
+        if (self.schema_version == "1.2") != (self.routing_contract == "decision-boundary-only-v2"):
             raise ValueError("Segmentation agreement schema differs from routing contract")
         expected_counts = (
             len(self.items),
@@ -790,19 +797,18 @@ class TasteSourceSegmentationAgreementReport(BaseModel):
             expected_scale_blockers.add("overlap-family-agreement-below-calibration-threshold")
         if self.segmenter_a_decision_count == self.segmenter_b_decision_count == 0:
             expected_scale_blockers.add("calibration-no-positive-decisions")
-        if self.schema_version == "1.1":
+        if self.schema_version in {"1.1", "1.2"}:
             expected_scale_blockers.add("source-group-validation-stage-required")
         if self.scaled_execution_blocker_codes != tuple(sorted(expected_scale_blockers)):
             raise ValueError("Segmentation scale blockers are inconsistent")
         if self.scaled_execution_authorized != (not expected_scale_blockers):
             raise ValueError("Segmentation scale authorization differs from blockers")
-        if (self.schema_version == "1.1") != (self.group_uncertainty is not None):
+        if (self.schema_version in {"1.1", "1.2"}) != (self.group_uncertainty is not None):
             raise ValueError("Segmentation agreement schema differs from group uncertainty")
         if self.group_uncertainty is not None:
             uncertainty = self.group_uncertainty
             context_exact_count = sum(
-                item.exact_span_agreement_count
-                - len(item.context_disagreement_segment_ids)
+                item.exact_span_agreement_count - len(item.context_disagreement_segment_ids)
                 for item in self.items
             )
             expected_context_point = (
@@ -814,8 +820,7 @@ class TasteSourceSegmentationAgreementReport(BaseModel):
                 uncertainty.source_group_count != self.source_item_count
                 or sum(uncertainty.per_campaign_source_group_counts.values())
                 != self.source_item_count
-                or uncertainty.overlap_trigger_span_f1.point_micros
-                != self.overlap_span_f1_micros
+                or uncertainty.overlap_trigger_span_f1.point_micros != self.overlap_span_f1_micros
                 or uncertainty.overlap_matched_family_agreement.point_micros
                 != self.overlap_matched_family_agreement_micros
                 or uncertainty.adjudication_item_rate.point_micros
@@ -1084,8 +1089,7 @@ def plan_taste_source_segmentation_sample(
         raise ValueError("Prospective per-campaign sample count is outside its bound")
     root = Path(locator_root).resolve(strict=True)
     exclusions = tuple(
-        load_taste_source_segmentation_sample_manifest(path)
-        for path in excluded_sample_paths
+        load_taste_source_segmentation_sample_manifest(path) for path in excluded_sample_paths
     )
     excluded_keys = {
         (item.campaign_id, item.review_item_id)
@@ -1118,10 +1122,7 @@ def plan_taste_source_segmentation_sample(
             item for item in loaded if isinstance(item, ScientificTasteSourceReviewItem)
         )
         private_by_item = (
-            {
-                item.review_item_id: item
-                for item in load_taste_source_review_private_map(path)
-            }
+            {item.review_item_id: item for item in load_taste_source_review_private_map(path)}
             if source_group_disjoint
             else {}
         )
@@ -1139,10 +1140,7 @@ def plan_taste_source_segmentation_sample(
                 "Prospective segmentation private map cannot resolve every excluded item"
             )
         excluded_groups = (
-            {
-                private_by_item[item_id].source_group_id
-                for item_id in campaign_excluded_item_ids
-            }
+            {private_by_item[item_id].source_group_id for item_id in campaign_excluded_item_ids}
             if source_group_disjoint
             else set()
         )
@@ -1158,9 +1156,7 @@ def plan_taste_source_segmentation_sample(
         if len(available) < per_campaign_item_count:
             raise ValueError("Prospective segmentation campaign has too few unseen items")
         algorithm = (
-            source_group_algorithm_version
-            if source_group_disjoint
-            else "sha256-ranked-balanced-v1"
+            source_group_algorithm_version if source_group_disjoint else "sha256-ranked-balanced-v1"
         )
         if source_group_disjoint and algorithm == "sha256-ranked-source-group-disjoint-v2":
             ranked_candidates = sorted(
@@ -1172,13 +1168,9 @@ def plan_taste_source_segmentation_sample(
                             "random_seed": random_seed,
                             "campaign_id": campaign.campaign_id,
                             "campaign_sha256": campaign.campaign_sha256,
-                            "source_group_id": private_by_item[
-                                item.review_item_id
-                            ].source_group_id,
+                            "source_group_id": private_by_item[item.review_item_id].source_group_id,
                             "review_item_id": item.review_item_id,
-                            "review_item_sha256": _canonical_sha256(
-                                item.model_dump(mode="json")
-                            ),
+                            "review_item_sha256": _canonical_sha256(item.model_dump(mode="json")),
                         }
                     ),
                     item.review_item_id,
@@ -1259,9 +1251,7 @@ def plan_taste_source_segmentation_sample(
                             "campaign_id": campaign.campaign_id,
                             "campaign_sha256": campaign.campaign_sha256,
                             "review_item_id": item.review_item_id,
-                            "review_item_sha256": _canonical_sha256(
-                                item.model_dump(mode="json")
-                            ),
+                            "review_item_sha256": _canonical_sha256(item.model_dump(mode="json")),
                         }
                     ),
                     item.review_item_id,
@@ -1278,24 +1268,15 @@ def plan_taste_source_segmentation_sample(
         source_campaign_file_sha256s[campaign.campaign_id] = _sha256_file(path)
         source_campaign_sha256s[campaign.campaign_id] = campaign.campaign_sha256
         source_scientific_items_sha256s[campaign.campaign_id] = campaign.scientific_items.sha256
-        source_private_map_file_sha256s[campaign.campaign_id] = (
-            campaign.private_item_map.sha256
-        )
+        source_private_map_file_sha256s[campaign.campaign_id] = campaign.private_item_map.sha256
         per_campaign_counts[campaign.campaign_id] = per_campaign_item_count
         if source_group_disjoint:
             per_campaign_source_group_counts[campaign.campaign_id] = per_campaign_item_count
-            per_campaign_excluded_source_group_counts[campaign.campaign_id] = len(
-                excluded_groups
-            )
+            per_campaign_excluded_source_group_counts[campaign.campaign_id] = len(excluded_groups)
             eligible_group_count = len(
-                {
-                    private_by_item[item.review_item_id].source_group_id
-                    for item in available
-                }
+                {private_by_item[item.review_item_id].source_group_id for item in available}
             )
-            per_campaign_eligible_source_group_counts[campaign.campaign_id] = (
-                eligible_group_count
-            )
+            per_campaign_eligible_source_group_counts[campaign.campaign_id] = eligible_group_count
             per_campaign_sampling_fraction_micros[campaign.campaign_id] = (
                 per_campaign_item_count * 1_000_000
             ) // eligible_group_count
@@ -1335,16 +1316,12 @@ def plan_taste_source_segmentation_sample(
         ),
         random_seed=random_seed,
         selection_algorithm_version=(
-            source_group_algorithm_version
-            if source_group_disjoint
-            else "sha256-ranked-balanced-v1"
+            source_group_algorithm_version if source_group_disjoint else "sha256-ranked-balanced-v1"
         ),
         source_campaign_locators=dict(sorted(source_campaign_locators.items())),
         source_campaign_file_sha256s=dict(sorted(source_campaign_file_sha256s.items())),
         source_campaign_sha256s=dict(sorted(source_campaign_sha256s.items())),
-        source_scientific_items_sha256s=dict(
-            sorted(source_scientific_items_sha256s.items())
-        ),
+        source_scientific_items_sha256s=dict(sorted(source_scientific_items_sha256s.items())),
         excluded_sample_locators={
             inspection.sample.sample_id: _relative(inspection.path, root)
             for inspection in sorted(exclusions, key=lambda value: value.sample.sample_id)
@@ -1359,9 +1336,7 @@ def plan_taste_source_segmentation_sample(
         },
         per_campaign_item_counts=dict(sorted(per_campaign_counts.items())),
         source_private_map_file_sha256s=(
-            dict(sorted(source_private_map_file_sha256s.items()))
-            if source_group_disjoint
-            else None
+            dict(sorted(source_private_map_file_sha256s.items())) if source_group_disjoint else None
         ),
         per_campaign_source_group_counts=(
             dict(sorted(per_campaign_source_group_counts.items()))
@@ -1604,10 +1579,8 @@ def normalize_taste_source_decision_segmentation(
         for campaign_id, (path, campaign, _) in campaigns.items():
             if (
                 _relative(path, root) != (sample.source_campaign_locators or {})[campaign_id]
-                or _sha256_file(path)
-                != (sample.source_campaign_file_sha256s or {})[campaign_id]
-                or campaign.campaign_sha256
-                != (sample.source_campaign_sha256s or {})[campaign_id]
+                or _sha256_file(path) != (sample.source_campaign_file_sha256s or {})[campaign_id]
+                or campaign.campaign_sha256 != (sample.source_campaign_sha256s or {})[campaign_id]
             ):
                 raise ValueError("Segmentation campaign differs from the prospective binding")
     if len(projects) != 1:
@@ -1886,9 +1859,7 @@ def compile_taste_source_segmentation_agreement(
                 family_disagreement_segment_ids=family_disagreements,
                 context_disagreement_segment_ids=context_disagreements,
                 semantic_disagreement_segment_ids=semantic_disagreements,
-                no_decision_rationale_disagreement=(
-                    no_decision_rationale_disagreement
-                ),
+                no_decision_rationale_disagreement=(no_decision_rationale_disagreement),
                 segmenter_a_unmatched_segment_ids=unmatched_a,
                 segmenter_b_unmatched_segment_ids=unmatched_b,
                 residual_decision_bearing_text_possible=residual,
@@ -2058,9 +2029,7 @@ def normalize_taste_source_segmentation_resolution(
                 scientific_items[(campaign_id, item.review_item_id)] = item
 
     agreement_items = {(item.campaign_id, item.review_item_id): item for item in agreement.items}
-    first_items = {
-        (item.campaign_id, item.review_item_id): item for item in source_run.items
-    }
+    first_items = {(item.campaign_id, item.review_item_id): item for item in source_run.items}
     resolved: list[TasteSourceSegmentationResolutionItem] = []
     for raw_item in raw["items"]:
         if not isinstance(raw_item, dict) or not isinstance(raw_item.get("segments"), list):
@@ -2100,8 +2069,7 @@ def normalize_taste_source_segmentation_resolution(
             )
             if (
                 segments != expected_item.segments
-                or raw_item.get("no_decision_rationale")
-                != expected_item.no_decision_rationale
+                or raw_item.get("no_decision_rationale") != expected_item.no_decision_rationale
                 or raw_item.get("residual_decision_bearing_text_possible")
                 != expected_item.residual_decision_bearing_text_possible
                 or raw_item.get("resolution_rationale") != expected_rationale
@@ -2347,9 +2315,7 @@ def _normalize_raw_segments(
             ):
                 raise ValueError("Taste source decision offsets differ from source bytes")
             start, end = raw_start, raw_end
-        segment_identity = _canonical_sha256(
-            [campaign_id, review_item_id, start, end, verbatim]
-        )
+        segment_identity = _canonical_sha256([campaign_id, review_item_id, start, end, verbatim])
         segments.append(
             TasteSourceDecisionSegment(
                 segment_id=f"segment-{segment_identity[:24]}",
@@ -2403,9 +2369,7 @@ def _normalize_raw_context_ranges(
             or review_comment[start:end] != verbatim
         ):
             raise ValueError("Taste source decision context offsets differ from source bytes")
-        identity = _canonical_sha256(
-            [campaign_id, review_item_id, start, end, verbatim]
-        )
+        identity = _canonical_sha256([campaign_id, review_item_id, start, end, verbatim])
         contexts.append(
             TasteSourceDecisionContextSpan(
                 context_id=f"context-{identity[:24]}",
@@ -2416,14 +2380,8 @@ def _normalize_raw_context_ranges(
             )
         )
     unit_rows = _taste_source_comment_unit_offsets(review_comment)
-    start_ordinals = {
-        start: ordinal
-        for ordinal, (_, _, start, _) in enumerate(unit_rows, 1)
-    }
-    end_ordinals = {
-        end: ordinal
-        for ordinal, (_, _, _, end) in enumerate(unit_rows, 1)
-    }
+    start_ordinals = {start: ordinal for ordinal, (_, _, start, _) in enumerate(unit_rows, 1)}
+    end_ordinals = {end: ordinal for ordinal, (_, _, _, end) in enumerate(unit_rows, 1)}
     ordinal_ranges: list[tuple[int, int]] = []
     for context in contexts:
         try:
@@ -2475,10 +2433,8 @@ def _verify_group_disjoint_segmentation_sample(
         raise ValueError("Segmentation group uncertainty sample binding drifted")
     sample = sample_inspection.sample
     if (
-        sample.selection_algorithm_version
-        != "sha256-ranked-source-group-disjoint-v3"
-        or sample.uncertainty_estimand
-        != "descriptive-calibration-superpopulation-work-model"
+        sample.selection_algorithm_version != "sha256-ranked-source-group-disjoint-v3"
+        or sample.uncertainty_estimand != "descriptive-calibration-superpopulation-work-model"
     ):
         raise ValueError("Segmentation group uncertainty requires group-first v3 sampling")
     observed: set[tuple[str, str]] = set()
@@ -2492,10 +2448,7 @@ def _verify_group_disjoint_segmentation_sample(
         selected_ids = selected_by_campaign.get(campaign_id, set())
         if not selected_ids.issubset(private_by_id):
             raise ValueError("Segmentation group uncertainty lacks selected private-map rows")
-        groups = {
-            (campaign_id, private_by_id[item_id].source_group_id)
-            for item_id in selected_ids
-        }
+        groups = {(campaign_id, private_by_id[item_id].source_group_id) for item_id in selected_ids}
         if len(groups) != len(selected_ids) or observed & groups:
             raise ValueError("Segmentation sample is not source-group disjoint")
         observed.update(groups)
@@ -2540,15 +2493,13 @@ def _compile_group_uncertainty(
             for item in selected
         )
         presence = sum(
-            (item.segmenter_a_count > 0) == (item.segmenter_b_count > 0)
-            for item in selected
+            (item.segmenter_a_count > 0) == (item.segmenter_b_count > 0) for item in selected
         )
         return (
             _f1_micros(overlap, count_a, count_b),
             (family * 1_000_000) // max(1, overlap),
             (presence * 1_000_000) // len(selected),
-            (sum(item.requires_adjudication for item in selected) * 1_000_000)
-            // len(selected),
+            (sum(item.requires_adjudication for item in selected) * 1_000_000) // len(selected),
             (context_exact * 1_000_000) // exact if exact else None,
         )
 

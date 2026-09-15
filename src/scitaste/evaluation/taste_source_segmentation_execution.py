@@ -250,6 +250,7 @@ class TasteSourceSegmentationExecutionInspection(BaseModel):
     packet_count: int = Field(gt=0)
     unique_item_count: int = Field(gt=0)
     runner_git_binding_verified: Literal[True] = True
+    runtime_source_tree_verified: Literal[True] = True
     payload_firewall_verified: Literal[True] = True
     routing_amendment_verified: Literal[True] = True
     precontact_audit_seal_verified: Literal[True] = True
@@ -1518,7 +1519,8 @@ def inspect_taste_source_segmentation_execution_authorization(
     if _sha256_file(cli_path) != authorization.runner.cli_file_sha256:
         raise ValueError("Segmentation execution CLI binding drifted")
     if (
-        _git_blob_sha256(root, authorization.runner.git_commit, authorization.runner.locator)
+        Path(__file__).resolve() != runner_path
+        or _git_blob_sha256(root, authorization.runner.git_commit, authorization.runner.locator)
         != authorization.runner.file_sha256
         or _git_blob_sha256(root, authorization.runner.git_commit, authorization.runner.cli_locator)
         != authorization.runner.cli_file_sha256
@@ -1533,6 +1535,7 @@ def inspect_taste_source_segmentation_execution_authorization(
             or _sha256_file(module_path) != module.file_sha256
         ):
             raise ValueError("Segmentation execution runtime-module binding drifted")
+    _verify_runtime_source_tree(root, authorization.runner.git_commit)
 
     limits = authorization.limits
     frozen_budget = protocol.protocol.budget
@@ -4055,6 +4058,74 @@ def _git_blob_sha256(root: Path, commit: str, locator: str) -> str:
     if result.returncode != 0:
         raise ValueError("Segmentation execution Git blob is unavailable")
     return hashlib.sha256(result.stdout).hexdigest()
+
+
+def _verify_runtime_source_tree(root: Path, commit: str) -> None:
+    """Require the complete loaded SciTaste source tree to equal the bound commit."""
+
+    source_root = (root / "src/scitaste").resolve(strict=True)
+    tracked = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "diff",
+            "--quiet",
+            "--no-ext-diff",
+            commit,
+            "--",
+            "src/scitaste",
+        ],
+        check=False,
+        capture_output=True,
+        timeout=15,
+    )
+    if tracked.returncode != 0:
+        raise ValueError("Segmentation runtime source tree differs from its Git binding")
+    untracked = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            "src/scitaste",
+        ],
+        check=False,
+        capture_output=True,
+        timeout=15,
+    )
+    if untracked.returncode != 0 or untracked.stdout.strip():
+        raise ValueError("Segmentation runtime source tree contains unbound files")
+
+    package = __import__("scitaste")
+    if Path(str(package.__file__)).resolve() != source_root / "__init__.py":
+        raise ValueError("Segmentation runtime loaded an unbound SciTaste package")
+    loaded_modules = {
+        "scitaste.evaluation.taste_source_segmentation": (
+            source_root / "evaluation/taste_source_segmentation.py"
+        ),
+        "scitaste.evaluation.taste_source_segmentation_protocol": (
+            source_root / "evaluation/taste_source_segmentation_protocol.py"
+        ),
+        "scitaste.evaluation.taste_source_segmentation_post_audit": (
+            source_root / "evaluation/taste_source_segmentation_post_audit.py"
+        ),
+        "scitaste.evaluation.model_identity": (source_root / "evaluation/model_identity.py"),
+        "scitaste.evaluation.natural_taste_review": (
+            source_root / "evaluation/natural_taste_review.py"
+        ),
+        "scitaste.taste.intrinsic": source_root / "taste/intrinsic.py",
+        "scitaste.project.models": source_root / "project/models.py",
+        "scitaste.resources": source_root / "resources/__init__.py",
+        "scitaste.resources.registry": source_root / "resources/registry.py",
+    }
+    for module_name, expected_path in loaded_modules.items():
+        module = __import__(module_name, fromlist=["__name__"])
+        if Path(str(module.__file__)).resolve() != expected_path:
+            raise ValueError("Segmentation runtime loaded a module outside the bound tree")
 
 
 def _atomic_bytes(path: Path, raw: bytes) -> None:
