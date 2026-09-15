@@ -228,6 +228,9 @@ def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
         authorized_by="project-owner",
         approval_origin="project-owner-conversation",
         approval_evidence_sha256=_SHA,
+        approval_evidence=SegmentationExecutionFileBinding(
+            locator="owner-approval.yaml", file_sha256=_SHA
+        ),
         authorized_at=now,
         expires_at=now + timedelta(hours=12),
         protocol=SegmentationExecutionFileBinding(locator="protocol.yaml", file_sha256=_SHA),
@@ -311,11 +314,14 @@ def test_authorization_is_self_hashed_and_cannot_overclaim() -> None:
         TasteSourceSegmentationExecutionAuthorization.model_validate(payload)
 
     incomplete = authorization.model_dump(mode="json")
-    incomplete["runner"]["runtime_modules"][-1] = incomplete["runner"][
-        "runtime_modules"
-    ][0]
+    incomplete["runner"]["runtime_modules"][-1] = incomplete["runner"]["runtime_modules"][0]
     with pytest.raises(ValidationError, match="runtime-module manifest is incomplete"):
         TasteSourceSegmentationExecutionAuthorization.model_validate(incomplete)
+
+    wrong_approval = authorization.model_dump(mode="json")
+    wrong_approval["approval_evidence"]["file_sha256"] = "b" * 64
+    with pytest.raises(ValidationError, match="owner-approval evidence hash differs"):
+        TasteSourceSegmentationExecutionAuthorization.model_validate(wrong_approval)
 
 
 def test_decision_boundary_routing_does_not_adjudicate_free_text_differences() -> None:

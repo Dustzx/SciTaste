@@ -6913,6 +6913,7 @@ def _handle_evaluation_taste_source_segmentation_execution_inspect(
                 "ai_d_inventory_replay_verified": (inspection.ai_d_inventory_replay_verified),
                 "ai_e_preexecution_pass_verified": (inspection.ai_e_preexecution_pass_verified),
                 "ai_e_authority_pass_verified": (inspection.ai_e_authority_pass_verified),
+                "owner_approval_receipt_verified": (inspection.owner_approval_receipt_verified),
                 "authorization_candidate_validated": (inspection.authorization_candidate_validated),
                 "execution_ready": inspection.execution_ready,
                 "external_action_performed": inspection.external_action_performed,

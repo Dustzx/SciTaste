@@ -189,6 +189,7 @@ class TasteSourceSegmentationExecutionAuthorization(BaseModel):
     authorized_by: str = Field(min_length=1, max_length=200)
     approval_origin: Literal["project-owner-conversation"]
     approval_evidence_sha256: str = Field(pattern=_SHA256)
+    approval_evidence: SegmentationExecutionFileBinding
     authorized_at: datetime
     expires_at: datetime
     protocol: SegmentationExecutionFileBinding
@@ -219,6 +220,8 @@ class TasteSourceSegmentationExecutionAuthorization(BaseModel):
             raise ValueError("Segmentation execution authorization window is invalid")
         _safe_locator(self.execution_ledger_locator)
         _safe_locator(self.run_output_locator)
+        if self.approval_evidence.file_sha256 != self.approval_evidence_sha256:
+            raise ValueError("Segmentation owner-approval evidence hash differs")
         expected = _canonical_sha256(self.model_dump(mode="json", exclude={"authorization_sha256"}))
         if self.authorization_sha256 != expected:
             raise ValueError("Segmentation execution authorization hash mismatch")
@@ -257,6 +260,7 @@ class TasteSourceSegmentationExecutionInspection(BaseModel):
     ai_d_inventory_replay_verified: Literal[True] = True
     ai_e_preexecution_pass_verified: Literal[True] = True
     ai_e_authority_pass_verified: Literal[True] = True
+    owner_approval_receipt_verified: Literal[True] = True
     authorization_candidate_validated: Literal[True] = True
     execution_ready: Literal[False] = False
     external_action_performed: Literal[False] = False
@@ -1413,6 +1417,60 @@ def _verify_predecessor_precontact_seal(
         raise ValueError("Segmentation AI-E preexecution review is not a bound pass")
 
 
+def _verify_owner_approval_receipt(
+    *,
+    root: Path,
+    authorization: TasteSourceSegmentationExecutionAuthorization,
+    protocol: TasteSourceSegmentationProtocolInspection,
+    request_pack: TasteSourceSegmentationRequestPack,
+) -> None:
+    """Bind the procedural conversation approval to the exact live scope."""
+
+    approval_path = _bound_path(root, authorization.approval_evidence)
+    approval = _yaml_mapping(approval_path, "segmentation owner-approval receipt")
+    generation = protocol.protocol.generation
+    limits = authorization.limits
+    expected_scope = {
+        "provider": authorization.requested_provider,
+        "model": authorization.requested_model,
+        "unique_item_count": request_pack.unique_item_count,
+        "segmenter_requests": generation.segmenter_total_requests,
+        "maximum_adjudication_requests": generation.maximum_adjudication_shards,
+        "identity_sentinel_requests": generation.identity_sentinel_requests,
+        "maximum_provider_requests": limits.maximum_provider_requests,
+        "maximum_input_tokens": limits.maximum_input_tokens,
+        "maximum_output_tokens": limits.maximum_output_tokens,
+        "retry_count": limits.retry_count,
+        "maximum_estimated_cost_cny": (authorization.price_ceiling.maximum_estimated_cost_cny),
+        "owner_maximum_liability_usd": (authorization.price_ceiling.owner_maximum_liability_usd),
+    }
+    authority = approval.get("authority")
+    if (
+        approval.get("schema_version") != "1.0"
+        or approval.get("project_id") != authorization.project_id
+        or approval.get("authorized_by") != authorization.authorized_by
+        or approval.get("approval_origin") != authorization.approval_origin
+        or approval.get("authorized_at") != authorization.authorized_at
+        or approval.get("authorization_scope") != expected_scope
+        or approval.get("human_identity_cryptographically_verified") is not False
+        or approval.get("procedural_trust_root")
+        != "project-owner-conversation-recorded-by-active-codex-session"
+        or not isinstance(authority, dict)
+        or authority.get("api_calls_authorized") is not True
+        or authority.get("prospective_calibration_authorized") is not True
+        or any(
+            authority.get(field) is not False
+            for field in (
+                "scaled_execution_authorized",
+                "benchmark_admission_authorized",
+                "formal_effectiveness_claim_authorized",
+                "human_review_claim_authorized",
+            )
+        )
+    ):
+        raise ValueError("Segmentation owner-approval receipt is invalid or scope-drifted")
+
+
 def _yaml_mapping(path: Path, label: str) -> dict[str, object]:
     payload = yaml.safe_load(_bounded_file(path, _MAX_PACKET_BYTES).read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -1571,6 +1629,12 @@ def inspect_taste_source_segmentation_execution_authorization(
         raise ValueError("Segmentation execution price ceiling is not contemporaneous")
 
     _verify_precontact_execution_gate(
+        root=root,
+        authorization=authorization,
+        protocol=protocol,
+        request_pack=pack,
+    )
+    _verify_owner_approval_receipt(
         root=root,
         authorization=authorization,
         protocol=protocol,
