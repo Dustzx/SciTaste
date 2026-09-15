@@ -1,0 +1,323 @@
+schema_version: "1.0"
+inventory_id: scitaste-model-role-inventory-20260915-v1
+observed_at: 2026-09-15T22:45:46+08:00
+observation_scope: read-only-static-metadata
+selection_authority: none
+
+selection_policy:
+  inventory_presence_selects_model: false
+  required_gate: task-excluded-conformance
+  formal_benchmark_tasks_may_be_used_for_selection: false
+  candidate_downloads_allowed: true
+  scientific_design_may_require_models_absent_from_inventory: true
+  freeze_after_conformance:
+    - exact_model_identity
+    - role_assignment
+    - prompt_and_tool_contract
+    - inference_parameters
+    - cost_and_latency_budget
+  additional_gates:
+    - license-and-provenance-review
+    - bounded-load-or-endpoint-preflight
+    - judge-independence-and-calibration
+  notes:
+    - Role fit below admits a candidate to conformance; it is not an experiment selection.
+    - Conformance tasks must be disjoint from every formal benchmark development, validation, and test task used for reported estimates.
+    - Task-training models are benchmark executors or trainable backbones, never SciTaste decision authorities.
+
+role_status_vocabulary:
+  candidate: General candidate for a task-excluded conformance window.
+  specialist_candidate: Candidate only for the named modality or pipeline substage.
+  baseline_candidate: Useful as a bounded baseline, sensitivity slice, or compatibility model.
+  blocked: Not eligible until the stated blocker is cleared.
+  not_applicable: The resource does not implement this role.
+
+sources:
+  - source_id: local-weights-20260915
+    location: local
+    root: /media/good/dxhismyson/weights
+    visibility: visible
+    observation_method: directory names, regular-file sizes, config/tokenizer metadata
+    top_level_entries: 19
+    model_or_component_entries: 16
+    non_model_entries: 3
+    regular_file_bytes_all_entries: 201457274318
+    regular_file_bytes_model_or_component_entries: 145456579422
+    filesystem:
+      total_bytes: 3936820731904
+      used_bytes: 3580812054528
+      available_bytes: 155952549888
+    gpu_at_observation:
+      device_count: 1
+      device_name: NVIDIA GeForce RTX 3090
+      memory_total_mib: 24576
+      memory_free_mib: 22694
+    excluded_non_model_entries:
+      - FEA
+      - FEA_reproduction_sources_private_20260901
+      - focus
+  - source_id: remote-model-root-pending-sync
+    location: remote
+    root: /media/sdb/wwh/models
+    visibility: not-visible-from-local-host
+    synchronization_status: pending
+    live_claims_permitted: false
+    cached_inventory_ref: docs/research/data/gpu_host_3090_2_model_assets_v1.yaml
+    notes:
+      - No remote connection, probe, transfer, or download was performed for this inventory.
+      - Cached remote records are provenance only until the source is synchronized or re-observed under separate authority.
+
+api_models:
+  - resource_id: deepseek-v4-flash
+    provider: deepseek
+    model_id: deepseek-v4-flash
+    inventory_state: current-pending-authenticated-conformance
+    evidence_ref: configs/resources/api/deepseek_v4_flash_v3.yaml
+    role_fit:
+      research_agent: candidate
+      code_agent: candidate
+      judge: candidate
+      embedding: not_applicable
+      task_training: not_applicable
+    constraints: A rolling API alias; freeze the observed identity window and do not judge its own outputs in the main comparison.
+  - resource_id: zhipu-glm53-flash
+    provider: zhipu
+    model_id: glm-5.3-flash
+    inventory_state: current-availability-observed
+    evidence_ref: configs/resources/api/zhipu_glm53_flash_v3.yaml
+    role_fit:
+      research_agent: candidate
+      code_agent: candidate
+      judge: candidate
+      embedding: not_applicable
+      task_training: not_applicable
+    constraints: A rolling API alias; formal role selection remains task-excluded and judge use must be generator-independent.
+  - resource_id: bailian-qwen38-max
+    provider: alibaba-bailian
+    model_id: qwen3.8-max
+    inventory_state: historical-blocked
+    evidence_ref: configs/resources/api/bailian_qwen38_max.yaml
+    role_fit:
+      research_agent: blocked
+      code_agent: blocked
+      judge: blocked
+      embedding: not_applicable
+      task_training: not_applicable
+    constraints: Preserve historical provenance only until availability and conformance are re-established.
+
+local_assets:
+  - asset_id: glm-5-3-flash-tokenizer-local
+    path_name: GLM-5.3-Flash-tokenizer
+    category: tokenizer-only
+    regular_file_bytes: 20298997
+    architecture: Glm5NextForConditionalGeneration
+    model_type: glm5_next
+    tokenizer_class: TokenizersBackend
+    model_max_length: 1048576
+    weights_layout: none
+    license_metadata: absent
+    role_fit: {research_agent: not_applicable, code_agent: not_applicable, judge: not_applicable, embedding: not_applicable, task_training: not_applicable}
+    constraints: Prompt-length and tokenizer compatibility support only; no generation weights are present.
+  - asset_id: internvl3-5-4b-local
+    path_name: InternVL3_5-4B
+    category: multimodal-generative-model
+    regular_file_bytes: 9481141635
+    architecture: InternVLChatModel
+    model_type: internvl_chat
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 14588
+    weights_layout: indexed-safetensors-2-of-2
+    license_metadata: apache-2.0
+    role_fit: {research_agent: specialist_candidate, code_agent: baseline_candidate, judge: specialist_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Custom-code load path and multimodal role require a bounded runtime preflight.
+  - asset_id: llava-onevision-1-5-4b-local
+    path_name: LLaVA-OneVision-1.5-4B-Instruct
+    category: multimodal-generative-model
+    regular_file_bytes: 9592346034
+    architecture: LLaVAOneVision1_5_ForConditionalGeneration
+    model_type: null
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 131072
+    weights_layout: indexed-safetensors-2-of-2
+    license_metadata: apache-2.0
+    role_fit: {research_agent: specialist_candidate, code_agent: baseline_candidate, judge: specialist_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Prefer as a multimodal comparator or task backbone, subject to conformance.
+  - asset_id: lavit-3b-local
+    path_name: LaViT-3B
+    category: multimodal-reasoning-model
+    regular_file_bytes: 15107866431
+    architecture: Qwen2_5_VLForConditionalGeneration
+    model_type: qwen2_5_vl
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 131072
+    weights_layout: indexed-safetensors-4-of-4
+    license_metadata: apache-2.0
+    role_fit: {research_agent: specialist_candidate, code_agent: not_applicable, judge: specialist_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Visual-grounding specialist; not a default full-workflow controller.
+  - asset_id: pixelreasoner-local
+    path_name: PixelReasoner
+    category: multimodal-reasoning-model
+    regular_file_bytes: 16589541475
+    architecture: Qwen2_5_VLForConditionalGeneration
+    model_type: qwen2_5_vl
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 131072
+    weights_layout: indexed-safetensors-4-of-4
+    license_metadata: apache-2.0
+    role_fit: {research_agent: specialist_candidate, code_agent: not_applicable, judge: specialist_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Visual reasoning specialist; exact upstream identity and runtime behavior must be checked before use.
+  - asset_id: qwen3-vl-2b-instruct-local
+    path_name: Qwen3-VL-2B-Instruct
+    category: multimodal-generative-model
+    regular_file_bytes: 4266648961
+    architecture: Qwen3VLForConditionalGeneration
+    model_type: qwen3_vl
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 262144
+    weights_layout: single-safetensors
+    license_metadata: apache-2.0
+    role_fit: {research_agent: baseline_candidate, code_agent: baseline_candidate, judge: baseline_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Ordinary low-cost candidate only; it has no preferred or headline role.
+  - asset_id: qwen3-vl-4b-instruct-local
+    path_name: Qwen3-VL-4B-Instruct
+    category: multimodal-generative-model
+    regular_file_bytes: 8887292732
+    architecture: Qwen3VLForConditionalGeneration
+    model_type: qwen3_vl
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 262144
+    weights_layout: indexed-safetensors-2-of-2
+    license_metadata: apache-2.0
+    role_fit: {research_agent: candidate, code_agent: baseline_candidate, judge: specialist_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Candidate status depends on the same task-excluded gate as every other model.
+  - asset_id: qwen3-vl-8b-instruct-local
+    path_name: Qwen3-VL-8B-Instruct
+    category: multimodal-generative-model
+    regular_file_bytes: 17545915883
+    architecture: Qwen3VLForConditionalGeneration
+    model_type: qwen3_vl
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 262144
+    weights_layout: indexed-safetensors-4-of-4
+    license_metadata: apache-2.0
+    role_fit: {research_agent: candidate, code_agent: candidate, judge: candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Single-card feasibility, throughput, and independence must be established before assignment.
+  - asset_id: qwen3-5-4b-local
+    path_name: Qwen3.5-4B
+    category: multimodal-generative-model
+    regular_file_bytes: 9342907469
+    architecture: Qwen3_5ForConditionalGeneration
+    model_type: qwen3_5
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 262144
+    weights_layout: indexed-safetensors-2-of-2
+    license_metadata: apache-2.0
+    role_fit: {research_agent: candidate, code_agent: candidate, judge: specialist_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Content presence is verified historically, but loadability and role quality remain unverified.
+  - asset_id: zwz-4b-local
+    path_name: ZwZ-4B
+    category: fine-grained-visual-perception-model
+    regular_file_bytes: 9669958026
+    architecture: Qwen3VLForConditionalGeneration
+    model_type: qwen3_vl
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 262144
+    weights_layout: indexed-safetensors-2-of-2
+    license_metadata: apache-2.0
+    role_fit: {research_agent: specialist_candidate, code_agent: not_applicable, judge: specialist_candidate, embedding: not_applicable, task_training: candidate}
+    constraints: Fine-grained visual specialist; not a default scientific-reasoning controller.
+  - asset_id: all-minilm-l6-v2-local
+    path_name: all-MiniLM-L6-v2
+    category: embedding-model
+    regular_file_bytes: 976948668
+    architecture: BertModel
+    model_type: bert
+    tokenizer_class: BertTokenizer
+    model_max_length: 512
+    weights_layout: redundant-framework-formats
+    license_metadata: apache-2.0
+    role_fit: {research_agent: not_applicable, code_agent: not_applicable, judge: not_applicable, embedding: candidate, task_training: baseline_candidate}
+    constraints: English 384-dimensional retrieval baseline; scientific-domain and multilingual alternatives may be downloaded and compared.
+  - asset_id: llava-1-5-7b-hf-local
+    path_name: llava-1.5-7b-hf
+    category: multimodal-generative-model
+    regular_file_bytes: 14131147585
+    architecture: LlavaForConditionalGeneration
+    model_type: llava
+    tokenizer_class: LlamaTokenizer
+    model_max_length: null
+    weights_layout: indexed-safetensors-3-of-3
+    license_metadata: llama2
+    role_fit: {research_agent: baseline_candidate, code_agent: not_applicable, judge: baseline_candidate, embedding: not_applicable, task_training: baseline_candidate}
+    constraints: Legacy multimodal comparator; tokenizer length metadata is not a usable context limit.
+  - asset_id: sam-vit-base-local
+    path_name: sam-vit-base
+    category: vision-component
+    regular_file_bytes: 1125337705
+    architecture: SamModel
+    model_type: sam
+    tokenizer_class: null
+    model_max_length: null
+    weights_layout: redundant-framework-formats
+    license_metadata: apache-2.0
+    role_fit: {research_agent: not_applicable, code_agent: not_applicable, judge: not_applicable, embedding: not_applicable, task_training: candidate}
+    constraints: Segmentation task component only.
+  - asset_id: sam2-1-hiera-tiny-local
+    path_name: sam2.1-hiera-tiny
+    category: vision-component
+    regular_file_bytes: 311947528
+    architecture: Sam2VideoModel
+    model_type: sam2_video
+    tokenizer_class: null
+    model_max_length: null
+    weights_layout: safetensors-and-native-checkpoint
+    license_metadata: apache-2.0
+    role_fit: {research_agent: not_applicable, code_agent: not_applicable, judge: not_applicable, embedding: not_applicable, task_training: candidate}
+    constraints: Image/video segmentation task component only.
+  - asset_id: seal-vqa-7b-local
+    path_name: seal_vqa_7b
+    category: visual-question-answering-model
+    regular_file_bytes: 14278271796
+    architecture: LlavaSearchLlamaForCausalLM
+    model_type: llava_search
+    tokenizer_class: LlamaTokenizer
+    model_max_length: 2048
+    weights_layout: indexed-pytorch-bin-2-of-2
+    license_metadata: absent
+    role_fit: {research_agent: not_applicable, code_agent: not_applicable, judge: specialist_candidate, embedding: not_applicable, task_training: baseline_candidate}
+    constraints: License and upstream provenance must be resolved before any use.
+  - asset_id: visualcot-7b-local
+    path_name: visualCoT-7B
+    category: multimodal-reasoning-model
+    regular_file_bytes: 14129008497
+    architecture: LlavaLlamaForCausalLM
+    model_type: llava
+    tokenizer_class: LlamaTokenizer
+    model_max_length: 2048
+    weights_layout: indexed-pytorch-bin-2-of-2
+    license_metadata: llama2
+    role_fit: {research_agent: specialist_candidate, code_agent: not_applicable, judge: specialist_candidate, embedding: not_applicable, task_training: baseline_candidate}
+    constraints: Visual chain-of-thought baseline; not a default full-workflow controller.
+
+pipeline_role_plan:
+  literature_idea_hypothesis: research_agent
+  experiment_design_and_taste_selection: research_agent
+  implementation_debugging_and_tool_use: code_agent
+  retrieval_and_memory_indexing: embedding
+  benchmark_training_and_objective_execution: task_training
+  evidence_synthesis_and_manuscript: research_agent
+  blinded_review_and_adjudication: judge
+  authority_rules:
+    - Deterministic task scorers remain primary wherever available.
+    - A judge must not score its own generated answer in the headline estimate.
+    - Research-agent, code-agent, and judge may be different models selected independently by role.
+    - Existing inventory is a cost optimization after scientific equivalence, never a restriction on design.
+
+external_actions:
+  api_calls: 0
+  model_loads: 0
+  gpu_jobs: 0
+  model_transfers: 0
+  model_downloads: 0
+  remote_connections: 0
+  weight_hashes_computed: 0
