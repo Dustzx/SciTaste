@@ -307,6 +307,44 @@ class AIRawPreferenceResponse(BaseModel):
         return self
 
 
+class AIReviewUsage(BaseModel):
+    """Hash-bound provider token and cost telemetry."""
+
+    model_config = _CONFIG
+
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    cached_input_tokens: int = Field(default=0, ge=0)
+    cost_usd: float = Field(ge=0, allow_inf_nan=False)
+    pricing_sha256: str = Field(pattern=_SHA256)
+    usage_sha256: str = Field(pattern=_SHA256)
+    cost_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def usage_is_coherent_and_self_hashed(self) -> AIReviewUsage:
+        if self.total_tokens != self.input_tokens + self.output_tokens:
+            raise ValueError("AI review total tokens do not match input plus output")
+        if self.cached_input_tokens > self.input_tokens:
+            raise ValueError("AI review cached input tokens exceed input tokens")
+        usage_payload = {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
+            "cached_input_tokens": self.cached_input_tokens,
+        }
+        if self.usage_sha256 != _canonical_sha256(usage_payload):
+            raise ValueError("AI review usage hash mismatch")
+        cost_payload = {
+            **usage_payload,
+            "cost_usd": self.cost_usd,
+            "pricing_sha256": self.pricing_sha256,
+        }
+        if self.cost_sha256 != _canonical_sha256(cost_payload):
+            raise ValueError("AI review cost hash mismatch")
+        return self
+
+
 class AIReviewExecutionReceipt(BaseModel):
     """Caller-supplied evidence that binds one model invocation to raw bytes."""
 
@@ -319,13 +357,17 @@ class AIReviewExecutionReceipt(BaseModel):
     model: str = Field(min_length=1, max_length=300)
     model_revision: str = Field(min_length=1, max_length=300)
     reviewer_identity_sha256: str = Field(pattern=_SHA256)
+    backend_config: AIPreferenceFileBinding
     request: AIPreferenceFileBinding
     request_sha256: str = Field(pattern=_SHA256)
+    http_request: AIPreferenceFileBinding
+    raw_http_body: AIPreferenceFileBinding
     raw_response: AIPreferenceFileBinding
     provider_request_id: str = Field(min_length=1, max_length=1_000)
     started_at: datetime
     completed_at: datetime
     http_status: int = Field(ge=100, le=599)
+    usage: AIReviewUsage
     model_call_observed: Literal[True] = True
     reviewer_kind: Literal["ai"] = "ai"
     not_human_review: Literal[True] = True
@@ -488,8 +530,8 @@ class AIAdjudicationRequest(BaseModel):
     decision_standards: tuple[str, ...]
     tie_rule: str
     cannot_assess_rule: str
-    required_response_schema: Literal["scitaste-ai-preference-response-v1"] = (
-        "scitaste-ai-preference-response-v1"
+    required_response_schema: Literal["scitaste-ai-adjudication-response-v1"] = (
+        "scitaste-ai-adjudication-response-v1"
     )
     items: tuple[AIAdjudicationRequestItem, ...] = Field(min_length=1, max_length=100_000)
     disputed_items_only: Literal[True] = True
@@ -916,6 +958,9 @@ def _verify_response_and_receipt(
     ):
         raise ValueError("AI execution receipt does not bind the assigned model request")
     request_path = _bound_public_file(root, receipt.request)
+    backend_config_path = _bound_public_file(root, receipt.backend_config)
+    http_request_path = _bound_public_file(root, receipt.http_request)
+    raw_http_path = _bound_public_file(root, receipt.raw_http_body)
     raw_path = _bound_public_file(root, receipt.raw_response)
     if raw_path != raw_file or _sha256(raw_path) != _sha256(raw_file):
         raise ValueError("AI execution receipt does not bind the supplied raw response bytes")
@@ -926,8 +971,16 @@ def _verify_response_and_receipt(
         raise ValueError("AI execution receipt request differs from the request pack")
     if receipt.http_status < 200 or receipt.http_status >= 300:
         raise ValueError("AI primary execution receipt did not observe a successful response")
-    if receipt_file in {raw_file, request_path}:
-        raise ValueError("AI execution receipt must be a distinct retained file")
+    evidence_files = {
+        receipt_file,
+        backend_config_path,
+        http_request_path,
+        raw_http_path,
+        raw_file,
+        request_path,
+    }
+    if len(evidence_files) != 6:
+        raise ValueError("AI execution receipt evidence files must be distinct")
 
 
 def _find_disputes(rows: list[AINormalizedPreferenceRow]) -> tuple[AIPreferenceDispute, ...]:
@@ -1167,11 +1220,14 @@ __all__ = [
     "AIBlindPreferenceProtocol",
     "AINormalizedPreferenceRow",
     "AIPreferenceDisposition",
+    "AIPreferenceFileBinding",
     "AIPreferenceLockReport",
     "AIPreferenceModelIdentity",
+    "AIPreferencePrimaryRequest",
     "AIPreferenceRequestPack",
     "AIRawPreferenceResponse",
     "AIReviewExecutionReceipt",
+    "AIReviewUsage",
     "LockedAIPreferenceReviewSet",
     "compile_ai_preference_request_pack",
     "load_ai_blind_preference_protocol",

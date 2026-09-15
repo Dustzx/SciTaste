@@ -4340,9 +4340,8 @@ before the deadline-critical Track-A H1/H2 pilot.
 
 ### ADR-135: Track-A preference review has an explicit AI-only evidence lane
 
-Status: accepted and implemented through primary lock and disputed-only routing;
-live calls, adjudicator import, private-key opening, and effect estimation remain
-separate actions.
+Status: accepted and implemented through bounded execution, final lock, and
+AI-only descriptive analysis; no live call or paper-level effect is claimed.
 
 The H1/H2 public blind package is reusable without converting a model judgment
 into human evidence. `ai-preference-pack-prepare` accepts either its public
@@ -4372,6 +4371,29 @@ This lane consistently serializes `reviewer_kind=ai`,
 `not_human_review=true`, and `human_validity_claim_allowed=false`; human identity,
 qualification, and consent flags are false. It can replace an unavailable human
 operational gate for the self-development study, but it cannot support a human
-preference or external-expert validity claim. Private condition opening and AI
-effect analysis require a later adapter that consumes the locked AI schema
-without renaming it as a human review set.
+preference or external-expert validity claim. The downstream execution and
+analysis adapter consumes this locked AI schema without renaming it as a human
+review set. Its final lock explicitly sets
+`operational_review_gate_satisfied=true`, so orchestration can continue without
+waiting for a person while preserving that epistemic distinction.
+
+Execution is a separate, double-opt-in action. A secret-free backend file names
+an environment variable, HTTPS endpoint, exact provider/model/revision, zero
+retries, timeout, output ceiling, and captured USD rates. A phase budget reserves
+exactly two primary calls or one adjudicator call and bounds each request plus
+the aggregate tokens and cost before contact. The runner resolves keys only from
+the environment, calls each identity once, persists the exact HTTP request and
+raw response body, extracts a strict JSON response, and binds request/config,
+HTTP status, provider request ID, timestamps, token usage, derived cost, and all
+file hashes in its receipt. A failed request writes a terminal failure record;
+the occupied output directory cannot silently resume or recall a successful
+identity.
+
+`ai-preference-adjudicator-execute` either performs the one identically bounded
+online call or emits a content-bound local execution request that grants no
+execution authority. `ai-preference-finalize` accepts adjudicator evidence if
+and only if primary disputes exist, verifies exact dispute coverage, and locks
+one AI result per H1/H2 case block. `ai-preference-analyze` first replays this
+public chain, then and only then reads the committed private condition map. Its
+input and descriptive result use endpoint kind `ai-only-paired-preference`, set
+`human_or_expert_endpoint=false`, and preserve the source-group paired rows.

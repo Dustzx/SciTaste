@@ -13,6 +13,14 @@ semantic versioning.
   condition evidence, and emits a third-model request only for disputed blocks.
   Every artifact declares `reviewer_kind=ai`, `not_human_review=true`, and no
   human validity, identity, qualification, or consent claim.
+- Completed its execution and analysis lane: two OpenAI-compatible primaries
+  run once each under pre-reserved call/token/cost ceilings, secrets resolve
+  only from named environment variables, exact HTTP bodies and usage/cost
+  derivations remain hash-bound, and failures never retry. The third identity
+  can run online or emit a non-authorizing local request, after which exact
+  disputed-only responses lock one final AI result per block. Only then may a
+  committed private condition map open for a descriptively labelled
+  `ai-only-paired-preference` H1/H2 result, never a human/expert endpoint.
 - Recorded prospective segmentation v7 as consumed after its second provider
   contact rejected two unknown fields whose values were both `null`. This is a
   strict adapter-contract failure, not evidence about model quality or Taste

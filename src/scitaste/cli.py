@@ -81,6 +81,7 @@ from scitaste.evaluation import (
     TasteSourceReviewRole,
     align_evidence_program_to_benchmark,
     allocate_benchmark_metadata_population,
+    analyze_ai_paired_preferences,
     analyze_human_preferences,
     approve_benchmark_metadata_allocation,
     approve_benchmark_metadata_projection,
@@ -105,6 +106,9 @@ from scitaste.evaluation import (
     compile_taste_source_segmentation_agreement,
     complete_objective_result_set,
     derive_h4_formal_preparation_request,
+    execute_ai_preference_adjudicator,
+    execute_ai_preference_primary_panel,
+    finalize_ai_preference_reviews,
     inspect_acquired_json_content,
     inspect_acquired_structured_metadata,
     inspect_acquired_task_cohort,
@@ -2239,6 +2243,68 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(ai_preference_lock)
     ai_preference_lock.set_defaults(handler=_handle_evaluation_ai_preference_lock)
+    ai_preference_execute = evaluation_commands.add_parser(
+        "ai-preference-primary-execute",
+        help="Execute the two AI-only primary requests once under explicit token/cost ceilings",
+    )
+    ai_preference_execute.add_argument("--pack", type=Path, required=True)
+    ai_preference_execute.add_argument(
+        "--backend-config",
+        type=Path,
+        action="append",
+        required=True,
+        help="secret-free provider config; provide exactly twice",
+    )
+    ai_preference_execute.add_argument("--budget", type=Path, required=True)
+    ai_preference_execute.add_argument("--evidence-root", type=Path, default=Path("."))
+    ai_preference_execute.add_argument("--output", type=Path, required=True)
+    ai_preference_execute.add_argument(
+        "--allow-live",
+        action="store_true",
+        help="authorize exactly the two zero-retry calls bound by this command",
+    )
+    _add_log_level_option(ai_preference_execute)
+    ai_preference_execute.set_defaults(handler=_handle_evaluation_ai_preference_execute)
+    ai_adjudicator_execute = evaluation_commands.add_parser(
+        "ai-preference-adjudicator-execute",
+        help="Execute one disputed-only AI adjudicator or emit a local execution request",
+    )
+    ai_adjudicator_execute.add_argument("--request", type=Path, required=True)
+    ai_adjudicator_execute.add_argument("--backend-config", type=Path, required=True)
+    ai_adjudicator_execute.add_argument("--budget", type=Path, required=True)
+    ai_adjudicator_execute.add_argument("--evidence-root", type=Path, default=Path("."))
+    ai_adjudicator_execute.add_argument("--output", type=Path, required=True)
+    ai_adjudicator_execute.add_argument(
+        "--allow-live",
+        action="store_true",
+        help="authorize the one zero-retry online call; ignored for a local handoff",
+    )
+    _add_log_level_option(ai_adjudicator_execute)
+    ai_adjudicator_execute.set_defaults(handler=_handle_evaluation_ai_adjudicator_execute)
+    ai_preference_finalize = evaluation_commands.add_parser(
+        "ai-preference-finalize",
+        help="Import disputed-only adjudication and lock one AI-only outcome per H1/H2 block",
+    )
+    ai_preference_finalize.add_argument("--primary-reviews", type=Path, required=True)
+    ai_preference_finalize.add_argument("--adjudicator-request", type=Path, default=None)
+    ai_preference_finalize.add_argument("--adjudicator-raw-response", type=Path, default=None)
+    ai_preference_finalize.add_argument("--adjudicator-receipt", type=Path, default=None)
+    ai_preference_finalize.add_argument("--evidence-root", type=Path, default=Path("."))
+    ai_preference_finalize.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(ai_preference_finalize)
+    ai_preference_finalize.set_defaults(handler=_handle_evaluation_ai_preference_finalize)
+    ai_preference_analyze = evaluation_commands.add_parser(
+        "ai-preference-analyze",
+        help="Open the committed condition map after AI lock and compute descriptive H1/H2",
+    )
+    ai_preference_analyze.add_argument("--study", type=Path, required=True)
+    ai_preference_analyze.add_argument("--final-reviews", type=Path, required=True)
+    ai_preference_analyze.add_argument("--blind-key", type=Path, required=True)
+    ai_preference_analyze.add_argument("--evidence-root", type=Path, default=Path("."))
+    ai_preference_analyze.add_argument("--analysis-input", type=Path, required=True)
+    ai_preference_analyze.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(ai_preference_analyze)
+    ai_preference_analyze.set_defaults(handler=_handle_evaluation_ai_preference_analyze)
     human_study_prepare = evaluation_commands.add_parser(
         "human-study-prepare",
         help="Compile timestamped benchmark recordings into a condition-hidden H1/H2 package",
@@ -6514,12 +6580,8 @@ def _handle_taste_refresh_project_policy(args: argparse.Namespace) -> int:
                 "source_episode_count": readiness["source_episode_count"],
                 "training_episode_count": readiness["training_episode_count"],
                 "observed_family_count": readiness["observed_family_count"],
-                "support_sufficient_family_count": readiness[
-                    "support_sufficient_family_count"
-                ],
-                "adaptive_head_ready_family_count": readiness[
-                    "adaptive_head_ready_family_count"
-                ],
+                "support_sufficient_family_count": readiness["support_sufficient_family_count"],
+                "adaptive_head_ready_family_count": readiness["adaptive_head_ready_family_count"],
                 "policy_application_ready": receipt.policy_application_ready,
                 "policy_application_authorized": receipt.policy_application_authorized,
                 "formal_effect_claim_ready": receipt.formal_effect_claim_ready,
@@ -6570,8 +6632,7 @@ def _handle_taste_family_policy_fit(args: argparse.Namespace) -> int:
         for family, head in model.family_heads.items()
         if head.feature_posteriors
         and any(
-            item.support >= head.config.minimum_feature_support
-            for item in head.feature_posteriors
+            item.support >= head.config.minimum_feature_support for item in head.feature_posteriors
         )
     ]
     print(
@@ -7645,6 +7706,92 @@ def _handle_evaluation_ai_preference_lock(args: argparse.Namespace) -> int:
             },
             indent=2,
             ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_ai_preference_execute(args: argparse.Namespace) -> int:
+    if len(args.backend_config) != 2:
+        raise ValueError("--backend-config must be provided exactly twice")
+    run = execute_ai_preference_primary_panel(
+        evidence_root=args.evidence_root,
+        request_pack_path_or_dir=args.pack,
+        backend_config_paths=tuple(args.backend_config),
+        budget_path=args.budget,
+        output_dir=args.output,
+        allow_live=args.allow_live,
+    )
+    print(run.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_evaluation_ai_adjudicator_execute(args: argparse.Namespace) -> int:
+    result = execute_ai_preference_adjudicator(
+        evidence_root=args.evidence_root,
+        adjudicator_request_path=args.request,
+        backend_config_path=args.backend_config,
+        budget_path=args.budget,
+        output_dir=args.output,
+        allow_live=args.allow_live,
+    )
+    print(result.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_evaluation_ai_preference_finalize(args: argparse.Namespace) -> int:
+    final = finalize_ai_preference_reviews(
+        evidence_root=args.evidence_root,
+        primary_review_set_path=args.primary_reviews,
+        output_path=args.output,
+        adjudicator_request_path=args.adjudicator_request,
+        adjudicator_raw_response_path=args.adjudicator_raw_response,
+        adjudicator_execution_receipt_path=args.adjudicator_receipt,
+    )
+    print(
+        json.dumps(
+            {
+                "final_review_set_sha256": final.final_review_set_sha256,
+                "block_count": len(final.blocks),
+                "adjudicated_block_count": sum(
+                    item.resolution_source == "ai-adjudicator" for item in final.blocks
+                ),
+                "reviewer_kind": "ai",
+                "not_human_review": True,
+                "human_validity_claim_allowed": False,
+                "operational_review_gate_satisfied": True,
+                "output": str(args.output),
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_ai_preference_analyze(args: argparse.Namespace) -> int:
+    analysis, result = analyze_ai_paired_preferences(
+        evidence_root=args.evidence_root,
+        study_path=args.study,
+        final_review_set_path=args.final_reviews,
+        blind_key_path=args.blind_key,
+        analysis_input_path=args.analysis_input,
+        result_path=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "analysis_input_sha256": analysis.analysis_input_sha256,
+                "result_sha256": result.result_sha256,
+                "endpoint_kind": result.endpoint_kind,
+                "human_or_expert_endpoint": False,
+                "operational_review_gate_satisfied": True,
+                "hypothesis_results": [
+                    item.model_dump(mode="json") for item in result.hypothesis_results
+                ],
+                "analysis_input": str(args.analysis_input),
+                "output": str(args.output),
+            },
+            indent=2,
         )
     )
     return 0
