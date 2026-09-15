@@ -497,9 +497,12 @@ from scitaste.taste.trajectory_reconstruction import (
     attach_prospective_taste_outcome,
     capture_prospective_taste_decision,
     compile_prospective_taste_episode,
+    compile_prospective_taste_episode_v2,
     load_taste_process_episode_proposal,
     load_taste_prospective_capture,
+    load_taste_prospective_completion_projection,
     load_taste_prospective_decision_lock,
+    load_taste_prospective_outcome_attachment,
     load_taste_trajectory_inventory,
     load_taste_trajectory_sampling_plan,
     lock_prospective_taste_decision,
@@ -1726,6 +1729,20 @@ def build_parser() -> argparse.ArgumentParser:
     process_compile.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(process_compile)
     process_compile.set_defaults(handler=_handle_taste_compile_prospective_episode)
+    process_compile_v2 = taste_commands.add_parser(
+        "compile-prospective-episode-v2",
+        help="Compile one sealed attribution against a two-phase prospective foundation",
+    )
+    process_compile_v2.add_argument("--plan", type=Path, required=True)
+    process_compile_v2.add_argument("--lock", type=Path, required=True)
+    process_compile_v2.add_argument("--attachment", type=Path, required=True)
+    process_compile_v2.add_argument("--projection", type=Path, required=True)
+    process_compile_v2.add_argument("--proposal", type=Path, required=True)
+    process_compile_v2.add_argument("--expected-revision", type=int, required=True)
+    process_compile_v2.add_argument("--output", type=Path, required=True)
+    process_compile_v2.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(process_compile_v2)
+    process_compile_v2.set_defaults(handler=_handle_taste_compile_prospective_episode_v2)
     project_policy_corpus = taste_commands.add_parser(
         "seal-project-policy-corpus",
         help="Seal one explicit project-owned population of AI-reviewed Taste episodes",
@@ -6682,6 +6699,51 @@ def _handle_taste_compile_prospective_episode(args: argparse.Namespace) -> int:
                 "candidate_id": candidate.candidate_id,
                 "candidate_sha256": candidate.candidate_sha256,
                 "maturity": candidate.maturity.value,
+                "ready_for_ai_attribution_review": True,
+                "retrieval_eligible": False,
+                "policy_update_authorized": False,
+                "no_model_calls_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_compile_prospective_episode_v2(args: argparse.Namespace) -> int:
+    plan = load_taste_trajectory_sampling_plan(args.plan)
+    lock = load_taste_prospective_decision_lock(args.lock)
+    attachment = load_taste_prospective_outcome_attachment(args.attachment)
+    projection = load_taste_prospective_completion_projection(args.projection)
+    proposal = load_taste_process_episode_proposal(args.proposal)
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, plan.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(
+            f"process episode v2 compilation requires a verified current Idea: {codes}"
+        )
+    candidate = compile_prospective_taste_episode_v2(
+        plan,
+        lock,
+        attachment,
+        projection,
+        proposal,
+        runtime=runtime,
+        current_idea_revision=idea_report.current_binding,
+        expected_project_revision=args.expected_revision,
+        output=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "prospective-process-episode-quarantined-v2",
+                "output": str(args.output),
+                "candidate_id": candidate.candidate_id,
+                "candidate_sha256": candidate.candidate_sha256,
+                "maturity": candidate.maturity.value,
+                "two_phase_temporal_foundation_verified": True,
                 "ready_for_ai_attribution_review": True,
                 "retrieval_eligible": False,
                 "policy_update_authorized": False,
