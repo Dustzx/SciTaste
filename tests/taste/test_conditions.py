@@ -8,12 +8,14 @@ from scitaste.data.store import TasteLibrary
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.conditions import (
+    NativeLifecycleCondition,
     NativeTasteCondition,
     build_native_condition_runtime,
     load_native_condition_matrix,
 )
 
 MATRIX = "configs/evaluation/native_taste_condition_matrix_v1.yaml"
+H4_MATRIX = "configs/evaluation/native_lifecycle_taste_h4_matrix_v1.yaml"
 
 
 def _case(
@@ -64,6 +66,19 @@ def test_native_condition_matrix_rejects_component_smuggling(tmp_path) -> None:
         assert "native condition profile drift: native-base" in str(error)
     else:  # pragma: no cover - explicit assertion message
         raise AssertionError("component drift was accepted")
+
+
+def test_h4_lifecycle_matrix_changes_no_static_component() -> None:
+    matrix = load_native_condition_matrix(H4_MATRIX).matrix
+
+    assert matrix.schema_version == "1.2"
+    assert {item.condition_id for item in matrix.profiles} == set(
+        NativeLifecycleCondition
+    )
+    learned = matrix.profile(NativeLifecycleCondition.LEARNED_POLICY_ON)
+    control = matrix.profile(NativeLifecycleCondition.LEARNED_POLICY_OFF)
+    assert learned.components == control.components
+    assert learned.role != control.role
 
 
 def test_full_and_placebo_retrieve_disjoint_taste_domains(tmp_path) -> None:

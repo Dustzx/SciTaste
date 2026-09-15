@@ -358,6 +358,20 @@ def idea_binding_matches_current(
     )
 
 
+def idea_scientific_contract_sha256(binding: ProjectIdeaRevisionBinding) -> str:
+    """Hash stable scientific identity while excluding unrelated project revisions."""
+
+    return content_sha256(
+        {
+            "project_id": binding.project_id,
+            "revision_id": binding.revision_id,
+            "record_locator": binding.record_locator,
+            "record_sha256": binding.record_sha256,
+            "artifact_sha256": binding.artifact_sha256,
+        }
+    )
+
+
 def _load_and_verify_entry(
     runtime: Any,
     snapshot: ProjectSnapshot,
@@ -509,6 +523,7 @@ __all__ = [
     "ProjectIdeaRevisionEntry",
     "ProjectIdeaRevisionReport",
     "idea_binding_matches_current",
+    "idea_scientific_contract_sha256",
     "inspect_current_idea_revision",
     "read_project_idea_ledger",
     "register_project_idea_revision",

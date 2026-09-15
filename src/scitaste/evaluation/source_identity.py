@@ -22,7 +22,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.project.models import content_sha256
 
-SourceIdentityNamespace = Literal["f1000-work-v1", "openreview-forum-v1"]
+SourceIdentityNamespace = Literal[
+    "f1000-work-v1",
+    "openreview-forum-v1",
+    "benchmark-task-v1",
+]
 
 _CONFIG = ConfigDict(
     extra="forbid",
@@ -38,9 +42,13 @@ _F1000_DOI = re.compile(
     re.IGNORECASE,
 )
 _OPENREVIEW_FORUM = re.compile(r"^[A-Za-z0-9_-]{3,200}$")
+_BENCHMARK_TASK = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]{0,199}::[A-Za-z0-9][A-Za-z0-9._-]{0,199}$"
+)
 _PREFIX = {
     "f1000-work-v1": "f1000-work",
     "openreview-forum-v1": "openreview-forum",
+    "benchmark-task-v1": "benchmark-task",
 }
 _MAX_REGISTRY_BYTES = 16 * 1_048_576
 
@@ -55,6 +63,12 @@ def canonical_openreview_source_group_id(forum_id: str) -> str:
     """Return one stable opaque identity for an OpenReview forum trajectory."""
 
     return _canonical_group_id("openreview-forum-v1", forum_id)
+
+
+def canonical_benchmark_task_source_group_id(benchmark_id: str, task_id: str) -> str:
+    """Return a stable opaque identity for one held-out benchmark task."""
+
+    return _canonical_group_id("benchmark-task-v1", f"{benchmark_id}::{task_id}")
 
 
 class CanonicalSourceIdentity(BaseModel):
@@ -234,15 +248,20 @@ def _normalize_source_identifier(
         if match is None:
             raise ValueError("F1000 source identity must be a supported DOI or versioned DOI")
         return match.group("base").casefold()
-    if _OPENREVIEW_FORUM.fullmatch(value) is None:
-        raise ValueError("OpenReview source identity must be one exact forum ID")
-    return value
+    if namespace == "openreview-forum-v1":
+        if _OPENREVIEW_FORUM.fullmatch(value) is None:
+            raise ValueError("OpenReview source identity must be one exact forum ID")
+        return value
+    if _BENCHMARK_TASK.fullmatch(value) is None:
+        raise ValueError("benchmark source identity must be benchmark-id::task-id")
+    return value.casefold()
 
 
 __all__ = [
     "CanonicalSourceIdentity",
     "CanonicalSourceIdentityRegistry",
     "SourceIdentityNamespace",
+    "canonical_benchmark_task_source_group_id",
     "canonical_f1000_source_group_id",
     "canonical_openreview_source_group_id",
     "load_canonical_source_identity_registry",

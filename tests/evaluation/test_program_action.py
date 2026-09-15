@@ -56,6 +56,7 @@ def test_current_gpu_gate_retains_owner_boundary_without_execution() -> None:
     assert route.verification.owner_approval_required is True
     assert route.verification.reason_codes == (
         "declared-owner-boundary-requires-owner",
+        "irreversible-action-requires-owner",
         "external-authority-requires-owner",
     )
     assert route.next_action_kind == "request_owner_decision"

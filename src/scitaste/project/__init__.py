@@ -47,8 +47,28 @@ from scitaste.project.models import (
     ProjectSnapshot,
 )
 from scitaste.project.runtime import ProjectRevisionConflictError, ProjectRuntime
+from scitaste.project.work_priority import (
+    DeadlineRoutedWorkProgram,
+    DeadlineWorkDecision,
+    DeadlineWorkDisposition,
+    DeadlineWorkItem,
+    DeadlineWorkKind,
+    DeadlineWorkPlan,
+    DeadlineWorkPlanDraft,
+    compile_deadline_work_program,
+    load_deadline_work_plan_draft,
+    materialize_deadline_work_plan,
+    save_deadline_work_program,
+)
 
 __all__ = [
+    "DeadlineRoutedWorkProgram",
+    "DeadlineWorkDecision",
+    "DeadlineWorkDisposition",
+    "DeadlineWorkItem",
+    "DeadlineWorkKind",
+    "DeadlineWorkPlan",
+    "DeadlineWorkPlanDraft",
     "IdeaRevisionEvidenceInput",
     "IdeaRevisionFinding",
     "IdeaRevisionPredecessor",
@@ -81,14 +101,18 @@ __all__ = [
     "VenueMilestoneKind",
     "VenueScheduleSourceRole",
     "assign_project_venue_schedule",
+    "compile_deadline_work_program",
     "complete_project_venue_milestone",
     "idea_binding_matches_current",
     "inspect_current_idea_revision",
     "inspect_project_deadline",
+    "load_deadline_work_plan_draft",
     "load_project_venue_schedule",
+    "materialize_deadline_work_plan",
     "project_venue_schedule_assignment_required",
     "read_project_idea_ledger",
     "read_project_venue_schedule",
     "register_project_idea_revision",
+    "save_deadline_work_program",
     "select_project_idea_revision",
 ]

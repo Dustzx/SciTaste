@@ -62,11 +62,15 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     spec_id: str
     project_id: str
     benchmark_id: str
     task_id: str
+    canonical_source_group_id: str | None = Field(
+        default=None,
+        pattern=r"^benchmark-task-[0-9a-f]{64}$",
+    )
     source_checkout: str
     repository_commit: str = Field(pattern=_COMMIT)
     require_clean_checkout: Literal[True] = True
@@ -155,6 +159,11 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
             raise ValueError("held-out input artifacts must be declared writable outputs")
         if self.schema_version == "1.0" and self.heldout_input_artifact_directories:
             raise ValueError("held-out input artifacts require task runtime schema 1.1")
+        if self.schema_version == "1.2":
+            if self.canonical_source_group_id is None:
+                raise ValueError("task runtime schema 1.2 requires a canonical source group")
+        elif self.canonical_source_group_id is not None:
+            raise ValueError("canonical source groups require task runtime schema 1.2")
         controlled_directories = (*self.dataset_directories, *self.writable_output_directories)
         for index, left in enumerate(controlled_directories):
             for right in controlled_directories[index + 1 :]:
@@ -168,6 +177,8 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
         payload = self.model_dump(mode="json", exclude={"fingerprint"})
         if self.schema_version == "1.0":
             payload.pop("heldout_input_artifact_directories")
+        if self.schema_version in {"1.0", "1.1"}:
+            payload.pop("canonical_source_group_id")
         return content_sha256(payload)
 
 

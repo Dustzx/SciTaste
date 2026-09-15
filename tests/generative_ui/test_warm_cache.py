@@ -105,7 +105,7 @@ def _runtime(tmp_path: Path) -> ProjectRuntime:
 
 
 def _policy(intent_id: str, *, authorized: bool = True) -> ModelWarmCachePolicy:
-    now = datetime(2026, 9, 13, 8, tzinfo=UTC)
+    now = datetime.now(UTC)
     return ModelWarmCachePolicy(
         policy_id="warm-project-fixed-entries-v1",
         project_id="warm-project",
@@ -143,7 +143,7 @@ def test_authorized_warm_cache_generates_once_and_serves_the_exact_model_page(
     )
     app = GenerativeUIApplication(runtime, planner=planner)
     intent_id = app.quick_intents("warm-project").intents[0].quick_intent_id
-    now = datetime(2026, 9, 13, 9, tzinfo=UTC)
+    now = datetime.now(UTC)
     service = ModelWarmCacheService(app, _policy(intent_id), now=lambda: now)
 
     first = service.warm()
@@ -197,7 +197,7 @@ def test_cached_workspace_start_rejects_an_unregistered_document_hash(tmp_path: 
     )
     app = GenerativeUIApplication(runtime, planner=planner)
     intent_id = app.quick_intents("warm-project").intents[0].quick_intent_id
-    now = datetime(2026, 9, 13, 9, tzinfo=UTC)
+    now = datetime.now(UTC)
     status = ModelWarmCacheService(app, _policy(intent_id), now=lambda: now).warm().status
     entry = status.fresh_entries[0]
 

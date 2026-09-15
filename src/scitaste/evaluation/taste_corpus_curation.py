@@ -55,6 +55,11 @@ class TasteAbstractionReviewRole(StrEnum):
     ADJUDICATOR = "adjudicator"
 
 
+class TasteAbstractionReviewerKind(StrEnum):
+    HUMAN = "human"
+    AI = "ai"
+
+
 class TasteAbstractionVerdict(StrEnum):
     ACCEPT = "accept"
     REJECT = "reject"
@@ -122,7 +127,7 @@ class TasteAbstractionCandidate(BaseModel):
 
 
 class TasteAbstractionReview(BaseModel):
-    """One condition-blinded human audit of an exact abstraction candidate."""
+    """One condition-blinded human or explicitly non-human abstraction audit."""
 
     model_config = _CONFIG
 
@@ -142,7 +147,11 @@ class TasteAbstractionReview(BaseModel):
     expertise_scope: str = Field(min_length=1, max_length=1_000)
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1, max_length=4_000)
-    human_performed: Literal[True] = True
+    reviewer_kind: TasteAbstractionReviewerKind = TasteAbstractionReviewerKind.HUMAN
+    human_performed: bool = True
+    not_human_review: bool = False
+    model_identifier: str | None = Field(default=None, max_length=500)
+    raw_review_sha256: str | None = Field(default=None, pattern=_SHA256)
     conflict_cleared: Literal[True] = True
     independent_review: Literal[True] = True
     blinded_to_other_reviews: Literal[True] = True
@@ -161,6 +170,21 @@ class TasteAbstractionReview(BaseModel):
             raise ValueError("accepted Taste abstraction review requires every criterion")
         if self.verdict is TasteAbstractionVerdict.REJECT and all(checks):
             raise ValueError("rejected Taste abstraction review must identify a failed criterion")
+        if self.reviewer_kind is TasteAbstractionReviewerKind.HUMAN:
+            if (
+                not self.human_performed
+                or self.not_human_review
+                or self.model_identifier is not None
+                or self.raw_review_sha256 is not None
+            ):
+                raise ValueError("human Taste review carries inconsistent provenance")
+        elif (
+            self.human_performed
+            or not self.not_human_review
+            or not self.model_identifier
+            or self.raw_review_sha256 is None
+        ):
+            raise ValueError("AI Taste review requires model and raw-response provenance")
         return self
 
 
@@ -169,7 +193,7 @@ class TasteCorpusCurationPackage(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.1", "1.2"] = "1.1"
+    schema_version: Literal["1.1", "1.2", "1.3"] = "1.1"
     package_id: str = Field(pattern=_ID)
     task_id: str = Field(pattern=_ID)
     task_domain_tags: tuple[str, ...] = Field(min_length=1, max_length=20)
@@ -182,6 +206,7 @@ class TasteCorpusCurationPackage(BaseModel):
     curation_tier: Literal[
         "dual-human-verified",
         "grounded-dual-human-verified",
+        "grounded-dual-ai-reviewed",
     ] = "dual-human-verified"
     outcome_information_availability: OutcomeInformationAvailability
     source_selection_frozen: Literal[True] = True
@@ -236,16 +261,32 @@ class TasteCorpusCurationPackage(BaseModel):
             for candidate in self.candidates
         ):
             raise ValueError("model-assisted Taste abstraction requires a bound source projection")
-        if self.schema_version == "1.2":
-            if self.curation_tier != "grounded-dual-human-verified":
-                raise ValueError("Taste curation v1.2 requires the grounded curation tier")
+        review_kinds = {item.reviewer_kind for item in self.reviews}
+        if len(review_kinds) != 1:
+            raise ValueError("one Taste curation package cannot mix human and AI reviews")
+        if self.schema_version == "1.1":
+            if review_kinds != {TasteAbstractionReviewerKind.HUMAN}:
+                raise ValueError("legacy Taste curation requires human review")
+        if self.schema_version in {"1.2", "1.3"}:
+            expected_tier = {
+                "1.2": "grounded-dual-human-verified",
+                "1.3": "grounded-dual-ai-reviewed",
+            }[self.schema_version]
+            expected_kind = {
+                "1.2": TasteAbstractionReviewerKind.HUMAN,
+                "1.3": TasteAbstractionReviewerKind.AI,
+            }[self.schema_version]
+            if self.curation_tier != expected_tier or review_kinds != {expected_kind}:
+                raise ValueError(
+                    "Taste curation schema, tier, and reviewer provenance differ"
+                )
             if any(
                 not isinstance(candidate.abstraction, GroundedTasteCaseAbstraction)
                 for candidate in self.candidates
             ):
-                raise ValueError("Taste curation v1.2 requires grounded abstractions")
+                raise ValueError("formal Taste curation requires grounded abstractions")
             if any(source.abstraction_input is None for source in self.sources):
-                raise ValueError("Taste curation v1.2 requires every source projection")
+                raise ValueError("formal Taste curation requires every source projection")
         observed_model_invocations = sum(
             candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED
             for candidate in self.candidates
@@ -268,7 +309,24 @@ class TasteCorpusCurationPackage(BaseModel):
 
     @property
     def semantic_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json"))
+        payload = self.model_dump(mode="json")
+        if self.schema_version in {"1.1", "1.2"}:
+            legacy_only_fields = {
+                "reviewer_kind",
+                "human_performed",
+                "not_human_review",
+                "model_identifier",
+                "raw_review_sha256",
+            }
+            payload["reviews"] = [
+                {
+                    key: value
+                    for key, value in review.items()
+                    if key not in legacy_only_fields
+                }
+                for review in payload["reviews"]
+            ]
+        return _canonical_sha256(payload)
 
 
 class TasteCorpusCurationInspection(BaseModel):
@@ -289,7 +347,7 @@ class TasteCorpusCurationFinding(BaseModel):
 class TasteCorpusCurationReport(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     package_id: str
     package_sha256: str = Field(pattern=_SHA256)
     source_count: int = Field(ge=0)
@@ -306,12 +364,26 @@ class TasteCorpusCurationReport(BaseModel):
     transfer_boundaries_verified: bool
     pair_structure_verified: bool
     dual_human_review_verified: bool
+    dual_ai_review_verified: bool = False
+    reviewer_kind: TasteAbstractionReviewerKind = TasteAbstractionReviewerKind.HUMAN
+    human_validity_claim_allowed: bool = True
     accepted_candidate_ids: tuple[str, ...]
     ready_to_materialize: bool
     ready_for_formal_taste_method: bool
     blockers: tuple[TasteCorpusCurationFinding, ...]
     no_external_action_performed: Literal[True] = True
     authorizes_execution: Literal[False] = False
+
+    @model_validator(mode="after")
+    def review_provenance_is_explicit(self) -> TasteCorpusCurationReport:
+        if self.dual_human_review_verified and self.dual_ai_review_verified:
+            raise ValueError("Taste curation cannot be both human- and AI-verified")
+        if self.reviewer_kind is TasteAbstractionReviewerKind.HUMAN:
+            if self.dual_ai_review_verified or not self.human_validity_claim_allowed:
+                raise ValueError("human Taste curation report has inconsistent provenance")
+        elif self.dual_human_review_verified or self.human_validity_claim_allowed:
+            raise ValueError("AI Taste curation report cannot claim human validity")
+        return self
 
 
 class TasteCorpusMaterializationReceipt(BaseModel):
@@ -424,7 +496,7 @@ def inspect_taste_corpus_curation(
     *,
     evidence_root: str | Path,
 ) -> TasteCorpusCurationReport:
-    """Inspect frozen sources and human reviews without external actions."""
+    """Inspect frozen sources and provenance-explicit reviews without external actions."""
 
     package = inspection.package
     root = Path(evidence_root).resolve(strict=True)
@@ -519,6 +591,7 @@ def inspect_taste_corpus_curation(
         item.code.startswith("review:") for item in blockers
     )
     all_grounded = grounded_count == len(package.candidates)
+    reviewer_kind = package.reviews[0].reviewer_kind
     transfer_verified = all_grounded and all(
         bool(candidate.abstraction.transfer_boundary.applies_when)
         and bool(candidate.abstraction.transfer_boundary.fails_when)
@@ -527,7 +600,7 @@ def inspect_taste_corpus_curation(
         if isinstance(candidate.abstraction, GroundedTasteCaseAbstraction)
     )
     formal_method_ready = (
-        package.schema_version == "1.2"
+        package.schema_version in {"1.2", "1.3"}
         and all_grounded
         and grounding_verified
         and transfer_verified
@@ -540,10 +613,11 @@ def inspect_taste_corpus_curation(
         and traces_verified
         and pair_structure
         and review_verified
-        and (formal_method_ready if package.schema_version == "1.2" else True)
+        and (formal_method_ready if package.schema_version in {"1.2", "1.3"} else True)
         and not blockers
     )
     return TasteCorpusCurationReport(
+        schema_version="1.1",
         package_id=package.package_id,
         package_sha256=package.semantic_sha256,
         source_count=len(package.sources),
@@ -563,7 +637,16 @@ def inspect_taste_corpus_curation(
         grounding_traces_verified=all_grounded and grounding_verified,
         transfer_boundaries_verified=transfer_verified,
         pair_structure_verified=pair_structure,
-        dual_human_review_verified=review_verified,
+        dual_human_review_verified=(
+            review_verified and reviewer_kind is TasteAbstractionReviewerKind.HUMAN
+        ),
+        dual_ai_review_verified=(
+            review_verified and reviewer_kind is TasteAbstractionReviewerKind.AI
+        ),
+        reviewer_kind=reviewer_kind,
+        human_validity_claim_allowed=(
+            reviewer_kind is TasteAbstractionReviewerKind.HUMAN
+        ),
         accepted_candidate_ids=tuple(sorted(accepted)),
         ready_to_materialize=ready,
         ready_for_formal_taste_method=formal_method_ready and ready,
@@ -798,7 +881,7 @@ def _inspect_reviews(
         expected_hash = candidate.semantic_sha256
         if any(item.candidate_sha256 != expected_hash for item in reviews):
             _add(blockers, "review:candidate_hash_mismatch", candidate_id)
-        if package.schema_version == "1.2" and any(
+        if package.schema_version in {"1.2", "1.3"} and any(
             item.grounding_trace_supported is not True
             or item.transfer_boundary_supported is not True
             for item in reviews
@@ -861,6 +944,7 @@ def _compile_entry(
         for item in reviews[candidate.candidate_id]
         if item.verdict is TasteAbstractionVerdict.ACCEPT
     )
+    reviewer_kind = package.reviews[0].reviewer_kind
     provenance = ProvenanceRecord(
         source_type=source.source_type,
         locator=source.locator,
@@ -871,7 +955,8 @@ def _compile_entry(
         license_url=source.license_url,
         access_scope="frozen-source-abstraction",
         derivation_method=(
-            f"{candidate.derivation_method} Independently reviewed under {package.package_id}."
+            f"{candidate.derivation_method} Independently {reviewer_kind.value}-reviewed "
+            f"under {package.package_id}."
         ),
         redistributable=source.redistributable,
         personal_data_removed=source.personal_data_removed,
@@ -927,13 +1012,17 @@ def _compile_entry(
         provenance=[provenance],
         confidence=abstraction.confidence,
         domain_tags=list(source.domain_tags),
-        label_basis="dual_human_verified_external_source",
+        label_basis=(
+            "dual_human_verified_external_source"
+            if reviewer_kind is TasteAbstractionReviewerKind.HUMAN
+            else "dual_ai_reviewed_external_source"
+        ),
         extractor_version=(
             "scitaste-grounded-taste-abstraction-v1"
             if grounded is not None
             else "scitaste-taste-abstraction-v1"
         ),
-        human_verified=True,
+        human_verified=(reviewer_kind is TasteAbstractionReviewerKind.HUMAN),
         retrieval_eligible=True,
     )
     return TasteCorpusEntry(
@@ -1196,6 +1285,7 @@ __all__ = [
     "TasteAbstractionOrigin",
     "TasteAbstractionReview",
     "TasteAbstractionReviewRole",
+    "TasteAbstractionReviewerKind",
     "TasteAbstractionVerdict",
     "TasteCaseAbstraction",
     "TasteCorpusCurationFinding",

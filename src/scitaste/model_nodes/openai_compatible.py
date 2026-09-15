@@ -335,8 +335,6 @@ def structured_model_messages(request: StructuredModelRequest) -> list[dict[str,
 
     identity: dict[str, JsonValue] = {
         "schema_version": request.schema_version,
-        "request_id": request.request_id,
-        "request_fingerprint": request.fingerprint,
         "node_name": request.node_name,
         "stage": request.stage,
         "state_snapshot_id": request.state_snapshot_id,

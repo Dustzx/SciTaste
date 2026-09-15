@@ -99,10 +99,16 @@ def test_iclr_metadata_requests_are_exact_no_run_owner_proposals(
     item_count: int,
     maximum_bytes: int,
     host: str,
+    tmp_path: Path,
 ) -> None:
     request = load_dataset_acquisition_request(path).request
+    for binding in request.evidence:
+        source = Path(binding.path)
+        target = tmp_path / binding.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
 
-    report = inspect_dataset_acquisition_request(request, workspace_root=Path("."))
+    report = inspect_dataset_acquisition_request(request, workspace_root=tmp_path)
 
     assert report.item_count == item_count
     assert report.maximum_total_bytes == maximum_bytes

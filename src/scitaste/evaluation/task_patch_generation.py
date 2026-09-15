@@ -18,9 +18,40 @@ from scitaste.evaluation.task_patch import (
 from scitaste.model_nodes.models import NodeContext, NodePolicy
 from scitaste.model_nodes.nodes import ModelNode
 from scitaste.model_nodes.runtime import ModelNodeRegistration
+from scitaste.project.models import content_sha256
 
 BENCHMARK_PATCH_NODE = "benchmark-research-patch"
 _MAX_REPLACEMENT_CHARS = 1_048_576
+
+
+class BenchmarkResearchActionDirective(BaseModel):
+    """Sanitized high-level action passed from Taste control to patch generation."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    action_id: str = Field(min_length=1, max_length=300)
+    action_type: Literal["PROBE", "PILOT", "EXPERIMENT", "ANALYZE", "REFINE", "PIVOT"]
+    instruction: str = Field(min_length=1, max_length=2_000)
+    directive_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def directive_is_self_hashed(self) -> BenchmarkResearchActionDirective:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"directive_sha256"}))
+        if self.directive_sha256 != expected:
+            raise ValueError("benchmark research-action directive hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> BenchmarkResearchActionDirective:
+        payload = dict(values)
+        payload.pop("directive_sha256", None)
+        unsigned = cls.model_construct(directive_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            directive_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"directive_sha256"})
+            ),
+        )
 
 
 class BenchmarkPatchGenerationInput(BaseModel):
@@ -28,7 +59,7 @@ class BenchmarkPatchGenerationInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     task_id: str = Field(min_length=1, max_length=200)
     research_problem: str = Field(min_length=1, max_length=16_000)
     primary_metric: str = Field(min_length=1, max_length=128)
@@ -45,6 +76,7 @@ class BenchmarkPatchGenerationInput(BaseModel):
     knowledge_guidance: tuple[str, ...] = Field(default=(), max_length=32)
     taste_guidance: tuple[str, ...] = Field(default=(), max_length=32)
     critic_guidance: tuple[str, ...] = Field(default=(), max_length=32)
+    research_action: BenchmarkResearchActionDirective | None = None
     constraints: tuple[str, ...] = Field(min_length=1, max_length=64)
 
     @field_validator(
@@ -65,6 +97,10 @@ class BenchmarkPatchGenerationInput(BaseModel):
 
     @model_validator(mode="after")
     def scores_and_budget_are_coherent(self) -> BenchmarkPatchGenerationInput:
+        if (self.schema_version == "1.1") != (self.research_action is not None):
+            raise ValueError(
+                "benchmark patch schema 1.1 requires exactly one research-action directive"
+            )
         for score in (self.baseline_development_score, self.current_development_score):
             if score is not None and not math.isfinite(score):
                 raise ValueError("benchmark development scores must be finite")
@@ -112,7 +148,7 @@ class BenchmarkPatchGenerationNode(
     """Choose a bounded patch or stop; never invoke tools or execute experiments."""
 
     node_name = BENCHMARK_PATCH_NODE
-    prompt_version = "benchmark-research-patch-v1"
+    prompt_version = "benchmark-research-patch-v2"
     system_instruction = (
         "Act as one bounded autonomous-research iteration. Use the exact visible source, "
         "objective metric, prior development feedback, and only the guidance fields supplied. "
@@ -121,7 +157,9 @@ class BenchmarkPatchGenerationNode(
         "another experiment. Do not invent results, claim access to held-out data, propose shell "
         "commands, add dependencies, change evaluation code, widen policy, or claim execution. "
         "A missing guidance channel is disabled by the registered condition; do not reconstruct "
-        "or simulate it from general knowledge. "
+        "or simulate it from general knowledge. When research_action is present, treat it as the "
+        "controller-owned objective for this turn; do not replace it with another high-level "
+        "research action. "
         "A proposal remains untrusted until deterministic admission and isolated development "
         "execution. Preserve a substantive scientific hypothesis rather than making cosmetic edits."
     )
@@ -222,6 +260,7 @@ __all__ = [
     "BenchmarkPatchGenerationInput",
     "BenchmarkPatchGenerationNode",
     "BenchmarkPatchGenerationOutput",
+    "BenchmarkResearchActionDirective",
     "benchmark_patch_node_types",
     "materialize_benchmark_patch_proposal",
 ]

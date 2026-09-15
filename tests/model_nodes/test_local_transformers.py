@@ -91,7 +91,8 @@ def test_local_structured_backend_retains_identity_prompt_and_zero_api_cost() ->
     assert call["temperature"] == 0.0
     assert call["messages"][0]["role"] == "system"
     user_payload = json.loads(call["messages"][1]["content"])
-    assert user_payload["request_identity"]["request_fingerprint"] == _request().fingerprint
+    assert "request_fingerprint" not in user_payload["request_identity"]
+    assert "request_id" not in user_payload["request_identity"]
 
 
 def test_local_structured_backend_retains_every_bounded_repair_attempt() -> None:

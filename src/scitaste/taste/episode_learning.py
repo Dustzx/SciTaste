@@ -978,6 +978,7 @@ class LifecycleTasteFeaturePosterior(BaseModel):
         "venue-action",
         "tag",
         "stage-tag",
+        "decision-state-action",
     ]
     wins: float = Field(ge=0.0)
     losses: float = Field(ge=0.0)
@@ -1034,13 +1035,14 @@ class LifecycleTastePolicyModel(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.3"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"] = "1.4"
     policy_id: str
     config: LifecycleTastePolicyConfig
     source_episode_ids: tuple[str, ...]
     source_episode_sha256: tuple[str, ...]
     source_group_keys: tuple[str, ...] = ()
     source_group_count: int = Field(default=0, ge=0)
+    source_group_ids: tuple[str, ...] = ()
     training_episode_ids: tuple[str, ...]
     training_episode_sha256: tuple[str, ...]
     training_episode_count: int = Field(ge=0)
@@ -1077,7 +1079,7 @@ class LifecycleTastePolicyModel(BaseModel):
             raise ValueError("lifecycle Taste policy and config IDs differ")
         if len(self.source_episode_ids) != len(set(self.source_episode_ids)):
             raise ValueError("lifecycle Taste source episode IDs must be unique")
-        if self.schema_version == "1.3":
+        if self.schema_version in {"1.3", "1.4", "1.5"}:
             if self.source_group_count != len(self.source_group_keys):
                 raise ValueError("lifecycle Taste source-group count differs")
             if self.source_group_keys != tuple(sorted(set(self.source_group_keys))):
@@ -1088,6 +1090,19 @@ class LifecycleTastePolicyModel(BaseModel):
                 raise ValueError("lifecycle Taste source groups exceed source episodes")
         elif self.source_group_keys or self.source_group_count:
             raise ValueError("legacy lifecycle Taste policy cannot carry source-group closure")
+        if self.schema_version in {"1.4", "1.5"}:
+            if self.source_group_ids != tuple(sorted(set(self.source_group_ids))):
+                raise ValueError("lifecycle Taste canonical source-group IDs are not closed")
+            if bool(self.source_episode_ids) != bool(self.source_group_ids):
+                raise ValueError(
+                    "lifecycle Taste source episodes and canonical source-group IDs disagree"
+                )
+            if len(self.source_group_ids) > self.source_group_count:
+                raise ValueError(
+                    "lifecycle Taste canonical source-group IDs exceed clustered groups"
+                )
+        elif self.source_group_ids:
+            raise ValueError("legacy lifecycle Taste policy cannot carry canonical group IDs")
         if len(self.training_episode_ids) != self.training_episode_count:
             raise ValueError("lifecycle Taste training episode count differs")
         if self.training_source_group_count != len(self.training_source_group_keys):
@@ -1146,7 +1161,7 @@ class LifecycleTastePolicyModel(BaseModel):
             for item in self.feature_posteriors
         ):
             raise ValueError("lifecycle Taste posteriors differ from the configured prior")
-        if self.schema_version in {"1.1", "1.2", "1.3"} and any(
+        if self.schema_version in {"1.1", "1.2", "1.3", "1.4", "1.5"} and any(
             item.support > self.effective_training_weight + 1e-9 for item in self.feature_posteriors
         ):
             raise ValueError("lifecycle Taste feature support exceeds source-group weight")
@@ -1159,7 +1174,7 @@ class LifecycleTastePolicyModel(BaseModel):
             self.shuffle_assignments,
         )
         if shuffled:
-            if self.schema_version in {"1.2", "1.3"}:
+            if self.schema_version in {"1.2", "1.3", "1.4", "1.5"}:
                 self._validate_shuffle_v2()
             elif self.shuffle_algorithm != "not-applicable" or any(shuffle_details):
                 raise ValueError("legacy shuffled-credit policy cannot carry v2 telemetry")
@@ -1167,9 +1182,11 @@ class LifecycleTastePolicyModel(BaseModel):
             raise ValueError("non-shuffled policy cannot carry shuffle telemetry")
         expected = content_sha256(self.model_dump(mode="json", exclude={"policy_sha256"}))
         legacy_payload = self.model_dump(mode="json", exclude={"policy_sha256"})
-        if self.schema_version != "1.3":
+        if self.schema_version not in {"1.3", "1.4", "1.5"}:
             legacy_payload.pop("source_group_keys")
             legacy_payload.pop("source_group_count")
+        if self.schema_version not in {"1.4", "1.5"}:
+            legacy_payload.pop("source_group_ids")
         for field in (
             "shuffle_algorithm",
             "shuffle_block_count",
@@ -1192,7 +1209,11 @@ class LifecycleTastePolicyModel(BaseModel):
                 "effective_training_weight",
             ):
                 legacy_payload.pop(field)
-        legacy_expected = content_sha256(legacy_payload) if self.schema_version != "1.3" else None
+        legacy_expected = (
+            content_sha256(legacy_payload)
+            if self.schema_version not in {"1.4", "1.5"}
+            else None
+        )
         if self.policy_sha256 not in {expected, legacy_expected}:
             raise ValueError("lifecycle Taste policy hash mismatch")
         return self
@@ -1282,16 +1303,32 @@ class LifecycleTastePolicyModel(BaseModel):
         """Return common provenance eligibility for confirmatory or diagnostic arms."""
 
         return (
-            self.schema_version == "1.3"
+            self.schema_version in {"1.4", "1.5"}
             and self.source_review_evidence_kinds == ("ai",)
             and self.source_ai_reviewed_episode_count == len(self.source_episode_ids)
             and self.source_legacy_unverified_episode_count == 0
             and len(self.ai_review_contract_sha256s) == 1
         )
 
+    @property
+    def h4_adaptive_policy_eligible(self) -> bool:
+        """Require learned decision-state support before an H4 treatment run."""
+
+        adaptive = tuple(
+            item
+            for item in self.feature_posteriors
+            if item.feature_kind == "decision-state-action" and item.support > 0
+        )
+        return (
+            self.schema_version == "1.5"
+            and self.intervention_policy_artifact_eligible
+            and len({item.feature.rpartition("::action::")[2] for item in adaptive}) >= 2
+            and len({item.posterior_mean for item in adaptive}) >= 2
+        )
+
     @classmethod
     def create(cls, **values: object) -> LifecycleTastePolicyModel:
-        payload = {"schema_version": "1.3", **values}
+        payload = {"schema_version": "1.4", **values}
         payload.pop("policy_sha256", None)
         unsigned = cls.model_construct(policy_sha256="0" * 64, **payload)
         return cls(
@@ -1400,7 +1437,7 @@ def fit_lifecycle_taste_policy(
         ):
             raise ValueError("lifecycle Taste episode belongs to another Idea revision")
         if (
-            episode.candidate.schema_version != "1.2"
+                episode.candidate.schema_version not in {"1.2", "1.3"}
             or episode.candidate.source_group_id is None
             or episode.candidate.dataset_partition is None
         ):
@@ -1418,6 +1455,13 @@ def fit_lifecycle_taste_policy(
         if existing is not episode.candidate.dataset_partition:
             raise ValueError("lifecycle Taste source group crosses dataset partitions")
     selected = _select_training_episodes(episodes, config)
+    decision_context_count = sum(
+        item.candidate.decision_context is not None for item in selected
+    )
+    if decision_context_count not in {0, len(selected)}:
+        raise ValueError(
+            "lifecycle Taste training cannot mix context-bound and legacy episodes"
+        )
     group_counts: dict[str, int] = defaultdict(int)
     for episode in selected:
         group_counts[_source_group_key(episode)] += 1
@@ -1464,12 +1508,22 @@ def fit_lifecycle_taste_policy(
         for feature, values in sorted(observations.items())
     )
     return LifecycleTastePolicyModel.create(
+        schema_version="1.5" if decision_context_count else "1.4",
         policy_id=config.policy_id,
         config=config,
         source_episode_ids=tuple(ids),
         source_episode_sha256=tuple(item.admission_sha256 for item in episodes),
         source_group_keys=tuple(sorted(group_partitions)),
         source_group_count=len(group_partitions),
+        source_group_ids=tuple(
+            sorted(
+                {
+                    item.candidate.source_group_id
+                    for item in episodes
+                    if item.candidate.source_group_id is not None
+                }
+            )
+        ),
         training_episode_ids=tuple(item.admission_id for item in selected),
         training_episode_sha256=tuple(item.admission_sha256 for item in selected),
         training_episode_count=len(selected),
@@ -2030,6 +2084,13 @@ def _episode_action_features(episode, action) -> tuple[tuple[str, str], ...]:  #
         venue_tags=episode.candidate.venue_tags,
         action_type=action.action_type,
         tags=action.tags,
+        decision_context=(
+            ()
+            if episode.candidate.decision_context is None
+            else tuple(
+                episode.candidate.decision_context.model_dump(mode="json").items()
+            )
+        ),
     )
 
 
@@ -2043,6 +2104,7 @@ def _state_action_features(
         venue_tags=(() if state.target_venue is None else (state.target_venue,)),
         action_type=action.type.value,
         tags=tuple(action.tags),
+        decision_context=_state_decision_context(state),
     )
 
 
@@ -2053,6 +2115,7 @@ def _features(
     venue_tags: tuple[str, ...],
     action_type: str,
     tags: tuple[str, ...],
+    decision_context: tuple[tuple[str, str], ...] = (),
 ) -> tuple[tuple[str, str], ...]:
     normalized_stage = _normal(stage)
     normalized_action = _normal(action_type)
@@ -2071,7 +2134,30 @@ def _features(
                 (f"stage::{normalized_stage}::tag::{tag}", "stage-tag"),
             )
         )
+    for name, value in sorted(decision_context):
+        normalized_name = _normal(name)
+        normalized_value = _normal(value)
+        features.append(
+            (
+                f"decision-state::{normalized_name}::{normalized_value}::action::{normalized_action}",
+                "decision-state-action",
+            )
+        )
     return tuple(features)
+
+
+def _state_decision_context(state: ResearchState) -> tuple[tuple[str, str], ...]:
+    context = state.executor_context
+    required = (
+        "remaining_experiments",
+        "failure_count",
+        "no_improvement_streak",
+        "score_trend",
+        "best_vs_baseline",
+    )
+    if any(name not in context for name in required):
+        return ()
+    return tuple((name, str(context[name])) for name in required)
 
 
 def _posterior(
@@ -2109,6 +2195,7 @@ def _feature_weight(kind: str) -> float:
         "venue-action": 1.5,
         "tag": 0.5,
         "stage-tag": 1.0,
+        "decision-state-action": 2.0,
     }[kind]
 
 

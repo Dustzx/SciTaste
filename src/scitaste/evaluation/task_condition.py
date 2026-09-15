@@ -19,6 +19,7 @@ from scitaste.taste.conditions import (
     NativeConditionId,
     NativeConditionMatrixInspection,
     NativeConfirmatoryCondition,
+    NativeLifecycleCondition,
     NativeTasteCondition,
     NativeTasteRetrievalMode,
 )
@@ -186,6 +187,8 @@ class BenchmarkResearchConditionGuidance(BaseModel):
                 False,
             ),
             NativeConfirmatoryCondition.MISMATCHED_TASTE: (False, False, True, False),
+            NativeLifecycleCondition.LEARNED_POLICY_ON: (True, True, True, True),
+            NativeLifecycleCondition.LEARNED_POLICY_OFF: (True, True, True, True),
         }[self.condition_id]
         if tuple(present.values()) != expected:
             raise ValueError("benchmark condition guidance does not match its component matrix")
@@ -212,7 +215,9 @@ def compile_benchmark_condition_guidance(
         raise ValueError("benchmark guidance set binds another condition-matrix file")
     if guidance.condition_matrix_fingerprint != matrix.matrix.fingerprint:
         raise ValueError("benchmark guidance set binds another condition matrix")
-    if (matrix.matrix.schema_version == "1.1") != (guidance.schema_version == "1.1"):
+    if (matrix.matrix.schema_version in {"1.1", "1.2"}) != (
+        guidance.schema_version == "1.1"
+    ):
         raise ValueError("formal condition matrix and mechanism guidance schema must match")
     profile = matrix.matrix.profile(condition)
     components = profile.components

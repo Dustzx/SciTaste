@@ -6,13 +6,17 @@ from pathlib import Path
 import pytest
 
 from scitaste.project import (
+    DeadlineWorkDisposition,
+    DeadlineWorkPlanDraft,
     ProjectDeadlineUrgency,
     ProjectManifest,
     ProjectRuntime,
     ProjectVenueSchedule,
     assign_project_venue_schedule,
+    compile_deadline_work_program,
     complete_project_venue_milestone,
     inspect_project_deadline,
+    materialize_deadline_work_plan,
 )
 
 
@@ -142,3 +146,56 @@ def test_assignment_rejects_a_different_target_venue(tmp_path: Path) -> None:
         )
 
     assert runtime.open("deadline-project").revision == 0
+
+
+def test_critical_deadline_routes_claim_work_and_defers_repeated_checks(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    snapshot = assign_project_venue_schedule(
+        runtime,
+        project_id="deadline-project",
+        schedule=_schedule(),
+        expected_revision=0,
+    )
+    deadline = inspect_project_deadline(
+        snapshot,
+        observed_at=datetime.fromisoformat("2026-09-15T00:00:00+08:00"),
+    )
+    draft = DeadlineWorkPlanDraft.create(
+        plan_id="iclr-critical-path-v1",
+        project_id="deadline-project",
+        items=(
+            {
+                "work_id": "abstract-freeze",
+                "title": "Freeze the genuine abstract",
+                "kind": "manuscript",
+                "supports_required_outcomes": ("Register a genuine abstract.",),
+                "submission_blocking": True,
+                "estimated_hours": 2.0,
+                "expected_evidence_gain": 90.0,
+            },
+            {
+                "work_id": "full-test-repeat",
+                "title": "Repeat the full suite during feature development",
+                "kind": "verification",
+                "estimated_hours": 1.0,
+                "expected_evidence_gain": 2.0,
+            },
+        ),
+    )
+
+    program = compile_deadline_work_program(
+        deadline,
+        materialize_deadline_work_plan(draft, deadline),
+    )
+
+    decisions = {item.work_id: item for item in program.decisions}
+    assert decisions["abstract-freeze"].disposition is DeadlineWorkDisposition.EXECUTE_NOW
+    assert decisions["abstract-freeze"].priority_rank == 1
+    assert (
+        decisions["full-test-repeat"].disposition
+        is DeadlineWorkDisposition.DEFER_NONCRITICAL
+    )
+    assert "non-release-verification-deferred" in decisions["full-test-repeat"].reason_codes
+    assert program.execution_authorized is False

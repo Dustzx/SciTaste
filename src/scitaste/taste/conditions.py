@@ -40,7 +40,14 @@ class NativeConfirmatoryCondition(StrEnum):
     MISMATCHED_TASTE = "mismatched-taste"
 
 
-NativeConditionId = NativeTasteCondition | NativeConfirmatoryCondition
+class NativeLifecycleCondition(StrEnum):
+    """Paired H4 arms differing only in learned lifecycle-policy weight."""
+
+    LEARNED_POLICY_ON = "full-scitaste-learned-policy"
+    LEARNED_POLICY_OFF = "native-base-without-learned-taste"
+
+
+NativeConditionId = NativeTasteCondition | NativeConfirmatoryCondition | NativeLifecycleCondition
 
 
 class NativeTasteRetrievalMode(StrEnum):
@@ -56,6 +63,8 @@ class NativeConditionRole(StrEnum):
     MATCHED_PLACEBO = "matched_placebo"
     REPRESENTATION_CONTROL = "representation_control"
     MECHANISM_TREATMENT = "mechanism_treatment"
+    LIFECYCLE_TREATMENT = "lifecycle_treatment"
+    LIFECYCLE_CONTROL = "lifecycle_control"
 
 
 class NativeConditionComponents(BaseModel):
@@ -153,6 +162,26 @@ _EXPECTED_CONFIRMATORY_PROFILES: dict[
     NativeTasteCondition.FULL: _EXPECTED_PROFILES[NativeTasteCondition.FULL],
 }
 
+_EXPECTED_LIFECYCLE_PROFILES: dict[
+    NativeConditionId,
+    tuple[NativeConditionRole, bool, bool, NativeTasteRetrievalMode, bool],
+] = {
+    NativeLifecycleCondition.LEARNED_POLICY_ON: (
+        NativeConditionRole.LIFECYCLE_TREATMENT,
+        True,
+        True,
+        NativeTasteRetrievalMode.MATCHED,
+        True,
+    ),
+    NativeLifecycleCondition.LEARNED_POLICY_OFF: (
+        NativeConditionRole.LIFECYCLE_CONTROL,
+        True,
+        True,
+        NativeTasteRetrievalMode.MATCHED,
+        True,
+    ),
+}
+
 
 class NativeConditionMatrix(BaseModel):
     """A closed legacy-diagnostic or formal-confirmatory condition matrix.
@@ -166,19 +195,25 @@ class NativeConditionMatrix(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     matrix_id: str = Field(pattern=r"^[a-z0-9]+(?:[a-z0-9_-]*[a-z0-9])?$")
-    profiles: tuple[NativeConditionProfile, ...] = Field(min_length=5, max_length=6)
+    profiles: tuple[NativeConditionProfile, ...] = Field(min_length=2, max_length=6)
     component_only_effect_claims_forbidden: Literal[True] = True
 
     @model_validator(mode="after")
     def exact_scientific_matrix(self) -> NativeConditionMatrix:
         by_id = {profile.condition_id: profile for profile in self.profiles}
-        expected_profiles = (
-            _EXPECTED_PROFILES if self.schema_version == "1.0" else _EXPECTED_CONFIRMATORY_PROFILES
-        )
+        expected_profiles = {
+            "1.0": _EXPECTED_PROFILES,
+            "1.1": _EXPECTED_CONFIRMATORY_PROFILES,
+            "1.2": _EXPECTED_LIFECYCLE_PROFILES,
+        }[self.schema_version]
         if len(by_id) != len(self.profiles) or set(by_id) != set(expected_profiles):
-            label = "legacy six-arm" if self.schema_version == "1.0" else "confirmatory five-arm"
+            label = {
+                "1.0": "legacy six-arm",
+                "1.1": "confirmatory five-arm",
+                "1.2": "lifecycle paired-arm",
+            }[self.schema_version]
             raise ValueError(f"native condition matrix must contain the exact {label} set")
         for condition_id, expected in expected_profiles.items():
             profile = by_id[condition_id]
@@ -209,7 +244,10 @@ class NativeConditionMatrix(BaseModel):
         try:
             condition_id: NativeConditionId = NativeTasteCondition(condition)
         except ValueError:
-            condition_id = NativeConfirmatoryCondition(condition)
+            try:
+                condition_id = NativeConfirmatoryCondition(condition)
+            except ValueError:
+                condition_id = NativeLifecycleCondition(condition)
         return next(item for item in self.profiles if item.condition_id is condition_id)
 
 
@@ -329,6 +367,7 @@ __all__ = [
     "NativeConditionRole",
     "NativeConditionRuntime",
     "NativeConfirmatoryCondition",
+    "NativeLifecycleCondition",
     "NativeTasteCondition",
     "NativeTasteRetrievalMode",
     "build_native_condition_runtime",

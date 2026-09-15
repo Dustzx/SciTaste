@@ -15,6 +15,7 @@ from scitaste.evaluation import (
     CorpusParityDimension,
     EvaluationCampaignActivation,
     EvaluationCampaignLaunchConfig,
+    EvaluationCampaignManifest,
     EvaluationCommandLauncher,
     ExecutionLane,
     ExecutionLaneKind,
@@ -37,10 +38,14 @@ from scitaste.evaluation import (
     compile_evaluation_cell_plan,
     load_prelaunch_manifest,
 )
+from scitaste.evaluation.campaign_execution import (
+    _has_registered_primary_evaluation_attempt,
+)
 from scitaste.project import (
     ProjectEvaluationArtifact,
     ProjectEvaluationBundle,
     ProjectManifest,
+    ProjectRun,
     ProjectRuntime,
 )
 from scitaste.project.models import content_sha256
@@ -312,7 +317,9 @@ def _fail_once_launch_config() -> EvaluationCampaignLaunchConfig:
     )
 
 
-def _five_arm_activation_fixture(tmp_path: Path) -> tuple[
+def _five_arm_activation_fixture(
+    tmp_path: Path,
+) -> tuple[
     ExperimentPrelaunchManifest,
     EvaluationCampaignLaunchConfig,
     EvaluationCampaignActivation,
@@ -602,10 +609,9 @@ def test_complete_native_objective_campaign_automatically_materializes_analysis(
     assert len(completed["cell_results"]) == 10
     assert len(completed["primary_comparisons"]) == 3
     handoff = json.loads(
-        (
-            project_root
-            / "runs/native-objective-closure/evaluation_campaign/HANDOFF.json"
-        ).read_text(encoding="utf-8")
+        (project_root / "runs/native-objective-closure/evaluation_campaign/HANDOFF.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert handoff["next_interface"] == "project.evaluation.register-result"
     assert handoff["result_set_locator"] == summary.completed_result_set_locator
@@ -718,3 +724,102 @@ def test_campaign_archives_an_interrupted_cell_before_resume(tmp_path: Path) -> 
     assert archived.read_text(encoding="utf-8") == "partial output\n"
     checkpoint = json.loads((interrupted_dir / "CHECKPOINT.json").read_text(encoding="utf-8"))
     assert checkpoint["attempt"] == 2
+
+
+def test_exposed_h4_crash_consumes_reservation_and_closes_without_rerun(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = _runtime(tmp_path)
+    runner = ProjectEvaluationCampaignRunner(runtime, _launch_config())
+    evaluation = runtime.open_evaluation("campaign-project", "authorized-pilot")
+    evaluation_root = runtime.projects_root / "campaign-project/evaluations/authorized-pilot"
+    plan = compile_evaluation_cell_plan(
+        load_prelaunch_manifest(
+            evaluation_root / evaluation.files["prelaunch_manifest"].locator
+        ).manifest
+    )
+    cell = plan.cells[0]
+    campaign = EvaluationCampaignManifest.create(
+        schema_version="1.2",
+        project_id="campaign-project",
+        run_id="h4-crash-run",
+        evaluation_id="authorized-pilot",
+        evaluation_bundle_sha256=evaluation.bundle_sha256,
+        proposal_sha256=plan.proposal_sha256,
+        plan_sha256=plan.plan_sha256,
+        launch_config_sha256=runner.launch_config.config_sha256,
+        selected_cell_ids=tuple(item.cell_id for item in plan.cells),
+        formal_preparation_sha256="f" * 64,
+        claim_authority=True,
+        execution_authorized=True,
+    )
+    snapshot = runtime.begin_run(
+        "campaign-project",
+        ProjectRun(
+            run_id=campaign.run_id,
+            provider="scitaste-native",
+            model="project-evaluation-campaign-runner",
+            condition="authorized-evaluation-campaign",
+            seed=0,
+            status="running",
+            evidence_scope="exact-authorized-cell-execution",
+            stage_path="evaluation_campaign",
+            evaluation_id=campaign.evaluation_id,
+            campaign_manifest_sha256=campaign.manifest_sha256,
+            formal_preparation_sha256=campaign.formal_preparation_sha256,
+            claim_authority=True,
+            h4_primary_attempt_consumed=False,
+        ),
+        expected_revision=runtime.open("campaign-project").revision,
+    )
+    root = runtime.projects_root / "campaign-project/runs/h4-crash-run/evaluation_campaign"
+    cell_dir = root / "cells" / cell.cell_id
+    native_root = cell_dir / "native_benchmark"
+    native_root.mkdir(parents=True)
+    (native_root / "H4_ARM_REQUEST.json").write_text("{}\n", encoding="utf-8")
+    (cell_dir / "CELL_REQUEST.json").write_text("{}\n", encoding="utf-8")
+    (cell_dir / "CELL_RESULT.json").write_text('{"partial": true}\n', encoding="utf-8")
+    recovered_record = runner._failed_record(
+        cell,
+        runner.launch_config.launchers[cell.system_id],
+        0.0,
+        "h4-itt-bounded-failure",
+        plan_sha256=plan.plan_sha256,
+        experiment_count=1,
+    )
+    validated: list[str] = []
+    monkeypatch.setattr(
+        runner,
+        "_validate_h4_recovery_arm",
+        lambda _root, observed: validated.append(observed.cell_id),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_h4_process_failure_record",
+        lambda *args, **kwargs: recovered_record,
+    )
+
+    updated, recovered = runner._recover_exposed_h4_cells(
+        "campaign-project",
+        root,
+        plan,
+        (cell,),
+        {},
+        campaign,
+        snapshot,
+    )
+
+    assert recovered == 1
+    assert validated == [cell.cell_id]
+    registered = next(item for item in updated.manifest.runs if item.run_id == campaign.run_id)
+    assert (registered.model_extra or {})["h4_primary_attempt_consumed"] is True
+    assert _has_registered_primary_evaluation_attempt(
+        updated,
+        evaluation_id=campaign.evaluation_id,
+    )
+    assert (cell_dir / "recovery/partial-CELL_RESULT.json-001").is_file()
+    assert json.loads((cell_dir / "CELL_RESULT.json").read_text())["error_code"] == (
+        "h4-itt-bounded-failure"
+    )
+    assert (cell_dir / "CHECKPOINT.json").is_file()

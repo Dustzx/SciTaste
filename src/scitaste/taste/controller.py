@@ -29,6 +29,10 @@ from scitaste.state.research_state import ResearchState, ResourceBudget
 from scitaste.state.resources import remaining_budget
 from scitaste.taste.candidate_generation import concretize_candidate_actions
 from scitaste.taste.critics import StageTasteCriticSuite, TasteCriticFinding
+from scitaste.taste.decision_families import (
+    FamilyConditionedLifecycleTastePolicy,
+    ScientificTasteDecisionFamily,
+)
 from scitaste.taste.deliberation import (
     TasteDeliberationInput,
     VerifiedTasteDeliberation,
@@ -91,6 +95,8 @@ class TasteController:
         expected_candidate_generation_backend: str | None = None,
         expected_candidate_generation_model: str | None = None,
         lifecycle_policy: LifecycleTastePolicyModel | None = None,
+        family_conditioned_policy: FamilyConditionedLifecycleTastePolicy | None = None,
+        lifecycle_decision_family: ScientificTasteDecisionFamily | None = None,
         lifecycle_policy_weight: float = 1.0,
     ) -> None:
         self.policy = policy or UtilityPolicy()
@@ -114,7 +120,25 @@ class TasteController:
         self.candidate_generation_prompt_version = candidate_generation_prompt_version
         self.expected_candidate_generation_backend = expected_candidate_generation_backend
         self.expected_candidate_generation_model = expected_candidate_generation_model
+        if family_conditioned_policy is not None:
+            if lifecycle_policy is not None:
+                raise ValueError(
+                    "pass either a pooled lifecycle policy or a family-conditioned policy"
+                )
+            if lifecycle_decision_family is None:
+                raise ValueError(
+                    "family-conditioned Taste requires an explicit scientific decision family"
+                )
+            lifecycle_policy = family_conditioned_policy.require_head(
+                lifecycle_decision_family
+            )
+        elif lifecycle_decision_family is not None:
+            raise ValueError(
+                "a scientific decision family requires a family-conditioned policy"
+            )
         self.lifecycle_policy = lifecycle_policy
+        self.family_conditioned_policy = family_conditioned_policy
+        self.lifecycle_decision_family = lifecycle_decision_family
         self.lifecycle_policy_weight = lifecycle_policy_weight
         if mode == TasteMode.AUGMENTED and retriever is None:
             raise ValueError("augmented taste mode requires a TasteRetriever")
@@ -400,7 +424,10 @@ class TasteController:
             else ""
         )
         critic_text = _critic_rationale(critic_findings)
-        lifecycle_text = _lifecycle_policy_rationale(lifecycle_assessment)
+        lifecycle_text = _lifecycle_policy_rationale(
+            lifecycle_assessment,
+            decision_family=self.lifecycle_decision_family,
+        )
         utility_text = (
             "configurable scientific-value and resource-cost weights"
             if self.utility_enabled
@@ -445,7 +472,11 @@ class TasteController:
             ),
             model_candidate_generation=generation_trace,
             taste_deliberation=deliberation_trace,
-            lifecycle_taste_policy=_lifecycle_policy_trace(lifecycle_assessment),
+            lifecycle_taste_policy=_lifecycle_policy_trace(
+                lifecycle_assessment,
+                family_policy=self.family_conditioned_policy,
+                decision_family=self.lifecycle_decision_family,
+            ),
             taste_intervention=intervention_trace,
             model_decision=model_trace,
         )
@@ -776,12 +807,21 @@ def _model_decision_context(
 
 def _lifecycle_policy_trace(
     assessment: LifecycleTastePolicyAssessment | None,
+    *,
+    family_policy: FamilyConditionedLifecycleTastePolicy | None,
+    decision_family: ScientificTasteDecisionFamily | None,
 ) -> LifecycleTastePolicyTrace | None:
     if assessment is None:
         return None
     return LifecycleTastePolicyTrace(
+        schema_version="1.1" if family_policy is not None else "1.0",
         policy_id=assessment.policy_id,
         policy_sha256=assessment.policy_sha256,
+        decision_family=(None if decision_family is None else decision_family.value),
+        family_policy_id=(None if family_policy is None else family_policy.policy_id),
+        family_policy_sha256=(
+            None if family_policy is None else family_policy.policy_sha256
+        ),
         idea_revision_id=assessment.idea_revision_id,
         idea_revision_record_sha256=assessment.idea_revision_record_sha256,
         observed_idea_revision_id=assessment.observed_idea_revision_id,
@@ -797,16 +837,24 @@ def _lifecycle_policy_trace(
 
 def _lifecycle_policy_rationale(
     assessment: LifecycleTastePolicyAssessment | None,
+    *,
+    decision_family: ScientificTasteDecisionFamily | None,
 ) -> str:
     if assessment is None:
         return ""
+    family_text = (
+        ""
+        if decision_family is None
+        else f" for the {decision_family.value} decision family"
+    )
     if assessment.abstained:
         return (
-            " Learned lifecycle Taste abstained without changing the ranking "
+            f" Learned lifecycle Taste{family_text} abstained without changing the ranking "
             f"({', '.join(assessment.reason_codes)})."
         )
     return (
-        " Learned lifecycle Taste applied reviewed outcome evidence and recommended "
+        f" Learned lifecycle Taste{family_text} applied reviewed outcome evidence and "
+        "recommended "
         f"{assessment.recommended_action_id} "
         f"(pairwise probability={assessment.pairwise_probability:.3f})."
     )

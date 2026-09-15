@@ -126,9 +126,15 @@ class LifecycleTastePolicyTrace(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     policy_id: str = Field(min_length=1)
     policy_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    decision_family: str | None = Field(default=None, min_length=1)
+    family_policy_id: str | None = Field(default=None, min_length=1)
+    family_policy_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
     idea_revision_id: str = Field(min_length=1)
     idea_revision_record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     observed_idea_revision_id: str | None = None
@@ -153,6 +159,21 @@ class LifecycleTastePolicyTrace(BaseModel):
             self.observed_idea_revision_record_sha256 is None
         ):
             raise ValueError("observed lifecycle Taste Idea identity is incomplete")
+        family_values = (
+            self.decision_family,
+            self.family_policy_id,
+            self.family_policy_sha256,
+        )
+        if any(item is not None for item in family_values) != all(
+            item is not None for item in family_values
+        ):
+            raise ValueError("family-conditioned lifecycle Taste identity is incomplete")
+        if self.schema_version == "1.0" and any(item is not None for item in family_values):
+            raise ValueError("legacy lifecycle Taste trace cannot claim family conditioning")
+        if self.schema_version == "1.1" and not all(
+            item is not None for item in family_values
+        ):
+            raise ValueError("schema-1.1 lifecycle Taste trace requires family conditioning")
         if self.recommended_action_id is not None and (
             self.recommended_action_id not in self.action_adjustments
         ):

@@ -462,7 +462,10 @@ def _semantic_support_blockers(
             or not report.abstraction_input_bindings_verified
             or not report.grounding_traces_verified
             or not report.transfer_boundaries_verified
-            or not report.dual_human_review_verified
+            or not (
+                report.dual_human_review_verified
+                or report.dual_ai_review_verified
+            )
             or report.blockers
         ):
             blockers.append(f"semantic:{artifact.artifact_id}:curation_not_formal_ready")

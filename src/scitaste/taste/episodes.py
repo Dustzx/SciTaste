@@ -197,12 +197,24 @@ class TasteCreditAssignment(BaseModel):
         return self
 
 
+class TasteEpisodeDecisionContext(BaseModel):
+    """Outcome-blind state available when the archived decision was made."""
+
+    model_config = _CONFIG
+
+    remaining_experiments: Literal["zero", "one", "two-to-three", "four-plus"]
+    failure_count: Literal["zero", "one", "two-plus"]
+    no_improvement_streak: Literal["zero", "one", "two-plus"]
+    score_trend: Literal["unknown", "declining", "flat", "improving"]
+    best_vs_baseline: Literal["below", "equal", "above"]
+
+
 class TasteEpisodeCandidate(BaseModel):
     """One quarantined decision precedent proposed by any supervision channel."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.2"
     candidate_id: str = Field(pattern=_ID)
     project_id: str
     source_project_id: str | None = None
@@ -223,6 +235,7 @@ class TasteEpisodeCandidate(BaseModel):
     stage: str = Field(min_length=1, max_length=300)
     decision_id: str = Field(min_length=1, max_length=300)
     state_summary: str = Field(min_length=1, max_length=20_000)
+    decision_context: TasteEpisodeDecisionContext | None = None
     alternatives: tuple[TasteEpisodeAlternative, ...] = Field(min_length=2, max_length=30)
     selected_action_id: str = Field(min_length=1, max_length=300)
     decision_principle: str = Field(min_length=1, max_length=10_000)
@@ -262,11 +275,11 @@ class TasteEpisodeCandidate(BaseModel):
         selected = [item.action_id for item in self.alternatives if item.selected]
         if selected != [self.selected_action_id]:
             raise ValueError("Taste episode must mark exactly its selected action")
-        if self.schema_version in {"1.1", "1.2"} and any(
+        if self.schema_version in {"1.1", "1.2", "1.3"} and any(
             item.action_type == "unspecified" for item in self.alternatives
         ):
             raise ValueError("schema-1.1+ Taste alternatives require action types")
-        if self.schema_version == "1.2":
+        if self.schema_version in {"1.2", "1.3"}:
             if (
                 self.source_group_id is None
                 or self.dataset_partition is None
@@ -352,7 +365,7 @@ class TasteEpisodeCandidate(BaseModel):
                 raise ValueError("outcome-pending Taste episodes cannot carry attribution")
         elif not self.outcomes or not self.credit_assignments:
             raise ValueError("attribution-proposed episodes require outcomes and credit")
-        elif self.schema_version in {"1.1", "1.2"}:
+        elif self.schema_version in {"1.1", "1.2", "1.3"}:
             if self.attribution_producer_role is None or self.attribution_producer_id is None:
                 raise ValueError("outcome attribution requires its producer identity")
             expected_attribution_role = (
@@ -372,20 +385,28 @@ class TasteEpisodeCandidate(BaseModel):
             folded = [value.casefold() for value in values]
             if len(folded) != len(set(folded)):
                 raise ValueError(f"Taste episode {label} items must be unique")
+        if self.schema_version == "1.3":
+            if self.decision_context is None:
+                raise ValueError("schema-1.3 Taste episode requires decision-time context")
+        elif self.decision_context is not None:
+            raise ValueError("legacy Taste episode cannot carry decision-time context")
         payload = self.model_dump(mode="json", exclude={"candidate_sha256"})
         expected = content_sha256(payload)
-        legacy_expected = (
-            content_sha256(_legacy_candidate_payload(payload, self.schema_version))
-            if self.schema_version in {"1.0", "1.1"}
-            else None
-        )
-        if self.candidate_sha256 not in {expected, legacy_expected}:
+        accepted_hashes = {expected}
+        if self.schema_version in {"1.0", "1.1", "1.2"}:
+            legacy = _legacy_candidate_payload(payload, self.schema_version)
+            accepted_hashes.add(content_sha256(legacy))
+            accepted_hashes.add(content_sha256({**legacy, "decision_context": None}))
+        if self.candidate_sha256 not in accepted_hashes:
             raise ValueError("Taste episode candidate hash mismatch")
         return self
 
     @classmethod
     def create(cls, **values: object) -> TasteEpisodeCandidate:
-        payload = {"schema_version": "1.2", **values}
+        payload = {
+            "schema_version": "1.3" if values.get("decision_context") is not None else "1.2",
+            **values,
+        }
         payload.pop("candidate_sha256", None)
         unsigned = cls.model_construct(candidate_sha256="0" * 64, **payload)
         return cls(
@@ -435,6 +456,7 @@ def compile_process_taste_episode_candidate(
     idea_revision: ProjectIdeaRevisionBinding,
     producer_id: str,
     state_summary: str,
+    decision_context: TasteEpisodeDecisionContext | None = None,
     decision_principle: str,
     why_preferred: str,
     outcomes: tuple[TasteEpisodeOutcome, ...],
@@ -488,6 +510,7 @@ def compile_process_taste_episode_candidate(
         stage=decision.stage,
         decision_id=decision.decision_id,
         state_summary=state_summary,
+        decision_context=decision_context,
         alternatives=alternatives,
         selected_action_id=decision.selected_action.action_id,
         decision_principle=decision_principle,
@@ -564,6 +587,7 @@ def compile_human_taste_intervention_candidate(
     operation: TasteInterventionOperation,
     supervision_scope: Literal[TasteSupervisionScope.USER, TasteSupervisionScope.PROJECT],
     state_summary: str,
+    decision_context: TasteEpisodeDecisionContext | None = None,
     decision_principle: str,
     why_preferred: str,
     applicability_conditions: tuple[str, ...],
@@ -611,6 +635,7 @@ def compile_human_taste_intervention_candidate(
         stage=decision.stage,
         decision_id=decision.decision_id,
         state_summary=state_summary,
+        decision_context=decision_context,
         alternatives=alternatives,
         selected_action_id=decision.selected_action.action_id,
         decision_principle=decision_principle,
@@ -734,9 +759,12 @@ def _legacy_candidate_payload(
     payload: dict[str, object],
     schema_version: str,
 ) -> dict[str, object]:
-    """Reproduce schema-1.0/1.1 hashes after additive parsing."""
+    """Reproduce older hashes after additive parsing."""
 
     legacy = dict(payload)
+    legacy.pop("decision_context", None)
+    if schema_version == "1.2":
+        return legacy
     for field in (
         "source_project_id",
         "source_group_id",
@@ -769,6 +797,7 @@ __all__ = [
     "TasteEpisodeAlternative",
     "TasteEpisodeCandidate",
     "TasteEpisodeConfounder",
+    "TasteEpisodeDecisionContext",
     "TasteEpisodeEvidence",
     "TasteEpisodeEvidenceRole",
     "TasteEpisodeFinding",

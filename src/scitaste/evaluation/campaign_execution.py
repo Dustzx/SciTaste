@@ -38,6 +38,13 @@ from scitaste.evaluation.cell_plan import (
     PlannedEvaluationCell,
     load_evaluation_cell_plan,
 )
+from scitaste.evaluation.h4_execution import (
+    H4ArmRunRequest,
+    H4TerminalOutcomeReceipt,
+    H4TerminalResourceUsage,
+    load_h4_arm_run_request,
+)
+from scitaste.evaluation.native_measurement import NativeBenchmarkObjectiveMeasurement
 from scitaste.evaluation.prelaunch import (
     AdapterEvidenceKind,
     ConfirmatoryEstimandKind,
@@ -57,8 +64,14 @@ from scitaste.project import (
     ProjectRun,
     ProjectRuntime,
     ProjectSnapshot,
+    inspect_current_idea_revision,
 )
-from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
+from scitaste.project.models import (
+    content_sha256,
+    validate_entry_id,
+    validate_project_id,
+    validate_relative_locator,
+)
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _SHA256 = r"^[0-9a-f]{64}$"
@@ -94,23 +107,47 @@ class EvaluationCommandLauncher(BaseModel):
         return values
 
 
+class EvaluationFormalPreparationBinding(BaseModel):
+    """Content address of the preparation replay required before H4 registration."""
+
+    model_config = _CONFIG
+
+    kind: Literal["native-h4-v1"] = "native-h4-v1"
+    locator: str
+    sha256: str = Field(pattern=_SHA256)
+    preparation_sha256: str = Field(pattern=_SHA256)
+
+    @field_validator("locator")
+    @classmethod
+    def locator_is_safe(cls, value: str) -> str:
+        return validate_relative_locator(value, field_name="formal preparation locator")
+
+
 class EvaluationCampaignLaunchConfig(BaseModel):
     """Content-addressed system-to-adapter binding for one campaign."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     launchers: dict[str, EvaluationCommandLauncher] = Field(min_length=1, max_length=30)
+    formal_preparation: EvaluationFormalPreparationBinding | None = None
 
     @model_validator(mode="after")
     def system_ids_are_safe(self) -> EvaluationCampaignLaunchConfig:
         for system_id in self.launchers:
             validate_entry_id(system_id, field_name="evaluation launcher system_id")
+        if self.schema_version == "1.0" and self.formal_preparation is not None:
+            raise ValueError("campaign launch config v1.0 cannot bind formal preparation")
+        if self.schema_version == "1.1" and self.formal_preparation is None:
+            raise ValueError("campaign launch config v1.1 requires formal preparation")
         return self
 
     @property
     def config_sha256(self) -> str:
-        return content_sha256(self.model_dump(mode="json"))
+        payload = self.model_dump(mode="json")
+        if self.schema_version == "1.0":
+            payload.pop("formal_preparation", None)
+        return content_sha256(payload)
 
 
 class EvaluationAdapterUsage(BaseModel):
@@ -162,7 +199,7 @@ class EvaluationCampaignManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     project_id: str
     run_id: str
     evaluation_id: str
@@ -172,6 +209,7 @@ class EvaluationCampaignManifest(BaseModel):
     launch_config_sha256: str = Field(pattern=_SHA256)
     selected_cell_ids: tuple[str, ...] = Field(min_length=1, max_length=10_000)
     activation_sha256: str | None = Field(default=None, pattern=_SHA256)
+    formal_preparation_sha256: str | None = Field(default=None, pattern=_SHA256)
     claim_authority: bool = True
     execution_authorized: Literal[True] = True
     manifest_sha256: str = Field(pattern=_SHA256)
@@ -190,10 +228,23 @@ class EvaluationCampaignManifest(BaseModel):
         if len(self.selected_cell_ids) != len(set(self.selected_cell_ids)):
             raise ValueError("evaluation campaign selected cell IDs must be unique")
         if self.schema_version == "1.0":
-            if self.activation_sha256 is not None or not self.claim_authority:
+            if (
+                self.activation_sha256 is not None
+                or self.formal_preparation_sha256 is not None
+                or not self.claim_authority
+            ):
                 raise ValueError("campaign manifest v1.0 cannot bind a feasibility activation")
-        elif self.activation_sha256 is None or self.claim_authority:
-            raise ValueError("activated campaign must be feasibility-only and content-bound")
+        elif self.schema_version == "1.1":
+            if (
+                self.activation_sha256 is None
+                or self.formal_preparation_sha256 is not None
+                or self.claim_authority
+            ):
+                raise ValueError("activated campaign must be feasibility-only and content-bound")
+        elif self.formal_preparation_sha256 is None or self.claim_authority != (
+            self.activation_sha256 is None
+        ):
+            raise ValueError("prepared H4 campaign authority differs from its activation")
         expected = content_sha256(self._identity_payload())
         if self.manifest_sha256 != expected:
             raise ValueError("evaluation campaign manifest hash mismatch")
@@ -204,6 +255,9 @@ class EvaluationCampaignManifest(BaseModel):
         if self.schema_version == "1.0":
             payload.pop("activation_sha256", None)
             payload.pop("claim_authority", None)
+            payload.pop("formal_preparation_sha256", None)
+        elif self.schema_version == "1.1":
+            payload.pop("formal_preparation_sha256", None)
         return payload
 
     @classmethod
@@ -453,6 +507,13 @@ class ProjectEvaluationCampaignRunner:
                 raise ValueError("campaign cell selection differs from its activation")
         launches, launch_blockers = self._launches(project_id, run_id, selected)
         blockers = self._readiness_blockers(inputs, selected, launch_blockers, activation)
+        blockers.extend(
+            self._formal_preparation_blockers(
+                inputs,
+                selected,
+            )
+        )
+        blockers = sorted(set(blockers))
         if blockers or dry_run:
             return EvaluationCampaignSummary(
                 schema_version="1.1",
@@ -474,9 +535,24 @@ class ProjectEvaluationCampaignRunner:
             )
         if not allow_execution:
             raise ValueError("evaluation execution requires allow_execution=true")
+        if (
+            activation is None
+            and not resume
+            and _contains_h4_cells(selected)
+            and _has_registered_primary_evaluation_attempt(
+                inputs.snapshot,
+                evaluation_id=evaluation_id,
+            )
+        ):
+            raise ValueError(
+                "H4 primary evaluation attempt is already registered; use resume or an "
+                "approved claim-authority=false sensitivity campaign"
+            )
 
+        h4_campaign = _contains_h4_cells(selected)
+        preparation_binding = self.launch_config.formal_preparation
         campaign = EvaluationCampaignManifest.create(
-            schema_version="1.1" if activation is not None else "1.0",
+            schema_version=("1.2" if h4_campaign else "1.1" if activation is not None else "1.0"),
             project_id=project_id,
             run_id=run_id,
             evaluation_id=evaluation_id,
@@ -486,6 +562,11 @@ class ProjectEvaluationCampaignRunner:
             launch_config_sha256=self.launch_config.config_sha256,
             selected_cell_ids=tuple(cell.cell_id for cell in selected),
             activation_sha256=(activation.activation_sha256 if activation is not None else None),
+            formal_preparation_sha256=(
+                preparation_binding.preparation_sha256
+                if h4_campaign and preparation_binding is not None
+                else None
+            ),
             claim_authority=activation is None,
             execution_authorized=True,
         )
@@ -495,8 +576,17 @@ class ProjectEvaluationCampaignRunner:
         with self._locked(root):
             self._materialize_manifest(root, campaign)
             records = self._load_records(project_id, root, inputs.plan, campaign)
+            snapshot, interrupted_recoveries = self._recover_exposed_h4_cells(
+                project_id,
+                root,
+                inputs.plan,
+                selected,
+                records,
+                campaign,
+                snapshot,
+            )
             executed = 0
-            recovered = 0
+            recovered = interrupted_recoveries
             for cell in selected:
                 if max_cells is not None and executed >= max_cells:
                     break
@@ -505,6 +595,17 @@ class ProjectEvaluationCampaignRunner:
                     self._verify_checkpoint(project_id, root, cell, previous, campaign)
                     recovered += 1
                     continue
+                if (
+                    previous is not None
+                    and retry_failed_cells
+                    and campaign.claim_authority
+                    and campaign.formal_preparation_sha256 is not None
+                    and _h4_arm_was_exposed(root, cell.cell_id)
+                ):
+                    raise ValueError(
+                        "treatment-exposed primary H4 cells are immutable; retries require a "
+                        "sensitivity campaign"
+                    )
                 if previous is not None and not retry_failed_cells:
                     self._verify_checkpoint(project_id, root, cell, previous, campaign)
                     continue
@@ -512,10 +613,36 @@ class ProjectEvaluationCampaignRunner:
                 record = self._run_cell(project_id, root, cell, campaign)
                 records[cell.cell_id] = record
                 executed += 1
-                self._save_result_set(project_id, root, evaluation_id, inputs.plan, records)
+                if (
+                    campaign.claim_authority
+                    and campaign.formal_preparation_sha256 is not None
+                    and _h4_arm_was_exposed(root, cell.cell_id)
+                ):
+                    snapshot, _ = self._recover_exposed_h4_cells(
+                        project_id,
+                        root,
+                        inputs.plan,
+                        (cell,),
+                        records,
+                        campaign,
+                        snapshot,
+                    )
+                self._save_result_set(
+                    project_id,
+                    root,
+                    evaluation_id,
+                    inputs.plan,
+                    records,
+                    campaign,
+                )
 
             result_set = self._save_result_set(
-                project_id, root, evaluation_id, inputs.plan, records
+                project_id,
+                root,
+                evaluation_id,
+                inputs.plan,
+                records,
+                campaign,
             )
             selected_ids = {cell.cell_id for cell in selected}
             selected_complete = selected_ids <= set(records)
@@ -549,7 +676,9 @@ class ProjectEvaluationCampaignRunner:
                 selected_complete=selected_complete,
                 failed=failed,
             )
-            if status == "cells_complete" and closure is not None:
+            if status in {"cells_complete", "cells_complete_with_failures"} and (
+                closure is not None and closure.completed_result_set is not None
+            ):
                 status = "analysis_complete"
             locator = (
                 closure.completed_result_set_locator
@@ -595,8 +724,7 @@ class ProjectEvaluationCampaignRunner:
                     "retry_or_accept_failures"
                     if status == "cells_complete_with_failures"
                     else "feasibility_review"
-                    if status
-                    in {"feasibility_complete", "feasibility_complete_with_failures"}
+                    if status in {"feasibility_complete", "feasibility_complete_with_failures"}
                     else "objective_analysis_or_blind_review"
                     if status == "cells_complete"
                     else "result_registration"
@@ -650,6 +778,133 @@ class ProjectEvaluationCampaignRunner:
             launches=tuple(launches),
         )
 
+    def _recover_exposed_h4_cells(
+        self,
+        project_id: str,
+        root: Path,
+        plan: EvaluationCellPlan,
+        selected: tuple[PlannedEvaluationCell, ...],
+        records: dict[str, EvaluationCellResult],
+        campaign: EvaluationCampaignManifest,
+        snapshot: ProjectSnapshot,
+    ) -> tuple[ProjectSnapshot, int]:
+        """Make treatment exposure irreversible across runner crashes.
+
+        The adapter atomically writes ``H4_ARM_REQUEST.json`` before model or
+        executor work.  If the parent process dies after that write, a resume
+        closes the exposed cell as a conservative ITT failure; it never archives
+        the directory and launches the treatment a second time.
+        """
+
+        if not (campaign.claim_authority and campaign.formal_preparation_sha256 is not None):
+            return snapshot, 0
+        exposed = tuple(cell for cell in selected if _h4_arm_was_exposed(root, cell.cell_id))
+        if not exposed:
+            return snapshot, 0
+        for cell in exposed:
+            previous = records.get(cell.cell_id)
+            if previous is None or (
+                previous.status == "failed" and previous.error_code != "h4-itt-bounded-failure"
+            ):
+                self._validate_h4_recovery_arm(root, cell)
+        current = self.runtime.open(project_id)
+        registered = next(item for item in current.manifest.runs if item.run_id == campaign.run_id)
+        if not (registered.model_extra or {}).get("h4_primary_attempt_consumed"):
+            snapshot = self.runtime.update_run(
+                project_id,
+                campaign.run_id,
+                expected_revision=current.revision,
+                h4_primary_attempt_consumed=True,
+            )
+        else:
+            snapshot = current
+        recovered = 0
+        for cell in exposed:
+            previous = records.get(cell.cell_id)
+            if previous is not None and not (
+                previous.status == "failed" and previous.error_code != "h4-itt-bounded-failure"
+            ):
+                continue
+            launcher = self.launch_config.launchers[cell.system_id]
+            cell_dir = root / "cells" / cell.cell_id
+            _preserve_partial_file(cell_dir / "CELL_RESULT.json")
+            _preserve_partial_file(cell_dir / "CHECKPOINT.json")
+            recovery_elapsed = 0.0
+            if cell.lane_kind is ExecutionLaneKind.GPU:
+                recovery_elapsed = (
+                    float(cell.resource.max_gpu_hours or 0.0)
+                    * 3600
+                    / launcher.gpu_count
+                )
+            record = self._h4_process_failure_record(
+                project_id,
+                cell,
+                launcher,
+                recovery_elapsed,
+                "orchestrator-interrupted-after-arm-exposure",
+                cell_dir=cell_dir,
+                campaign=campaign,
+            )
+            if record is None:
+                raise ValueError("exposed H4 arm cannot be validated; primary rerun is forbidden")
+            _atomic_json_write(cell_dir / "CELL_RESULT.json", record.model_dump(mode="json"))
+            command = self._render_command(cell, launcher, cell_dir.resolve())
+            self._write_checkpoint(project_id, root, cell, record, campaign, command)
+            records[cell.cell_id] = record
+            recovered += 1
+        if recovered:
+            self._save_result_set(
+                project_id,
+                root,
+                campaign.evaluation_id,
+                plan,
+                records,
+                campaign,
+            )
+        return snapshot, recovered
+
+    def _validate_h4_recovery_arm(
+        self,
+        campaign_root: Path,
+        cell: PlannedEvaluationCell,
+    ) -> None:
+        """Rebuild one uncheckpointed arm through the first-party adapter."""
+
+        from scitaste.evaluation.h4_preparation import load_h4_formal_preparation
+        from scitaste.evaluation.native_benchmark_adapter import (
+            NativeBenchmarkCellRunner,
+            load_native_benchmark_adapter_config,
+            load_native_benchmark_cell_request,
+        )
+
+        preparation_binding = self.launch_config.formal_preparation
+        if preparation_binding is None:
+            raise ValueError("H4 recovery lacks formal preparation")
+        root = self.evidence_root.resolve(strict=True)
+        preparation_path = _repository_regular_file(root, preparation_binding.locator)
+        if _file_sha256(preparation_path) != preparation_binding.sha256:
+            raise ValueError("H4 recovery formal preparation bytes differ")
+        preparation = load_h4_formal_preparation(preparation_path)
+        if preparation.preparation_sha256 != preparation_binding.preparation_sha256:
+            raise ValueError("H4 recovery formal preparation identity differs")
+        config_binding = preparation.adapter_configs[cell.system_id]
+        config_path = _repository_regular_file(root, config_binding.locator)
+        if _file_sha256(config_path) != config_binding.file_sha256:
+            raise ValueError("H4 recovery adapter config differs from preparation")
+        config = load_native_benchmark_adapter_config(config_path)
+        if content_sha256(config) != config_binding.semantic_sha256:
+            raise ValueError("H4 recovery adapter semantic identity differs")
+        request_path = campaign_root / "cells" / cell.cell_id / "CELL_REQUEST.json"
+        request = load_native_benchmark_cell_request(request_path)
+        if request.cell != cell:
+            raise ValueError("H4 recovery cell request differs from the plan")
+        NativeBenchmarkCellRunner(
+            root,
+            config,
+            request,
+            cell_request_path=request_path,
+        ).validate_h4_arm_for_recovery()
+
     @staticmethod
     def _handoff(
         *,
@@ -670,17 +925,17 @@ class ProjectEvaluationCampaignRunner:
             resume_safe = True
             retry_required = False
             human_required = False
-        elif failed and campaign.claim_authority:
-            next_interface = "project.evaluation.resolve-cell-failures"
-            required_inputs = ("explicit-retry-or-accept-failure-decision",)
-            resume_safe = True
-            retry_required = True
-            human_required = False
         elif analysis_complete:
             next_interface = "project.evaluation.register-result"
             required_inputs = ("completed-objective-result-set",)
             resume_safe = False
             retry_required = False
+            human_required = False
+        elif failed and campaign.claim_authority:
+            next_interface = "project.evaluation.resolve-cell-failures"
+            required_inputs = ("explicit-retry-or-accept-failure-decision",)
+            resume_safe = True
+            retry_required = True
             human_required = False
         elif not campaign.claim_authority:
             next_interface = "project.evaluation.inspect-feasibility-block"
@@ -794,6 +1049,77 @@ class ProjectEvaluationCampaignRunner:
             blockers.extend(f"cell:{cell.cell_id}:{code}" for code in cell.readiness_blockers)
         return sorted(set(blockers))
 
+    def _formal_preparation_blockers(
+        self,
+        inputs: _CampaignInputs,
+        selected: tuple[PlannedEvaluationCell, ...],
+    ) -> list[str]:
+        """Replay formal H4 evidence before a primary attempt can be registered."""
+
+        if not _contains_h4_cells(selected):
+            return []
+        binding = self.launch_config.formal_preparation
+        if self.launch_config.schema_version != "1.1" or binding is None:
+            return ["preparation:native-h4-v1-required"]
+        try:
+            from scitaste.evaluation.h4_preparation import (
+                load_h4_formal_preparation,
+                verify_h4_formal_preparation,
+            )
+
+            root = self.evidence_root.resolve(strict=True)
+            git_root = Path(
+                subprocess.run(
+                    ["git", "rev-parse", "--show-toplevel"],
+                    cwd=root,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip()
+            ).resolve(strict=True)
+            if (
+                root != git_root
+                or self.runtime.projects_root.resolve() != root / "outputs" / "projects"
+            ):
+                raise ValueError("formal H4 repository and ProjectRuntime roots differ")
+            current = root
+            for part in PurePosixPath(binding.locator).parts:
+                current /= part
+                if current.is_symlink():
+                    raise ValueError("formal preparation cannot traverse a symbolic link")
+            preparation_path = current.resolve(strict=True)
+            if (
+                not preparation_path.is_relative_to(root)
+                or not preparation_path.is_file()
+                or _file_sha256(preparation_path) != binding.sha256
+            ):
+                raise ValueError("formal preparation file binding differs")
+            preparation = load_h4_formal_preparation(preparation_path)
+            if preparation.preparation_sha256 != binding.preparation_sha256:
+                raise ValueError("formal preparation semantic identity differs")
+            idea_report = inspect_current_idea_revision(
+                self.runtime,
+                inputs.snapshot.project_id,
+            )
+            if idea_report.current_binding is None or not idea_report.experiment_freeze_eligible:
+                raise ValueError("formal H4 requires an accepted current Idea")
+            verify_h4_formal_preparation(
+                root,
+                preparation,
+                project_id=inputs.snapshot.project_id,
+                evaluation_id=inputs.evaluation.evaluation_id,
+                evaluation_bundle_sha256=inputs.evaluation.bundle_sha256,
+                proposal_sha256=inputs.evaluation.proposal_sha256,
+                plan_sha256=inputs.plan.plan_sha256,
+                selected_cells=selected,
+                current_idea_revision=idea_report.current_binding,
+                launchers=self.launch_config.launchers,
+                prelaunch_manifest=inputs.manifest,
+            )
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return ["preparation:native-h4-v1-invalid"]
+        return []
+
     def _activation_blockers(
         self,
         inputs: _CampaignInputs,
@@ -896,7 +1222,14 @@ class ProjectEvaluationCampaignRunner:
         claim = analysis.claim_admission if analysis is not None else None
         if (
             not selected_complete
-            or (failed and campaign.claim_authority)
+            or (
+                failed
+                and campaign.claim_authority
+                and not _all_failures_are_preregistered_itt(
+                    results,
+                    selected_cell_ids=campaign.selected_cell_ids,
+                )
+            )
             or inputs.manifest.primary_endpoint is not ScientificEndpointKind.OBJECTIVE_PROGRESS
             or claim is None
             or claim.estimand_kind
@@ -1008,9 +1341,7 @@ class ProjectEvaluationCampaignRunner:
                 measurement_set_sha256=measurements.measurement_set_sha256,
                 analysis_locator=analysis_path.relative_to(project_root).as_posix(),
                 analysis_sha256=observed_report.report_sha256,
-                completed_result_set_locator=(
-                    completed_path.relative_to(project_root).as_posix()
-                ),
+                completed_result_set_locator=(completed_path.relative_to(project_root).as_posix()),
                 completed_result_set_sha256=completed.result_set_sha256,
                 completed_result_set=completed,
             )
@@ -1102,12 +1433,14 @@ class ProjectEvaluationCampaignRunner:
                 registered.stage_path,
                 extra.get("evaluation_id"),
                 extra.get("campaign_manifest_sha256"),
+                extra.get("formal_preparation_sha256"),
             )
             actual = (
                 "authorized-evaluation-campaign",
                 "evaluation_campaign",
                 campaign.evaluation_id,
                 campaign.manifest_sha256,
+                campaign.formal_preparation_sha256,
             )
             if expected != actual:
                 raise ValueError("resume campaign identity differs from the registered run")
@@ -1137,6 +1470,8 @@ class ProjectEvaluationCampaignRunner:
                 plan_sha256=campaign.plan_sha256,
                 launch_config_sha256=campaign.launch_config_sha256,
                 campaign_manifest_sha256=campaign.manifest_sha256,
+                formal_preparation_sha256=campaign.formal_preparation_sha256,
+                h4_primary_attempt_consumed=False,
                 activation_sha256=campaign.activation_sha256,
                 claim_authority=campaign.claim_authority,
                 resume_attempt=0,
@@ -1186,7 +1521,15 @@ class ProjectEvaluationCampaignRunner:
             )
             elapsed = max(0.0, self.clock() - started)
             if process.returncode != 0:
-                record = self._failed_record(
+                record = self._h4_process_failure_record(
+                    project_id,
+                    cell,
+                    launcher,
+                    elapsed,
+                    "nonzero-exit",
+                    cell_dir=cell_dir,
+                    campaign=campaign,
+                ) or self._failed_record(
                     cell,
                     launcher,
                     elapsed,
@@ -1195,7 +1538,15 @@ class ProjectEvaluationCampaignRunner:
                     experiment_count=1,
                 )
             elif not adapter_result_path.is_file():
-                record = self._failed_record(
+                record = self._h4_process_failure_record(
+                    project_id,
+                    cell,
+                    launcher,
+                    elapsed,
+                    "adapter-result-missing",
+                    cell_dir=cell_dir,
+                    campaign=campaign,
+                ) or self._failed_record(
                     cell,
                     launcher,
                     elapsed,
@@ -1215,7 +1566,15 @@ class ProjectEvaluationCampaignRunner:
                 )
         except subprocess.TimeoutExpired:
             elapsed = max(0.0, self.clock() - started)
-            record = self._failed_record(
+            record = self._h4_process_failure_record(
+                project_id,
+                cell,
+                launcher,
+                elapsed,
+                "timeout",
+                cell_dir=cell_dir,
+                campaign=campaign,
+            ) or self._failed_record(
                 cell,
                 launcher,
                 elapsed,
@@ -1230,7 +1589,15 @@ class ProjectEvaluationCampaignRunner:
                 cell_dir / "FAILURE.json",
                 {"schema_version": "1.0", "error_code": code, "error": str(exc)[:2_000]},
             )
-            record = self._failed_record(
+            record = self._h4_process_failure_record(
+                project_id,
+                cell,
+                launcher,
+                elapsed,
+                code,
+                cell_dir=cell_dir,
+                campaign=campaign,
+            ) or self._failed_record(
                 cell,
                 launcher,
                 elapsed,
@@ -1241,6 +1608,141 @@ class ProjectEvaluationCampaignRunner:
         _atomic_json_write(record_path, record.model_dump(mode="json"))
         self._write_checkpoint(project_id, root, cell, record, campaign, command)
         return record
+
+    def _h4_process_failure_record(
+        self,
+        project_id: str,
+        cell: PlannedEvaluationCell,
+        launcher: EvaluationCommandLauncher,
+        elapsed: float,
+        error_code: str,
+        *,
+        cell_dir: Path,
+        campaign: EvaluationCampaignManifest,
+    ) -> EvaluationCellResult | None:
+        """Close a process failure as ITT once a valid H4 arm was assigned."""
+
+        native_root = cell_dir / "native_benchmark"
+        arm_path = native_root / "H4_ARM_REQUEST.json"
+        if not arm_path.is_file():
+            return None
+        try:
+            arm = load_h4_arm_run_request(arm_path)
+            if (
+                arm.campaign_manifest_sha256 != campaign.manifest_sha256
+                or arm.plan_sha256 != campaign.plan_sha256
+                or arm.cell_id != cell.cell_id
+                or arm.task_id != cell.task_id
+                or arm.condition.value != cell.system_id
+                or arm.seed != cell.seed
+                or arm.repetition != cell.repetition
+            ):
+                return None
+            failure_path = native_root / "FAILURE.json"
+            _atomic_json_write(
+                failure_path,
+                {
+                    "schema_version": "1.1",
+                    "error_code": error_code,
+                    "failure_owner": "evaluation-campaign-runner",
+                    "post_treatment_assignment": True,
+                },
+            )
+            loop_sha, candidate_sha, heldout_sha, predecessor_sha = _h4_existing_evidence_bindings(
+                native_root, arm
+            )
+            adapter_usage = _h4_conservative_failure_usage(cell, arm)
+            terminal = H4TerminalOutcomeReceipt.create(
+                profile_sha256=arm.profile_sha256,
+                arm_run_request_sha256=arm.request_sha256,
+                campaign_manifest_sha256=campaign.manifest_sha256,
+                cell_id=cell.cell_id,
+                task_id=cell.task_id,
+                condition=arm.condition,
+                failure_stage="campaign-process",
+                error_code=error_code,
+                failure_artifact_sha256=_file_sha256(failure_path),
+                last_valid_predecessor_sha256=predecessor_sha,
+                resource_usage=H4TerminalResourceUsage.model_validate(
+                    adapter_usage.model_dump(mode="json")
+                ),
+                usage_accounting="conservative-authorized-ceiling",
+            )
+            terminal_path = native_root / "H4_TERMINAL_OUTCOME.json"
+            _atomic_json_write(terminal_path, terminal.model_dump(mode="json"))
+            measurement = NativeBenchmarkObjectiveMeasurement.create(
+                schema_version="1.1",
+                cell_id=cell.cell_id,
+                task_id=cell.task_id,
+                condition_id=cell.system_id,
+                outcome_status="itt_bounded_failure",
+                frozen_candidate_sha256=candidate_sha,
+                heldout_receipt_sha256=heldout_sha,
+                metric_name=arm.primary_metric,
+                metric_direction=arm.metric_direction,
+                heldout_score=None,
+                baseline_heldout_score=arm.baseline_heldout_score,
+                directed_progress=arm.failure_directed_progress_penalty,
+                h4_execution_profile_sha256=arm.profile_sha256,
+                h4_arm_run_request_sha256=arm.request_sha256,
+                loop_result_sha256=loop_sha,
+                terminal_evidence_sha256=terminal.receipt_sha256,
+                lifecycle_policy_weight=arm.lifecycle_policy_weight,
+            )
+            measurement_path = native_root / "OBJECTIVE_MEASUREMENT.json"
+            _atomic_json_write(measurement_path, measurement.model_dump(mode="json"))
+            evidence_files = _h4_evidence_files(native_root)
+            index_payload = {
+                "schema_version": "1.1",
+                "adapter_config_id": "campaign-runner-h4-recovery",
+                "campaign_manifest_sha256": campaign.manifest_sha256,
+                "plan_sha256": campaign.plan_sha256,
+                "cell_sha256": content_sha256(cell),
+                "task_spec_fingerprint": arm.task_spec_fingerprint,
+                "loop_result_sha256": loop_sha,
+                "terminal_outcome_receipt_sha256": terminal.receipt_sha256,
+                "heldout_receipt_sha256": heldout_sha,
+                "objective_measurement_sha256": measurement.measurement_sha256,
+                "heldout_scoring_executed_only_after_candidate_freeze": (heldout_sha is not None),
+                "model_invocations_after_candidate_freeze": 0,
+                "evidence_files": evidence_files,
+                "evidence_tree_sha256": content_sha256(evidence_files),
+            }
+            index_payload["evidence_index_sha256"] = content_sha256(index_payload)
+            index_path = native_root / "EVIDENCE_INDEX.json"
+            _atomic_json_write(index_path, index_payload)
+            process_artifacts = tuple(
+                path
+                for path in (cell_dir / "stdout.log", cell_dir / "stderr.log")
+                if path.is_file() and path.stat().st_size > 0
+            )
+            return self._record_from_adapter(
+                project_id,
+                cell,
+                launcher,
+                elapsed,
+                EvaluationAdapterResult(
+                    status="failed",
+                    evidence_class="real",
+                    usage=adapter_usage,
+                    artifact_paths=tuple(
+                        path.relative_to(cell_dir).as_posix()
+                        for path in (
+                            arm_path,
+                            failure_path,
+                            terminal_path,
+                            measurement_path,
+                            index_path,
+                            *process_artifacts,
+                        )
+                    ),
+                    error_code="h4-itt-bounded-failure",
+                ),
+                cell_dir,
+                campaign.plan_sha256,
+            )
+        except (KeyError, OSError, ValueError):
+            return None
 
     def _record_from_adapter(
         self,
@@ -1256,13 +1758,23 @@ class ProjectEvaluationCampaignRunner:
         artifacts = tuple(
             self._artifact(project_id, cell_dir, locator) for locator in result.artifact_paths
         )
-        budget_error = _budget_error(cell, result.usage, usage, artifacts)
+        budget_error = _budget_error(
+            cell,
+            result.usage,
+            usage,
+            artifacts,
+            accounted_storage_bytes=_adapter_accounted_storage_bytes(
+                cell_dir,
+                result.artifact_paths,
+            ),
+        )
         status = result.status
         error_code = result.error_code
         outcome = result.outcome
         if budget_error is not None:
             status, error_code, outcome = "failed", budget_error, None
         return EvaluationCellResult.create(
+            schema_version="1.1",
             cell_id=cell.cell_id,
             proposal_sha256=cell.proposal_sha256,
             plan_sha256=plan_sha256,
@@ -1287,6 +1799,7 @@ class ProjectEvaluationCampaignRunner:
         experiment_count: int,
     ) -> EvaluationCellResult:
         return EvaluationCellResult.create(
+            schema_version="1.1",
             cell_id=cell.cell_id,
             proposal_sha256=cell.proposal_sha256,
             plan_sha256=plan_sha256,
@@ -1315,6 +1828,8 @@ class ProjectEvaluationCampaignRunner:
                 request_count=usage.request_count or 0,
                 input_tokens=usage.input_tokens or 0,
                 output_tokens=usage.output_tokens or 0,
+                max_input_tokens_observed=usage.max_input_tokens_observed or 0,
+                max_output_tokens_observed=usage.max_output_tokens_observed or 0,
                 api_cost=usage.api_cost or 0.0,
                 gpu_hours=None,
                 wall_time_hours=elapsed / 3600,
@@ -1324,6 +1839,8 @@ class ProjectEvaluationCampaignRunner:
             request_count=usage.request_count,
             input_tokens=usage.input_tokens,
             output_tokens=usage.output_tokens,
+            max_input_tokens_observed=usage.max_input_tokens_observed,
+            max_output_tokens_observed=usage.max_output_tokens_observed,
             api_cost=None,
             gpu_hours=elapsed * launcher.gpu_count / 3600,
             wall_time_hours=elapsed / 3600,
@@ -1428,10 +1945,22 @@ class ProjectEvaluationCampaignRunner:
                 or result_set.evaluation_id != campaign.evaluation_id
                 or result_set.proposal_sha256 != plan.proposal_sha256
                 or result_set.plan_sha256 != plan.plan_sha256
+                or (
+                    campaign.formal_preparation_sha256 is not None
+                    and (
+                        result_set.schema_version != "1.1"
+                        or result_set.run_id != campaign.run_id
+                        or result_set.campaign_manifest_sha256 != campaign.manifest_sha256
+                        or result_set.launch_config_sha256 != campaign.launch_config_sha256
+                        or result_set.formal_preparation_sha256
+                        != campaign.formal_preparation_sha256
+                    )
+                )
             ):
                 raise ValueError("existing campaign result set has another identity")
             aggregate = {item.cell_id: item for item in result_set.cell_results}
         observed: dict[str, EvaluationCellResult] = {}
+        untrusted_exposed: set[str] = set()
         by_id = {cell.cell_id: cell for cell in plan.cells}
         cells_root = root / "cells"
         if cells_root.is_dir():
@@ -1442,9 +1971,22 @@ class ProjectEvaluationCampaignRunner:
                     raise ValueError("campaign contains an unplanned cell result")
                 if record.cell_id in observed:
                     raise ValueError("campaign contains duplicate cell results")
-                self._verify_checkpoint(project_id, root, cell, record, campaign)
+                try:
+                    self._verify_checkpoint(project_id, root, cell, record, campaign)
+                except (OSError, ValueError):
+                    if (
+                        campaign.claim_authority
+                        and campaign.formal_preparation_sha256 is not None
+                        and _h4_arm_was_exposed(root, record.cell_id)
+                    ):
+                        untrusted_exposed.add(record.cell_id)
+                        continue
+                    raise
                 observed[record.cell_id] = record
-        if any(observed.get(cell_id) != record for cell_id, record in aggregate.items()):
+        if any(
+            cell_id not in untrusted_exposed and observed.get(cell_id) != record
+            for cell_id, record in aggregate.items()
+        ):
             raise ValueError("aggregate and checkpointed campaign cell results differ")
         return observed
 
@@ -1455,13 +1997,20 @@ class ProjectEvaluationCampaignRunner:
         evaluation_id: str,
         plan: EvaluationCellPlan,
         records: dict[str, EvaluationCellResult],
+        campaign: EvaluationCampaignManifest,
     ) -> EvaluationResultSet:
         order = {cell.cell_id: index for index, cell in enumerate(plan.cells)}
+        prepared_h4 = campaign.formal_preparation_sha256 is not None
         result_set = EvaluationResultSet.create(
+            schema_version="1.1" if prepared_h4 else "1.0",
             project_id=project_id,
             evaluation_id=evaluation_id,
             proposal_sha256=plan.proposal_sha256,
             plan_sha256=plan.plan_sha256,
+            run_id=campaign.run_id if prepared_h4 else None,
+            campaign_manifest_sha256=(campaign.manifest_sha256 if prepared_h4 else None),
+            launch_config_sha256=(campaign.launch_config_sha256 if prepared_h4 else None),
+            formal_preparation_sha256=campaign.formal_preparation_sha256,
             cell_results=tuple(sorted(records.values(), key=lambda item: order[item.cell_id])),
             blind_reviews=(),
             primary_comparisons=(),
@@ -1501,15 +2050,29 @@ class ProjectEvaluationCampaignRunner:
 
     def _materialize_manifest(self, root: Path, campaign: EvaluationCampaignManifest) -> None:
         path = root / "CAMPAIGN.json"
+        launch_path = root / "LAUNCH_CONFIG.json"
         if path.is_file():
             observed = EvaluationCampaignManifest.model_validate_json(path.read_bytes())
             if observed != campaign:
                 raise ValueError("existing campaign manifest has another identity")
+            if not launch_path.exists() and observed.schema_version in {"1.0", "1.1"}:
+                _atomic_json_write(
+                    launch_path,
+                    self.launch_config.model_dump(mode="json"),
+                )
+            elif (
+                not launch_path.is_file()
+                or launch_path.is_symlink()
+                or EvaluationCampaignLaunchConfig.model_validate_json(launch_path.read_bytes())
+                != self.launch_config
+            ):
+                raise ValueError("existing campaign launch config has another identity")
             return
         existing = [item for item in root.iterdir() if item.name not in {".campaign.lock"}]
         if existing:
             raise ValueError("campaign output exists without an identity manifest")
         _atomic_json_write(path, campaign.model_dump(mode="json"))
+        _atomic_json_write(launch_path, self.launch_config.model_dump(mode="json"))
 
     def _render_command(
         self,
@@ -1560,6 +2123,12 @@ class ProjectEvaluationCampaignRunner:
                 "SCITASTE_EVALUATION_CELL_ID": cell.cell_id,
             }
         )
+        if launcher.gpu_count:
+            environment["CUDA_VISIBLE_DEVICES"] = ",".join(
+                str(index) for index in range(launcher.gpu_count)
+            )
+        else:
+            environment.pop("CUDA_VISIBLE_DEVICES", None)
         return environment
 
     @staticmethod
@@ -1613,11 +2182,162 @@ def _load_adapter_result(path: Path) -> EvaluationAdapterResult:
     return EvaluationAdapterResult.model_validate_json(path.read_bytes())
 
 
+def _h4_conservative_failure_usage(
+    cell: PlannedEvaluationCell,
+    arm: H4ArmRunRequest,
+) -> EvaluationAdapterUsage:
+    if cell.lane_kind is ExecutionLaneKind.API_ONLY:
+        return EvaluationAdapterUsage(
+            request_count=cell.resource.max_requests,
+            input_tokens=cell.resource.max_total_tokens,
+            output_tokens=0,
+            max_input_tokens_observed=cell.resource.max_input_tokens_per_call,
+            max_output_tokens_observed=cell.resource.max_output_tokens_per_call,
+            api_cost=cell.resource.max_cost,
+            experiment_count=arm.maximum_patch_iterations + 2,
+        )
+    return EvaluationAdapterUsage(experiment_count=arm.maximum_patch_iterations + 2)
+
+
+def _contains_h4_cells(cells: tuple[PlannedEvaluationCell, ...]) -> bool:
+    h4_systems = {
+        "full-scitaste-learned-policy",
+        "native-base-without-learned-taste",
+    }
+    return any(cell.system_id in h4_systems for cell in cells)
+
+
+def _has_registered_primary_evaluation_attempt(
+    snapshot: ProjectSnapshot,
+    *,
+    evaluation_id: str,
+) -> bool:
+    """Treat a registered formal primary campaign as its unique reservation.
+
+    A pre-treatment failure may resume the same run, but cannot be abandoned in
+    favor of a second primary run and later resurrected.
+    """
+
+    for run in snapshot.manifest.runs:
+        extra = run.model_extra or {}
+        if (
+            run.condition == "authorized-evaluation-campaign"
+            and extra.get("evaluation_id") == evaluation_id
+            and extra.get("claim_authority") is True
+            and extra.get("formal_preparation_sha256") is not None
+        ):
+            return True
+    return False
+
+
+def _h4_arm_was_exposed(campaign_root: Path, cell_id: str) -> bool:
+    path = campaign_root / "cells" / cell_id / "native_benchmark" / "H4_ARM_REQUEST.json"
+    return path.is_file() and not path.is_symlink()
+
+
+def _h4_existing_evidence_bindings(
+    native_root: Path,
+    arm: H4ArmRunRequest,
+) -> tuple[str | None, str | None, str | None, str]:
+    # Imported lazily because task execution contracts depend on the campaign
+    # manifest type defined by this module.
+    from scitaste.evaluation.task_research_loop import BenchmarkResearchLoopResult
+    from scitaste.evaluation.task_scoring import (
+        BenchmarkFrozenCandidate,
+        BenchmarkHeldoutExecutionReceipt,
+    )
+
+    loop_sha: str | None = None
+    candidate_sha: str | None = None
+    heldout_sha: str | None = None
+    predecessor = arm.request_sha256
+    loop_path = native_root / "development_loop" / "RESULT.json"
+    if loop_path.is_file():
+        try:
+            loop = BenchmarkResearchLoopResult.model_validate_json(loop_path.read_bytes())
+            if loop.h4_arm_run_request_sha256 != arm.request_sha256:
+                raise ValueError("H4 loop arm binding differs")
+            loop_sha = loop.result_sha256
+            predecessor = loop_sha
+        except ValueError:
+            _preserve_invalid_h4_evidence(loop_path)
+    candidate_path = native_root / "FROZEN_CANDIDATE.json"
+    if candidate_path.is_file():
+        try:
+            candidate = BenchmarkFrozenCandidate.model_validate_json(candidate_path.read_bytes())
+            if candidate.loop_result_sha256 != loop_sha:
+                raise ValueError("H4 candidate loop binding differs")
+            candidate_sha = candidate.candidate_sha256
+            predecessor = candidate_sha
+        except ValueError:
+            _preserve_invalid_h4_evidence(candidate_path)
+    heldout_path = native_root / "heldout" / "execution" / "RESULT.json"
+    if heldout_path.is_file():
+        try:
+            heldout = BenchmarkHeldoutExecutionReceipt.model_validate_json(
+                heldout_path.read_bytes()
+            )
+            if candidate_sha is None or heldout.frozen_candidate_sha256 != candidate_sha:
+                raise ValueError("H4 held-out candidate binding differs")
+            heldout_sha = heldout.receipt_sha256
+            predecessor = heldout_sha
+        except ValueError:
+            _preserve_invalid_h4_evidence(heldout_path)
+    return loop_sha, candidate_sha, heldout_sha, predecessor
+
+
+def _preserve_invalid_h4_evidence(path: Path) -> None:
+    digest = _file_sha256(path)
+    target = path.with_name(f"{path.stem}.invalid-{digest[:12]}{path.suffix}")
+    if target.exists():
+        raise ValueError("duplicate invalid H4 evidence artifact")
+    os.replace(path, target)
+
+
+def _h4_evidence_files(native_root: Path) -> tuple[dict[str, object], ...]:
+    selected: list[Path] = []
+    for candidate in native_root.rglob("*"):
+        if candidate.is_symlink() or not candidate.is_file():
+            continue
+        relative = candidate.relative_to(native_root)
+        if relative.parts[0] in {"development_loop", "heldout"} or relative.name in {
+            "H4_ARM_REQUEST.json",
+            "H4_TERMINAL_OUTCOME.json",
+            "FAILURE.json",
+            "FROZEN_CANDIDATE.json",
+            "OBJECTIVE_MEASUREMENT.json",
+        }:
+            selected.append(candidate)
+    if len(selected) > 5_000:
+        raise ValueError("native H4 evidence tree exceeds its file-count ceiling")
+    entries: list[dict[str, object]] = []
+    for candidate in sorted(
+        selected,
+        key=lambda item: item.relative_to(native_root).as_posix(),
+    ):
+        size = candidate.stat().st_size
+        if not 1 <= size <= 64 * 1_048_576:
+            raise ValueError("native H4 evidence file exceeds its size ceiling")
+        entries.append(
+            {
+                "locator": candidate.relative_to(native_root).as_posix(),
+                "sha256": _file_sha256(candidate),
+                "size_bytes": size,
+            }
+        )
+    observed = {str(item["locator"]) for item in entries}
+    if not {"H4_ARM_REQUEST.json", "H4_TERMINAL_OUTCOME.json"} <= observed:
+        raise ValueError("native H4 recovery evidence lacks terminal receipts")
+    return tuple(entries)
+
+
 def _budget_error(
     cell: PlannedEvaluationCell,
     reported: EvaluationAdapterUsage,
     usage: EvaluationCellUsage,
     artifacts: tuple[EvaluationResultArtifact, ...],
+    *,
+    accounted_storage_bytes: int,
 ) -> str | None:
     resource = cell.resource
     if cell.lane_kind is ExecutionLaneKind.API_ONLY:
@@ -1663,9 +2383,39 @@ def _budget_error(
             return "local-model-telemetry-incomplete"
         if (usage.gpu_hours or 0) > float(resource.max_gpu_hours or 0):
             return "gpu-budget-exceeded"
-        if sum(item.size_bytes for item in artifacts) > int(resource.max_storage_bytes or 0):
+        if max(
+            sum(item.size_bytes for item in artifacts),
+            accounted_storage_bytes,
+        ) > int(resource.max_storage_bytes or 0):
             return "storage-budget-exceeded"
     return None
+
+
+def _adapter_accounted_storage_bytes(
+    cell_dir: Path,
+    artifact_paths: tuple[str, ...],
+) -> int:
+    total = sum((cell_dir / PurePosixPath(locator)).stat().st_size for locator in artifact_paths)
+    indexes = [
+        cell_dir / PurePosixPath(locator)
+        for locator in artifact_paths
+        if PurePosixPath(locator).name == "EVIDENCE_INDEX.json"
+    ]
+    for index_path in indexes:
+        try:
+            payload = json.loads(index_path.read_bytes())
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise ValueError("adapter evidence index is invalid") from exc
+        entries = payload.get("evidence_files")
+        if not isinstance(entries, list) or any(
+            not isinstance(item, dict)
+            or not isinstance(item.get("size_bytes"), int)
+            or item["size_bytes"] < 1
+            for item in entries
+        ):
+            raise ValueError("adapter evidence index storage accounting is invalid")
+        total = max(total, index_path.stat().st_size + sum(item["size_bytes"] for item in entries))
+    return total
 
 
 def _atomic_json_write(path: Path, payload: object) -> None:
@@ -1682,6 +2432,24 @@ def _atomic_json_write(path: Path, payload: object) -> None:
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
+
+
+def _preserve_partial_file(path: Path) -> None:
+    """Move an untrusted crash-window file aside without discarding evidence."""
+
+    if not path.exists():
+        return
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("H4 recovery file must be a regular non-symlink file")
+    recovery_root = path.parent / "recovery"
+    recovery_root.mkdir(exist_ok=True)
+    index = 1
+    while True:
+        destination = recovery_root / f"partial-{path.name}-{index:03d}"
+        if not destination.exists():
+            os.replace(path, destination)
+            return
+        index += 1
 
 
 def _attempt_number(cell_dir: Path) -> int:
@@ -1705,6 +2473,39 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _repository_regular_file(root: Path, locator: str) -> Path:
+    """Resolve a repository locator while rejecting every symlink hop."""
+
+    current = root.resolve(strict=True)
+    pure = PurePosixPath(validate_relative_locator(locator, field_name="repository artifact"))
+    for part in pure.parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("repository artifact cannot traverse a symbolic link")
+    resolved = current.resolve(strict=True)
+    if not resolved.is_relative_to(root) or not resolved.is_file():
+        raise ValueError("repository artifact escapes its repository")
+    return resolved
+
+
+def _all_failures_are_preregistered_itt(
+    results: EvaluationResultSet,
+    *,
+    selected_cell_ids: tuple[str, ...],
+) -> bool:
+    """Admit only treatment-exposed terminal failures to automatic ITT closure."""
+
+    selected = set(selected_cell_ids)
+    failures = tuple(
+        record
+        for record in results.cell_results
+        if record.cell_id in selected and record.status == "failed"
+    )
+    return bool(failures) and all(
+        record.error_code == "h4-itt-bounded-failure" for record in failures
+    )
+
+
 def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(character in "0123456789abcdef" for character in value)
 
@@ -1719,6 +2520,7 @@ __all__ = [
     "EvaluationCellCheckpoint",
     "EvaluationCellLaunch",
     "EvaluationCommandLauncher",
+    "EvaluationFormalPreparationBinding",
     "ProjectEvaluationCampaignRunner",
     "load_evaluation_campaign_launch_config",
 ]

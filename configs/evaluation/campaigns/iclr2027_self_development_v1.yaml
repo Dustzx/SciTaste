@@ -19,7 +19,7 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 4aaf60a2224b1c5953a5550713116ada60c544f8986923d4f05a1985c50b0fe2
+    sha256: 2d8971c3efa46adc61bd4080f9264b6d686c16f998907441aa750adb3c81afcb
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
     sha256: 97c9c42b567878a7ec5eff4514891bcc2374b1f959cb07770a811f26d55d0746
@@ -91,7 +91,7 @@ artifacts:
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
   - artifact_id: mechanism-governance
     path: docs/research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md
-    sha256: ffa2349bfa00e172b793e3e468dac44375fa6d821118a519daba03bb86cf8217
+    sha256: 030b3f17f570c8de577bd312b79f3d8a4b5f4709e59c347ff2a32214f8c7890f
   - artifact_id: dual-estimand-governance
     path: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
     sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812

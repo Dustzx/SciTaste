@@ -329,8 +329,8 @@ class TasteInterventionContract(BaseModel):
         )
         if lifecycle_policy is not None:
             checks["policy source groups"] = (
-                lifecycle_policy.schema_version == "1.3"
-                and lifecycle_policy.source_group_keys == self.policy_source_group_ids
+                lifecycle_policy.schema_version == "1.4"
+                and lifecycle_policy.source_group_ids == self.policy_source_group_ids
             )
             checks["credit assignment schedule"] = (
                 self.credit_assignment_schedule_sha256
@@ -412,7 +412,7 @@ def lifecycle_policy_training_corpus_sha256(policy: LifecycleTastePolicyModel) -
             "idea_revision_binding_sha256": policy.config.idea_revision.binding_sha256,
             "source_episode_ids": policy.source_episode_ids,
             "source_episode_sha256": policy.source_episode_sha256,
-            "source_group_keys": policy.source_group_keys,
+            "source_group_ids": policy.source_group_ids,
             "training_partitions": tuple(item.value for item in policy.config.training_partitions),
             "eligible_outcome_families": tuple(
                 item.value for item in policy.config.eligible_outcome_families

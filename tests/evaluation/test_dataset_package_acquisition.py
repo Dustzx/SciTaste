@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import shutil
 import stat
 import zipfile
 from datetime import UTC, datetime
@@ -247,9 +248,18 @@ def _fetcher(payload: bytes, asset: DatasetPackageAsset):
     return fetch
 
 
-def test_repository_request_needs_exact_owner_confirmation_after_license_policy() -> None:
+def _isolated_repository_workspace(tmp_path: Path, inspection) -> None:
+    del inspection
+    shutil.copytree("configs", tmp_path / "configs")
+    shutil.copytree("docs", tmp_path / "docs")
+
+
+def test_repository_request_needs_exact_owner_confirmation_after_license_policy(
+    tmp_path: Path,
+) -> None:
     inspection = load_dataset_package_request(REPOSITORY_REQUEST)
-    report = inspect_dataset_package_request(inspection, workspace_root=".")
+    _isolated_repository_workspace(tmp_path, inspection)
+    report = inspect_dataset_package_request(inspection, workspace_root=tmp_path)
 
     assert report.ready_for_owner_approval is True
     assert report.authorizes_download is False
@@ -269,7 +279,8 @@ def test_cli_cannot_approve_repository_request_with_wrong_hash(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     inspection = load_dataset_package_request(REPOSITORY_REQUEST)
-    report = inspect_dataset_package_request(inspection, workspace_root=".")
+    _isolated_repository_workspace(tmp_path, inspection)
+    report = inspect_dataset_package_request(inspection, workspace_root=tmp_path)
 
     with pytest.raises(SystemExit) as exc_info:
         main(
@@ -278,8 +289,8 @@ def test_cli_cannot_approve_repository_request_with_wrong_hash(
                 "dataset-package-approve",
                 "--manifest",
                 str(REPOSITORY_REQUEST),
-                "--workspace-root",
-                ".",
+                    "--workspace-root",
+                    str(tmp_path),
                 "--confirm-proposal-sha256",
                 "0" * 64,
                 "--confirm-gate-report-sha256",

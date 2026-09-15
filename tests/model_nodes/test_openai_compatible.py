@@ -180,8 +180,6 @@ def test_chat_payload_identity_pricing_and_raw_response(monkeypatch) -> None:
     assert prompt["output_schema"] == request().output_schema
     assert prompt["request_identity"] == {
         "schema_version": "1.0",
-        "request_id": "structured-live-1",
-        "request_fingerprint": request().fingerprint,
         "node_name": "review-semantic",
         "stage": "REVIEW",
         "state_snapshot_id": "snapshot-1",

@@ -21,12 +21,20 @@ from scitaste.evaluation.prelaunch import (
     SystemRole,
     TaskFreezeSemantics,
 )
-from scitaste.project.models import content_sha256, validate_relative_locator
+from scitaste.project.models import (
+    content_sha256,
+    validate_entry_id,
+    validate_relative_locator,
+)
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _SHA256 = r"^[0-9a-f]{64}$"
 _CELL_ID = r"^cell-[0-9a-f]{24}$"
 _BLIND_ID = r"^blind-[0-9a-f]{24}$"
+_H4_SYSTEM_IDS = {
+    "full-scitaste-learned-policy",
+    "native-base-without-learned-taste",
+}
 
 
 class EvaluationResultArtifact(BaseModel):
@@ -52,6 +60,8 @@ class EvaluationCellUsage(BaseModel):
     request_count: int | None = Field(default=None, ge=0)
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
+    max_input_tokens_observed: int | None = Field(default=None, ge=0)
+    max_output_tokens_observed: int | None = Field(default=None, ge=0)
     api_cost: float | None = Field(default=None, ge=0)
     gpu_hours: float | None = Field(default=None, ge=0)
     wall_time_hours: float = Field(ge=0)
@@ -63,7 +73,7 @@ class EvaluationCellResult(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     cell_id: str = Field(pattern=_CELL_ID)
     proposal_sha256: str = Field(pattern=_SHA256)
     plan_sha256: str = Field(pattern=_SHA256)
@@ -87,7 +97,15 @@ class EvaluationCellResult(BaseModel):
                 raise ValueError("a successful cell requires outcome and artifacts only")
         elif self.error_code is None or self.outcome is not None:
             raise ValueError("a failed cell requires an error code and no outcome")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
+        if self.schema_version == "1.0" and any(
+            value is not None
+            for value in (
+                self.usage.max_input_tokens_observed,
+                self.usage.max_output_tokens_observed,
+            )
+        ):
+            raise ValueError("cell result v1.1 is required for per-call token telemetry")
+        expected = content_sha256(_cell_result_hash_payload(self))
         if self.record_sha256 != expected:
             raise ValueError("evaluation cell result hash mismatch")
         return self
@@ -99,9 +117,7 @@ class EvaluationCellResult(BaseModel):
         unsigned = cls.model_construct(record_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            record_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"record_sha256"})
-            ),
+            record_sha256=content_sha256(_cell_result_hash_payload(unsigned)),
         )
 
 
@@ -276,11 +292,15 @@ class EvaluationResultSet(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_id: str
     evaluation_id: str
     proposal_sha256: str = Field(pattern=_SHA256)
     plan_sha256: str = Field(pattern=_SHA256)
+    run_id: str | None = None
+    campaign_manifest_sha256: str | None = Field(default=None, pattern=_SHA256)
+    launch_config_sha256: str | None = Field(default=None, pattern=_SHA256)
+    formal_preparation_sha256: str | None = Field(default=None, pattern=_SHA256)
     cell_results: tuple[EvaluationCellResult, ...] = Field(default=(), max_length=10_000)
     blind_reviews: tuple[EvaluationBlindReview, ...] = Field(default=(), max_length=10_000)
     primary_comparisons: tuple[EvaluationPrimaryComparison, ...] = Field(default=(), max_length=100)
@@ -300,6 +320,19 @@ class EvaluationResultSet(BaseModel):
             for item in self.cell_results
         ):
             raise ValueError("cell results must bind the result-set proposal and plan")
+        provenance = (
+            self.run_id,
+            self.campaign_manifest_sha256,
+            self.launch_config_sha256,
+            self.formal_preparation_sha256,
+        )
+        if self.schema_version == "1.0" and any(item is not None for item in provenance):
+            raise ValueError("result set v1.0 cannot carry campaign provenance")
+        if self.schema_version == "1.1":
+            if any(item is None for item in provenance):
+                raise ValueError("result set v1.1 requires complete campaign provenance")
+            assert self.run_id is not None
+            validate_entry_id(self.run_id, field_name="result-set run_id")
         expected = content_sha256(_result_set_hash_payload(self))
         if self.result_set_sha256 != expected:
             raise ValueError("evaluation result-set hash mismatch")
@@ -338,8 +371,28 @@ def _comparison_hash_payload(comparison: EvaluationPrimaryComparison) -> dict[st
     return payload
 
 
+def _cell_result_hash_payload(record: EvaluationCellResult) -> dict[str, object]:
+    payload = record.model_dump(mode="json", exclude={"record_sha256"})
+    if record.schema_version == "1.0":
+        payload["usage"].pop("max_input_tokens_observed", None)
+        payload["usage"].pop("max_output_tokens_observed", None)
+    return payload
+
+
 def _result_set_hash_payload(result_set: EvaluationResultSet) -> dict[str, object]:
     payload = result_set.model_dump(mode="json", exclude={"result_set_sha256"})
+    if result_set.schema_version == "1.0":
+        for field in (
+            "run_id",
+            "campaign_manifest_sha256",
+            "launch_config_sha256",
+            "formal_preparation_sha256",
+        ):
+            payload.pop(field, None)
+    for record in payload["cell_results"]:
+        if record["schema_version"] == "1.0":
+            record["usage"].pop("max_input_tokens_observed", None)
+            record["usage"].pop("max_output_tokens_observed", None)
     for comparison in payload["primary_comparisons"]:
         if comparison["schema_version"] == "1.0":
             comparison.pop("analysis_input_sha256", None)
@@ -951,9 +1004,13 @@ def _budget_issues(cell: PlannedEvaluationCell, record: EvaluationCellResult) ->
             usage.request_count,
             usage.input_tokens,
             usage.output_tokens,
+            usage.max_input_tokens_observed,
+            usage.max_output_tokens_observed,
             usage.api_cost,
         )
-        if any(value is None for value in required) or usage.gpu_hours is not None:
+        if (
+            record.schema_version == "1.1" and any(value is None for value in required)
+        ) or usage.gpu_hours is not None:
             issues.append(f"cell:{cell.cell_id}:api-telemetry-incomplete")
         else:
             assert usage.request_count is not None
@@ -964,6 +1021,14 @@ def _budget_issues(cell: PlannedEvaluationCell, record: EvaluationCellResult) ->
                 issues.append(f"cell:{cell.cell_id}:request-budget-exceeded")
             if usage.input_tokens + usage.output_tokens > (resource.max_total_tokens or 0):
                 issues.append(f"cell:{cell.cell_id}:token-budget-exceeded")
+            if usage.max_input_tokens_observed is not None and usage.max_input_tokens_observed > (
+                resource.max_input_tokens_per_call or 0
+            ):
+                issues.append(f"cell:{cell.cell_id}:input-token-call-budget-exceeded")
+            if usage.max_output_tokens_observed is not None and usage.max_output_tokens_observed > (
+                resource.max_output_tokens_per_call or 0
+            ):
+                issues.append(f"cell:{cell.cell_id}:output-token-call-budget-exceeded")
             if usage.api_cost > (resource.max_cost or 0):
                 issues.append(f"cell:{cell.cell_id}:cost-budget-exceeded")
     else:
@@ -971,6 +1036,19 @@ def _budget_issues(cell: PlannedEvaluationCell, record: EvaluationCellResult) ->
             issues.append(f"cell:{cell.cell_id}:gpu-telemetry-incomplete")
         elif usage.gpu_hours > (resource.max_gpu_hours or 0):
             issues.append(f"cell:{cell.cell_id}:gpu-budget-exceeded")
+        local_model_telemetry = (
+            usage.request_count,
+            usage.input_tokens,
+            usage.output_tokens,
+            usage.max_input_tokens_observed,
+            usage.max_output_tokens_observed,
+        )
+        if (
+            record.schema_version == "1.1"
+            and any(value is not None for value in local_model_telemetry)
+            and any(value is None for value in local_model_telemetry)
+        ):
+            issues.append(f"cell:{cell.cell_id}:local-model-telemetry-incomplete")
         if sum(item.size_bytes for item in record.artifacts) > (resource.max_storage_bytes or 0):
             issues.append(f"cell:{cell.cell_id}:storage-budget-exceeded")
     return issues
@@ -1080,6 +1158,21 @@ def _claim_comparison_status(
         if not candidate_units or candidate_units != comparator_units:
             issues.add(f"analysis:{spec.contrast_id}:planned-units-not-paired")
 
+    h4_claim = any(cell.system_id in _H4_SYSTEM_IDS for cell in cells)
+    if h4_claim:
+        provenance = (
+            result_set.run_id,
+            result_set.campaign_manifest_sha256,
+            result_set.launch_config_sha256,
+            result_set.formal_preparation_sha256,
+        )
+        if result_set.schema_version != "1.1" or any(item is None for item in provenance):
+            issues.add("analysis:h4-formal-campaign-provenance-required")
+        issues.update(
+            f"analysis:{item.comparison_id}:h4-requires-executable-schema-1.2"
+            for item in comparisons
+            if item.schema_version != "1.2"
+        )
     executable_comparisons = [item for item in comparisons if item.schema_version == "1.2"]
     expected_executable: dict[str, EvaluationPrimaryComparison] = {}
     if executable_comparisons:
@@ -1101,6 +1194,8 @@ def _claim_comparison_status(
         spec = specs.get(comparison.comparison_id)
         if spec is None:
             issues.add(f"analysis:{comparison.comparison_id}:unplanned-contrast")
+            continue
+        if h4_claim and comparison.schema_version != "1.2":
             continue
         if (
             comparison.candidate_system_id != spec.candidate_system_id
@@ -1208,10 +1303,15 @@ def _recompute_objective_comparisons(
         root / PurePosixPath(measurement_artifact.locator)
     )
     raw_results = EvaluationResultSet.create(
+        schema_version=result_set.schema_version,
         project_id=result_set.project_id,
         evaluation_id=result_set.evaluation_id,
         proposal_sha256=result_set.proposal_sha256,
         plan_sha256=result_set.plan_sha256,
+        run_id=result_set.run_id,
+        campaign_manifest_sha256=result_set.campaign_manifest_sha256,
+        launch_config_sha256=result_set.launch_config_sha256,
+        formal_preparation_sha256=result_set.formal_preparation_sha256,
         cell_results=result_set.cell_results,
         blind_reviews=result_set.blind_reviews,
         primary_comparisons=(),

@@ -77,6 +77,19 @@ execution-only credit by default. The controller changes
 ranking only when structured scope, support, pairwise probability, and a credible
 margin all pass; otherwise it records an exact abstention. This prevents a
 mistaken self-explanation from recursively becoming its own authority.
+The policy layer now separates seven scientific judgments rather than assuming
+that all forms of Taste share one scalar preference. Scientific value,
+epistemic discrimination, empirical diagnosticity, adaptive allocation,
+inferential discipline, transfer/correction, and scientific communication each
+receive an independently fitted head. Two isolated AI reviews assign an admitted
+episode to one family, with a third adjudicator only on disagreement; model,
+invocation, and raw-response hashes remain attached and no human-review claim is
+created. At inference, the caller must name the live decision family. An unseen
+family refuses to borrow evidence from another head, and the selected head retains
+the existing support, scope, and credible-margin abstention rules. H4 binds the
+adaptive-allocation head because its treatment is specifically the use of
+trajectory feedback to decide the next experiment, not generic writing or idea
+preference.
 Continual learning begins from an explicit trajectory sampling plan, not from an
 unscoped scan of successful logs. The plan binds the current Idea, natural source
 group, split, decision-log location, and bounded state-search root. Reconstruction
@@ -252,7 +265,7 @@ designs:
 
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
-| Scientific Taste control | The existing controller, critics, grounded-source pipeline, transfer-bounded deliberation, causal condition contracts, and outcome-gated memory remain the substrate. A project-owned Idea revision binds the current lifecycle-policy thesis; one shared episode schema closes the proposal boundary across three supervision channels; dual independent attribution review, conditional adjudication, immutable admission, outcome/control policy fits, exact-scope uncertainty abstention, and controller traces now close the first estimated-policy path | Complete the closest-work/novelty challenge and accept the Idea revision; reconstruct and independently review real longitudinal episodes; replace exact structured matching with empirically justified transfer where warranted; and produce powered held-out H1--H4 evidence |
+| Scientific Taste control | The controller, critics, grounded-source pipeline, transfer-bounded deliberation, causal condition contracts, and outcome-gated memory remain the substrate. A project-owned Idea revision binds the lifecycle-policy thesis; one shared episode schema closes three supervision channels; independent AI attribution, conditional adjudication, immutable admission, seven family-conditioned policy heads, exact-scope uncertainty abstention, family-aware controller traces, and H4 adaptive-head reproduction close the implemented policy path. Grounded source curation supports either truthful human provenance or a separately disclosed dual-AI tier | Accept the novelty-surviving Idea revision; reconstruct and AI-review real longitudinal episodes; empirically test transfer beyond exact structured matching; freeze authentic family-policy artifacts; and produce powered held-out H1--H4 evidence without reporting AI review as human evidence |
 | Generation as Content workspace | Trusted evidence-bound generated surfaces, project conversations, flexible planning edits, explicit project interventions, resource views, and proposal-only action bridges are implemented. The Core exposes a typed human-intervention compiler and a later outcome-join seam that preserve operation, producer, scope, alternatives, evidence, transfer boundary, and reversal condition without granting admission | Adapt the delivered conversation branch's accepted interaction into the shared episode candidate, add dynamic backend activation and general action packets, and conduct a counterbalanced human study after the scientific-policy loop is stable |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, durable bounded execution, cost-sensitive verification, and paper-evaluation contracts are implemented. Its Core handoff preserves exact decision/outcome evidence, separated outcome families, confounders, credit hypothesis, transfer boundary, and attribution-producer identity while independent review retains authority | Adapt durable Tool observations into real process-Taste candidates, acquire missing diagnostics when justified, empirically evaluate routing and intervention cost, and replicate beyond authored fixtures |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |

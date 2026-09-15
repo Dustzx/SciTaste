@@ -89,7 +89,7 @@ _LIFECYCLE_PHASES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "method-readiness",
         ("qualify-objective-and-external-assets",),
     ),
-    ("independent-review", "independent-review", ("freeze-independent-review",)),
+    ("independent-review", "independent-review", ("freeze-ai-review-panel",)),
     (
         "prepilot-evidence",
         "prepilot-evidence",

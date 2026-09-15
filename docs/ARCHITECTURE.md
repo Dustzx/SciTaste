@@ -4098,3 +4098,151 @@ does not prove acceptance or paper quality, but it prevents the scheduler and
 generated interface from confusing a planned external action with a completed
 one. The ICLR 2027 profile records the official abstract and paper deadlines and
 retains CCFDDL only as a secondary index.
+
+### ADR-131: Lifecycle Taste is an every-round intervention, not a condition label
+
+Status: accepted and implemented; real H4 artifacts and execution remain open.
+
+H4 estimates the intention-to-treat effect of a learned lifecycle policy on
+held-out objective progress. Both arms therefore receive the same task, Full
+SciTaste static guidance, patch model, prompt, seed schedule, tool/repair policy,
+execution profiles, scorer, and budget. The only treatment is lifecycle-policy
+weight: one in the treatment arm and zero in the control arm. The retained
+legacy condition ID `native-base-without-learned-taste` means lifecycle-policy
+off only; the schema-1.2 matrix prevents it from being mistaken for a Base
+system because both arms still contain the same Knowledge, Taste precedents,
+utility policy, and critics.
+
+The intervention occurs on every development round. A deterministic fixed menu
+offers high-level PROBE, PILOT, EXPERIMENT, ANALYZE, REFINE, PIVOT, and STOP
+actions. Intrinsic `TasteController` selects one under the frozen policy with
+the generic stage critic disabled, because that critic contains stage-specific
+priors against otherwise valid H4 actions. Only a sanitized action ID, type, and
+instruction reach the common patch model. Policy scores, rationale, request IDs,
+and request fingerprints remain audit-only. STOP ends the loop without a model call;
+every other selection requires exactly one proposal, so the patch model cannot
+become a second stopping policy or widen the search budget.
+
+### ADR-133: Deadline pressure compiles the work order, not just a countdown
+
+Status: accepted and implemented.
+
+`ProjectDeadlineStatus.defer_noncritical_work` previously reached the project UI
+without deterministically changing Core scheduling. SciTaste now separates an
+editable `DeadlineWorkPlanDraft` from a snapshot-bound `DeadlineWorkPlan`, then
+compiles both with the exact time-relative deadline status into a
+`DeadlineRoutedWorkProgram`. Work items declare dependencies, effort, evidence
+gain, next-milestone outcomes, and claim, submission, or release criticality.
+Under critical pressure the compiler admits only ready critical-path work to the
+immediate queue and explicitly defers noncritical polish and non-release checks.
+
+This is scheduling evidence, not execution authority. It cannot contact a
+provider, reserve a GPU, mutate an external service, or attest submission. The
+deadline route sits upstream of Tool Intelligence: Tool Intelligence chooses the
+smallest justified check for an admitted action, while the deadline compiler
+prevents low-value actions from reaching that stage.
+
+Before baseline execution, model contact, or editable mutation, the adapter
+loads one protocol-level H4 profile, a canonical outcome-blind five-state probe
+contract, and a passed deterministic manipulation report. The contract freezes
+the controller seed; report margins and dispositions are recomputed from the
+observations, and the adapter replays the complete probe before accepting exact
+report equality. It then exclusively
+writes an arm request, which breaks the profile/campaign hash cycle by binding
+the actual campaign/cell only after the campaign exists. The request also binds
+the accepted Idea, task bytes, canonical
+held-out identity, source partitions, workspace surfaces, dev/held-out resource
+records, model profile, prompt, node policy, decoding configuration, and budget.
+The repository must be clean at the frozen commit and tracked-tree hash. Static
+guidance sources, policy sources, and held-out tasks must be canonical and
+pairwise disjoint. Formal multi-task execution uses one guidance/mechanism-context
+binding per task. The complete campaign's worst-case calls, tokens, and cost are
+reserved before the first model call so arm order cannot exhaust a later arm.
+
+Every baseline and decision record carries its arm request, predecessor receipt,
+post-iteration state, source surface, and a self-hash. The final objective binds
+that loop chain. Development, proposal, held-out, adapter, timeout, or process
+failure remains an observed cell under a preregistered task-specific worst bound
+rather than disappearing from analysis. Every failure has a typed terminal
+outcome receipt whose stage, error, predecessor, failure artifact, and resource
+use are replayed by the collector. The same validation is invoked by the public
+analysis and result-registration route; it closes the arm request, loop, frozen
+candidate, held-out request and receipt, raw score, terminal, and measured or
+conservative usage instead of trusting a caller-supplied measurement set. A pair
+artifact then joins the exact on/off
+arm requests and measurements for the same task, seed, and repetition, reports
+the on-minus-off effect, and is persisted inside the objective measurement set.
+A project evaluation may register only one claim-authoritative H4 primary
+attempt; additional campaigns must be explicitly non-claim sensitivity runs.
+That primary-attempt lock is preceded by a no-execution preparation replay.
+The formal launch config binds `PREPARATION.json`, which in turn binds the exact
+on/off launchers, adapter configs, selected H4 cell population, accepted Idea,
+repository identity, state-probe artifacts, lifecycle policy, and a policy
+reproduction report. Policy reproduction re-runs every AI-reviewed episode
+admission against the original evidence and panel contract, then refits the
+schema-1.5 outcome-updated policy and requires exact equality. This prevents a
+caller from making a hand-built posterior look eligible merely by setting its
+derived flags. The campaign validates this chain before registering or resuming
+a project run. A stable Idea scientific-contract hash excludes incidental
+project revision/snapshot counters but retains the exact Idea revision record
+and artifact hashes, so bookkeeping updates neither invalidate the experiment
+nor weaken scientific-change detection.
+The formal launcher is an absolute isolated Python process whose bootstrap pins
+`<repository>/src` ahead of installed packages. Its inherited environment is
+limited to the proposal's API-key variable, and its GPU count must equal the
+proposal resource. Registering a formal primary campaign reserves the unique
+run even before treatment contact, so an abandoned pre-treatment run may resume
+but cannot coexist with a second primary run. After an arm request exists,
+resume first reconstructs that entire request from the frozen adapter, condition,
+task, pristine workspace, development and held-out resource receipts, model
+profile, policy, and campaign. A missing or invalid checkpoint is not repaired
+around an old result: the partial bytes are retained and the verified exposure
+is closed as a preregistered worst-bound ITT failure. Exposure also sets the
+project run's consumed marker, and result registration requires that marker plus
+the exact schema-1.2 campaign, launch config, and preparation provenance.
+Any claim containing an H4 system requires executable comparison schema 1.2 and
+must reproduce the registered analysis. Conservative API/GPU terminal ceilings
+are derived exactly from the planned cell and arm iteration limit, including
+failures before a loop exists; measured usage must agree with the loop and stay
+inside the same authority.
+These controls create formal-evidence infrastructure; they do not create a
+favorable effect, validate the learned policy, or authorize a real experiment.
+All independent reviews used during implementation are explicitly AI reviews,
+not human or expert judgments.
+
+### ADR-132: Scientific Taste is family-conditioned, not one pooled preference
+
+Status: accepted and implemented at the artifact/controller boundary; authentic
+episode populations and formal effects remain open.
+
+A single lifecycle preference table can combine incompatible judgments. Choosing
+a worthwhile question, selecting a diagnostic experiment, allocating a final
+model call, calibrating a claim, transferring a precedent, and communicating an
+argument are all scientific decisions, but evidence that teaches one does not
+automatically teach the others. SciTaste therefore defines seven decision
+families: scientific value, epistemic discrimination, empirical diagnosticity,
+adaptive allocation, inferential discipline, transfer and correction, and
+scientific communication.
+
+An admitted episode enters exactly one family through a self-hashed assignment.
+The assignment requires two isolated AI primary reviews over the fixed ontology;
+agreement forbids an unnecessary adjudicator, while disagreement requires exactly
+one distinct AI adjudicator. Reviewer, invocation, model, rationale, and raw
+response hashes remain bound. These are non-human reviews even when the workflow
+treats them as a completed engineering gate.
+
+Fitting partitions the complete admitted population by those assignments and
+invokes the existing outcome-updated, source-group-aware estimator independently
+for each observed family. Empty families are explicit. Inference requires a
+declared family and cannot fall back to another head; within a head, Idea, domain,
+stage, support, pairwise probability, and credible-margin gates still control
+application or exact abstention. The decision trace binds both the chosen head and
+its parent family-policy artifact. For H4, the reproduction spec additionally
+binds every assignment and proves that the legacy-compatible policy consumed by
+the runner is exactly the family policy's adaptive-allocation head.
+
+Grounded source curation now permits a separate dual-AI-reviewed tier with exact
+model and raw-response provenance. It can support retrieval and AI-evaluated
+experiments, but it never sets `human_verified` or permits a human-validity claim.
+The original human tier remains available. This preserves truthful evidence while
+allowing the self-development workflow to proceed without waiting for human labor.

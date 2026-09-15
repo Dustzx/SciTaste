@@ -102,7 +102,11 @@ class EvidenceReviewPackage(BaseModel):
     @computed_field
     @property
     def package_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"package_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"package_sha256"})
+        if self.ai_review_contract is None:
+            payload.pop("ai_review_contract", None)
+            payload.pop("ai_review_contract_sha256", None)
+        return _canonical_sha256(payload)
 
 
 class EvidenceReviewInspection(BaseModel):

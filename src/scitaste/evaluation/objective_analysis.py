@@ -23,11 +23,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.evaluation.cell_plan import EvaluationCellPlan, PlannedEvaluationCell
+from scitaste.evaluation.h4_execution import H4PairedResult
 from scitaste.evaluation.prelaunch import (
     ContrastInferenceRole,
     ExperimentPrelaunchManifest,
 )
 from scitaste.evaluation.results import (
+    EvaluationCellResult,
     EvaluationPrimaryComparison,
     EvaluationResultArtifact,
     EvaluationResultSet,
@@ -40,6 +42,10 @@ _SHA256 = r"^[0-9a-f]{64}$"
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
 _MAX_JSON_BYTES = 64 * 1024 * 1024
 _IMPLEMENTATION_ID = "scitaste.objective-analysis.task-clustered-v1"
+_H4_SYSTEM_IDS = {
+    "full-scitaste-learned-policy",
+    "native-base-without-learned-taste",
+}
 
 
 class ObjectiveDirection(StrEnum):
@@ -209,7 +215,7 @@ class ObjectiveMeasurementSet(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_id: str = Field(pattern=_ID)
     evaluation_id: str = Field(pattern=_ID)
     proposal_sha256: str = Field(pattern=_SHA256)
@@ -217,6 +223,10 @@ class ObjectiveMeasurementSet(BaseModel):
     cell_result_population_sha256: str = Field(pattern=_SHA256)
     objective_outcome_contract_sha256: str = Field(pattern=_SHA256)
     measurements: tuple[ObjectiveCellMeasurement, ...] = Field(max_length=10_000)
+    h4_paired_results: tuple[H4PairedResult, ...] = Field(
+        default=(),
+        max_length=5_000,
+    )
     measurement_set_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -224,7 +234,14 @@ class ObjectiveMeasurementSet(BaseModel):
         cell_ids = [item.cell_id for item in self.measurements]
         if len(cell_ids) != len(set(cell_ids)):
             raise ValueError("objective cell measurements must be unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"measurement_set_sha256"}))
+        pair_ids = [item.pair_id for item in self.h4_paired_results]
+        if len(pair_ids) != len(set(pair_ids)):
+            raise ValueError("objective H4 paired results must be unique")
+        if self.schema_version == "1.0" and self.h4_paired_results:
+            raise ValueError("legacy objective measurements cannot contain H4 pairs")
+        if self.schema_version == "1.1" and not self.h4_paired_results:
+            raise ValueError("objective H4 measurements require paired results")
+        expected = content_sha256(_objective_measurement_set_hash_payload(self))
         if self.measurement_set_sha256 != expected:
             raise ValueError("objective measurement-set hash mismatch")
         return self
@@ -237,9 +254,18 @@ class ObjectiveMeasurementSet(BaseModel):
         return cls(
             **payload,
             measurement_set_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"measurement_set_sha256"})
+                _objective_measurement_set_hash_payload(unsigned)
             ),
         )
+
+
+def _objective_measurement_set_hash_payload(
+    measurements: ObjectiveMeasurementSet,
+) -> dict[str, object]:
+    payload = measurements.model_dump(mode="json", exclude={"measurement_set_sha256"})
+    if measurements.schema_version == "1.0":
+        payload.pop("h4_paired_results", None)
+    return payload
 
 
 class ObjectiveTaskContrast(BaseModel):
@@ -360,10 +386,15 @@ def complete_objective_result_set(
     ):
         raise ValueError("objective analysis cell population changed before completion")
     return EvaluationResultSet.create(
+        schema_version=results.schema_version,
         project_id=results.project_id,
         evaluation_id=results.evaluation_id,
         proposal_sha256=results.proposal_sha256,
         plan_sha256=results.plan_sha256,
+        run_id=results.run_id,
+        campaign_manifest_sha256=results.campaign_manifest_sha256,
+        launch_config_sha256=results.launch_config_sha256,
+        formal_preparation_sha256=results.formal_preparation_sha256,
         cell_results=results.cell_results,
         blind_reviews=results.blind_reviews,
         primary_comparisons=materialization.primary_comparisons,
@@ -444,9 +475,7 @@ def analyze_objective_outcomes(
     """Compute task-level paired estimates without launching any external resource."""
 
     root = Path(project_root).resolve(strict=True)
-    protocol_root = (
-        Path(evidence_root).resolve(strict=True) if evidence_root is not None else root
-    )
+    protocol_root = Path(evidence_root).resolve(strict=True) if evidence_root is not None else root
     contract = contract_inspection.contract
     if manifest.analysis is None or manifest.analysis.claim_admission is None:
         raise ValueError("objective analysis requires a preregistered claim-admission contract")
@@ -511,6 +540,14 @@ def analyze_objective_outcomes(
         )
     if set(measurement_by_cell) - claim_cell_ids:
         raise ValueError("objective measurement set contains a non-claim cell")
+    _validate_h4_analysis_population(
+        plan,
+        claim_cells,
+        record_by_cell,
+        measurements,
+        task_specs,
+        project_root=root,
+    )
     if manifest.study_scope == "formal" and any(
         record_by_cell[cell.cell_id].evidence_class != "real" for cell in claim_cells
     ):
@@ -772,6 +809,77 @@ def primary_comparisons_from_objective_report(
         )
         for item in report.comparisons
     )
+
+
+def _validate_h4_analysis_population(
+    plan: EvaluationCellPlan,
+    claim_cells: list[PlannedEvaluationCell],
+    record_by_cell: dict[str, EvaluationCellResult],
+    measurements: ObjectiveMeasurementSet,
+    task_specs: dict[str, ObjectiveTaskScoreContract],
+    *,
+    project_root: Path,
+) -> None:
+    """Make H4 closure an invariant of analysis, not only of one collector CLI."""
+
+    from scitaste.evaluation.objective_measurement_collection import (
+        validate_h4_objective_cell_evidence,
+    )
+
+    h4_cells = tuple(cell for cell in claim_cells if cell.system_id in _H4_SYSTEM_IDS)
+    if not h4_cells:
+        if measurements.schema_version != "1.0" or measurements.h4_paired_results:
+            raise ValueError("non-H4 objective analysis cannot carry H4 paired evidence")
+        return
+    if measurements.schema_version != "1.1":
+        raise ValueError("H4 objective analysis requires schema 1.1 measurements")
+
+    expected_groups: dict[tuple[str, int, int], dict[str, PlannedEvaluationCell]] = {}
+    for cell in h4_cells:
+        group = expected_groups.setdefault((cell.task_id, cell.seed, cell.repetition), {})
+        if cell.system_id in group:
+            raise ValueError("H4 objective plan repeats an arm within a pair")
+        group[cell.system_id] = cell
+    if any(set(arms) != _H4_SYSTEM_IDS for arms in expected_groups.values()):
+        raise ValueError("H4 objective plan lacks an exact on/off pair")
+    paired = {
+        (item.task_id, item.seed, item.repetition): item for item in measurements.h4_paired_results
+    }
+    if set(paired) != set(expected_groups):
+        raise ValueError("H4 paired results differ from the exact planned population")
+
+    profile_sha256s: set[str] = set()
+    for key, arms in expected_groups.items():
+        pair = paired[key]
+        observed: dict[str, tuple[object, object]] = {}
+        for system_id, cell in arms.items():
+            record = record_by_cell[cell.cell_id]
+            request, native = validate_h4_objective_cell_evidence(
+                plan,
+                cell,
+                record,
+                task_specs[cell.task_id],
+                project_root=project_root,
+            )
+            observed[system_id] = (request, native)
+            profile_sha256s.add(request.profile_sha256)
+        on_request, on_native = observed["full-scitaste-learned-policy"]
+        off_request, off_native = observed["native-base-without-learned-taste"]
+        if (
+            pair.profile_sha256 != on_request.profile_sha256
+            or pair.profile_sha256 != off_request.profile_sha256
+            or pair.learned_policy_on_arm_request_sha256 != on_request.request_sha256
+            or pair.learned_policy_off_arm_request_sha256 != off_request.request_sha256
+            or pair.learned_policy_on_measurement_sha256 != on_native.measurement_sha256
+            or pair.learned_policy_off_measurement_sha256 != off_native.measurement_sha256
+            or pair.learned_policy_on_plan_position != on_request.plan_position
+            or pair.learned_policy_off_plan_position != off_request.plan_position
+            or pair.learned_policy_on_directed_progress != on_native.directed_progress
+            or pair.learned_policy_off_directed_progress != off_native.directed_progress
+        ):
+            raise ValueError("H4 paired result differs from its arm evidence")
+    if len(profile_sha256s) != 1:
+        raise ValueError("H4 objective population mixes execution profiles")
 
 
 def _task_effects(

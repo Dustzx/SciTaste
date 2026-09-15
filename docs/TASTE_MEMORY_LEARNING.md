@@ -16,7 +16,7 @@ quarantined TasteCase --------------------> excluded from retrieval
         |
         +-- bound decision record and actual-outcome hash
         +-- content-bound outcome record and observation IDs
-        +-- two independent, conflict-cleared human reviews
+        +-- two independent, invocation-separated AI or human reviews
         +-- one distinct adjudicator only when primary reviews split
         |
         v
@@ -93,6 +93,45 @@ people exist. A formal longitudinal study must retain its reviewer recruitment,
 identity/conflict records, outcome artifacts, and review packets under the
 project evidence protocol. Unit-test reviewers are fixtures only and must never
 be reported as human evidence.
+
+For engineering progress and internally AI-reviewed source assets, SciTaste also
+supports two isolated AI reviewers plus a distinct adjudicator on disagreement.
+Those records bind model, invocation, and raw-response identities and always keep
+`not_human_review=true`; they can close the operational review gate requested by
+the project owner but never set `human_verified` or support a human-validity
+claim.
+
+## Scientific decision-family conditioning
+
+Admitted episodes are not pooled into one generic quality score. A fixed
+seven-family ontology separates scientific value, epistemic discrimination,
+empirical diagnosticity, adaptive allocation, inferential discipline,
+transfer/correction, and scientific communication. Two isolated AI assignments
+must agree, or a third invocation adjudicates. The assignment is joined to
+outcome-family metadata only after the outcome-blind family judgment.
+
+Compile each assignment, then fit one independent head per observed family:
+
+```bash
+.venv/bin/scitaste taste assign-decision-family \
+  --assignment-id episode-001-family-v1 \
+  --episode admitted-episode-001.json \
+  --decision-family adaptive-allocation \
+  --review reviewer-a.json --review reviewer-b.json \
+  --rationale "This decision allocates the next bounded experiment." \
+  --output episode-001-family-v1.json
+
+.venv/bin/scitaste taste fit-family-policy \
+  --policy-id lifecycle-taste-v1 \
+  --config lifecycle-policy.yaml \
+  --episode admitted-episode-001.json \
+  --assignment episode-001-family-v1.json \
+  --output FAMILY_POLICY.json
+```
+
+Unobserved families abstain rather than borrowing another head. Native H4 uses
+only the exact `adaptive-allocation` head, while its reproduction report binds
+the complete parent policy, assignment population, and admitted episodes.
 
 ## Current evidence boundary
 

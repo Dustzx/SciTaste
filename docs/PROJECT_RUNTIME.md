@@ -225,6 +225,26 @@ it exposes the exact observed time, next deadline, remaining seconds/hours/days,
 urgency, required outcomes, and `defer_noncritical_work`. It does not guess task
 durations or invent a percentage complete.
 
+Deadline status can also compile the project work order rather than remaining a
+display-only warning. Supply a JSON draft containing a `plan_id`, `project_id`,
+canonical `items`, and `completed_work_ids`; each item declares prerequisites,
+effort, expected evidence gain, claim/submission/release criticality, and any
+exact next-milestone outcome it supports:
+
+```bash
+.venv/bin/scitaste project deadline route-work \
+  --project-id my-research-project \
+  --plan /path/to/WORK_PLAN_DRAFT.json \
+  --output-locator planning/iclr2027/DEADLINE_WORK_PROGRAM.json \
+  --outputs-root outputs
+```
+
+At seven days or fewer the compiler retains ready critical-path work, waits for
+declared prerequisites, and explicitly defers the rest. Verification that is not
+a release gate is labeled as deferred instead of being repeated during feature
+development. The self-hashed result has `execution_authorized=false`; it neither
+runs a task nor grants API/GPU or external-submission authority.
+
 The status response includes the current revision. Supply it when registering or
 selecting a run:
 
@@ -303,6 +323,33 @@ turn selection or author approval into execution.
 deriving its seven decision-scale readiness gates. This keeps a large expanded
 cell matrix inspectable without allowing summary prose or a UI count to replace
 the underlying blocker codes.
+
+For native lifecycle H4, the request and formal preparation are derived rather
+than handwritten. Both commands replay project registration, the accepted Idea,
+paired cell plan, AI-reviewed episode admissions, family-conditioned
+adaptive-allocation policy, state manipulation probe, source partitions,
+adapter inputs, model/resource profiles, and a clean repository identity. They
+never authorize or start a cell:
+
+```bash
+.venv/bin/scitaste project evaluation plan-native-h4 \
+  --project-id my-research-project --evaluation-id native-h4-v1 \
+  --preparation-id native-h4-preparation-v1 \
+  --learned-policy-adapter configs/evaluation/h4-on.json \
+  --policy-off-adapter configs/evaluation/h4-off.json \
+  --timeout-seconds 7200 \
+  --output-locator evaluations/native-h4-v1/formal/REQUEST.json \
+  --outputs-root outputs
+
+.venv/bin/scitaste project evaluation prepare-native-h4 \
+  --request outputs/projects/my-research-project/evaluations/native-h4-v1/formal/REQUEST.json \
+  --preparation-output evaluations/native-h4-v1/formal/PREPARATION.json \
+  --launch-config-output evaluations/native-h4-v1/formal/LAUNCH_CONFIG.json \
+  --outputs-root outputs
+```
+
+Actual `run-campaign` remains a later owner-authorized action after exact model,
+data, API/GPU, time, and cost disclosure.
 
 After an explicitly approved runner has produced existing result bytes, admit
 them through a separate immutable registry transition:

@@ -5,6 +5,67 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added project-owned deadline work routing so an imminent venue milestone
+  changes the Core priority queue instead of serving only as a countdown;
+  noncritical feature polish and non-release verification are explicitly deferred.
+- Added family-conditioned Scientific Taste. Seven explicit judgment families
+  separate scientific value, epistemic discrimination, empirical diagnosticity,
+  adaptive allocation, inferential discipline, transfer/correction, and
+  scientific communication instead of pooling them into one score. Every
+  episode-to-family assignment binds two independent AI reviews plus conditional
+  adjudication and exact model, invocation, and raw-response identities. A
+  deterministic CLI fits one uncertainty-aware lifecycle head per observed
+  family; unobserved families and under-supported heads abstain. The controller
+  records both the selected head and parent family-policy identity, while H4
+  reproduction can require the adaptive-allocation head to reproduce from the
+  complete assignment and episode population. Grounded Taste curation now also
+  has a truthful dual-AI-reviewed tier alongside the human tier; AI evidence never
+  sets `human_verified` or authorizes a human-validity claim. No API, GPU,
+  benchmark, or held-out execution was performed.
+- Added the native H4 lifecycle-policy execution path. A schema-1.1 adapter now
+  requires an immutable protocol profile, passed outcome-blind state-probe report,
+  AI-reviewed policy artifact, canonical source registry, task-specific guidance,
+  exact task/scorer/split identities, current accepted Idea, clean repository
+  identity, fixed model/prompt/policy, and both resource profiles before baseline
+  execution. Every round uses deterministic intrinsic Taste to choose one fixed
+  high-level action; a non-STOP action permits exactly one patch proposal and
+  exposes no policy scores or operational request identifiers to the patch model.
+  On/off arms retain identical static Full-SciTaste guidance and differ only by
+  lifecycle-policy weight. Iterations form a self-hashed predecessor chain;
+  development, held-out, adapter, and campaign-process failures close through a
+  typed terminal receipt and remain in the intention-to-treat population under a
+  task-specific registered bound. Task-seed-repetition pairs are retained inside
+  the objective measurement set, primary-attempt failures cannot be selectively
+  rerun, and the model budget reserves the full campaign before its first call.
+  State-probe dispositions are recomputed from their observations and the native
+  adapter deterministically replays the frozen seed, policy, controller, and
+  probes before accepting a report. The public objective-analysis path now
+  revalidates the exact H4 pair population and the complete arm-request, loop,
+  frozen-candidate, held-out-request/receipt, measurement, terminal, and usage
+  chain, so a caller cannot bypass these gates with a hand-built measurement set.
+  Claim registration requires executable schema-1.2 recomputation whenever an
+  H4 system appears, and conservative terminal usage must exactly equal the
+  API/GPU cell authority derived before execution; measured terminal telemetry
+  is checked against the loop, result record, per-call limits, and arm ceiling.
+  A formal adapter can no longer trust a hand-assembled eligible policy: its
+  complete AI-reviewed admission population is re-admitted from bound evidence
+  and the lifecycle policy is refitted for exact equality. A schema-1.1 launch
+  config additionally binds a self-hashed preparation manifest. The campaign
+  replays that policy, the state probes, adapters, launchers, accepted Idea,
+  cell population, source registry, objective contract, repository commit, and
+  tracked tree before `_begin_or_resume`. The canonical launcher uses the frozen
+  repository source under isolated Python, accepts only the registered API-key
+  environment, and derives GPU count from the proposal. A registered formal run
+  reserves the unique primary attempt. Once an arm is exposed, restart recovery
+  either retains a verified checkpoint or reconstructs the complete arm from the
+  frozen task, pristine workspace, resources, model, policy, and preparation,
+  then records a conservative ITT failure; it never relaunches that treatment.
+  Formal result sets bind the project run, campaign, launch config, and preparation
+  and replay the chain at registration. Unrelated project-state revisions do not
+  stale the scientific Idea identity; changed Idea record or artifact bytes still
+  do. Independent reviews are recorded as AI reviews
+  (`not_human_review=true`), never human evidence; no real API, GPU, benchmark, or
+  held-out execution was authorized by this change.
 - The first real prospective segmentation window failed closed after exactly
   two GLM-5.3-Flash requests: the identity sentinel passed, but segmenter A
   converted two curly-quote pairs to ASCII in a 33-span response. The frozen v2

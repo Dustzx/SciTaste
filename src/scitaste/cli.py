@@ -99,9 +99,11 @@ from scitaste.evaluation import (
     build_structured_metadata_audit_plan_bundle,
     compile_evaluation_campaign_activation,
     compile_evaluation_cell_plan,
+    compile_h4_formal_preparation_bundle,
     compile_taste_source_ai_calibration,
     compile_taste_source_segmentation_agreement,
     complete_objective_result_set,
+    derive_h4_formal_preparation_request,
     inspect_acquired_json_content,
     inspect_acquired_structured_metadata,
     inspect_acquired_task_cohort,
@@ -160,6 +162,7 @@ from scitaste.evaluation import (
     load_executable_candidate_manifest,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
+    load_h4_formal_preparation_request,
     load_human_blind_opening,
     load_human_outcome_study,
     load_human_preference_analysis_contract,
@@ -235,6 +238,7 @@ from scitaste.evaluation import (
     save_evaluation_cell_plan,
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
+    save_h4_formal_preparation_request,
     save_human_outcome_study_report,
     save_human_preference_analysis_report,
     save_json_content_audit_approval,
@@ -315,17 +319,25 @@ from scitaste.model_nodes.schemas import VenuePaperReviewProposal
 from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
 from scitaste.project import (
     PaperManifest,
+    ProjectIdeaRevisionArtifact,
+    ProjectIdeaRevisionEntry,
     ProjectManifest,
     ProjectRun,
     ProjectRuntime,
     assign_project_venue_schedule,
+    compile_deadline_work_program,
     complete_project_venue_milestone,
     inspect_current_idea_revision,
     inspect_project_deadline,
+    load_deadline_work_plan_draft,
     load_project_venue_schedule,
+    materialize_deadline_work_plan,
     project_venue_schedule_assignment_required,
+    register_project_idea_revision,
+    save_deadline_work_program,
+    select_project_idea_revision,
 )
-from scitaste.project.models import validate_entry_id
+from scitaste.project.models import validate_entry_id, validate_relative_locator
 from scitaste.project_substrate_cli import register_project_substrate_cli
 from scitaste.resource_cli import register_resource_cli
 from scitaste.review import (
@@ -366,6 +378,19 @@ from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.conditions import NativeTasteRetrievalMode, load_native_condition_matrix
+from scitaste.taste.decision_families import (
+    ScientificDecisionFamilyAssignment,
+    ScientificDecisionFamilyReview,
+    ScientificTasteDecisionFamily,
+    fit_family_conditioned_lifecycle_taste_policy,
+    load_scientific_decision_family_assignment,
+    save_family_conditioned_lifecycle_taste_policy,
+    save_scientific_decision_family_assignment,
+)
+from scitaste.taste.episode_learning import (
+    AdmittedTasteEpisode,
+    LifecycleTastePolicyConfig,
+)
 from scitaste.taste.episodes import TasteEpisodePartition, TasteEpisodeSourceRelationship
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
@@ -631,6 +656,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_project_options(project_deadline_complete)
     project_deadline_complete.set_defaults(handler=_handle_project_deadline_complete)
+    project_deadline_route = project_deadline_commands.add_parser(
+        "route-work",
+        help="Compile a deadline-aware work order without executing any item",
+    )
+    project_deadline_route.add_argument("--project-id", required=True)
+    project_deadline_route.add_argument("--plan", type=Path, required=True)
+    project_deadline_route.add_argument("--output-locator", required=True)
+    project_deadline_route.add_argument("--at", default=None)
+    _add_project_options(project_deadline_route)
+    project_deadline_route.set_defaults(handler=_handle_project_deadline_route_work)
 
     project_idea = project_commands.add_parser(
         "idea", help="Inspect the content-bound current research Idea"
@@ -643,6 +678,32 @@ def build_parser() -> argparse.ArgumentParser:
     project_idea_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_idea_status)
     project_idea_status.set_defaults(handler=_handle_project_idea_status)
+    project_idea_register = project_idea_commands.add_parser(
+        "register",
+        help="Register an already materialized immutable Idea revision artifact",
+    )
+    project_idea_register.add_argument("--project-id", required=True)
+    project_idea_register.add_argument("--run-id", required=True)
+    project_idea_register.add_argument("--record-locator", required=True)
+    project_idea_register.add_argument("--expected-revision", type=int, required=True)
+    project_idea_register.add_argument("--supersedes-concept", action="append", default=[])
+    project_idea_register.add_argument("--selected-for-paper", action="store_true")
+    project_idea_register.add_argument(
+        "--keep-current",
+        action="store_true",
+        help="register the artifact without selecting it as the current Idea",
+    )
+    _add_project_options(project_idea_register)
+    project_idea_register.set_defaults(handler=_handle_project_idea_register)
+    project_idea_select = project_idea_commands.add_parser(
+        "select",
+        help="Select a verified registered Idea revision without changing its authority",
+    )
+    project_idea_select.add_argument("--project-id", required=True)
+    project_idea_select.add_argument("--revision-id", required=True)
+    project_idea_select.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_idea_select)
+    project_idea_select.set_defaults(handler=_handle_project_idea_select)
 
     project_lifecycle = project_commands.add_parser(
         "lifecycle", help="Verify idea-to-paper-to-review lifecycle evidence"
@@ -760,6 +821,60 @@ def build_parser() -> argparse.ArgumentParser:
     project_evaluation_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_evaluation_status)
     project_evaluation_status.set_defaults(handler=_handle_project_evaluation_status)
+    project_evaluation_h4_plan = project_evaluation_commands.add_parser(
+        "plan-native-h4",
+        help="Derive the canonical no-execution H4 preparation request",
+    )
+    project_evaluation_h4_plan.add_argument("--project-id", required=True)
+    project_evaluation_h4_plan.add_argument("--evaluation-id", required=True)
+    project_evaluation_h4_plan.add_argument("--preparation-id", required=True)
+    project_evaluation_h4_plan.add_argument(
+        "--learned-policy-adapter",
+        required=True,
+        help="repository-relative adapter config for the learned-policy-on arm",
+    )
+    project_evaluation_h4_plan.add_argument(
+        "--policy-off-adapter",
+        required=True,
+        help="repository-relative adapter config for the lifecycle-policy-off arm",
+    )
+    project_evaluation_h4_plan.add_argument(
+        "--timeout-seconds",
+        type=float,
+        required=True,
+    )
+    project_evaluation_h4_plan.add_argument(
+        "--output-locator",
+        required=True,
+        help="project-relative path for the immutable request JSON",
+    )
+    project_evaluation_h4_plan.add_argument(
+        "--repository-root", type=Path, default=Path(".")
+    )
+    _add_project_options(project_evaluation_h4_plan)
+    project_evaluation_h4_plan.set_defaults(handler=_handle_project_evaluation_h4_plan)
+    project_evaluation_h4_prepare = project_evaluation_commands.add_parser(
+        "prepare-native-h4",
+        help="Compile and replay a no-execution formal native H4 launch bundle",
+    )
+    project_evaluation_h4_prepare.add_argument("--request", type=Path, required=True)
+    project_evaluation_h4_prepare.add_argument(
+        "--repository-root", type=Path, default=Path(".")
+    )
+    project_evaluation_h4_prepare.add_argument(
+        "--preparation-output",
+        required=True,
+        help="project-relative immutable PREPARATION.json locator",
+    )
+    project_evaluation_h4_prepare.add_argument(
+        "--launch-config-output",
+        required=True,
+        help="project-relative immutable LAUNCH_CONFIG.json locator",
+    )
+    _add_project_options(project_evaluation_h4_prepare)
+    project_evaluation_h4_prepare.set_defaults(
+        handler=_handle_project_evaluation_h4_prepare
+    )
     project_evaluation_campaign = project_evaluation_commands.add_parser(
         "run-campaign",
         help="Run only an exact execution-authorized evaluation cell plan",
@@ -1483,6 +1598,51 @@ def build_parser() -> argparse.ArgumentParser:
     trajectory_reconstruct.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(trajectory_reconstruct)
     trajectory_reconstruct.set_defaults(handler=_handle_taste_trajectory_reconstruct)
+    family_policy_fit = taste_commands.add_parser(
+        "fit-family-policy",
+        help="Fit isolated scientific decision-family Taste heads without model execution",
+    )
+    family_policy_fit.add_argument("--policy-id", required=True)
+    family_policy_fit.add_argument("--config", type=Path, required=True)
+    family_policy_fit.add_argument(
+        "--episode",
+        type=Path,
+        action="append",
+        required=True,
+        help="admitted Taste episode JSON; repeat for the complete population",
+    )
+    family_policy_fit.add_argument(
+        "--assignment",
+        type=Path,
+        action="append",
+        required=True,
+        help="AI-reviewed decision-family assignment JSON; repeat for every episode",
+    )
+    family_policy_fit.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(family_policy_fit)
+    family_policy_fit.set_defaults(handler=_handle_taste_family_policy_fit)
+    family_assignment = taste_commands.add_parser(
+        "assign-decision-family",
+        help="Compile isolated AI reviews into one scientific decision-family assignment",
+    )
+    family_assignment.add_argument("--assignment-id", required=True)
+    family_assignment.add_argument("--episode", type=Path, required=True)
+    family_assignment.add_argument(
+        "--decision-family",
+        choices=[item.value for item in ScientificTasteDecisionFamily],
+        required=True,
+    )
+    family_assignment.add_argument("--rationale", required=True)
+    family_assignment.add_argument(
+        "--review",
+        type=Path,
+        action="append",
+        required=True,
+        help="isolated AI review JSON; repeat for two primaries and optional adjudicator",
+    )
+    family_assignment.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(family_assignment)
+    family_assignment.set_defaults(handler=_handle_taste_decision_family_assignment)
 
     library = commands.add_parser("library", help="Knowledge and taste libraries")
     library_commands = library.add_subparsers(dest="library_command", required=True)
@@ -3381,6 +3541,43 @@ def _handle_project_deadline_complete(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_project_deadline_route_work(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    observed_at = None if args.at is None else datetime.fromisoformat(args.at)
+    deadline = inspect_project_deadline(
+        snapshot,
+        observed_at=observed_at,
+        project_root=runtime.projects_root / args.project_id,
+    )
+    draft = load_deadline_work_plan_draft(args.plan)
+    plan = materialize_deadline_work_plan(draft, deadline)
+    program = compile_deadline_work_program(deadline, plan)
+    output = _project_new_output_path(
+        runtime.projects_root / args.project_id,
+        args.output_locator,
+        create_parents=not args.dry_run,
+    )
+    if not args.dry_run:
+        save_deadline_work_program(program, output)
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "deadline-work-program-materialized"
+                    if not args.dry_run
+                    else "deadline-work-program-compiled-no-write"
+                ),
+                "output": str(output),
+                "program": program.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def _handle_project_idea_status(args: argparse.Namespace) -> int:
     report = inspect_current_idea_revision(
         ProjectRuntime(args.outputs_root),
@@ -3388,6 +3585,120 @@ def _handle_project_idea_status(args: argparse.Namespace) -> int:
     )
     print(report.model_dump_json(indent=2))
     return 0
+
+
+def _handle_project_idea_register(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    locator = validate_relative_locator(
+        args.record_locator,
+        field_name="Idea revision record",
+    )
+    project_root = runtime.projects_root / args.project_id
+    record_path = _project_bound_regular_file(project_root, locator)
+    raw = record_path.read_bytes()
+    if not 1 <= len(raw) <= 4 * 1024 * 1024:
+        raise ValueError("Idea revision record has an invalid size")
+    artifact = ProjectIdeaRevisionArtifact.model_validate_json(raw, strict=True)
+    if artifact.project_id != args.project_id:
+        raise ValueError("Idea revision artifact belongs to another project")
+    entry = ProjectIdeaRevisionEntry(
+        revision_id=artifact.revision_id,
+        status=artifact.status,
+        run_id=args.run_id,
+        record_locator=locator,
+        record_sha256=hashlib.sha256(raw).hexdigest(),
+        supersedes_concepts=tuple(sorted(set(args.supersedes_concept))),
+        selected_for_paper=args.selected_for_paper,
+    )
+    snapshot = register_project_idea_revision(
+        runtime,
+        args.project_id,
+        entry,
+        expected_revision=args.expected_revision,
+        make_current=not args.keep_current,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "project-idea-revision-registered",
+                "project_id": snapshot.project_id,
+                "project_revision": snapshot.revision,
+                "idea_revision_id": artifact.revision_id,
+                "idea_status": artifact.status,
+                "novelty_review_complete": artifact.novelty_review_complete,
+                "paper_claim_authority": artifact.paper_claim_authority,
+                "selected_as_current": not args.keep_current,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_idea_select(args: argparse.Namespace) -> int:
+    snapshot = select_project_idea_revision(
+        ProjectRuntime(args.outputs_root),
+        args.project_id,
+        args.revision_id,
+        expected_revision=args.expected_revision,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "project-idea-revision-selected",
+                "project_id": snapshot.project_id,
+                "project_revision": snapshot.revision,
+                "idea_revision_id": args.revision_id,
+                "paper_claim_authority_changed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _project_bound_regular_file(root: Path, locator: str) -> Path:
+    canonical_root = root.resolve(strict=True)
+    current = canonical_root
+    for part in PurePosixPath(locator).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("project-bound input cannot traverse a symbolic link")
+    resolved = current.resolve(strict=True)
+    if not resolved.is_relative_to(canonical_root) or not resolved.is_file():
+        raise ValueError("project-bound input escapes its project")
+    return resolved
+
+
+def _project_new_output_path(
+    root: Path,
+    locator: str,
+    *,
+    create_parents: bool,
+) -> Path:
+    locator = validate_relative_locator(locator, field_name="project output locator")
+    canonical_root = root.resolve(strict=True)
+    current = canonical_root
+    parts = PurePosixPath(locator).parts
+    for part in parts[:-1]:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("project output cannot traverse a symbolic link")
+        if create_parents:
+            current.mkdir(exist_ok=True)
+        elif not current.exists():
+            continue
+        if current.exists() and not current.is_dir():
+            raise ValueError("project output parent is not a directory")
+    parent = current.resolve(strict=create_parents)
+    if not parent.is_relative_to(canonical_root):
+        raise ValueError("project output escapes its project")
+    target = parent / parts[-1]
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+    return target
 
 
 def _handle_project_lifecycle_status(args: argparse.Namespace) -> int:
@@ -3623,6 +3934,78 @@ def _handle_project_evaluation_status(args: argparse.Namespace) -> int:
                 "gpu_resources": bundle.gpu_resources,
                 "decision_map": decision_map.model_dump(mode="json"),
                 "no_execution_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_evaluation_h4_plan(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    request = derive_h4_formal_preparation_request(
+        args.repository_root,
+        runtime,
+        project_id=args.project_id,
+        evaluation_id=args.evaluation_id,
+        preparation_id=args.preparation_id,
+        adapter_config_locators={
+            "full-scitaste-learned-policy": args.learned_policy_adapter,
+            "native-base-without-learned-taste": args.policy_off_adapter,
+        },
+        timeout_seconds=args.timeout_seconds,
+    )
+    output = _project_new_output_path(
+        runtime.projects_root / args.project_id,
+        args.output_locator,
+        create_parents=not args.dry_run,
+    )
+    if not args.dry_run:
+        save_h4_formal_preparation_request(request, output)
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "formal-native-h4-request-materialized"
+                    if not args.dry_run
+                    else "formal-native-h4-request-derived-no-write"
+                ),
+                "output": str(output),
+                "request": request.model_dump(mode="json"),
+                "execution_authorized": False,
+                "no_api_calls_performed": True,
+                "no_gpu_work_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_evaluation_h4_prepare(args: argparse.Namespace) -> int:
+    request = load_h4_formal_preparation_request(args.request)
+    bundle = compile_h4_formal_preparation_bundle(
+        args.repository_root,
+        ProjectRuntime(args.outputs_root),
+        request,
+        preparation_locator=args.preparation_output,
+        launch_config_locator=args.launch_config_output,
+        materialize=not args.dry_run,
+    )
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "formal-native-h4-bundle-materialized"
+                    if not args.dry_run
+                    else "formal-native-h4-bundle-verified-no-write"
+                ),
+                "bundle": bundle.model_dump(mode="json"),
+                "execution_authorized": False,
+                "no_api_calls_performed": True,
+                "no_gpu_work_performed": True,
             },
             indent=2,
             ensure_ascii=False,
@@ -5412,6 +5795,109 @@ def _handle_taste_trajectory_reconstruct(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _handle_taste_family_policy_fit(args: argparse.Namespace) -> int:
+    config_raw = _bounded_regular_input(args.config, label="lifecycle Taste config")
+    config_payload = yaml.safe_load(config_raw.decode("utf-8"))
+    if not isinstance(config_payload, dict):
+        raise ValueError("lifecycle Taste config must be a JSON or YAML object")
+    config = LifecycleTastePolicyConfig.model_validate(config_payload)
+    episodes = tuple(
+        AdmittedTasteEpisode.model_validate_json(
+            _bounded_regular_input(path, label="admitted Taste episode"),
+            strict=True,
+        )
+        for path in args.episode
+    )
+    assignments = tuple(
+        load_scientific_decision_family_assignment(path)
+        for path in args.assignment
+    )
+    model = fit_family_conditioned_lifecycle_taste_policy(
+        episodes,
+        assignments,
+        config,
+        policy_id=args.policy_id,
+    )
+    output = save_family_conditioned_lifecycle_taste_policy(model, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "family-conditioned-lifecycle-taste-policy-fitted",
+                "output": str(output),
+                "policy_id": model.policy_id,
+                "policy_sha256": model.policy_sha256,
+                "source_episode_count": len(model.source_episode_ids),
+                "learned_decision_families": [
+                    family.value for family in model.family_heads
+                ],
+                "empty_decision_families": [
+                    family.value for family in model.empty_families
+                ],
+                "reviewer_kind": model.reviewer_kind,
+                "not_human_review": model.not_human_review,
+                "no_api_calls_performed": True,
+                "no_gpu_work_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_decision_family_assignment(args: argparse.Namespace) -> int:
+    episode = AdmittedTasteEpisode.model_validate_json(
+        _bounded_regular_input(args.episode, label="admitted Taste episode"),
+        strict=True,
+    )
+    reviews = tuple(
+        ScientificDecisionFamilyReview.model_validate_json(
+            _bounded_regular_input(path, label="scientific decision-family AI review"),
+            strict=True,
+        )
+        for path in args.review
+    )
+    assignment = ScientificDecisionFamilyAssignment.create(
+        assignment_id=args.assignment_id,
+        admission_id=episode.admission_id,
+        admission_sha256=episode.admission_sha256,
+        decision_family=ScientificTasteDecisionFamily(args.decision_family),
+        observed_outcome_families=tuple(
+            item.family for item in episode.candidate.credit_assignments
+        ),
+        rationale=args.rationale,
+        reviews=reviews,
+    )
+    output = save_scientific_decision_family_assignment(assignment, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "scientific-decision-family-assigned",
+                "output": str(output),
+                "assignment_id": assignment.assignment_id,
+                "assignment_sha256": assignment.assignment_sha256,
+                "decision_family": assignment.decision_family.value,
+                "reviewer_kind": assignment.reviewer_kind,
+                "not_human_review": assignment.not_human_review,
+                "no_api_calls_performed": True,
+                "no_gpu_work_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _bounded_regular_input(path: Path, *, label: str) -> bytes:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"{label} must be a regular file")
+    raw = path.read_bytes()
+    if not 1 <= len(raw) <= 64 * 1024 * 1024:
+        raise ValueError(f"{label} has an invalid size")
+    return raw
 
 
 def _handle_library_build(args: argparse.Namespace) -> int:

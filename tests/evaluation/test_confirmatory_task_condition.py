@@ -21,6 +21,7 @@ from scitaste.evaluation.task_condition import (
 from scitaste.taste.conditions import load_native_condition_matrix
 
 MATRIX = "configs/evaluation/native_taste_confirmatory_matrix_v1.yaml"
+H4_MATRIX = "configs/evaluation/native_lifecycle_taste_h4_matrix_v1.yaml"
 
 
 def _sha(value: str) -> str:
@@ -114,8 +115,8 @@ def _artifact(
     )
 
 
-def _guidance() -> BenchmarkResearchGuidanceSet:
-    matrix = load_native_condition_matrix(MATRIX)
+def _guidance(matrix_path: str = MATRIX) -> BenchmarkResearchGuidanceSet:
+    matrix = load_native_condition_matrix(matrix_path)
     bundle = _bundle()
     return BenchmarkResearchGuidanceSet(
         schema_version="1.1",
@@ -196,3 +197,25 @@ def test_formal_guidance_rejects_a_substituted_raw_context() -> None:
         match="exact token-accounted context",
     ):
         BenchmarkResearchGuidanceSet.model_validate(payload)
+
+
+def test_h4_arms_compile_identical_static_full_guidance() -> None:
+    matrix = load_native_condition_matrix(H4_MATRIX)
+    guidance = _guidance(H4_MATRIX)
+
+    learned = compile_benchmark_condition_guidance(
+        matrix,
+        guidance,
+        "full-scitaste-learned-policy",
+    )
+    policy_off = compile_benchmark_condition_guidance(
+        matrix,
+        guidance,
+        "native-base-without-learned-taste",
+    )
+
+    assert learned.utility_guidance == policy_off.utility_guidance
+    assert learned.knowledge_guidance == policy_off.knowledge_guidance
+    assert learned.taste_guidance == policy_off.taste_guidance
+    assert learned.critic_guidance == policy_off.critic_guidance
+    assert learned.artifact_sha256 == policy_off.artifact_sha256

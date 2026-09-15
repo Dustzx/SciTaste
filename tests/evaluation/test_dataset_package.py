@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,13 @@ from scitaste.evaluation import (
 
 INVENTORY_PATH = Path("docs/research/data/mlrc_first_preflight_asset_inventory_v1.yaml")
 REQUEST_PATH = Path("configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml")
+
+
+def _isolated_workspace(tmp_path: Path) -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    shutil.copytree("configs", tmp_path / "configs")
+    shutil.copytree("docs", tmp_path / "docs")
+    return tmp_path
 
 
 def test_repository_inventory_freezes_exact_first_preflight_assets() -> None:
@@ -44,10 +52,13 @@ def test_repository_inventory_freezes_exact_first_preflight_assets() -> None:
     assert inventory.authorizes_execution is False
 
 
-def test_repository_request_is_license_policy_bound_and_approval_ready() -> None:
+def test_repository_request_is_license_policy_bound_and_approval_ready(tmp_path: Path) -> None:
     inspection = load_dataset_package_request(REQUEST_PATH)
 
-    report = inspect_dataset_package_request(inspection, workspace_root=".")
+    report = inspect_dataset_package_request(
+        inspection,
+        workspace_root=_isolated_workspace(tmp_path),
+    )
 
     assert report.selected_task_ids == (
         "perception_temporal_action_loc",
@@ -112,7 +123,7 @@ def test_candidate_or_inventory_drift_fails_closed() -> None:
     assert "inventory:hash-mismatch" in {item.code for item in report.integrity_blockers}
 
 
-def test_license_policy_drift_fails_the_package_gate_closed() -> None:
+def test_license_policy_drift_fails_the_package_gate_closed(tmp_path: Path) -> None:
     inspection = load_dataset_package_request(REQUEST_PATH)
     request = inspection.request
     assert request.license_policy is not None
@@ -125,7 +136,7 @@ def test_license_policy_drift_fails_the_package_gate_closed() -> None:
             file_sha256=inspection.file_sha256,
             request=drifted,
         ),
-        workspace_root=".",
+        workspace_root=_isolated_workspace(tmp_path),
     )
 
     assert report.metadata_review_ready is False
@@ -183,13 +194,14 @@ def test_cli_separates_metadata_readiness_from_owner_approval(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     output = tmp_path / "REPORT.json"
+    workspace = _isolated_workspace(tmp_path / "workspace")
     base = [
         "evaluation",
         "dataset-package-request",
         "--manifest",
         str(REQUEST_PATH),
         "--workspace-root",
-        ".",
+        str(workspace),
     ]
 
     assert main([*base, "--require-metadata-review-ready", "--output", str(output)]) == 0

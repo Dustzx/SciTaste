@@ -107,10 +107,19 @@ class PlanningDirectivePublication(BaseModel):
             self.predecessor_publication_sha256 is None
         ):
             raise ValueError("planning-directive predecessor identity must be complete")
-        expected = _fingerprint(
-            _jsonable(self.model_dump(mode="json", exclude={"publication_sha256"}))
-        )
-        if self.publication_sha256 != expected:
+        payload = self.model_dump(mode="json", exclude={"publication_sha256"})
+        accepted_hashes = {_fingerprint(_jsonable(payload)), _fingerprint(payload)}
+        if self.predecessor_publication_id is None:
+            legacy_payload = dict(payload)
+            legacy_payload.pop("predecessor_publication_id", None)
+            legacy_payload.pop("predecessor_publication_sha256", None)
+            accepted_hashes.update(
+                {
+                    _fingerprint(_jsonable(legacy_payload)),
+                    _fingerprint(legacy_payload),
+                }
+            )
+        if self.publication_sha256 not in accepted_hashes:
             raise ValueError("planning-directive publication hash mismatch")
         return self
 

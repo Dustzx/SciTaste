@@ -12,6 +12,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.evaluation.campaign_execution import EvaluationCampaignManifest
 from scitaste.evaluation.cell_plan import PlannedEvaluationCell
+from scitaste.evaluation.h4_execution import (
+    H4BenchmarkResearchActionProvider,
+    H4ResearchActionDecision,
+    build_h4_benchmark_action_menu,
+)
+from scitaste.evaluation.h4_state_probe import (
+    H4DevelopmentFeedbackEvent,
+    reduce_h4_feedback_context,
+)
 from scitaste.evaluation.task_condition import BenchmarkResearchConditionGuidance
 from scitaste.evaluation.task_execution import (
     BenchmarkDevelopmentExecutionReceipt,
@@ -30,6 +39,7 @@ from scitaste.evaluation.task_patch import (
 from scitaste.evaluation.task_patch_generation import (
     BenchmarkPatchGenerationInput,
     BenchmarkPatchGenerationOutput,
+    BenchmarkResearchActionDirective,
     materialize_benchmark_patch_proposal,
 )
 from scitaste.evaluation.task_runtime import (
@@ -48,6 +58,13 @@ from scitaste.model_nodes.models import NodePolicy, NodeResultStatus
 from scitaste.model_nodes.profiles import ModelNodeProfile
 from scitaste.model_nodes.runtime import ModelNodeTrigger, RuntimeBackendMode, RuntimeOutcome
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
+from scitaste.state.research_state import (
+    ExperimentPlan,
+    ResearchStage,
+    ResearchState,
+    ResourceBudget,
+    ResourceUsage,
+)
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _SHA256 = r"^[0-9a-f]{64}$"
@@ -152,7 +169,7 @@ class RuntimeBenchmarkPatchDecisionProvider:
             request_id=invocation_id,
             expected_project_revision=self.expected_project_revision,
             node_name="benchmark-research-patch",
-            node_input=input_data.model_dump(mode="json"),
+            node_input=_benchmark_patch_node_input(input_data),
             state_projection=ImmutableStateProjection(
                 project_id=self.project_id,
                 state_snapshot_id=input_data.patch_context.context_sha256,
@@ -286,7 +303,7 @@ class BenchmarkResearchLoopConfig(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     loop_id: str
     cell: BenchmarkResearchCellBinding
     condition: BenchmarkResearchConditionGuidance
@@ -302,6 +319,8 @@ class BenchmarkResearchLoopConfig(BaseModel):
     development_limits: BenchmarkDevelopmentLimits = Field(
         default_factory=BenchmarkDevelopmentLimits
     )
+    h4_arm_run_request_sha256: str | None = Field(default=None, pattern=_SHA256)
+    research_resource_budget: ResourceBudget | None = None
     execution_authorized: Literal[True] = True
     heldout_authorized: Literal[False] = False
 
@@ -315,11 +334,21 @@ class BenchmarkResearchLoopConfig(BaseModel):
         ):
             if len(values) != len(set(values)):
                 raise ValueError("benchmark research loop tuple values must be unique")
+        h4_fields = (self.h4_arm_run_request_sha256, self.research_resource_budget)
+        if self.schema_version == "1.1":
+            if any(value is None for value in h4_fields):
+                raise ValueError("benchmark research loop v1.1 requires H4 action control")
+        elif any(value is not None for value in h4_fields):
+            raise ValueError("benchmark research loop v1.0 cannot carry H4 action control")
         return self
 
     @property
     def fingerprint(self) -> str:
-        return content_sha256(self.model_dump(mode="json"))
+        payload = self.model_dump(mode="json")
+        if self.schema_version == "1.0":
+            payload.pop("h4_arm_run_request_sha256")
+            payload.pop("research_resource_budget")
+        return content_sha256(payload)
 
 
 class BenchmarkResearchIteration(BaseModel):
@@ -335,16 +364,85 @@ class BenchmarkResearchIteration(BaseModel):
         "stopped",
     ]
     patch_context_sha256: str | None = Field(default=None, pattern=_SHA256)
+    research_state_snapshot_id: str | None = Field(
+        default=None,
+        pattern=r"^state-[0-9a-f]{64}$",
+    )
+    research_action_menu_sha256: str | None = Field(default=None, pattern=_SHA256)
+    research_action_decision_sha256: str | None = Field(default=None, pattern=_SHA256)
+    taste_intervention_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
+    selected_research_action_sha256: str | None = Field(default=None, pattern=_SHA256)
+    research_action_directive_sha256: str | None = Field(default=None, pattern=_SHA256)
     decision_sha256: str | None = Field(default=None, pattern=_SHA256)
     proposal_sha256: str | None = Field(default=None, pattern=_SHA256)
     admission_sha256: str | None = Field(default=None, pattern=_SHA256)
     application_receipt_sha256: str | None = Field(default=None, pattern=_SHA256)
     development_receipt_sha256: str | None = Field(default=None, pattern=_SHA256)
     rollback_receipt_sha256: str | None = Field(default=None, pattern=_SHA256)
+    h4_arm_run_request_sha256: str | None = Field(default=None, pattern=_SHA256)
+    previous_iteration_receipt_sha256: str | None = Field(
+        default=None,
+        pattern=_SHA256,
+    )
+    editable_surface_after_sha256: str | None = Field(default=None, pattern=_SHA256)
+    post_iteration_state_sha256: str | None = Field(default=None, pattern=_SHA256)
+    iteration_receipt_sha256: str | None = Field(default=None, pattern=_SHA256)
     score: float | None = Field(default=None, allow_inf_nan=False)
     improvement_over_predecessor: float | None = Field(default=None, allow_inf_nan=False)
     best_score_after: float | None = Field(default=None, allow_inf_nan=False)
     error_code: str | None = None
+
+    @model_validator(mode="after")
+    def h4_receipt_is_closed(self) -> BenchmarkResearchIteration:
+        if self.h4_arm_run_request_sha256 is None:
+            if any(
+                item is not None
+                for item in (
+                    self.previous_iteration_receipt_sha256,
+                    self.editable_surface_after_sha256,
+                    self.post_iteration_state_sha256,
+                    self.iteration_receipt_sha256,
+                )
+            ):
+                raise ValueError("legacy research iteration cannot carry H4 receipt fields")
+            return self
+        if any(
+            item is None
+            for item in (
+                self.editable_surface_after_sha256,
+                self.post_iteration_state_sha256,
+                self.iteration_receipt_sha256,
+            )
+        ):
+            raise ValueError("H4 research iteration lacks its receipt closure")
+        expected_state = _post_iteration_state_sha256(self)
+        if self.post_iteration_state_sha256 != expected_state:
+            raise ValueError("H4 post-iteration state hash differs")
+        expected_receipt = content_sha256(
+            self.model_dump(mode="json", exclude={"iteration_receipt_sha256"})
+        )
+        if self.iteration_receipt_sha256 != expected_receipt:
+            raise ValueError("H4 iteration receipt hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> BenchmarkResearchIteration:
+        payload = dict(values)
+        payload.pop("post_iteration_state_sha256", None)
+        payload.pop("iteration_receipt_sha256", None)
+        provisional = cls.model_construct(
+            post_iteration_state_sha256=None,
+            iteration_receipt_sha256=None,
+            **payload,
+        )
+        payload["post_iteration_state_sha256"] = _post_iteration_state_sha256(
+            provisional
+        )
+        unsigned = cls.model_construct(iteration_receipt_sha256="0" * 64, **payload)
+        payload["iteration_receipt_sha256"] = content_sha256(
+            unsigned.model_dump(mode="json", exclude={"iteration_receipt_sha256"})
+        )
+        return cls(**payload)
 
 
 class BenchmarkResearchLoopResult(BaseModel):
@@ -352,12 +450,13 @@ class BenchmarkResearchLoopResult(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     loop_id: str
     config_sha256: str = Field(pattern=_SHA256)
     task_spec_fingerprint: str = Field(pattern=_SHA256)
     cell_binding_sha256: str = Field(pattern=_SHA256)
     condition_guidance_sha256: str = Field(pattern=_SHA256)
+    h4_arm_run_request_sha256: str | None = Field(default=None, pattern=_SHA256)
     status: Literal["completed", "stopped", "failed"]
     stop_reason: str
     baseline_score: float | None = Field(default=None, allow_inf_nan=False)
@@ -414,7 +513,31 @@ class BenchmarkResearchLoopResult(BaseModel):
             item.disposition == "execution_failed" for item in self.iterations
         ):
             raise ValueError("benchmark research loop failed experiment count mismatch")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"result_sha256"}))
+        h4_iterations = self.iterations[1:]
+        if self.schema_version == "1.1":
+            if self.h4_arm_run_request_sha256 is None or any(
+                item.research_action_decision_sha256 is None for item in h4_iterations
+            ):
+                raise ValueError("benchmark research loop v1.1 lacks H4 decisions")
+            previous = None
+            for item in self.iterations:
+                if (
+                    item.h4_arm_run_request_sha256
+                    != self.h4_arm_run_request_sha256
+                    or item.previous_iteration_receipt_sha256 != previous
+                    or item.editable_surface_after_sha256 is None
+                ):
+                    raise ValueError("benchmark research loop H4 receipt chain differs")
+                previous = item.iteration_receipt_sha256
+        elif self.h4_arm_run_request_sha256 is not None or any(
+            item.research_action_decision_sha256 is not None
+            or item.h4_arm_run_request_sha256 is not None
+            or item.previous_iteration_receipt_sha256 is not None
+            or item.editable_surface_after_sha256 is not None
+            for item in self.iterations
+        ):
+            raise ValueError("benchmark research loop v1.0 cannot carry H4 decisions")
+        expected = content_sha256(_loop_result_hash_payload(self))
         if self.result_sha256 != expected:
             raise ValueError("benchmark research loop result hash mismatch")
         return self
@@ -424,7 +547,7 @@ class BenchmarkResearchLoopResult(BaseModel):
         payload = {"schema_version": "1.0", **values}
         payload.pop("result_sha256", None)
         unsigned = cls.model_construct(result_sha256="0" * 64, **payload)
-        digest = content_sha256(unsigned.model_dump(mode="json", exclude={"result_sha256"}))
+        digest = content_sha256(_loop_result_hash_payload(unsigned))
         return cls(**payload, result_sha256=digest)
 
 
@@ -437,6 +560,7 @@ class BenchmarkResearchLoop:
         prepared_workspace: PreparedBenchmarkWorkspace,
         decision_provider: BenchmarkPatchDecisionProvider,
         development_executor: BenchmarkDevelopmentExecutor,
+        research_action_provider: H4BenchmarkResearchActionProvider | None = None,
         *,
         source_root: str | Path,
         workspace: str | Path,
@@ -445,6 +569,7 @@ class BenchmarkResearchLoop:
         self.prepared_workspace = prepared_workspace
         self.decision_provider = decision_provider
         self.development_executor = development_executor
+        self.research_action_provider = research_action_provider
         self.source_root = Path(source_root).resolve(strict=True)
         self.workspace = Path(workspace).resolve(strict=True)
 
@@ -484,8 +609,12 @@ class BenchmarkResearchLoop:
         baseline_score = baseline.objective.score if baseline.objective is not None else None
         best_score = baseline_score
         best_iteration = 0 if baseline_score is not None else None
-        records: list[BenchmarkResearchIteration] = [
-            BenchmarkResearchIteration(
+        records: list[BenchmarkResearchIteration] = []
+        records.append(
+            _research_iteration(
+                config,
+                records,
+                editable_surface_after_sha256=surface,
                 iteration=0,
                 disposition="baseline" if baseline.status == "succeeded" else "execution_failed",
                 development_receipt_sha256=baseline.receipt_sha256,
@@ -493,7 +622,7 @@ class BenchmarkResearchLoop:
                 best_score_after=best_score,
                 error_code=baseline.error_code,
             )
-        ]
+        )
         _write_iteration(target, records[-1])
         if baseline.status == "failed":
             return self._finish(
@@ -549,7 +678,76 @@ class BenchmarkResearchLoop:
                 self.workspace,
                 selected_paths=config.selected_context_paths,
             )
+            action_decision = None
+            action_directive = None
+            if self.research_action_provider is not None:
+                state = self._research_state(
+                    config,
+                    iteration=iteration,
+                    best_score=best_score,
+                    baseline_score=baseline_score,
+                    development_count=development_count,
+                    failed_count=failed_count,
+                    model_cost=model_cost,
+                    gpu_hours=gpu_hours,
+                    feedback=tuple(feedback),
+                    records=tuple(records),
+                )
+                action_menu = build_h4_benchmark_action_menu(iteration=iteration)
+                action_decision = self.research_action_provider.decide(
+                    state,
+                    action_menu,
+                    loop_id=config.loop_id,
+                    iteration=iteration,
+                )
+                _write_json(
+                    iteration_root / "RESEARCH_STATE.json",
+                    state.model_dump(mode="json"),
+                )
+                _write_json(
+                    iteration_root / "RESEARCH_ACTION_DECISION.json",
+                    action_decision.model_dump(mode="json"),
+                )
+                if action_decision.decision.selected_action.type.value == "STOP":
+                    records.append(
+                        _research_iteration(
+                            config,
+                            records,
+                            editable_surface_after_sha256=(
+                                context.editable_surface_sha256
+                            ),
+                            iteration=iteration,
+                            disposition="stopped",
+                            patch_context_sha256=context.context_sha256,
+                            research_state_snapshot_id=(
+                                action_decision.decision.state_snapshot_id
+                            ),
+                            research_action_menu_sha256=(
+                                action_decision.contract.action_menu_sha256
+                            ),
+                            research_action_decision_sha256=(
+                                action_decision.decision_sha256
+                            ),
+                            taste_intervention_contract_sha256=(
+                                action_decision.contract.contract_sha256
+                            ),
+                            selected_research_action_sha256=(
+                                action_decision.selected_action_sha256
+                            ),
+                            best_score_after=best_score,
+                        )
+                    )
+                    _write_iteration(target, records[-1])
+                    status = "stopped"
+                    stop_reason = "taste-controller-stop"
+                    break
+                action_directive = BenchmarkResearchActionDirective.create(
+                    action_id=action_decision.downstream_action_id,
+                    action_type=action_decision.downstream_action_type,
+                    instruction=action_decision.downstream_instruction,
+                )
             input_data = BenchmarkPatchGenerationInput(
+                schema_version=("1.1" if action_directive is not None else "1.0"),
                 task_id=self.spec.task_id,
                 research_problem=self._research_problem_text(),
                 primary_metric=self.spec.primary_metric,
@@ -566,6 +764,7 @@ class BenchmarkResearchLoop:
                 knowledge_guidance=config.condition.knowledge_guidance,
                 taste_guidance=config.condition.taste_guidance,
                 critic_guidance=config.condition.critic_guidance,
+                research_action=action_directive,
                 constraints=config.constraints,
             )
             _write_json(iteration_root / "PATCH_CONTEXT.json", context.model_dump(mode="json"))
@@ -589,11 +788,36 @@ class BenchmarkResearchLoop:
             model_cost += decision.cost_usd
             self._verify_model_did_not_mutate(context.editable_surface_sha256)
             if decision.output.decision == "stop":
+                if action_decision is not None:
+                    records.append(
+                        _research_iteration(
+                            config,
+                            records,
+                            editable_surface_after_sha256=(
+                                context.editable_surface_sha256
+                            ),
+                            iteration=iteration,
+                            disposition="proposal_rejected",
+                            patch_context_sha256=context.context_sha256,
+                            **_h4_iteration_fields(action_decision, action_directive),
+                            decision_sha256=decision.decision_sha256,
+                            best_score_after=best_score,
+                            error_code="h4-patch-model-failed-to-propose",
+                        )
+                    )
+                    _write_iteration(target, records[-1])
+                    status = "failed"
+                    stop_reason = "h4-patch-model-failed-to-propose"
+                    break
                 records.append(
-                    BenchmarkResearchIteration(
+                    _research_iteration(
+                        config,
+                        records,
+                        editable_surface_after_sha256=context.editable_surface_sha256,
                         iteration=iteration,
                         disposition="stopped",
                         patch_context_sha256=context.context_sha256,
+                        **_h4_iteration_fields(action_decision, action_directive),
                         decision_sha256=decision.decision_sha256,
                         best_score_after=best_score,
                     )
@@ -622,10 +846,14 @@ class BenchmarkResearchLoop:
             _write_json(iteration_root / "PATCH_ADMISSION.json", admission.model_dump(mode="json"))
             if admission.decision == "rejected":
                 records.append(
-                    BenchmarkResearchIteration(
+                    _research_iteration(
+                        config,
+                        records,
+                        editable_surface_after_sha256=context.editable_surface_sha256,
                         iteration=iteration,
                         disposition="proposal_rejected",
                         patch_context_sha256=context.context_sha256,
+                        **_h4_iteration_fields(action_decision, action_directive),
                         decision_sha256=decision.decision_sha256,
                         proposal_sha256=proposal.fingerprint,
                         admission_sha256=admission.admission_sha256,
@@ -667,10 +895,16 @@ class BenchmarkResearchLoop:
                 failed_count += 1
                 reverted_count += 1
                 records.append(
-                    BenchmarkResearchIteration(
+                    _research_iteration(
+                        config,
+                        records,
+                        editable_surface_after_sha256=(
+                            rollback.editable_surface_after_sha256
+                        ),
                         iteration=iteration,
                         disposition="execution_failed",
                         patch_context_sha256=context.context_sha256,
+                        **_h4_iteration_fields(action_decision, action_directive),
                         decision_sha256=decision.decision_sha256,
                         proposal_sha256=proposal.fingerprint,
                         admission_sha256=admission.admission_sha256,
@@ -729,10 +963,18 @@ class BenchmarkResearchLoop:
                 )
             )
             records.append(
-                BenchmarkResearchIteration(
+                _research_iteration(
+                    config,
+                    records,
+                    editable_surface_after_sha256=(
+                        application.editable_surface_after_sha256
+                        if adopted
+                        else rollback.editable_surface_after_sha256
+                    ),
                     iteration=iteration,
                     disposition=disposition,
                     patch_context_sha256=context.context_sha256,
+                    **_h4_iteration_fields(action_decision, action_directive),
                     decision_sha256=decision.decision_sha256,
                     proposal_sha256=proposal.fingerprint,
                     admission_sha256=admission.admission_sha256,
@@ -795,7 +1037,81 @@ class BenchmarkResearchLoop:
             raise ValueError("benchmark research loop cell belongs to another task")
         if config.cell.system_id != config.condition.condition_id.value:
             raise ValueError("benchmark research loop condition differs from its campaign cell")
+        if (config.schema_version == "1.1") != (self.research_action_provider is not None):
+            raise ValueError("benchmark research loop H4 provider and config differ")
+        if self.research_action_provider is not None and (
+            config.h4_arm_run_request_sha256
+            != self.research_action_provider.arm_request.request_sha256
+        ):
+            raise ValueError("benchmark research loop H4 arm request differs")
         self._research_problem_text()
+
+    def _research_state(
+        self,
+        config: BenchmarkResearchLoopConfig,
+        *,
+        iteration: int,
+        best_score: float,
+        baseline_score: float,
+        development_count: int,
+        failed_count: int,
+        model_cost: float,
+        gpu_hours: float,
+        feedback: tuple[str, ...],
+        records: tuple[BenchmarkResearchIteration, ...],
+    ) -> ResearchState:
+        assert config.research_resource_budget is not None
+        feedback_events = _h4_feedback_events(
+            self.spec,
+            records,
+            baseline_score=baseline_score,
+        )
+        if sum(item.disposition == "failed" for item in feedback_events) != failed_count:
+            raise ValueError("H4 feedback reducer and failure counter differ")
+        decision_context = reduce_h4_feedback_context(
+            maximum_patch_iterations=config.maximum_patch_iterations,
+            decision_iteration=iteration,
+            history=feedback_events,
+        )
+        return ResearchState(
+            revision=iteration,
+            project_id=config.cell.project_id,
+            research_direction=self._research_problem_text(),
+            target_domain=self.spec.benchmark_id,
+            target_venue="ICLR 2027",
+            resource_budget=config.research_resource_budget,
+            resource_usage=ResourceUsage(
+                gpu_hours=gpu_hours,
+                experiments=float(development_count),
+                api_cost_usd=model_cost,
+            ),
+            current_stage=ResearchStage.EVIDENCE,
+            current_experiment_plan=ExperimentPlan(
+                plan_id=f"h4-{self.spec.task_id}",
+                objective=(
+                    f"Improve held-out {self.spec.primary_metric} under the frozen task "
+                    "and resource contract."
+                ),
+                falsifies=[
+                    "The selected lifecycle action fails to improve development evidence."
+                ],
+                estimated_cost={"experiments": float(config.maximum_patch_iterations)},
+                matched_baselines=["identical-executor-lifecycle-policy-off"],
+                negative_controls=["no-update", "shuffled-credit"],
+                expected_information_gain=1.0,
+            ),
+            executor_context={
+                "task_id": self.spec.task_id,
+                "iteration": iteration,
+                "primary_metric": self.spec.primary_metric,
+                "metric_direction": self.spec.metric_direction,
+                "baseline_development_score": baseline_score,
+                "best_development_score": best_score,
+                "failed_experiment_count": failed_count,
+                "feedback_sha256": content_sha256(feedback),
+                **decision_context.model_dump(mode="json"),
+            },
+        )
 
     def _research_problem_text(self) -> str:
         checkout = self.source_root.joinpath(*PurePosixPath(self.spec.source_checkout).parts)
@@ -934,11 +1250,13 @@ class BenchmarkResearchLoop:
     ) -> BenchmarkResearchLoopResult:
         surface, _ = hash_editable_surface(self.spec, self.workspace)
         result = BenchmarkResearchLoopResult.create(
+            schema_version=config.schema_version,
             loop_id=config.loop_id,
             config_sha256=config.fingerprint,
             task_spec_fingerprint=self.spec.fingerprint,
             cell_binding_sha256=config.cell.binding_sha256,
             condition_guidance_sha256=config.condition.fingerprint,
+            h4_arm_run_request_sha256=config.h4_arm_run_request_sha256,
             status=status,
             stop_reason=stop_reason,
             baseline_score=baseline_score,
@@ -971,6 +1289,42 @@ def _improvement(spec: BenchmarkTaskRuntimeSpec, score: float, predecessor: floa
     return score - predecessor if spec.metric_direction == "higher" else predecessor - score
 
 
+def _h4_feedback_events(
+    spec: BenchmarkTaskRuntimeSpec,
+    records: tuple[BenchmarkResearchIteration, ...],
+    *,
+    baseline_score: float,
+) -> tuple[H4DevelopmentFeedbackEvent, ...]:
+    events: list[H4DevelopmentFeedbackEvent] = []
+    for record in records:
+        if record.iteration == 0:
+            continue
+        if record.disposition == "execution_failed":
+            disposition = "failed"
+            improvement = None
+        elif record.disposition == "adopted":
+            disposition = "adopted"
+            improvement = record.improvement_over_predecessor
+        elif record.improvement_over_predecessor is not None:
+            disposition = "reverted"
+            improvement = record.improvement_over_predecessor
+        else:
+            continue
+        best_progress = (
+            _improvement(spec, record.best_score_after, baseline_score)
+            if record.best_score_after is not None
+            else 0.0
+        )
+        events.append(
+            H4DevelopmentFeedbackEvent(
+                disposition=disposition,
+                directed_improvement=improvement,
+                best_directed_progress_after=best_progress,
+            )
+        )
+    return tuple(events)
+
+
 def _score_feedback(
     spec: BenchmarkTaskRuntimeSpec,
     score: float | None,
@@ -996,6 +1350,91 @@ def _write_iteration(target: Path, record: BenchmarkResearchIteration) -> None:
         target / "iterations" / directory / "ITERATION.json",
         record.model_dump(mode="json"),
     )
+
+
+def _post_iteration_state_sha256(record: BenchmarkResearchIteration) -> str:
+    return content_sha256(
+        {
+            "iteration": record.iteration,
+            "disposition": record.disposition,
+            "editable_surface_after_sha256": record.editable_surface_after_sha256,
+            "score": record.score,
+            "best_score_after": record.best_score_after,
+            "development_receipt_sha256": record.development_receipt_sha256,
+            "rollback_receipt_sha256": record.rollback_receipt_sha256,
+            "error_code": record.error_code,
+        }
+    )
+
+
+def _research_iteration(
+    config: BenchmarkResearchLoopConfig,
+    records: list[BenchmarkResearchIteration],
+    *,
+    editable_surface_after_sha256: str,
+    **values: object,
+) -> BenchmarkResearchIteration:
+    h4_values: dict[str, object] = {}
+    if config.schema_version == "1.1":
+        h4_values = {
+            "h4_arm_run_request_sha256": config.h4_arm_run_request_sha256,
+            "previous_iteration_receipt_sha256": (
+                records[-1].iteration_receipt_sha256 if records else None
+            ),
+            "editable_surface_after_sha256": editable_surface_after_sha256,
+        }
+    if h4_values:
+        return BenchmarkResearchIteration.create(**values, **h4_values)
+    return BenchmarkResearchIteration(**values)
+
+
+def _h4_iteration_fields(
+    decision: H4ResearchActionDecision | None,
+    directive: BenchmarkResearchActionDirective | None,
+) -> dict[str, str | None]:
+    if decision is None:
+        return {}
+    return {
+        "research_state_snapshot_id": decision.decision.state_snapshot_id,
+        "research_action_menu_sha256": decision.contract.action_menu_sha256,
+        "research_action_decision_sha256": decision.decision_sha256,
+        "taste_intervention_contract_sha256": decision.contract.contract_sha256,
+        "selected_research_action_sha256": decision.selected_action_sha256,
+        "research_action_directive_sha256": (
+            directive.directive_sha256 if directive is not None else None
+        ),
+    }
+
+
+def _benchmark_patch_node_input(
+    input_data: BenchmarkPatchGenerationInput,
+) -> dict[str, object]:
+    payload = input_data.model_dump(mode="json")
+    if input_data.schema_version == "1.0":
+        payload.pop("research_action")
+    return payload
+
+
+def _loop_result_hash_payload(result: BenchmarkResearchLoopResult) -> dict[str, object]:
+    payload = result.model_dump(mode="json", exclude={"result_sha256"})
+    if result.schema_version == "1.0":
+        payload.pop("h4_arm_run_request_sha256")
+        for iteration in payload["iterations"]:  # type: ignore[index,union-attr]
+            for field in (
+                "research_state_snapshot_id",
+                "research_action_menu_sha256",
+                "research_action_decision_sha256",
+                "taste_intervention_contract_sha256",
+                "selected_research_action_sha256",
+                "research_action_directive_sha256",
+                "h4_arm_run_request_sha256",
+                "previous_iteration_receipt_sha256",
+                "editable_surface_after_sha256",
+                "post_iteration_state_sha256",
+                "iteration_receipt_sha256",
+            ):
+                iteration.pop(field)  # type: ignore[union-attr]
+    return payload
 
 
 def _write_json(path: Path, payload: object) -> None:

@@ -7,7 +7,15 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from scitaste.evaluation.campaign_execution import (
+    EvaluationCampaignLaunchConfig,
+    EvaluationCampaignManifest,
+)
 from scitaste.evaluation.cell_plan import load_evaluation_cell_plan
+from scitaste.evaluation.h4_preparation import (
+    load_h4_formal_preparation,
+    verify_h4_formal_preparation,
+)
 from scitaste.evaluation.prelaunch import load_prelaunch_manifest
 from scitaste.evaluation.results import (
     EvaluationOutcomeAssessment,
@@ -21,6 +29,7 @@ from scitaste.project import (
     ProjectEvaluationResultEvidence,
     ProjectRuntime,
     ProjectSnapshot,
+    inspect_current_idea_revision,
 )
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 
@@ -66,6 +75,18 @@ def prepare_project_evaluation_result(
         evaluation_dir / evaluation.files["prelaunch_manifest"].locator
     ).manifest
     plan = load_evaluation_cell_plan(evaluation_dir / evaluation.files["cell_plan"].locator)
+    if _contains_h4_cells(plan.cells):
+        _verify_h4_result_origin(
+            runtime,
+            results,
+            result_source=source,
+            project_id=project_id,
+            evaluation_id=evaluation_id,
+            evaluation_bundle_sha256=evaluation.bundle_sha256,
+            proposal_sha256=evaluation.proposal_sha256,
+            plan=plan,
+            manifest=manifest,
+        )
     assessment = inspect_evaluation_results(
         manifest,
         plan,
@@ -163,6 +184,123 @@ def _project_owned_regular_file(project_root: Path, value: str | Path) -> Path:
     if not resolved.is_file():
         raise ValueError("evaluation result set must be a regular file")
     return resolved
+
+
+def _verify_h4_result_origin(
+    runtime: ProjectRuntime,
+    results: EvaluationResultSet,
+    *,
+    result_source: Path,
+    project_id: str,
+    evaluation_id: str,
+    evaluation_bundle_sha256: str,
+    proposal_sha256: str,
+    plan,
+    manifest,
+) -> None:  # type: ignore[no-untyped-def]
+    """Require formal H4 results to descend from one replayed project campaign."""
+
+    if (
+        results.schema_version != "1.1"
+        or results.run_id is None
+        or results.campaign_manifest_sha256 is None
+        or results.launch_config_sha256 is None
+        or results.formal_preparation_sha256 is None
+    ):
+        raise ValueError("H4 result set lacks formal campaign provenance")
+    project_root = runtime.projects_root / project_id
+    campaign_root = project_root / "runs" / results.run_id / "evaluation_campaign"
+    if result_source.parent != campaign_root.resolve(strict=True):
+        raise ValueError("H4 result set is outside its originating campaign")
+    campaign_path = _project_owned_regular_file(project_root, campaign_root / "CAMPAIGN.json")
+    launch_path = _project_owned_regular_file(
+        project_root,
+        campaign_root / "LAUNCH_CONFIG.json",
+    )
+    campaign = EvaluationCampaignManifest.model_validate_json(campaign_path.read_bytes())
+    launch_config = EvaluationCampaignLaunchConfig.model_validate_json(launch_path.read_bytes())
+    binding = launch_config.formal_preparation
+    if (
+        campaign.schema_version != "1.2"
+        or not campaign.claim_authority
+        or campaign.run_id != results.run_id
+        or campaign.project_id != project_id
+        or campaign.evaluation_id != evaluation_id
+        or campaign.evaluation_bundle_sha256 != evaluation_bundle_sha256
+        or campaign.proposal_sha256 != proposal_sha256
+        or campaign.plan_sha256 != plan.plan_sha256
+        or campaign.manifest_sha256 != results.campaign_manifest_sha256
+        or campaign.launch_config_sha256 != results.launch_config_sha256
+        or campaign.formal_preparation_sha256 != results.formal_preparation_sha256
+        or launch_config.schema_version != "1.1"
+        or launch_config.config_sha256 != results.launch_config_sha256
+        or binding is None
+        or binding.preparation_sha256 != results.formal_preparation_sha256
+    ):
+        raise ValueError("H4 result campaign provenance differs")
+    snapshot = runtime.open(project_id)
+    registered = next(
+        (item for item in snapshot.manifest.runs if item.run_id == results.run_id),
+        None,
+    )
+    extra = {} if registered is None else registered.model_extra or {}
+    if (
+        registered is None
+        or registered.condition != "authorized-evaluation-campaign"
+        or registered.stage_path != "evaluation_campaign"
+        or extra.get("evaluation_id") != evaluation_id
+        or extra.get("campaign_manifest_sha256") != campaign.manifest_sha256
+        or extra.get("formal_preparation_sha256") != campaign.formal_preparation_sha256
+        or extra.get("h4_primary_attempt_consumed") is not True
+    ):
+        raise ValueError("H4 result campaign is not registered in project state")
+    repository_root = runtime.outputs_root.parent.resolve(strict=True)
+    if runtime.projects_root.resolve() != repository_root / "outputs" / "projects":
+        raise ValueError("H4 result ProjectRuntime is outside the repository outputs root")
+    preparation_path = _repository_owned_regular_file(
+        repository_root,
+        binding.locator,
+    )
+    if hashlib.sha256(preparation_path.read_bytes()).hexdigest() != binding.sha256:
+        raise ValueError("H4 result formal preparation bytes differ")
+    preparation = load_h4_formal_preparation(preparation_path)
+    idea = inspect_current_idea_revision(runtime, project_id)
+    if idea.current_binding is None or not idea.experiment_freeze_eligible:
+        raise ValueError("H4 result current Idea is not experiment-freeze eligible")
+    selected = tuple(item for item in plan.cells if item.cell_id in campaign.selected_cell_ids)
+    verify_h4_formal_preparation(
+        repository_root,
+        preparation,
+        project_id=project_id,
+        evaluation_id=evaluation_id,
+        evaluation_bundle_sha256=evaluation_bundle_sha256,
+        proposal_sha256=proposal_sha256,
+        plan_sha256=plan.plan_sha256,
+        selected_cells=selected,
+        current_idea_revision=idea.current_binding,
+        launchers=launch_config.launchers,
+        prelaunch_manifest=manifest,
+    )
+
+
+def _repository_owned_regular_file(root: Path, locator: str) -> Path:
+    current = root.resolve(strict=True)
+    for part in Path(locator).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("H4 repository artifact cannot traverse a symbolic link")
+    resolved = current.resolve(strict=True)
+    if not resolved.is_relative_to(root) or not resolved.is_file():
+        raise ValueError("H4 repository artifact escapes the repository")
+    return resolved
+
+
+def _contains_h4_cells(cells) -> bool:  # type: ignore[no-untyped-def]
+    systems = {
+        "full-scitaste-learned-policy",
+        "native-base-without-learned-taste",
+    }
+    return any(item.system_id in systems for item in cells)
 
 
 def _evidence_bindings(

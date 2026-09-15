@@ -9,11 +9,20 @@ from pydantic import ValidationError
 from scitaste.evaluation.source_identity import (
     CanonicalSourceIdentity,
     CanonicalSourceIdentityRegistry,
+    canonical_benchmark_task_source_group_id,
     canonical_f1000_source_group_id,
     canonical_openreview_source_group_id,
     load_canonical_source_identity_registry,
     save_canonical_source_identity_registry,
 )
+
+
+def test_benchmark_task_identity_is_stable_and_opaque() -> None:
+    observed = canonical_benchmark_task_source_group_id("MLRC-v1", "Task-07")
+
+    assert observed == canonical_benchmark_task_source_group_id("mlrc-v1", "task-07")
+    assert observed.startswith("benchmark-task-")
+    assert "mlrc" not in observed
 
 
 def test_f1000_identity_is_stable_across_doi_forms_and_versions() -> None:

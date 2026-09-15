@@ -6,6 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from scitaste.evaluation.h4_policy_reproduction import (
+    H4PolicyReproductionSpec,
+    reproduce_h4_lifecycle_policy,
+)
 from scitaste.project import ProjectIdeaRevisionBinding
 from scitaste.project.models import content_sha256
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -19,12 +23,16 @@ from scitaste.taste import (
     AITasteReviewNormalizationReport,
     LifecycleTastePolicyConfig,
     LifecycleTastePolicyUpdateMode,
+    ScientificDecisionFamilyAssignment,
+    ScientificDecisionFamilyReview,
+    ScientificTasteDecisionFamily,
     TasteAttributionReviewRole,
     TasteAttributionReviewVerdict,
     TasteController,
     TasteCreditAssignment,
     TasteCreditDirection,
     TasteEpisodeAttributionReview,
+    TasteEpisodeDecisionContext,
     TasteEpisodeEvidence,
     TasteEpisodeEvidenceRole,
     TasteEpisodeOutcome,
@@ -34,10 +42,38 @@ from scitaste.taste import (
     admit_taste_episode,
     assess_lifecycle_taste_policy,
     compile_process_taste_episode_candidate,
+    fit_family_conditioned_lifecycle_taste_policy,
     fit_lifecycle_taste_policy,
     inspect_taste_episode_admission,
     load_ai_taste_review_panel_contract,
 )
+
+
+def _family_assignment(episode, ordinal: int) -> ScientificDecisionFamilyAssignment:
+    family = ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION
+    reviews = tuple(
+        ScientificDecisionFamilyReview(
+            reviewer_id=f"family-reviewer-{reviewer}-{ordinal}",
+            invocation_id=f"family-invocation-{reviewer}-{ordinal}",
+            model_identifier=f"isolated-family-model-{reviewer}",
+            role="primary",
+            decision_family=family,
+            rationale="The choice allocates the next experiment from trajectory state.",
+            raw_response_sha256=str(reviewer) * 64,
+        )
+        for reviewer in ("a", "b")
+    )
+    return ScientificDecisionFamilyAssignment.create(
+        assignment_id=f"family-assignment-{ordinal}",
+        admission_id=episode.admission_id,
+        admission_sha256=episode.admission_sha256,
+        decision_family=family,
+        observed_outcome_families=tuple(
+            item.family for item in episode.candidate.credit_assignments
+        ),
+        rationale="The action spends a bounded research opportunity after feedback.",
+        reviews=reviews,
+    )
 
 
 def _sha(path: Path) -> str:
@@ -85,6 +121,8 @@ def _candidate(
     polarity: TasteOutcomePolarity = TasteOutcomePolarity.SUPPORTS,
     family: TasteOutcomeFamily = TasteOutcomeFamily.DESIGN,
     source_group_id: str | None = None,
+    with_decision_context: bool = False,
+    decision_context: TasteEpisodeDecisionContext | None = None,
 ):
     actions = _actions()
     decision = ResearchDecision(
@@ -139,6 +177,20 @@ def _candidate(
         idea_revision=_idea_binding(),
         producer_id=f"process-taste-miner-{ordinal:02d}",
         state_summary="A decision-reversing boundary is unresolved before scaling.",
+        decision_context=(
+            decision_context
+            or (
+                TasteEpisodeDecisionContext(
+                    remaining_experiments="two-to-three",
+                    failure_count="zero",
+                    no_improvement_streak="one",
+                    score_trend="flat",
+                    best_vs_baseline="equal",
+                )
+                if with_decision_context
+                else None
+            )
+        ),
         decision_principle="Probe a cheap decisive uncertainty before scale-up.",
         why_preferred="The probe can change whether scale-up is justified.",
         outcomes=(outcome,),
@@ -208,8 +260,13 @@ def _ai_review(
     reviewer_id: str,
     run_id: str,
     model_id: str,
+    preferred_action_id: str = "probe-boundary",
 ):
-    human_template = _review(candidate, reviewer_id=reviewer_id)
+    human_template = _review(
+        candidate,
+        reviewer_id=reviewer_id,
+        preferred_action_id=preferred_action_id,
+    )
     payload = human_template.model_dump(mode="python", exclude={"human_performed"})
     shared_content = {
         AITasteReviewArtifactRole.REVIEW_PACKET: "frozen review packet\n",
@@ -245,9 +302,7 @@ def _ai_review(
         model_revision=f"{model_id}-revision",
         run_id=run_id,
         prompt_sha256=prompt_sha256,
-        input_projection_sha256=_sha(
-            paths[AITasteReviewArtifactRole.INPUT_PROJECTION]
-        ),
+        input_projection_sha256=_sha(paths[AITasteReviewArtifactRole.INPUT_PROJECTION]),
         raw_response_sha256=_sha(raw_path),
         input_tokens=100,
         output_tokens=20,
@@ -272,9 +327,7 @@ def _ai_review(
     paths[AITasteReviewArtifactRole.NORMALIZATION_REPORT] = normalization_path
     firewall = AITasteReviewFirewallReport.create(
         review_packet_sha256=_sha(paths[AITasteReviewArtifactRole.REVIEW_PACKET]),
-        input_projection_sha256=_sha(
-            paths[AITasteReviewArtifactRole.INPUT_PROJECTION]
-        ),
+        input_projection_sha256=_sha(paths[AITasteReviewArtifactRole.INPUT_PROJECTION]),
         condition_identity_exposed=False,
         paper_claims_exposed=False,
         out_of_window_outcomes_exposed=False,
@@ -319,6 +372,7 @@ def _admitted(
     family: TasteOutcomeFamily = TasteOutcomeFamily.DESIGN,
     source_group_id: str | None = None,
     confidence: float = 0.9,
+    with_decision_context: bool = False,
 ):
     candidate = _candidate(
         tmp_path,
@@ -326,6 +380,7 @@ def _admitted(
         polarity=polarity,
         family=family,
         source_group_id=source_group_id,
+        with_decision_context=with_decision_context,
     )
     reviews = (
         _review(
@@ -466,11 +521,10 @@ def test_two_ai_reviews_admit_training_but_forbid_human_validity_claim(
     assert policy.source_review_evidence_kinds == ("ai",)
     assert policy.ai_review_contract_sha256s == (contract.contract_sha256,)
     assert policy.human_validity_claim_allowed is False
-    assert policy.schema_version == "1.3"
-    assert policy.source_group_keys == (
-        "self-project:episode-project:source-group-01",
-    )
+    assert policy.schema_version == "1.4"
+    assert policy.source_group_keys == ("self-project:episode-project:source-group-01",)
     assert policy.source_group_count == 1
+    assert policy.source_group_ids == ("source-group-01",)
     assert policy.intervention_policy_artifact_eligible is True
     assert policy.h3_policy_artifact_eligible is True
     diagnostic = fit_lifecycle_taste_policy(
@@ -625,11 +679,7 @@ def test_shuffled_credit_is_order_invariant_across_weight_blocks(tmp_path: Path)
     assert forward.feature_posteriors == reverse.feature_posteriors
     assert forward.policy_sha256 == reverse.policy_sha256
     for block_sha256 in {item.block_sha256 for item in forward.shuffle_assignments}:
-        block = [
-            item
-            for item in forward.shuffle_assignments
-            if item.block_sha256 == block_sha256
-        ]
+        block = [item for item in forward.shuffle_assignments if item.block_sha256 == block_sha256]
         original = sorted(
             (item.original_action_type, item.effective_episode_weight) for item in block
         )
@@ -738,6 +788,128 @@ def test_scientific_policy_excludes_execution_only_credit_by_default(tmp_path: P
     assert policy.training_episode_ids == ("admitted-episode-01",)
 
 
+def test_context_bound_episodes_fit_feedback_adaptive_policy(tmp_path: Path) -> None:
+    episodes = tuple(
+        _admitted(tmp_path, ordinal, with_decision_context=True) for ordinal in range(1, 5)
+    )
+
+    policy = fit_lifecycle_taste_policy(
+        episodes,
+        LifecycleTastePolicyConfig(
+            policy_id="feedback-adaptive-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+        ),
+    )
+
+    assert policy.schema_version == "1.5"
+    assert any(item.feature_kind == "decision-state-action" for item in policy.feature_posteriors)
+    assert policy.h4_adaptive_policy_eligible is False
+
+
+def test_h4_policy_reproduction_refits_ai_admissions_and_tolerates_project_revision(
+    tmp_path: Path,
+) -> None:
+    evidence_root = tmp_path / "evidence"
+    evidence_root.mkdir()
+    contract_source = Path(
+        "configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml"
+    )
+    contract_path = tmp_path / "AI_REVIEW_CONTRACT.yaml"
+    contract_path.write_bytes(contract_source.read_bytes())
+    contract = load_ai_taste_review_panel_contract(contract_path)
+    episodes = []
+    for ordinal, preferred in ((1, "probe-boundary"), (2, "scale-now")):
+        candidate = _candidate(
+            evidence_root,
+            ordinal,
+            decision_context=TasteEpisodeDecisionContext(
+                remaining_experiments="two-to-three",
+                failure_count=("zero" if ordinal == 1 else "one"),
+                no_improvement_streak=("zero" if ordinal == 1 else "one"),
+                score_trend=("improving" if ordinal == 1 else "flat"),
+                best_vs_baseline=("above" if ordinal == 1 else "equal"),
+            ),
+        )
+        reviews = (
+            _ai_review(
+                candidate,
+                evidence_root,
+                reviewer_id=f"ai-a-{ordinal}",
+                run_id=f"ai-a-run-{ordinal}",
+                model_id="review-model-a",
+                preferred_action_id=preferred,
+            ),
+            _ai_review(
+                candidate,
+                evidence_root,
+                reviewer_id=f"ai-b-{ordinal}",
+                run_id=f"ai-b-run-{ordinal}",
+                model_id="review-model-b",
+                preferred_action_id=preferred,
+            ),
+        )
+        episodes.append(
+            admit_taste_episode(
+                candidate,
+                reviews,
+                admission_id=f"h4-ai-admission-{ordinal}",
+                evidence_root=evidence_root,
+                current_idea_revision=_idea_binding(),
+                ai_review_contract=contract,
+                expected_ai_review_contract_sha256=contract.contract_sha256,
+            )
+        )
+    policy = fit_lifecycle_taste_policy(
+        tuple(episodes),
+        LifecycleTastePolicyConfig(
+            policy_id="reproducible-h4-ai-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+        ),
+    )
+    assert policy.h4_adaptive_policy_eligible is True
+    policy_path = tmp_path / "POLICY.json"
+    policy_path.write_text(policy.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    episode_locators = []
+    for episode in episodes:
+        path = tmp_path / f"{episode.admission_id}.json"
+        path.write_text(episode.model_dump_json(indent=2) + "\n", encoding="utf-8")
+        episode_locators.append(path.name)
+    spec = H4PolicyReproductionSpec.create(
+        spec_id="h4-policy-reproduction-test",
+        project_id="episode-project",
+        evaluation_id="h4-formal-v1",
+        lifecycle_policy_locator=policy_path.name,
+        admitted_episode_locators=tuple(episode_locators),
+        ai_review_panel_contract_locator=contract_path.name,
+        episode_evidence_root_locator=evidence_root.name,
+    )
+    advanced_snapshot = ProjectIdeaRevisionBinding.create(
+        project_id="episode-project",
+        observed_project_revision=99,
+        observed_project_snapshot_sha256="9" * 64,
+        revision_id="lifecycle-taste-candidate-01",
+        status="candidate",
+        record_locator="runs/idea-run/idea_refinement/REVISION.json",
+        record_sha256="2" * 64,
+        artifact_sha256="3" * 64,
+        selected_for_paper=False,
+        paper_claim_authority=False,
+    )
+
+    report, reproduced = reproduce_h4_lifecycle_policy(
+        tmp_path,
+        spec,
+        current_idea_revision=advanced_snapshot,
+    )
+
+    assert reproduced == policy
+    assert report.refitted_policy_sha256 == policy.policy_sha256
+    assert report.reviewer_kind == "ai"
+    assert report.not_human_review is True
+
+
 def test_repeated_decisions_from_one_trajectory_do_not_inflate_support(
     tmp_path: Path,
     research_state,
@@ -767,6 +939,34 @@ def test_repeated_decisions_from_one_trajectory_do_not_inflate_support(
     assert policy.effective_training_weight == 0.9
     assert assessment.abstained is True
     assert "insufficient-support" in assessment.reason_codes
+
+
+def test_family_conditioned_policy_keeps_h4_adaptive_head_isolated(
+    tmp_path: Path,
+) -> None:
+    episodes = tuple(_admitted(tmp_path, ordinal) for ordinal in range(1, 4))
+    assignments = tuple(
+        _family_assignment(episode, ordinal)
+        for ordinal, episode in enumerate(episodes, start=1)
+    )
+    model = fit_family_conditioned_lifecycle_taste_policy(
+        episodes,
+        assignments,
+        LifecycleTastePolicyConfig(
+            policy_id="ignored-base-id",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+            minimum_feature_support=1.0,
+        ),
+        policy_id="family-policy",
+    )
+
+    head = model.require_head(ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION)
+
+    assert head.policy_id == "family-policy-adaptive-allocation"
+    assert head.source_episode_ids == tuple(item.admission_id for item in episodes)
+    assert ScientificTasteDecisionFamily.SCIENTIFIC_COMMUNICATION in model.empty_families
+    assert model.not_human_review is True
 
 
 def test_schema_11_episode_replays_but_cannot_train_without_sampling_unit(
@@ -828,6 +1028,7 @@ def test_schema_10_policy_replays_under_its_original_hash(tmp_path: Path) -> Non
         "human_validity_claim_allowed",
         "source_group_keys",
         "source_group_count",
+        "source_group_ids",
     ):
         payload.pop(field)
     legacy_sha256 = content_sha256(payload)
@@ -857,6 +1058,7 @@ def test_schema_11_policy_replays_with_source_group_fields(tmp_path: Path) -> No
         "human_validity_claim_allowed",
         "source_group_keys",
         "source_group_count",
+        "source_group_ids",
     ):
         payload.pop(field)
     legacy_sha256 = content_sha256(payload)
@@ -888,6 +1090,7 @@ def test_legacy_shuffled_policy_loads_for_audit_but_is_not_h3_eligible(
         "human_validity_claim_allowed",
         "source_group_keys",
         "source_group_count",
+        "source_group_ids",
     ):
         payload.pop(field)
     legacy_sha256 = content_sha256(payload)
