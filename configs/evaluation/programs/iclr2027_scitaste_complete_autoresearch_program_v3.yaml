@@ -1,0 +1,436 @@
+schema_version: "3.0"
+program_id: scitaste-iclr2027-complete-autoresearch-program-v3
+target_venue: ICLR 2027
+status: planning-contract-no-run
+paper_claim_scope: scientific-taste-improves-autonomous-research
+relationship_to_prior:
+  base_program_id: scitaste-iclr2027-lifecycle-evidence-program-v2
+  base_program_file_sha256: 481ee4a1257691239201d2ba1f01d5136819ce6b799f5321add9191d6647c6c9
+  policy: additive-v3-do-not-rewrite-v1-or-v2
+resource_binding:
+  corpus_id: accepted-autoresearch-evaluation-resources-2026-09-12-v9
+  corpus_path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
+  corpus_file_sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+  inherited_semantic_sha256: bb53a816b3a5479713f7cd6b9ccd027ef0e5ea5d9bd879941ce268228de0f010
+
+scientific_boundaries:
+  benchmark_is_method: false
+  benchmark_role: supplies-task-environment-inputs-and-owned-endpoints
+  method_role: selects-and-executes-research-actions
+  headline_authority: heldout-scorer-owned-objective-progress
+  ai_panel_role: operationally-final-nonhuman-mechanism-and-package-endpoint
+  human_validity_claim_allowed: false
+  self_development_in_headline_estimate: false
+  inventory_can_select_scientific_design: false
+  pseudo_implementation_of_blocked_system_allowed: false
+
+research_paradigms:
+  - paradigm_id: parameter-training-free-taste
+    role: primary-method-and-E1-mechanism-study
+    parameter_update_allowed: false
+    frozen_agent_model_required: true
+    permitted_state_update:
+      - source-grounded-episode-memory
+      - action-specific-delayed-credit
+      - retrieval-and-routing-statistics
+      - calibrated-abstention-state
+    forbidden_state_update:
+      - gradient-update-of-agent-model
+      - fine-tuning-on-formal-task-or-label
+      - fitting-on-heldout-outcome
+    compute_role: hosted-API-by-default-with-no-GPU-requirement
+  - paradigm_id: gpu-executed-autonomous-research
+    role: E2-E4-candidate-experiment-execution
+    parameter_update_allowed_for_agent_model: false
+    agent_inference_options: [hosted-api, qualified-local-model]
+    gpu_role:
+      - train-and-evaluate-candidate-research-code
+      - execute-benchmark-defined-workloads
+      - optionally-serve-a-qualified-local-agent-with-separate-accounting
+    selection_rule: allocate-from-qualified-inventory-after-task-fit-and-budget-freeze
+    forbidden_assumption: qwen3-vl-2b-or-one-rtx-3090-is-the-default-main-experiment
+
+benchmark_matrix:
+  - benchmark_id: scitastebench
+    resource_id: null
+    kind: internal-measurement-instrument
+    study_ids: [E1-H1, E1-H2, E1-H2b, E1-H3]
+    endpoint_owner: independent-dual-ai-panel
+    current_status: blocked-zero-formally-admitted-natural-cases
+  - benchmark_id: mlrc-bench-objective-route
+    resource_id: mlrc-bench-code
+    kind: external-objective-task-source
+    study_ids: [E2]
+    endpoint_owner: benchmark-hidden-scorer
+    current_status: blocked-formal-multitask-environment-and-assets-not-qualified
+  - benchmark_id: mle-bench-contingent-route
+    resource_id: null
+    kind: external-objective-task-source-candidate
+    study_ids: [E2]
+    endpoint_owner: benchmark-hidden-scorer
+    current_status: blocked-not-registered-in-v9-resource-corpus
+  - benchmark_id: mlr-bench
+    resource_id: mlr-bench
+    kind: external-idea-to-paper-task-source
+    study_ids: [E3]
+    endpoint_owner: benchmark-rubrics-plus-independent-dual-ai-panel
+    current_status: blocked-task-subset-assets-licenses-and-runtime-not-qualified
+  - benchmark_id: exp-bench
+    resource_id: exp-bench
+    kind: external-experiment-chain-task-source
+    study_ids: [E4]
+    endpoint_owner: benchmark-stage-and-conjunctive-success-scorers
+    current_status: blocked-task-subset-assets-licenses-and-runtime-not-qualified
+
+E1_scitastebench:
+  method_form: parameter-training-free
+  agent_model_class: frozen-strong-hosted-model
+  model_identity: null
+  model_freeze_stage: after-task-excluded-conformance-selection
+  core_conditions:
+    - condition_id: base
+      visible_addition: none
+      policy_state: no-taste-no-delayed-credit
+    - condition_id: raw
+      visible_addition: equal-budget-raw-evidence-from-the-same-source-bytes
+      policy_state: no-episode-abstraction
+    - condition_id: matched
+      visible_addition: source-grounded-in-scope-taste-at-raw-token-parity
+      policy_state: static-no-formal-outcome-update
+    - condition_id: mismatched
+      visible_addition: source-disjoint-quality-and-token-matched-out-of-scope-taste
+      policy_state: static-no-formal-outcome-update
+    - condition_id: full
+      visible_addition: autonomously-selected-grounded-taste-critics-controller-state
+      policy_state: reviewed-delayed-credit-memory-enabled
+  confirmatory_contrasts:
+    - study_id: E1-H1
+      hypothesis: H1_taste_abstraction
+      treatment: matched
+      comparator: raw
+      primary_endpoint: paired-condition-blinded-dual-ai-action-quality-and-claim-calibration
+    - study_id: E1-H2
+      hypothesis: H2_taste_specificity
+      treatment: matched
+      comparator: mismatched
+      primary_endpoint: paired-dual-ai-action-quality-with-transfer-and-reversal-errors
+    - study_id: E1-H2b
+      hypothesis: H2b_autonomous_selection
+      treatment: full.with-selector-decision-grounded
+      comparator: full.with-selector-lexical
+      primary_endpoint: paired-dual-ai-action-quality-and-calibrated-abstention
+      nesting_rule: change-only-selector-over-the-same-closed-hard-negative-pool
+    - study_id: E1-H3
+      hypothesis: H3_reviewed_delayed_credit
+      treatment: full.with-reviewed-outcome-update
+      comparator: full.with-no-update
+      negative_control: full.with-source-group-blocked-shuffled-credit
+      primary_endpoint: heldout-dual-ai-action-quality-calibration-abstention-and-reversal
+      nesting_rule: change-only-parameter-free-memory-update-state
+  supporting_contrast:
+    treatment: full
+    comparator: base
+    interpretation: bundled-training-free-system-effect-not-a-mechanism-identifier
+  common_controls:
+    - frozen-model-and-serving-revision
+    - candidate-action-set-and-order-counterbalance
+    - source-bytes-and-context-token-budget
+    - prompts-tools-temperature-and-seed-policy
+    - one-effective-unit-per-source-trajectory
+    - source-group-disjoint-update-and-evaluation-partitions
+  endpoint_policy:
+    primary_reviewers: 2
+    reviewer_kind: ai
+    identity_distinct: true
+    condition_blinded: true
+    adjudicator: one-identity-distinct-ai-only-on-disagreement
+    operational_finality: true
+    human_or_expert_label_allowed: false
+    title_authority: false
+
+external_studies:
+  - study_id: E2
+    name: heldout-objective-research-progress
+    inference_role: title-critical-confirmatory
+    benchmark_selection_rule: >-
+      Select a v9-bound, license-cleared, source-disjoint executable task route
+      with a scorer-owned hidden endpoint. MLRC-Bench is the currently bound
+      primary route; MLE-bench may replace or supplement it only after its exact
+      resource, license, task, and runtime contract is registered and admitted.
+    systems: [scitaste-native, native-base]
+    primary_contrast: scitaste-native-minus-native-base
+    primary_endpoint: paired-hidden-objective-progress-with-all-failures-retained
+    final_paper_required_per_task: false
+  - study_id: E3
+    name: mlr-bench-idea-to-paper
+    inference_role: supporting-ecological-full-lifecycle
+    benchmark_id: mlr-bench
+    systems:
+      - scitaste-native
+      - native-base-direct-tool-agent
+      - mlr-agent
+      - agent-laboratory
+      - deep-scientist
+    required_outputs:
+      - idea-and-selection-rationale
+      - proposal-and-experiment-plan
+      - executable-code-and-complete-logs
+      - scorer-resolved-evidence-package
+      - claim-evidence-linked-paper
+      - dual-ai-review-and-review-driven-revision
+    primary_endpoint: evidence-valid-complete-package-plus-blinded-dual-ai-paper-review
+    interpretation: benchmark-and-method-effects-reported-separately
+  - study_id: E4
+    name: exp-bench-experiment-chain
+    inference_role: diagnostic
+    benchmark_id: exp-bench
+    systems: [scitaste-native, native-base]
+    primary_endpoint: hypothesis-design-implementation-execution-conclusion-and-conjunctive-success
+    interpretation: stagewise-diagnostic-not-a-substitute-for-E2-or-E3
+
+system_matrix:
+  - system_id: scitaste-native
+    resource_id: null
+    method_kind: target-method
+    conditions: [full-parameter-training-free-taste]
+    study_ids: [E2, E3, E4]
+    matched_model_track: required
+    best_available_track: required
+    current_status: planned-program-specific-preflight-pending
+  - system_id: native-base
+    resource_id: null
+    method_kind: within-native-causal-control
+    conditions: [same-native-executor-zero-taste-adjustment]
+    study_ids: [E2, E4]
+    matched_model_track: required
+    best_available_track: not-applicable-same-model-as-scitaste-native
+    current_status: planned-program-specific-preflight-pending
+  - system_id: native-base-direct-tool-agent
+    resource_id: null
+    method_kind: direct-tool-agent-baseline
+    conditions: [same-task-tools-and-budget-without-scitaste-control]
+    study_ids: [E3]
+    matched_model_track: required
+    best_available_track: required
+    current_status: planned-adapter-semantic-equivalence-pending
+  - system_id: mlr-agent
+    resource_id: mlr-agent
+    method_kind: accepted-external-method
+    study_ids: [E3]
+    matched_model_track: eligible-only-after-exact-unchanged-core-model-mapping
+    best_available_track: eligible-only-after-native-model-and-adapter-admission
+    current_status: blocked-core-task-model-sandbox-telemetry-artifact-and-resume-gates
+  - system_id: agent-laboratory
+    resource_id: agent-laboratory
+    method_kind: accepted-external-method
+    study_ids: [E3]
+    matched_model_track: eligible-only-after-exact-unchanged-core-model-mapping
+    best_available_track: eligible-only-after-native-model-and-adapter-admission
+    current_status: blocked-unchanged-core-task-sandbox-telemetry-artifact-and-resume-gates
+  - system_id: deep-scientist
+    resource_id: deep-scientist
+    method_kind: accepted-external-method
+    study_ids: [E3]
+    matched_model_track: eligible-only-after-paper-equivalence-and-model-mapping
+    best_available_track: eligible-only-after-native-runner-and-adapter-admission
+    current_status: blocked-equivalence-task-model-sandbox-telemetry-artifact-and-resume-gates
+blocked_system_policy:
+  action: report-blocked-row-with-reason
+  forbidden_action: substitute-prompt-wrapper-or-pseudo-implementation
+
+estimands:
+  - estimand_id: matched-model
+    priority: causal-primary-where-supported
+    definition: >-
+      Compare admitted systems on the same frozen task package using the exact
+      same task-excluded-selected model identity, information, tools, repair
+      policy, wall-time, API, and compute ceilings.
+    exclusion_rule: systems-that-cannot-support-the-exact-model-remain-out-of-this-estimand
+    pooling_with_best_available: forbidden
+  - estimand_id: best-available
+    priority: ecological-secondary
+    definition: >-
+      Compare each admitted unchanged-core system using its strongest
+      task-excluded-qualified native model under a common resource ceiling.
+    required_disclosures: [model-confounding, native-interface-differences, adapter-differences]
+    pooling_with_matched_model: forbidden
+
+model_selection:
+  selection_data: task-excluded-conformance-suite-only
+  excluded_from_selection:
+    - all-formal-task-identities-and-source-groups
+    - formal-labels-hidden-scores-and-reference-papers
+    - formal-system-outputs-and-review-results
+    - scitaste-self-development-memory-derived-from-formal-tasks
+  candidate_sources:
+    - authenticated-strong-hosted-models
+    - qualified-existing-local-models
+    - newly-downloaded-models-only-after-separate-authorization
+  E1_constraint: select-a-frozen-strong-hosted-model
+  E2_E4_constraint: freeze-one-primary-model-for-within-native-causal-contrasts
+  selection_order:
+    - tool-and-structured-output-conformance
+    - context-sufficiency-and-execution-reliability
+    - exact-identity-reproducibility
+    - scientific-task-fit
+    - cost-throughput-and-capacity
+  fixed_primary_model_id: null
+  qwen3_vl_2b_privileged: false
+
+lifecycle_state_machine:
+  initial_state: task-acquisition-proposed
+  states:
+    - state_id: task-acquisition-proposed
+      required_artifacts: [resource-pin, license-scope, task-purpose, no-action-approval-request]
+      next: acquired-quarantined
+    - state_id: acquired-quarantined
+      required_artifacts: [byte-hashes, provenance, asset-inventory, quarantine-receipt]
+      next: task-admitted-and-split-frozen
+    - state_id: task-admitted-and-split-frozen
+      required_artifacts: [source-groups, pilot-formal-split, hidden-scorer-firewall, exclusion-ledger]
+      next: models-and-systems-frozen
+    - state_id: models-and-systems-frozen
+      required_artifacts: [task-excluded-model-selection, exact-model-identities, adapter-attestations, budgets]
+      next: idea-candidates-generated
+    - state_id: idea-candidates-generated
+      required_artifacts: [task-state, closed-candidate-set, candidate-provenance]
+      next: idea-decision-locked
+    - state_id: idea-decision-locked
+      required_artifacts: [selected-idea, selection-rationale, rejected-alternatives, pre-execution-timestamp]
+      next: experiment-plan-frozen
+    - state_id: experiment-plan-frozen
+      required_artifacts: [hypotheses, metrics, development-plan, hidden-evaluation-plan, stop-policy]
+      next: development-execution
+    - state_id: development-execution
+      required_artifacts: [immutable-command-log, API-ledger, compute-ledger, failures-and-retries]
+      next: candidate-frozen
+    - state_id: candidate-frozen
+      required_artifacts: [code-hash, environment-lock, checkpoint-hashes, no-more-development-attestation]
+      next: hidden-scoring
+    - state_id: hidden-scoring
+      required_artifacts: [isolated-inference-receipt, scorer-version, score-output, firewall-report]
+      next: evidence-admission
+    - state_id: evidence-admission
+      required_artifacts: [claim-result-links, validity-findings, failure-retention, contradiction-ledger]
+      next: paper-assembly
+    - state_id: paper-assembly
+      required_artifacts: [evidence-linked-draft, limitation-disclosures, resource-accounting]
+      next: dual-ai-review
+    - state_id: dual-ai-review
+      required_artifacts: [two-distinct-reviewer-identities, two-raw-reviews, disagreement-map]
+      conditional_next:
+        agreement: review-driven-revision
+        disagreement: ai-adjudication
+    - state_id: ai-adjudication
+      required_artifacts: [distinct-adjudicator-identity, adjudication-response, resolution-map]
+      next: review-driven-revision
+    - state_id: review-driven-revision
+      required_artifacts: [review-action-ledger, revised-draft, unchanged-evidence-attestation]
+      next: final-ai-review-and-package-freeze
+    - state_id: final-ai-review-and-package-freeze
+      required_artifacts: [final-dual-ai-disposition, unresolved-objections, immutable-package-manifest]
+      next: complete
+    - state_id: complete
+      required_artifacts: [trajectory-manifest, endpoint-summary, cost-summary]
+  fail_closed_transitions:
+    - hidden-data-visible-before-candidate-freeze
+    - unlogged-manual-repair-or-human-rescue
+    - missing-failed-run-or-retry
+    - claim-without-admitted-evidence
+    - paper-text-that-invents-or-reinterprets-missing-results
+    - system-core-modification-outside-disclosed-adapter
+
+execution_blocks:
+  - block_id: B0-task-excluded-complete-pipeline-conformance
+    formal_evidence: false
+    purpose: validate-every-state-and-artifact-boundary-on-development-only-inputs
+    required_coverage: [E1-shape, E2-objective-path, E3-idea-to-paper-path, E4-chain-path, failure-and-resume-path]
+    scale_out_allowed: false
+  - block_id: B1-small-complete-formal-block
+    formal_evidence: true
+    start_gate: B0-complete-and-exact-prelaunch-hash-approved
+    size_rule: smallest-source-disjoint-block-that-covers-each-primary-contrast-and-endpoint
+    required_coverage:
+      - E1-five-core-conditions-plus-only-H2b-and-H3-required-nested-controls
+      - E2-scitaste-native-versus-native-base-hidden-score
+      - E3-complete-idea-to-paper-for-every-admitted-system-row
+      - E4-full-experiment-chain-for-scitaste-native-and-native-base
+      - one-success-one-failure-or-natural-failure-retention-path
+      - dual-ai-review-and-review-driven-revision
+    unavailable_external_system_policy: keep-row-blocked-and-do-not-fabricate-output
+    scale_out_allowed: false
+  - block_id: B2-powered-source-disjoint-expansion
+    formal_evidence: true
+    start_gate: B1-complete-valid-no-leakage-and-power-analysis-frozen
+    size_rule: derive-task-and-repetition-counts-from-B0-variance-failure-rate-cost-and-clustered-power
+    forbidden_design: arbitrary-systems-by-tasks-by-seeds-cartesian-grid
+    assignment_rule: run-only-preregistered-contrast-required-cells
+
+split_and_leakage_policy:
+  grouping_key: source-paper-repository-dataset-task-family-union
+  partitions: [model-selection, development-pilot, taste-update, formal-heldout, judge-calibration]
+  cross_partition_source_group_overlap_allowed: false
+  repeated_runs_are_independent_units: false
+  independent_unit: heldout-source-grouped-task
+  one_effective_unit_per_source_trajectory: true
+  hidden_labels_visible_to: scorer-only
+  generating_agent_access_to_reference_paper_or_hidden_score: forbidden
+  formal_output_reuse_for_model-or-policy-selection: forbidden
+
+budget_policy:
+  freeze_before_block: true
+  matched_axes:
+    - wall-time
+    - agent-input-output-and-cached-tokens
+    - API-cost
+    - GPU-allocation-and-active-GPU-time
+    - CPU-RAM-and-disk
+    - tool-and-network-permissions
+    - repair-attempts-and-retries
+  per_task_and_per_system_ledgers_required: true
+  best_available_common_resource_ceiling_required: true
+  budget_overrun_outcome: retained-failure
+  human_rescue_budget_formal: zero
+
+failure_and_stop_policy:
+  analysis_population: intention-to-run
+  retained_outcomes:
+    - invalid-result
+    - fabricated-or-unsupported-claim
+    - timeout
+    - over-budget
+    - environment-failure
+    - model-or-provider-failure
+    - scorer-failure
+    - safety-stop
+  retry_policy: exact-count-and-eligible-error-classes-frozen-before-run
+  manual_repair: forbidden-after-formal-start
+  stop_rules:
+    - safety-or-license-violation
+    - hidden-scorer-or-firewall-integrity-failure
+    - per-cell-resource-ceiling-reached
+    - preregistered-global-cost-ceiling-reached
+    - preregistered-non-condition-specific-futility-rule
+  stop_rule_may_observe_unblinded_condition_effect: false
+  failed_cell_replacement: forbidden
+
+current_readiness:
+  scientific_design_complete: true
+  execution_ready: false
+  scitastebench_formal_cases: blocked-zero-admitted
+  external_task_packages: blocked
+  external_system_adapters: blocked
+  primary_model_selection: pending-task-excluded-conformance
+  B0_complete: false
+  B1_complete: false
+  power_analysis: pending-after-B0
+  exact_prelaunch_manifest: pending
+  owner_hash_approval: pending
+
+authorization:
+  authorizes_download: false
+  authorizes_api_calls: false
+  authorizes_gpu_work: false
+  authorizes_execution: false
+  authorizes_human_study: false
+  next_authority_required: exact-content-addressed-prelaunch-manifest-and-owner-approval
