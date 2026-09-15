@@ -40,6 +40,7 @@ def _write_receipts(
     *,
     judge_candidate: str = "judge-zhipu-glm53-flash",
 ) -> tuple[ModelRoleConformancePlan, list[Path]]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     plan = plan_model_role_conformance(SUITE, repository_root=ROOT)
     plan = plan.model_copy(
         update={
@@ -213,6 +214,10 @@ def test_b0_plan_is_multirole_and_empty_receipts_do_not_select(tmp_path: Path) -
     status = inspect_model_role_conformance(plan, [], evidence_root=tmp_path)
     assert status.executable_for_conformance is False
     assert "freeze conformance case bytes" in status.next_action
+
+    _, receipts = _write_receipts(tmp_path / "bounded-fixture")
+    with pytest.raises(ValueError, match="planning labels only"):
+        compile_model_role_selection(plan, receipts, evidence_root=tmp_path / "bounded-fixture")
 
 
 def test_selection_binds_exact_identity_profile_budget_and_independent_judge(
