@@ -1,0 +1,20 @@
+# Conservative USD accounting for the authenticated Bailian Qwen3.8-Max route.
+provider: alibaba-bailian
+base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+model: qwen3.8-max
+api_key_env: DASHSCOPE_API_KEY
+live_enabled: false
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 32768
+pricing_confirmed: true
+pricing:
+  currency: USD
+  input_usd_per_million_tokens: 2.0
+  cached_input_usd_per_million_tokens: 0.25
+  output_usd_per_million_tokens: 6.0
+  captured_at: 2026-09-16T00:00:00+08:00
+  source: https://help.aliyun.com/zh/model-studio/qwen3-8-max (CNY list price converted at conservative 6 CNY/USD)
+unpriced_engineering_probe: false
+extra_headers: {}
+extra_body: {}

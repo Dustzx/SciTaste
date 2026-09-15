@@ -1409,10 +1409,24 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
     """Reject v4 plans that regress to a checkpoint-driven partial workflow."""
 
     supersedes = program_payload.get("supersedes")
-    if not isinstance(supersedes, dict) or supersedes.get("program_id") != (
-        "scitaste-iclr2027-complete-autoresearch-program-v3"
-    ):
-        raise ValueError("program v4 must explicitly supersede the complete v3 plan")
+    program_id = program_payload.get("program_id")
+    predecessor_by_program = {
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v5": (
+            "scitaste-iclr2027-capability-driven-autoresearch-program-v4"
+        ),
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v6": (
+            "scitaste-iclr2027-capability-driven-autoresearch-program-v5"
+        ),
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v7": (
+            "scitaste-iclr2027-capability-driven-autoresearch-program-v6"
+        ),
+    }
+    expected_predecessor = predecessor_by_program.get(
+        program_id,
+        "scitaste-iclr2027-complete-autoresearch-program-v3",
+    )
+    if not isinstance(supersedes, dict) or supersedes.get("program_id") != expected_predecessor:
+        raise ValueError("capability-driven program has the wrong explicit predecessor")
 
     completeness = program_payload.get("automation_completeness")
     if not isinstance(completeness, dict):
@@ -1473,6 +1487,46 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
         }
     ):
         raise ValueError("program v4 model selection is not capability-driven and expandable")
+
+    if program_id == "scitaste-iclr2027-capability-driven-autoresearch-program-v7":
+        if (
+            selection.get("candidate_universe_authority")
+            != "recent-related-work-and-idea-task-fit-first"
+            or selection.get("available_inventory_role")
+            != "execution-cost-optimization-only-after-scientific-fit"
+        ):
+            raise ValueError("program v7 must derive models from related work before inventory")
+        model_strata = program_payload.get("model_strata")
+        if not isinstance(model_strata, dict) or set(model_strata) != {
+            "scientific_agent_models",
+            "benchmark_task_models",
+            "embedding_models",
+        }:
+            raise ValueError("program v7 must separate agent, task, and embedding models")
+        task_models = model_strata.get("benchmark_task_models")
+        if not isinstance(task_models, dict) or not str(
+            task_models.get("separation_rule", "")
+        ).startswith("Research-agent model selection and benchmark task-model selection"):
+            raise ValueError("program v7 conflates scientific agents with benchmark task models")
+        review_panel = program_payload.get("review_panel_contract")
+        if (
+            not isinstance(review_panel, dict)
+            or review_panel.get("reviewer_count") != 2
+            or review_panel.get("reviewers_must_be_identity_distinct") is not True
+            or review_panel.get("reviewers_must_be_generator_disjoint") is not True
+            or review_panel.get("adjudicator_required_on_disagreement") is not True
+        ):
+            raise ValueError("program v7 lacks the independent review and adjudication panel")
+        realization = program_payload.get("workflow_realization")
+        agent_loop = realization.get("agent_loop") if isinstance(realization, dict) else None
+        if (
+            not isinstance(realization, dict)
+            or realization.get("actual_execution_required") is not True
+            or realization.get("paper_only-or-simulated-results-count_as_complete") is not False
+            or not isinstance(agent_loop, list)
+            or len(agent_loop) < 18
+        ):
+            raise ValueError("program v7 does not realize the complete executable workflow")
 
 
 def _compile_contract(

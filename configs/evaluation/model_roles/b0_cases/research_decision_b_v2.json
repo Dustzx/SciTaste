@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-long-context-v2",
+  "source_group_id": "b0-dev-research-context-v2",
+  "role": "research_agent",
+  "selection_scope_id": "agent-global",
+  "formal_or_heldout": false,
+  "objective": "Choose the development-stage claim that is compatible with all three records. Cite every record: e1 supplies the development effect, e2 supplies the budget constraint, and e3 supplies the limitation that forbids a formal superiority claim.",
+  "payload": {
+    "evidence": [
+      {"id": "e1", "role": "development-effect", "finding": "method-x exceeds baseline on development split"},
+      {"id": "e2", "role": "feasibility-constraint", "finding": "method-x stays within the frozen budget"},
+      {"id": "e3", "role": "claim-limitation", "finding": "heldout outcomes remain sealed"}
+    ],
+    "claims": ["x-is-development-promising", "x-is-formally-superior"]
+  },
+  "required_response_fields": ["selection", "evidence_ids", "limitation"],
+  "expected": {"selection": "x-is-development-promising", "evidence_ids": ["e1", "e2", "e3"]}
+}

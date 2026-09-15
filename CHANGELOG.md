@@ -5,6 +5,20 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the related-work-driven ICLR 2027 program v7 and selected its immutable
+  project-owned run as the self-development authority. Candidate model classes
+  now derive from the frozen Idea, recent neighboring AutoResearch methods, and
+  benchmark conventions before local/API availability; existing assets only
+  optimize cost after scientific equivalence. The program separates scientific
+  agents, independent review/adjudication, embeddings, and benchmark task
+  models, keeps 2B/4B Qwen variants as lower bounds, requires actual experiment
+  execution and review-routed revision for completion, and records exact
+  per-track resource disclosures before launch.
+- Executed a 14-request task-excluded B0 role campaign: GLM-5.3-Flash research
+  and code, local Qwen3-VL-8B task execution, and local MiniLM retrieval passed;
+  Qwen3.8-Max failed the frozen judge reproducibility gate and was not promoted
+  into the independent paper-review panel. All responses, costs, failures, and
+  exact local checkpoint identities remain in project-owned ignored outputs.
 - Added the capability-driven ICLR 2027 AutoResearch program v4 and made it the
   default for new project-program initialization. The controller preserves v3
   replay while v4 rejects partial research workflows, requires the full

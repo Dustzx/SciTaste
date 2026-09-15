@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-tool-routing-v2",
+  "source_group_id": "b0-dev-code-tools-v2",
+  "role": "code_agent",
+  "selection_scope_id": "agent-global",
+  "formal_or_heldout": false,
+  "objective": "Choose the least costly permitted tool sequence that can establish whether a JSON field exists. file.read can access the named file; python.run cannot access files and may only analyze values already returned by another tool.",
+  "payload": {
+    "allowed_tools": ["file.read", "python.run"],
+    "file": "fixture.json",
+    "tool_contracts": {
+      "file.read": "returns the parsed JSON value from the named file",
+      "python.run": "analyzes supplied values only and has no filesystem access"
+    }
+  },
+  "required_response_fields": ["tool_sequence", "reason"],
+  "allowed_tool_names": ["file.read", "python.run"],
+  "expected": {"first_tool": "file.read"}
+}

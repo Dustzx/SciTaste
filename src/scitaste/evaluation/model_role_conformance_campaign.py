@@ -662,7 +662,12 @@ def inspect_bytebound_conformance_campaign(
         )
     else:
         readiness = CampaignReadiness.BLOCKED
-        next_action = "resolve blocked runner or resource bindings"
+        next_action = (
+            "start a new task-excluded campaign with a corrected case contract or "
+            "expanded candidate pool"
+            if completed_ids
+            else "resolve blocked runner or resource bindings"
+        )
     return ByteBoundCampaignStatus(
         campaign_id=plan.campaign_id,
         campaign_plan_sha256=plan.campaign_plan_sha256,

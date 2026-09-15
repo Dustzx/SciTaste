@@ -199,13 +199,25 @@ class E2ModelSelection(BaseModel):
     model_config = _CONFIG
 
     inventory: E2FileBinding
-    candidates: tuple[E2ModelCandidate, ...] = Field(min_length=4, max_length=16)
+    candidates: tuple[E2ModelCandidate, ...] = Field(min_length=2, max_length=24)
     b0_agent_candidate_id: str | None = None
     b1_agent_model_id: Literal[None] = None
     selection_data: Literal["task-excluded-conformance-only"]
+    candidate_universe_authority: Literal[
+        "legacy-capability-first",
+        "recent-related-work-and-idea-task-fit-first",
+    ] = "legacy-capability-first"
+    related_work_anchor_ids: tuple[str, ...] = Field(default=(), max_length=32)
+    available_inventory_role: Literal[
+        "candidate-source",
+        "execution-cost-optimization-only-after-scientific-fit",
+    ] = "candidate-source"
+    scientific_agent_and_task_model_separate: Literal[True] = True
     required_capabilities: tuple[str, ...] = Field(min_length=5, max_length=20)
     selection_order: tuple[
         Literal[
+            "derive-required-model-strata-from-idea-neighboring-recent-work",
+            "preserve-comparability-with-selected-benchmark-and-method-baselines",
             "minimum-role-capability-pass",
             "exact-identity-license-and-runtime-pass",
             "task-fit-on-source-disjoint-conformance",
@@ -237,19 +249,34 @@ class E2ModelSelection(BaseModel):
                 raise ValueError("E2 B0 requires an exact provisional candidate")
             if "2b" in selected.model_id.casefold():
                 raise ValueError("Qwen3-VL-2B cannot be the E2 B0 or headline default")
-        if not any(
-            item.status == "lower-bound-only" and "2b" in item.model_id.casefold()
+        if any(
+            "2b" in item.model_id.casefold() and item.status != "lower-bound-only"
             for item in self.candidates
         ):
-            raise ValueError("E2 must disclose Qwen3-VL-2B as a lower-bound-only option")
-        if set(self.selection_order) != {
+            raise ValueError("any E2 2B candidate must remain lower-bound-only")
+        required_order = {
             "minimum-role-capability-pass",
             "exact-identity-license-and-runtime-pass",
             "task-fit-on-source-disjoint-conformance",
             "reliability-under-fixed-tool-and-schema-contract",
             "cost-throughput-and-existing-asset-preference",
-        }:
+        }
+        if not required_order.issubset(self.selection_order):
             raise ValueError("E2 model selection order must retain all v4 role gates")
+        if self.candidate_universe_authority == "recent-related-work-and-idea-task-fit-first":
+            if (
+                self.available_inventory_role
+                != "execution-cost-optimization-only-after-scientific-fit"
+                or len(self.related_work_anchor_ids) < 4
+                or tuple(self.selection_order[:2])
+                != (
+                    "derive-required-model-strata-from-idea-neighboring-recent-work",
+                    "preserve-comparability-with-selected-benchmark-and-method-baselines",
+                )
+            ):
+                raise ValueError(
+                    "related-work-driven E2 selection must precede inventory preference"
+                )
         return self
 
 

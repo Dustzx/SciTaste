@@ -1,0 +1,445 @@
+schema_version: "4.0"
+program_id: scitaste-iclr2027-capability-driven-autoresearch-program-v7
+target_venue: ICLR 2027
+status: executable-program-binding-in-progress
+
+supersedes:
+  program_id: scitaste-iclr2027-capability-driven-autoresearch-program-v6
+  path: configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v6.yaml
+  file_sha256: 2f0c9566b2a0dadd420068e36fc4494bd8a5911c564345c9937093279c3b540d
+  policy: preserve-v6-prelaunch-history-use-v7-for-current-execution
+
+deadline_contract:
+  timezone: AoE
+  abstract_deadline: 2026-09-18T23:59:00-12:00
+  paper_deadline: 2026-09-25T23:59:00-12:00
+  scheduling_rule: title-critical-evidence-first-no-optional-engineering-before-B1
+
+paper_contract:
+  working_title: "SciTaste: Improving Autonomous Research through Scientific Taste"
+  title_claim_authority: E2-paired-hidden-objective-progress
+  self_development_is_primary_estimate: false
+  benchmark_is_method: false
+  completion_definition: >-
+    A trajectory is complete only after objective evidence is admitted, a
+    claim-evidence-linked paper is assembled, two independent AI reviews are
+    resolved, the paper is revised, and a final reviewed package is frozen.
+
+model_inventory_binding:
+  inventory_id: scitaste-model-role-inventory-20260916-v2
+  inventory_path: configs/resources/assets/model_role_inventory_v2.yaml
+  inventory_file_sha256: 4b7ceaa3038acf2c1d45d37d1116a67a41a6c97bce1f66399d042058906f3e63
+  role_partition: [research_agent, code_agent, judge, embedding, task_training]
+  inventory_presence_selects_model: false
+  candidate_pool_may_expand_after_scientific_design: true
+
+scientific_boundaries:
+  method_object: unified-lifecycle-scientific-taste-policy
+  headline_authority: heldout-scorer-owned-objective-progress
+  benchmark_role: task-environment-inputs-and-owned-endpoints
+  benchmark_is_method: false
+  pseudo_implementation_of_blocked_system_allowed: false
+  formal_manual_rescue_allowed: false
+  hidden_labels_visible_to: scorer-only
+  paper_may_repair_missing_evidence: false
+
+automation_completeness:
+  required_capabilities:
+    - research-goal-and-task-intake
+    - literature-and-reference-acquisition
+    - source-quality-admission
+    - grounded-taste-abstraction
+    - candidate-idea-and-hypothesis-generation
+    - taste-guided-selection-and-abstention
+    - experiment-design-and-preregistration
+    - role-and-resource-allocation
+    - implementation-and-bounded-repair
+    - experiment-execution-and-telemetry
+    - candidate-freeze-and-hidden-scoring
+    - evidence-analysis-and-contradiction-accounting
+    - claim-evidence-linked-paper-generation
+    - independent-dual-ai-review
+    - disagreement-adjudication
+    - review-driven-revision
+    - final-review-and-package-freeze
+  required_feedback_loops:
+    review_to_paper: required
+    review_to_evidence: required
+    review_to_experiment_plan: required
+    failed_execution_to_bounded_repair: development-only
+    heldout_score_to_taste_update: forbidden-within-formal-split
+    delayed_reviewed_outcome_to_future_taste_memory: source-group-disjoint-only
+  success_requires_all_capabilities: true
+  partial_pipeline_may_be_reported_as_complete: false
+
+research_tracks:
+  - study_id: E0
+    name: task-excluded-role-conformance
+    role: engineering-gate-not-paper-effectiveness-evidence
+    endpoint: role-specific-quality-schema-tool-reliability-latency-and-cost
+    formal_evidence: false
+  - study_id: E1
+    name: scitastebench-scientific-taste-mechanisms
+    paradigm: parameter-training-free
+    systems: [base, raw, matched, mismatched, full]
+    confirmatory_contrasts: [matched-minus-raw, matched-minus-mismatched]
+    nested_contrasts: [decision-grounded-selector-minus-lexical, reviewed-credit-minus-no-update]
+    endpoint: condition-blinded-independent-dual-ai-decision-quality-and-calibration
+    title_authority: false
+  - study_id: E2
+    name: heldout-objective-research-progress
+    paradigm: gpu-executed-autonomous-research
+    task_source: mlrc-bench-primary-mle-bench-contingent
+    systems: [scitaste-native, native-base]
+    primary_contrast: scitaste-native-minus-native-base
+    endpoint: paired-hidden-objective-progress-all-failures-retained
+    title_authority: true
+  - study_id: E3
+    name: idea-to-reviewed-paper
+    paradigm: complete-autonomous-research
+    task_source: mlr-bench
+    systems:
+      - scitaste-native
+      - native-base-direct-tool-agent
+      - mlr-agent
+      - agent-laboratory
+      - deep-scientist
+    endpoint: evidence-valid-complete-package-plus-blinded-dual-ai-paper-review
+    required_terminal_artifacts: [paper, two-reviews, revision, final-disposition]
+    title_authority: supporting
+  - study_id: E4
+    name: experiment-chain-diagnostics
+    paradigm: gpu-executed-autonomous-research
+    task_source: exp-bench
+    systems: [scitaste-native, native-base]
+    endpoint: hypothesis-design-implementation-execution-conclusion-and-conjunctive-success
+    title_authority: diagnostic-only
+
+model_selection:
+  selection_data: task-excluded-conformance-suite-only
+  selection_unit: role-by-role-not-one-model-for-the-whole-system
+  candidate_universe_authority: recent-related-work-and-idea-task-fit-first
+  available_inventory_role: execution-cost-optimization-only-after-scientific-fit
+  fixed_primary_model_id: null
+  inventory_presence_selects_model: false
+  qwen3_vl_2b_status: low-cost-lower-bound-only
+  qwen3_vl_2b_may_be_headline_default: false
+  available_candidates_are_a_floor_not_a_ceiling: true
+  candidate_sources:
+    - models-and-role-partitions-used-by-recent-neighboring-autoresearch-work
+    - current-frontier-reasoning-coding-and-multimodal-models
+    - authenticated-hosted-api-models
+    - all-qualified-local-inventory-models
+    - all-qualified-remote-inventory-models
+    - newly-downloaded-task-fit-models
+  owner_download_authority:
+    automatic_single_resource_max_bytes: 10737418240
+    aggregate_budget_must_still_be_frozen: true
+    above_limit_requires_new_owner_notice: true
+  role_gates:
+    research_agent:
+      required: [scientific-reasoning, long-context, structured-output, tool-use, evidence-citation]
+      preferred_pool: [zhipu-glm53-flash, deepseek-v41-flash, qwen3-vl-8b-instruct-local, qwen3-5-4b-local]
+    code_agent:
+      required: [repository-editing, executable-code, tool-use, bounded-repair, schema-adherence]
+      preferred_pool: [zhipu-glm53-flash, deepseek-v41-flash, qwen3-vl-8b-instruct-local, qwen3-5-4b-local]
+    judge:
+      required: [generator-independence, rubric-adherence, calibration, structured-output]
+      preferred_pool: [bailian-qwen38-max, zhipu-glm53-flash, deepseek-v41-flash, qwen3-vl-8b-instruct-local]
+    embedding:
+      required: [scientific-retrieval-quality, deterministic-batching, multilingual-policy]
+      preferred_pool: [all-minilm-l6-v2-local, downloadable-scientific-embedding]
+    task_training:
+      required: [benchmark-task-fit, license-clearance, reproducible-load, 24GB-or-distributed-feasibility]
+      preferred_pool:
+        - qwen3-vl-4b-instruct-local
+        - qwen3-vl-8b-instruct-local
+        - internvl3-5-4b-local
+        - llava-onevision-1-5-4b-local
+        - qwen3-5-4b-local
+        - downloadable-task-specific-model
+  selection_order:
+    - derive-required-model-strata-from-idea-neighboring-recent-work
+    - preserve-comparability-with-the-selected-benchmark-and-method-baselines
+    - minimum-role-capability-pass
+    - exact-identity-license-and-runtime-pass
+    - task-fit-on-source-disjoint-conformance
+    - reliability-under-fixed-tool-and-schema-contract
+    - cost-throughput-and-existing-asset-preference
+  matched_model_rule: same-exact-qualified-model-and-budget-within-each-causal-contrast
+  judge_independence_rule: no-model-judges-an-output-it-generated-in-a-headline-endpoint
+
+related_work_model_policy:
+  refresh_cutoff: 2026-09-16
+  policy: >-
+    Derive the candidate universe and model-scale strata from recent neighboring
+    autonomous-research methods before consulting available checkpoints. Existing
+    assets may lower cost but may never narrow the scientific design.
+  anchors:
+    - work_id: mlr-bench
+      source: https://arxiv.org/abs/2505.19955
+      design_implication: evaluate stagewise and end-to-end idea-to-paper quality across multiple frontier models and a coding agent
+    - work_id: ai-scientist-v2
+      source: https://arxiv.org/abs/2504.08066
+      design_implication: include experiment-manager search, actual experiment execution, manuscript generation, and VLM-assisted figure review
+    - work_id: scinav
+      source: https://openreview.net/forum?id=8iEsrg51Fs
+      design_implication: use same-model method contrasts, cross-model generalization, role-separated generation-and-judgment, success, valid-execution, and cost endpoints
+    - work_id: deep-scientist
+      source: https://arxiv.org/abs/2509.26603
+      design_implication: retain long-horizon progressive-fidelity search as a scalability comparison without copying its extreme compute scale
+    - work_id: autoresearchclaw
+      source: https://arxiv.org/abs/2605.20025
+      design_implication: compare complete iterative execution, failure recovery, verifiable reporting, intervention, and cross-run learning
+    - work_id: sage-mhfa
+      source: https://arxiv.org/abs/2606.31478
+      design_implication: evaluate evidence-grounded failure attribution and correct routing to idea, design, or implementation repair
+    - work_id: sgha
+      source: https://arxiv.org/abs/2608.17501
+      design_implication: include a local-open-weight training-free robustness stratum for corpus-first evidence-grounded idea discovery
+  candidate_refresh_rule: >-
+    Refresh this anchor set before each powered block; new models enter only through
+    task-excluded conformance and never by observing a formal task score.
+
+model_strata:
+  scientific_agent_models:
+    primary_matched_stratum:
+      definition: strongest-qualified-current-model-compatible-with-all-compared-systems
+      fixed_within_contrast: [exact-model, serving-window, prompts, tools, temperature, token-budget, retries]
+      current_candidates: [zhipu-glm53-flash, deepseek-v41-flash, bailian-qwen38-max, newly-qualified-frontier-api]
+      selection_state: research-and-code-qualified-judge-panel-incomplete
+    local_open_weight_robustness_stratum:
+      definition: task-fit-current-open-model-at-8B-to-14B-scale-or-smallest-capable-equivalent
+      current_candidates: [qwen3-vl-8b-instruct-local, qwen3-5-9b-remote-pending-reobservation, newly-downloaded-task-fit-open-model]
+      run_scope: repeat-only-preregistered-critical-contrasts-not-the-full-grid
+      selection_state: pending-related-work-derived-candidate-refresh-and-conformance
+    lower_bound_diagnostic_stratum:
+      candidates: [qwen3-vl-2b-instruct-local, qwen3-vl-4b-instruct-local]
+      paper_role: efficiency-or-capability-floor-only
+      headline_authority: false
+  benchmark_task_models:
+    E1: no-gradient-training-required-agent-model-frozen
+    E2: benchmark-recipe-owned-task-model-not-a-Qwen-agent-checkpoint
+    E2_current_task_model: LocPointTransformer-random-initialization-as-specified-by-MLRC-Perception
+    E3: per-task-model-and-dataset-selected-from-each-frozen-MLR-Bench-task-contract
+    E4: per-task-executor-selected-from-each-frozen-EXP-Bench-task-contract
+    separation_rule: >-
+      Research-agent model selection and benchmark task-model selection are separate
+      decisions, with separate hashes, budgets, telemetry, and causal roles.
+  embedding_models:
+    baseline: all-minilm-l6-v2-local
+    upgrade_rule: compare-a-scientific-or-multilingual-embedding-model-if-E1-corpus-retrieval-error-is-material
+    formal_selection_data: source-disjoint-retrieval-conformance-only
+
+review_panel_contract:
+  reviewer_count: 2
+  reviewers_must_be_identity_distinct: true
+  reviewers_must_be_generator_disjoint: true
+  reviewer_selection_data: task-excluded-calibration-only
+  adjudicator_required_on_disagreement: true
+  adjudicator_must_be_distinct_from: [research-agent, code-agent, reviewer-a, reviewer-b]
+  current_candidates: [bailian-qwen38-max, newly-qualified-frontier-judge, qualified-local-open-judge]
+  current_state: incomplete-qwen38max-single-candidate-failed-reproducibility-gate
+  failure_policy: expand-candidate-universe-or-correct-invalid-calibration-case-never-lower-threshold-after-results
+
+workflow_realization:
+  agent_loop:
+    - task-and-goal-intake
+    - literature-acquisition-and-source-quality-screening
+    - source-grounded-taste-abstraction
+    - candidate-idea-and-hypothesis-generation
+    - taste-guided-selection-with-abstention
+    - preregistered-experiment-design
+    - role-model-resource-and-budget-freeze
+    - code-implementation-and-bounded-development-repair
+    - actual-experiment-execution-and-telemetry
+    - candidate-freeze-before-hidden-scoring
+    - scorer-isolated-objective-evaluation
+    - evidence-admission-and-contradiction-accounting
+    - claim-evidence-linked-paper-and-figures
+    - two-independent-reviews
+    - disagreement-adjudication-if-required
+    - review-routed-reexperiment-reanalysis-or-rewrite
+    - final-dual-review-and-package-freeze
+    - trajectory-manifest-endpoint-and-cost-summary
+  actual_execution_required: true
+  paper_only-or-simulated-results-count_as_complete: false
+  formal_human_replacement: independent-AI-review-under-the-frozen-review-panel-contract
+  return_routes:
+    evidence-gap: experiment-plan-frozen
+    implementation-failure: development-execution
+    analysis-error: evidence-admission
+    writing-only-defect: paper-assembly
+  completeness_receipt: every-stage-must-bind-an-actual-content-hashed-artifact
+
+formal_resource_envelopes:
+  E1:
+    compute: CPU-and-hosted-API-primary
+    gpu: none-required-unless-local-open-robustness-stratum-is-run
+    model_rule: one-frozen-strong-agent-model-across-each-causal-contrast-plus-two-independent-judges
+  E2:
+    compute: hosted-or-qualified-local-agent-plus-remote-eight-RTX-3090-task-execution
+    task_model: benchmark-owned-LocPointTransformer-for-current-MLRC-task
+    B1_ceiling: 16-GPU-hours-for-one-paired-two-arm-trajectory
+    scale_out_rule: only-after-valid-B1-and-clustered-power-calculation
+  E3:
+    compute: hosted-agent-plus-task-dependent-GPU-execution
+    B1_scope: one-source-disjoint-complete-idea-to-reviewed-revised-paper-trajectory-per-admitted-system
+    model_rule: matched-model-primary-and-native-best-available-secondary-kept-separate
+  E4:
+    compute: hosted-agent-plus-task-dependent-GPU-execution
+    B1_scope: smallest-pair-covering-the-full-hypothesis-to-conclusion-chain
+  disclosure_before_launch:
+    - exact-agent-model-identities-and-provider-windows
+    - exact-reviewer-and-adjudicator-identities
+    - exact-task-models-and-initialization
+    - dataset-and-benchmark-byte-hashes
+    - GPU-count-active-hours-disk-and-wall-time
+    - API-token-and-dollar-ceilings
+    - retry-stop-network-and-repair-policy
+
+resource_topology:
+  development_lane: local-single-rtx-3090
+  formal_gpu_lane: remote-eight-rtx-3090
+  hosted_api_lane: [zhipu-glm53-flash, bailian-qwen38-max, deepseek-v41-flash]
+  routing_rule: workload-capability-and-budget-determine-lane
+  forbidden_routing_rule: checkpoint-presence-or-historical-path-determines-study-design
+
+system_matrix:
+  - system_id: scitaste-native
+    method_kind: target-method
+    study_ids: [E2, E3, E4]
+    matched_model_track: required
+    best_available_track: required
+    current_status: planned-program-specific-binding-in-progress
+  - system_id: native-base
+    method_kind: within-native-causal-control
+    study_ids: [E2, E4]
+    matched_model_track: required
+    best_available_track: same-model-as-scitaste-native
+    current_status: planned-program-specific-binding-in-progress
+  - system_id: native-base-direct-tool-agent
+    method_kind: direct-tool-agent-baseline
+    study_ids: [E3]
+    matched_model_track: required
+    best_available_track: required
+    current_status: planned-adapter-semantic-equivalence-pending
+  - system_id: mlr-agent
+    method_kind: accepted-external-method
+    study_ids: [E3]
+    current_status: blocked-unchanged-core-task-model-sandbox-telemetry-artifact-and-resume-gates
+  - system_id: agent-laboratory
+    method_kind: accepted-external-method
+    study_ids: [E3]
+    current_status: blocked-unchanged-core-task-model-sandbox-telemetry-artifact-and-resume-gates
+  - system_id: deep-scientist
+    method_kind: accepted-external-method
+    study_ids: [E3]
+    current_status: blocked-unchanged-core-task-model-sandbox-telemetry-artifact-and-resume-gates
+
+lifecycle_state_machine:
+  initial_state: task-acquisition-proposed
+  states:
+    - state_id: task-acquisition-proposed
+      required_artifacts: [resource-pin, license-scope, task-purpose, no-action-approval-request]
+      next: acquired-quarantined
+    - state_id: acquired-quarantined
+      required_artifacts: [byte-hashes, provenance, asset-inventory, quarantine-receipt]
+      next: task-admitted-and-split-frozen
+    - state_id: task-admitted-and-split-frozen
+      required_artifacts: [source-groups, pilot-formal-split, hidden-scorer-firewall, exclusion-ledger]
+      next: models-and-systems-frozen
+    - state_id: models-and-systems-frozen
+      required_artifacts: [task-excluded-model-selection, exact-model-identities, adapter-attestations, budgets]
+      next: idea-candidates-generated
+    - state_id: idea-candidates-generated
+      required_artifacts: [task-state, closed-candidate-set, candidate-provenance]
+      next: idea-decision-locked
+    - state_id: idea-decision-locked
+      required_artifacts: [selected-idea, selection-rationale, rejected-alternatives, pre-execution-timestamp]
+      next: experiment-plan-frozen
+    - state_id: experiment-plan-frozen
+      required_artifacts: [hypotheses, metrics, development-plan, hidden-evaluation-plan, stop-policy]
+      next: development-execution
+    - state_id: development-execution
+      required_artifacts: [immutable-command-log, API-ledger, compute-ledger, failures-and-retries]
+      next: candidate-frozen
+    - state_id: candidate-frozen
+      required_artifacts: [code-hash, environment-lock, checkpoint-hashes, no-more-development-attestation]
+      next: hidden-scoring
+    - state_id: hidden-scoring
+      required_artifacts: [isolated-inference-receipt, scorer-version, score-output, firewall-report]
+      next: evidence-admission
+    - state_id: evidence-admission
+      required_artifacts: [claim-result-links, validity-findings, failure-retention, contradiction-ledger]
+      next: paper-assembly
+    - state_id: paper-assembly
+      required_artifacts: [evidence-linked-draft, limitation-disclosures, resource-accounting]
+      next: dual-ai-review
+    - state_id: dual-ai-review
+      required_artifacts: [two-distinct-reviewer-identities, two-raw-reviews, disagreement-map]
+      conditional_next:
+        agreement: review-driven-revision
+        disagreement: ai-adjudication
+    - state_id: ai-adjudication
+      required_artifacts: [distinct-adjudicator-identity, adjudication-response, resolution-map]
+      next: review-driven-revision
+    - state_id: review-driven-revision
+      required_artifacts: [review-action-ledger, revised-draft, unchanged-evidence-attestation]
+      next: final-ai-review-and-package-freeze
+    - state_id: final-ai-review-and-package-freeze
+      required_artifacts: [final-dual-ai-disposition, unresolved-objections, immutable-package-manifest]
+      next: complete
+    - state_id: complete
+      required_artifacts: [trajectory-manifest, endpoint-summary, cost-summary]
+  revision_routes:
+    final-review-requires-new-experiment: experiment-plan-frozen
+    final-review-requires-reexecution: development-execution
+    final-review-requires-reanalysis: evidence-admission
+    final-review-requires-rewrite: paper-assembly
+  fail_closed_transitions:
+    - hidden-data-visible-before-candidate-freeze
+    - missing-failed-run-or-retry
+    - unlogged-formal-manual-repair
+    - paper-claim-without-admitted-evidence
+    - final-package-without-review-driven-revision
+
+execution_blocks:
+  - block_id: B0-task-excluded-full-loop-conformance
+    formal_evidence: false
+    purpose: execute-every-interface-including-review-return-path-before-formal-use
+    required_coverage: [E1-shape, E2-hidden-score-shape, E3-paper-review-revision, E4-stage-chain, failure-resume]
+    scale_out_allowed: false
+  - block_id: B1-minimal-complete-formal-block
+    formal_evidence: true
+    start_gate: B0-complete-role-bindings-frozen-and-exact-resource-manifest-recorded
+    required_coverage: [E1-primary-contrasts, E2-title-critical-pair, E3-one-complete-admitted-system-route, E4-diagnostic-pair, review-driven-revision]
+    size_rule: smallest-source-disjoint-design-that-identifies-the-preregistered-contrasts
+    scale_out_allowed: false
+  - block_id: B2-powered-source-disjoint-expansion
+    formal_evidence: true
+    start_gate: B1-valid-and-clustered-power-frozen
+    size_rule: expand-only-contrasts-that-need-power-or-robustness
+    forbidden_design: arbitrary-model-by-system-by-task-by-seed-grid
+
+budget_policy:
+  freeze_before_each_block: true
+  matched_axes: [wall-time, api-tokens-and-cost, active-gpu-time, cpu-ram-disk, tools-network, repair-retries]
+  intention_to_run: true
+  formal_human_rescue_budget: zero
+  budget_overrun_outcome: retained-failure
+
+current_readiness:
+  design_complete: true
+  controller_compatible: implemented-awaiting-project-initialization
+  B0_role_binding: incomplete-judge-panel-not-yet-qualified
+  B0_full_loop_complete: false
+  B1_complete: false
+  title_effectiveness_authority: false
+
+authorization:
+  owner_allows_new_downloads_up_to_10GiB_each: true
+  this_file_launches_downloads: false
+  this_file_launches_api_calls: false
+  this_file_launches_gpu_work: false
+  exact-run-manifest-required_before_execution: true

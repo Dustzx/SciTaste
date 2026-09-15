@@ -1,6 +1,10 @@
 # SciTaste capability-driven AutoResearch program v4
 
-Status: **new main experiment authority; executor binding in progress**.
+Status: **historical program; superseded by related-work-driven v7**.
+
+Current authority is
+[`SCITASTE_RELATED_WORK_DRIVEN_AUTORESEARCH_PROGRAM_V7.md`](SCITASTE_RELATED_WORK_DRIVEN_AUTORESEARCH_PROGRAM_V7.md).
+V4 is retained to reproduce the transition away from checkpoint-driven planning.
 
 The machine-readable authority is
 [`iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml).
