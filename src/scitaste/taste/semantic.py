@@ -140,7 +140,7 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         context: NodeContext,
         policy: NodePolicy,
     ) -> GroundedTasteCaseAbstraction:
-        """Undo only redundant JSON quote escaping when it yields an exact source span."""
+        """Align quote escaping or casing only when it identifies one exact source span."""
 
         del context, policy
         return _normalize_grounding_quote_escapes(proposal, input_data)
@@ -596,9 +596,16 @@ def _normalize_grounding_quote_escapes(
             evidence = support.verbatim_evidence
             source = visible.get(support.projection_field)
             normalized = evidence.replace('\\"', '"')
-            if source is not None and evidence not in source and normalized in source:
-                support = support.model_copy(update={"verbatim_evidence": normalized})
-                changed = True
+            aligned = normalized
+            if source is not None and evidence not in source:
+                if normalized in source:
+                    aligned = normalized
+                elif source.casefold().count(normalized.casefold()) == 1:
+                    start = source.casefold().index(normalized.casefold())
+                    aligned = source[start : start + len(normalized)]
+                if aligned in source:
+                    support = support.model_copy(update={"verbatim_evidence": aligned})
+                    changed = True
             supports.append(support)
         grounding.append(claim.model_copy(update={"supports": tuple(supports)}))
     return proposal.model_copy(update={"grounding": tuple(grounding)}) if changed else proposal
