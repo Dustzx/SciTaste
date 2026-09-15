@@ -328,10 +328,17 @@ def _quality_projection(source_projection: str) -> str:
         "verbatim_scientific_action": ("alternative", "scientific_action"),
         "observed_natural_outcome": ("outcome",),
     }
-    if set(fields) != set(expected):
+    required = {
+        "reviewed_abstract",
+        "verbatim_scientific_action",
+        "observed_natural_outcome",
+    }
+    if not required <= set(fields) or not set(fields) <= set(expected):
         raise ValueError("precedent projection fields differ from the quality instrument")
     normalized: dict[str, object] = {}
     for name, roles in expected.items():
+        if name not in fields:
+            continue
         record = fields[name]
         if not isinstance(record, dict) or "value" not in record:
             raise ValueError(f"precedent projection field {name!r} is malformed")
