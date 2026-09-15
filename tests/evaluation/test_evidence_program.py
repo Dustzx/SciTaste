@@ -12,12 +12,16 @@ from scitaste.evaluation import (
     load_evidence_program,
     load_external_resource_corpus,
 )
+from scitaste.taste import load_ai_taste_review_panel_contract
 
 PROGRAM = Path("configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml")
 LIFECYCLE_PROGRAM = Path(
     "configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml"
 )
 CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v9.yaml")
+AI_REVIEW_CONTRACT = Path(
+    "configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml"
+)
 
 
 def _program() -> IclrEvidenceProgram:
@@ -73,6 +77,17 @@ def test_lifecycle_program_is_coherent_and_keeps_execution_closed() -> None:
     assert report.scientific_blockers == ()
     assert report.ready_for_experiment is False
     assert report.execution_authorized is False
+
+
+def test_ai_review_contract_binds_current_lifecycle_program_without_authorizing_run() -> None:
+    program = load_evidence_program(LIFECYCLE_PROGRAM).program
+    contract = load_ai_taste_review_panel_contract(AI_REVIEW_CONTRACT)
+
+    assert contract.base_program_id == program.program_id
+    assert contract.base_program_proposal_sha256 == program.proposal_sha256
+    assert contract.human_validity_claim_allowed is False
+    assert contract.strong_title_authorized is False
+    assert contract.authorizes_execution is False
 
 
 def test_lifecycle_credit_requires_static_and_shuffled_controls(tmp_path: Path) -> None:

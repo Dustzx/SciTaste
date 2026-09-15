@@ -76,6 +76,8 @@ class EvidenceReviewPackage(BaseModel):
     evidence_program_sha256: str = Field(pattern=_SHA256)
     resource_corpus: ReviewFileBinding
     resource_corpus_sha256: str = Field(pattern=_SHA256)
+    ai_review_contract: ReviewFileBinding | None = None
+    ai_review_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
     source_proposals: tuple[SourceProposalBinding, ...] = Field(min_length=1, max_length=30)
     method_proposals: tuple[MethodProposalBinding, ...] = Field(min_length=2, max_length=30)
     authorizes_download: Literal[False] = False
@@ -87,6 +89,8 @@ class EvidenceReviewPackage(BaseModel):
 
     @model_validator(mode="after")
     def proposal_ids_are_unique(self) -> EvidenceReviewPackage:
+        if (self.ai_review_contract is None) != (self.ai_review_contract_sha256 is None):
+            raise ValueError("AI review contract file and semantic hash must appear together")
         for values, label in (
             ([item.source_id for item in self.source_proposals], "source"),
             ([item.system_id for item in self.method_proposals], "method"),
@@ -226,6 +230,11 @@ def inspect_evidence_review_package(
 
     program_path = _verify_binding(root, package.evidence_program, findings, "program")
     corpus_path = _verify_binding(root, package.resource_corpus, findings, "corpus")
+    ai_review_contract_path = (
+        _verify_binding(root, package.ai_review_contract, findings, "ai-review-contract")
+        if package.ai_review_contract is not None
+        else None
+    )
     program_inspection = None
     corpus_inspection = None
     evidence_report = None
@@ -237,6 +246,28 @@ def inspect_evidence_review_package(
             _add(findings, "program:semantic-hash-mismatch", "evidence-program hash differs")
         if corpus_inspection.semantic_sha256 != package.resource_corpus_sha256:
             _add(findings, "corpus:semantic-hash-mismatch", "resource-corpus hash differs")
+        if ai_review_contract_path is not None:
+            from scitaste.taste.episode_learning import (
+                load_ai_taste_review_panel_contract,
+            )
+
+            contract = load_ai_taste_review_panel_contract(ai_review_contract_path)
+            if contract.contract_sha256 != package.ai_review_contract_sha256:
+                _add(
+                    findings,
+                    "ai-review-contract:semantic-hash-mismatch",
+                    "AI review contract hash differs",
+                )
+            if (
+                contract.base_program_id != program_inspection.program.program_id
+                or contract.base_program_proposal_sha256
+                != program_inspection.program.proposal_sha256
+            ):
+                _add(
+                    findings,
+                    "ai-review-contract:program-binding-mismatch",
+                    "AI review contract binds another evidence program",
+                )
 
     selected_sources = (
         {

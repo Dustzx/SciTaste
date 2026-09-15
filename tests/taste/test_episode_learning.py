@@ -11,6 +11,12 @@ from scitaste.project.models import content_sha256
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.taste import (
+    AITasteEpisodeAttributionReview,
+    AITasteReviewArtifactBinding,
+    AITasteReviewArtifactRole,
+    AITasteReviewExecutionReceipt,
+    AITasteReviewFirewallReport,
+    AITasteReviewNormalizationReport,
     LifecycleTastePolicyConfig,
     LifecycleTastePolicyUpdateMode,
     TasteAttributionReviewRole,
@@ -30,6 +36,7 @@ from scitaste.taste import (
     compile_process_taste_episode_candidate,
     fit_lifecycle_taste_policy,
     inspect_taste_episode_admission,
+    load_ai_taste_review_panel_contract,
 )
 
 
@@ -165,6 +172,7 @@ def _review(
     preferred_action_id: str = "probe-boundary",
     role: TasteAttributionReviewRole = TasteAttributionReviewRole.PRIMARY,
     verdict: TasteAttributionReviewVerdict = TasteAttributionReviewVerdict.ACCEPT,
+    confidence: float = 0.9,
 ):
     accepted = verdict is TasteAttributionReviewVerdict.ACCEPT
     return TasteEpisodeAttributionReview(
@@ -183,13 +191,122 @@ def _review(
         credit_assignment_supported=accepted,
         transfer_scope_supported=True,
         reversal_probe_supported=True,
-        attribution_confidence=0.9 if accepted else 0.2,
+        attribution_confidence=confidence if accepted else 0.2,
         rationale=(
             "The decision, delayed outcome, and counterfactual support this preference."
             if accepted
             else "The causal credit is not supported."
         ),
         reviewed_at=datetime(2026, 9, 14, tzinfo=UTC),
+    )
+
+
+def _ai_review(
+    candidate,
+    tmp_path: Path,
+    *,
+    reviewer_id: str,
+    run_id: str,
+    model_id: str,
+):
+    human_template = _review(candidate, reviewer_id=reviewer_id)
+    payload = human_template.model_dump(mode="python", exclude={"human_performed"})
+    shared_content = {
+        AITasteReviewArtifactRole.REVIEW_PACKET: "frozen review packet\n",
+        AITasteReviewArtifactRole.INPUT_PROJECTION: "candidate-only input\n",
+        AITasteReviewArtifactRole.RUBRIC: "frozen attribution rubric\n",
+        AITasteReviewArtifactRole.SYSTEM_PROMPT: "review without condition identity\n",
+        AITasteReviewArtifactRole.USER_PROMPT: "assess the bound candidate\n",
+        AITasteReviewArtifactRole.SAMPLING_CONFIG: "temperature: 0\n",
+    }
+    paths: dict[AITasteReviewArtifactRole, Path] = {}
+    for role, content in shared_content.items():
+        path = tmp_path / f"ai-shared-{role.value}.txt"
+        path.write_text(content, encoding="utf-8")
+        paths[role] = path
+    raw_path = tmp_path / f"{run_id}-raw-response.txt"
+    raw_path.write_text(f"raw response {run_id}\n", encoding="utf-8")
+    paths[AITasteReviewArtifactRole.RAW_RESPONSE] = raw_path
+    prompt_sha256 = content_sha256(
+        {
+            role.value: _sha(paths[role])
+            for role in (
+                AITasteReviewArtifactRole.SYSTEM_PROMPT,
+                AITasteReviewArtifactRole.USER_PROMPT,
+            )
+        }
+    )
+    normalized_response_sha256 = content_sha256(
+        human_template.model_dump(mode="json", exclude={"human_performed"})
+    )
+    receipt = AITasteReviewExecutionReceipt.create(
+        provider_id=f"{model_id}-provider",
+        model_id=model_id,
+        model_revision=f"{model_id}-revision",
+        run_id=run_id,
+        prompt_sha256=prompt_sha256,
+        input_projection_sha256=_sha(
+            paths[AITasteReviewArtifactRole.INPUT_PROJECTION]
+        ),
+        raw_response_sha256=_sha(raw_path),
+        input_tokens=100,
+        output_tokens=20,
+        cost_usd=0.001,
+    )
+    receipt_path = tmp_path / f"{run_id}-execution-receipt.yaml"
+    receipt_path.write_text(receipt.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    paths[AITasteReviewArtifactRole.EXECUTION_RECEIPT] = receipt_path
+    normalization = AITasteReviewNormalizationReport.create(
+        run_id=run_id,
+        candidate_sha256=candidate.candidate_sha256,
+        raw_response_sha256=_sha(raw_path),
+        normalized_response_sha256=normalized_response_sha256,
+        schema_valid=True,
+        fuzzy_repair_applied=False,
+    )
+    normalization_path = tmp_path / f"{run_id}-normalization-report.yaml"
+    normalization_path.write_text(
+        normalization.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+    paths[AITasteReviewArtifactRole.NORMALIZATION_REPORT] = normalization_path
+    firewall = AITasteReviewFirewallReport.create(
+        review_packet_sha256=_sha(paths[AITasteReviewArtifactRole.REVIEW_PACKET]),
+        input_projection_sha256=_sha(
+            paths[AITasteReviewArtifactRole.INPUT_PROJECTION]
+        ),
+        condition_identity_exposed=False,
+        paper_claims_exposed=False,
+        out_of_window_outcomes_exposed=False,
+        other_review_exposed=False,
+        producer_response_exposed=False,
+    )
+    firewall_path = tmp_path / f"{run_id}-firewall-report.yaml"
+    firewall_path.write_text(firewall.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    paths[AITasteReviewArtifactRole.FIREWALL_REPORT] = firewall_path
+    artifacts = tuple(
+        AITasteReviewArtifactBinding(
+            role=role,
+            locator=paths[role].name,
+            sha256=_sha(paths[role]),
+        )
+        for role in AITasteReviewArtifactRole
+    )
+    contract = load_ai_taste_review_panel_contract(
+        "configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml"
+    )
+    return AITasteEpisodeAttributionReview(
+        **payload,
+        model_id=model_id,
+        model_revision=f"{model_id}-revision",
+        provider_id=f"{model_id}-provider",
+        prompt_sha256=prompt_sha256,
+        normalized_response_sha256=normalized_response_sha256,
+        run_id=run_id,
+        producer_model_id="episode-producer-model",
+        producer_run_id="episode-producer-run",
+        panel_contract_sha256=contract.contract_sha256,
+        artifacts=artifacts,
     )
 
 
@@ -201,6 +318,7 @@ def _admitted(
     polarity: TasteOutcomePolarity = TasteOutcomePolarity.SUPPORTS,
     family: TasteOutcomeFamily = TasteOutcomeFamily.DESIGN,
     source_group_id: str | None = None,
+    confidence: float = 0.9,
 ):
     candidate = _candidate(
         tmp_path,
@@ -210,8 +328,18 @@ def _admitted(
         source_group_id=source_group_id,
     )
     reviews = (
-        _review(candidate, reviewer_id=f"reviewer-a-{ordinal:02d}", preferred_action_id=preferred),
-        _review(candidate, reviewer_id=f"reviewer-b-{ordinal:02d}", preferred_action_id=preferred),
+        _review(
+            candidate,
+            reviewer_id=f"reviewer-a-{ordinal:02d}",
+            preferred_action_id=preferred,
+            confidence=confidence,
+        ),
+        _review(
+            candidate,
+            reviewer_id=f"reviewer-b-{ordinal:02d}",
+            preferred_action_id=preferred,
+            confidence=confidence,
+        ),
     )
     return admit_taste_episode(
         candidate,
@@ -223,7 +351,18 @@ def _admitted(
 
 
 def _policy(tmp_path: Path, *, mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED):
-    episodes = tuple(_admitted(tmp_path, ordinal) for ordinal in range(1, 9))
+    episodes = tuple(
+        _admitted(
+            tmp_path,
+            ordinal,
+            preferred=(
+                "probe-boundary"
+                if mode is not LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT or ordinal <= 4
+                else "scale-now"
+            ),
+        )
+        for ordinal in range(1, 9)
+    )
     config = LifecycleTastePolicyConfig(
         policy_id=f"policy-{mode.value}",
         update_mode=mode,
@@ -262,6 +401,72 @@ def test_two_independent_reviews_admit_one_training_episode(tmp_path: Path) -> N
     assert admitted.policy_training_eligible is True
     assert admitted.policy_update_authorized is False
     assert admitted.training_weight == 0.9
+
+
+def test_two_ai_reviews_admit_training_but_forbid_human_validity_claim(
+    tmp_path: Path,
+) -> None:
+    candidate = _candidate(tmp_path, 1)
+    contract = load_ai_taste_review_panel_contract(
+        "configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml"
+    )
+    reviews = (
+        _ai_review(
+            candidate,
+            tmp_path,
+            reviewer_id="ai-reviewer-a",
+            run_id="ai-run-a",
+            model_id="review-model-a",
+        ),
+        _ai_review(
+            candidate,
+            tmp_path,
+            reviewer_id="ai-reviewer-b",
+            run_id="ai-run-b",
+            model_id="review-model-b",
+        ),
+    )
+
+    report = inspect_taste_episode_admission(
+        candidate,
+        reviews,
+        evidence_root=str(tmp_path),
+        current_idea_revision=_idea_binding(),
+        ai_review_contract=contract,
+        expected_ai_review_contract_sha256=contract.contract_sha256,
+    )
+    admitted = admit_taste_episode(
+        candidate,
+        reviews,
+        admission_id="ai-admitted-episode-01",
+        evidence_root=str(tmp_path),
+        current_idea_revision=_idea_binding(),
+        ai_review_contract=contract,
+        expected_ai_review_contract_sha256=contract.contract_sha256,
+    )
+
+    assert report.ready_for_policy_training is True
+    assert report.review_evidence_kind == "ai"
+    assert report.ai_review_count == 2
+    assert report.human_review_count == 0
+    assert report.legacy_unverified_review_count == 0
+    assert report.human_validity_claim_allowed is False
+    assert report.cross_model_ai_panel is True
+    assert report.ai_review_contract_sha256 == contract.contract_sha256
+    assert admitted.human_validity_claim_allowed is False
+    assert admitted.ai_review_contract_sha256 == contract.contract_sha256
+    policy = fit_lifecycle_taste_policy(
+        (admitted,),
+        LifecycleTastePolicyConfig(
+            policy_id="ai-reviewed-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+        ),
+    )
+    assert policy.source_review_evidence_kinds == ("ai",)
+    assert policy.ai_review_contract_sha256s == (contract.contract_sha256,)
+    assert policy.human_validity_claim_allowed is False
+    assert policy.h3_policy_artifact_eligible is True
 
 
 def test_split_preference_requires_independent_adjudication(tmp_path: Path) -> None:
@@ -345,21 +550,100 @@ def test_outcome_updated_policy_learns_preference_and_no_update_abstains(
     assert control.reason_codes == ("no-update-control",)
 
 
-def test_shuffled_credit_control_reverses_two_action_training_labels(
+def test_shuffled_credit_control_preserves_action_marginal_and_records_assignment(
     tmp_path: Path,
-    research_state,
 ) -> None:
     shuffled = _policy(tmp_path, mode=LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT)
 
-    assessment = assess_lifecycle_taste_policy(
-        shuffled,
-        state=research_state,
-        actions=_actions(),
-        current_idea_revision=_idea_binding(),
+    action_posteriors = {
+        item.feature: item
+        for item in shuffled.feature_posteriors
+        if item.feature_kind == "action-type"
+    }
+
+    assert shuffled.shuffle_algorithm == "blocked-action-type-permutation-v2"
+    assert shuffled.shuffle_block_count == 1
+    assert shuffled.shuffled_episode_count == 8
+    assert shuffled.shuffle_fixed_point_count < 8
+    assert shuffled.shuffle_assignment_sha256 is not None
+    assert action_posteriors["action::probe"].wins == pytest.approx(3.6)
+    assert action_posteriors["action::advance"].wins == pytest.approx(3.6)
+
+
+def test_shuffled_credit_rejects_nonpermutable_block(tmp_path: Path) -> None:
+    episodes = tuple(_admitted(tmp_path, ordinal) for ordinal in range(1, 5))
+    config = LifecycleTastePolicyConfig(
+        policy_id="nonpermutable-control",
+        update_mode=LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT,
+        idea_revision=_idea_binding(),
+        shuffle_seed=17,
     )
 
-    assert assessment.abstained is False
-    assert assessment.recommended_action_id == "scale-now"
+    with pytest.raises(ValueError, match="two preferred action types"):
+        fit_lifecycle_taste_policy(episodes, config)
+
+
+def test_shuffled_credit_is_order_invariant_across_weight_blocks(tmp_path: Path) -> None:
+    episodes = tuple(
+        _admitted(
+            tmp_path,
+            ordinal,
+            preferred=("probe-boundary" if ordinal % 4 in {1, 2} else "scale-now"),
+            confidence=(0.9 if ordinal <= 4 else 0.7),
+        )
+        for ordinal in range(1, 9)
+    )
+    config = LifecycleTastePolicyConfig(
+        policy_id="weighted-shuffle-control",
+        update_mode=LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT,
+        idea_revision=_idea_binding(),
+        shuffle_seed=23,
+    )
+
+    forward = fit_lifecycle_taste_policy(episodes, config)
+    reverse = fit_lifecycle_taste_policy(tuple(reversed(episodes)), config)
+
+    assert forward.shuffle_block_count == 2
+    assert forward.shuffle_assignment_sha256 == reverse.shuffle_assignment_sha256
+    assert forward.shuffle_assignments == reverse.shuffle_assignments
+    assert forward.feature_posteriors == reverse.feature_posteriors
+    assert forward.policy_sha256 == reverse.policy_sha256
+    for block_sha256 in {item.block_sha256 for item in forward.shuffle_assignments}:
+        block = [
+            item
+            for item in forward.shuffle_assignments
+            if item.block_sha256 == block_sha256
+        ]
+        original = sorted(
+            (item.original_action_type, item.effective_episode_weight) for item in block
+        )
+        assigned = sorted(
+            (item.assigned_action_type, item.effective_episode_weight) for item in block
+        )
+        assert original == assigned
+
+
+def test_shuffled_credit_uses_one_independent_unit_per_source_group(
+    tmp_path: Path,
+) -> None:
+    episodes = (
+        _admitted(tmp_path, 1, source_group_id="shared-group"),
+        _admitted(
+            tmp_path,
+            2,
+            preferred="scale-now",
+            source_group_id="shared-group",
+        ),
+    )
+    config = LifecycleTastePolicyConfig(
+        policy_id="cluster-invalid-control",
+        update_mode=LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT,
+        idea_revision=_idea_binding(),
+        shuffle_seed=17,
+    )
+
+    with pytest.raises(ValueError, match="one sampled episode per source group"):
+        fit_lifecycle_taste_policy(episodes, config)
 
 
 def test_policy_abstains_without_current_idea_or_after_idea_revision(
@@ -513,6 +797,17 @@ def test_schema_10_policy_replays_under_its_original_hash(tmp_path: Path) -> Non
         "training_source_group_keys",
         "training_source_group_count",
         "effective_training_weight",
+        "shuffle_algorithm",
+        "shuffle_block_count",
+        "shuffled_episode_count",
+        "shuffle_fixed_point_count",
+        "shuffle_assignment_sha256",
+        "shuffle_assignments",
+        "source_review_evidence_kinds",
+        "source_ai_reviewed_episode_count",
+        "source_legacy_unverified_episode_count",
+        "ai_review_contract_sha256s",
+        "human_validity_claim_allowed",
     ):
         payload.pop(field)
     legacy_sha256 = content_sha256(payload)
@@ -522,6 +817,61 @@ def test_schema_10_policy_replays_under_its_original_hash(tmp_path: Path) -> Non
     assert legacy.schema_version == "1.0"
     assert legacy.policy_sha256 == legacy_sha256
     assert legacy.training_source_group_keys == ()
+
+
+def test_schema_11_policy_replays_with_source_group_fields(tmp_path: Path) -> None:
+    current = _policy(tmp_path)
+    payload = current.model_dump(mode="json", exclude={"policy_sha256"})
+    payload["schema_version"] = "1.1"
+    for field in (
+        "shuffle_algorithm",
+        "shuffle_block_count",
+        "shuffled_episode_count",
+        "shuffle_fixed_point_count",
+        "shuffle_assignment_sha256",
+        "shuffle_assignments",
+        "source_review_evidence_kinds",
+        "source_ai_reviewed_episode_count",
+        "source_legacy_unverified_episode_count",
+        "ai_review_contract_sha256s",
+        "human_validity_claim_allowed",
+    ):
+        payload.pop(field)
+    legacy_sha256 = content_sha256(payload)
+
+    legacy = type(current).model_validate({**payload, "policy_sha256": legacy_sha256})
+
+    assert legacy.schema_version == "1.1"
+    assert legacy.policy_sha256 == legacy_sha256
+    assert legacy.training_source_group_count == 8
+
+
+def test_legacy_shuffled_policy_loads_for_audit_but_is_not_h3_eligible(
+    tmp_path: Path,
+) -> None:
+    current = _policy(tmp_path, mode=LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT)
+    payload = current.model_dump(mode="json", exclude={"policy_sha256"})
+    payload["schema_version"] = "1.1"
+    for field in (
+        "shuffle_algorithm",
+        "shuffle_block_count",
+        "shuffled_episode_count",
+        "shuffle_fixed_point_count",
+        "shuffle_assignment_sha256",
+        "shuffle_assignments",
+        "source_review_evidence_kinds",
+        "source_ai_reviewed_episode_count",
+        "source_legacy_unverified_episode_count",
+        "ai_review_contract_sha256s",
+        "human_validity_claim_allowed",
+    ):
+        payload.pop(field)
+    legacy_sha256 = content_sha256(payload)
+
+    legacy = type(current).model_validate({**payload, "policy_sha256": legacy_sha256})
+
+    assert legacy.schema_version == "1.1"
+    assert legacy.h3_policy_artifact_eligible is False
 
 
 def test_policy_update_rejects_episode_from_another_idea_revision(tmp_path: Path) -> None:

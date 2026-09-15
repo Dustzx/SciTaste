@@ -99,9 +99,13 @@ conditions:
   - condition_id: shuffled-credit-policy
     kind: shuffled_credit_policy
     intervention: >-
-      Permute reviewed credit within frozen blocks while preserving episode,
-      outcome, action-frequency, source-group, and split marginals.
-    keeps_fixed: [episodes, outcomes, action frequencies, source groups, split, estimator, prior, inference gates]
+      Using blocked-action-type-permutation-v2, permute reviewed preferred
+      action types across one-episode source-group units within frozen
+      partition-stage-outcome-credit-weight-action-menu blocks. The frozen seed
+      determines the permutation without observing labels. Preserve the weighted
+      preferred-action-type marginal while intentionally breaking its domain,
+      venue, and tag alignment; fail closed on structurally nonpermutable blocks.
+    keeps_fixed: [episodes, outcomes, credit strata, effective weights, action-type marginals, source-group units, split, estimator, prior, inference gates]
   - condition_id: success-only-policy
     kind: success_only_policy
     intervention: >-

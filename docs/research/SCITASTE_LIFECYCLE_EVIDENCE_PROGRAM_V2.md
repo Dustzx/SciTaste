@@ -7,7 +7,7 @@ The machine-readable contract is
 It supersedes evidence-program v1 for the current lifecycle-Taste paper idea but
 does not edit, reinterpret, or authorize any historical provider-specific
 `formal-v1` or `formal-v2` run. Its semantic proposal hash is
-`a5c7ab955103c7ae0075938be6782b94964e716f038f53f635fb3298e6318174`.
+`ef6731ae05be2c2a6cf4c6a243a553e2f201aa89598474d3a9c6e575c6fa8e57`.
 The exact source- and accepted-method proposal bindings are carried by the
 separate no-action
 [`lifecycle evidence review package v2`](../../configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml);
@@ -54,6 +54,14 @@ they are not independent title claims and do not receive separate scale-out
 decisions. Comparisons with accepted systems are ecological evidence and are
 never pooled with the within-native H4 effect.
 
+The shuffled-credit negative control is the implemented
+`blocked-action-type-permutation-v2`. A frozen seed permutes preferred action
+types across one-episode source-group units inside matched partition, stage,
+outcome/credit, effective-weight, and action-menu blocks. It preserves the
+weighted action-type marginal but intentionally breaks domain, venue, and tag
+alignment. The complete donor/recipient assignment is stored and hashed in the
+policy; historical per-episode rotation is not H3-eligible.
+
 ## Unit, leakage, and review boundary
 
 Natural source trajectories are grouped before outcomes are reviewed. Formal
@@ -63,6 +71,13 @@ decisions are reconstructed from it. H3 and H4 retain every failed run. The
 primary decision endpoint is condition-blinded expert preference with at least
 two conflict-screened reviewers and adjudication; an automated judge is only a
 validated secondary measure. H4 uses scorer-owned objective progress.
+
+The owner subsequently selected the AI-only operational amendment for the
+current deadline. The base expert endpoint remains visible here rather than
+being rewritten, while the self-hashed
+[`AI review substitution protocol`](AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md)
+resolves H1--H3 to explicitly non-human proxy endpoints and binds every AI
+admission. It does not satisfy or inherit the expert endpoint above.
 
 The self-development project remains a recursive process case: its decisions,
 interventions, defects, paper revisions, and costs can demonstrate system use

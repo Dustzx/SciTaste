@@ -1,0 +1,39 @@
+schema_version: "1.0"
+contract_id: iclr2027-scitaste-ai-review-amendment-v1
+base_program_id: scitaste-iclr2027-lifecycle-evidence-program-v2
+base_program_proposal_sha256: ef6731ae05be2c2a6cf4c6a243a553e2f201aa89598474d3a9c6e575c6fa8e57
+primary_role_count: 2
+maximum_adjudicator_count: 1
+require_distinct_models: true
+require_distinct_raw_responses: true
+required_artifact_roles:
+  - review-packet
+  - input-projection
+  - rubric
+  - system-prompt
+  - user-prompt
+  - raw-response
+  - normalization-report
+  - execution-receipt
+  - firewall-report
+  - sampling-config
+endpoint_overrides:
+  H1_taste_abstraction: ai-panel-and-natural-outcome-proxy
+  H2_taste_specificity: ai-panel-and-transfer-error-proxy
+  H2b_taste_selection: ai-panel-and-reversal-proxy
+  H3_lifecycle_credit: ai-panel-and-heldout-decision-proxy
+  H4_objective_progress: scorer-owned-objective-endpoint-unchanged
+forbidden_claims:
+  - human preference
+  - expert agreement
+  - expert-aligned scientific quality
+  - human-validated SciTasteBench
+  - general scientific-taste construct validity from AI-panel evidence alone
+reviewer_kind: ai
+human_validity_claim_allowed: false
+strong_title_authorized: false
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false
+contract_sha256: 58d9e82db0e39163c6f42ac4909ee6e19f2549c22b8fa0d940dfe19a7dac6b94

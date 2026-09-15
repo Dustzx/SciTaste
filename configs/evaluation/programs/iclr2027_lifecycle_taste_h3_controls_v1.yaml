@@ -1,0 +1,60 @@
+schema_version: "1.0"
+control_id: iclr2027-lifecycle-taste-h3-controls-v1
+base_program_proposal_sha256: ef6731ae05be2c2a6cf4c6a243a553e2f201aa89598474d3a9c6e575c6fa8e57
+estimator: factorized-beta-pairwise-v1
+
+upstream_sampling:
+  independent_unit: source-group
+  maximum_episodes_per_source_group: 1
+  selection_timing: before-attribution-label-review
+  selection_rule: minimum-sha256
+  selection_seed: 7919
+  ranking_payload: "{selection_seed}:{source_relationship}:{source_project_id}:{source_group_id}:{admission_id}"
+  retained_manifest_required: true
+
+shuffled_credit:
+  algorithm: blocked-action-type-permutation-v2
+  seeds: [104729, 130363, 155921, 180749, 205759]
+  seeds_frozen_before_outcome_inspection: true
+  block_fields:
+    - dataset-partition
+    - stage
+    - supported-credit-family
+    - supported-credit-direction
+    - supported-credit-confidence
+    - outcome-polarity
+    - confounder-resolution-stratum
+    - exact-effective-episode-weight
+    - candidate-action-type-menu
+  deliberately_randomized_associations:
+    - episode-to-preferred-action-type
+    - domain-to-preferred-action-type
+    - venue-to-preferred-action-type
+    - tag-to-preferred-action-type
+  exact_invariants:
+    - source-episode-bytes
+    - outcome-and-credit-strata
+    - weighted-preferred-action-type-marginal-within-block
+    - independent-source-group-unit-set
+    - dataset-split
+  fail_closed:
+    minimum_block_size: 2
+    minimum_distinct_preferred_action_types: 2
+    one_candidate_per_action_type: true
+
+analysis:
+  primary_h3_contrast: outcome-updated-policy-minus-no-update-policy
+  shuffled_falsification: outcome-updated-policy-minus-within-case-mean-of-five-shuffled-policies
+  shuffled_seeds_are_not_independent_samples: true
+  confidence_interval_unit: heldout-source-group
+  report_each_seed_separately: true
+  report_block_sizes: true
+  report_fixed_points: true
+  report_rejected_and_nonpermutable_units: true
+  no_seed_selection_after_outcomes: true
+
+authorization:
+  authorizes_api_calls: false
+  authorizes_gpu_work: false
+  authorizes_execution: false
+

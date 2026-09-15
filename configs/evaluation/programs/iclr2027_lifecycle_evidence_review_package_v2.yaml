@@ -3,12 +3,16 @@ package_id: scitaste-iclr2027-lifecycle-evidence-review-package-v2
 project_id: scitaste-self-development
 evidence_program:
   path: configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml
-  file_sha256: c4006afd722319436cf2d2d5e339bec189fa27ac3bda9001609c6f247e528e9f
-evidence_program_sha256: a5c7ab955103c7ae0075938be6782b94964e716f038f53f635fb3298e6318174
+  file_sha256: 481ee4a1257691239201d2ba1f01d5136819ce6b799f5321add9191d6647c6c9
+evidence_program_sha256: ef6731ae05be2c2a6cf4c6a243a553e2f201aa89598474d3a9c6e575c6fa8e57
 resource_corpus:
   path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
   file_sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
 resource_corpus_sha256: bb53a816b3a5479713f7cd6b9ccd027ef0e5ea5d9bd879941ce268228de0f010
+ai_review_contract:
+  path: configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml
+  file_sha256: 131e7885893710dff0271a690444e081c43b297915f770e4bf1e5e3f65030fa2
+ai_review_contract_sha256: 58d9e82db0e39163c6f42ac4909ee6e19f2549c22b8fa0d940dfe19a7dac6b94
 source_proposals:
   - source_id: scitastebench-decision-cases
     kind: construction_screen

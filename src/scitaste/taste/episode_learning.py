@@ -10,13 +10,14 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.project.idea_revision import (
     ProjectIdeaRevisionBinding,
     idea_binding_matches_current,
 )
-from scitaste.project.models import content_sha256
+from scitaste.project.models import content_sha256, validate_relative_locator
 from scitaste.schema.actions import ResearchAction
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.episodes import (
@@ -45,8 +46,223 @@ class TasteAttributionReviewVerdict(StrEnum):
     REJECT = "reject"
 
 
+class AITasteReviewArtifactRole(StrEnum):
+    REVIEW_PACKET = "review-packet"
+    INPUT_PROJECTION = "input-projection"
+    RUBRIC = "rubric"
+    SYSTEM_PROMPT = "system-prompt"
+    USER_PROMPT = "user-prompt"
+    RAW_RESPONSE = "raw-response"
+    NORMALIZATION_REPORT = "normalization-report"
+    EXECUTION_RECEIPT = "execution-receipt"
+    FIREWALL_REPORT = "firewall-report"
+    SAMPLING_CONFIG = "sampling-config"
+
+
+_AI_REVIEW_ARTIFACT_ROLES = tuple(AITasteReviewArtifactRole)
+_AI_REVIEW_ENDPOINT_OVERRIDES = {
+    "H1_taste_abstraction": "ai-panel-and-natural-outcome-proxy",
+    "H2_taste_specificity": "ai-panel-and-transfer-error-proxy",
+    "H2b_taste_selection": "ai-panel-and-reversal-proxy",
+    "H3_lifecycle_credit": "ai-panel-and-heldout-decision-proxy",
+    "H4_objective_progress": "scorer-owned-objective-endpoint-unchanged",
+}
+_AI_REVIEW_FORBIDDEN_CLAIMS = (
+    "human preference",
+    "expert agreement",
+    "expert-aligned scientific quality",
+    "human-validated SciTasteBench",
+    "general scientific-taste construct validity from AI-panel evidence alone",
+)
+
+
+class AITasteReviewArtifactBinding(BaseModel):
+    model_config = _CONFIG
+
+    role: AITasteReviewArtifactRole
+    locator: str = Field(min_length=1, max_length=2_000)
+    sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def locator_is_relative(self) -> AITasteReviewArtifactBinding:
+        validate_relative_locator(self.locator, field_name="AI Taste review artifact")
+        return self
+
+
+class AITasteReviewPanelContract(BaseModel):
+    """Content-bound effective review policy for disclosed AI-only panels."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    contract_id: str = Field(pattern=_ID)
+    base_program_id: str = Field(pattern=_ID)
+    base_program_proposal_sha256: str = Field(pattern=_SHA256)
+    primary_role_count: Literal[2] = 2
+    maximum_adjudicator_count: Literal[1] = 1
+    require_distinct_models: Literal[True] = True
+    require_distinct_raw_responses: Literal[True] = True
+    required_artifact_roles: tuple[AITasteReviewArtifactRole, ...] = _AI_REVIEW_ARTIFACT_ROLES
+    endpoint_overrides: dict[str, str] = Field(min_length=4, max_length=10)
+    forbidden_claims: tuple[str, ...] = Field(min_length=5, max_length=30)
+    reviewer_kind: Literal["ai"] = "ai"
+    human_validity_claim_allowed: Literal[False] = False
+    strong_title_authorized: Literal[False] = False
+    authorizes_download: Literal[False] = False
+    authorizes_api_calls: Literal[False] = False
+    authorizes_gpu_work: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    contract_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def contract_is_closed(self) -> AITasteReviewPanelContract:
+        if self.required_artifact_roles != _AI_REVIEW_ARTIFACT_ROLES:
+            raise ValueError("AI Taste review contract must bind every artifact role")
+        if len(self.forbidden_claims) != len(set(self.forbidden_claims)):
+            raise ValueError("AI Taste review forbidden claims must be unique")
+        if self.endpoint_overrides != _AI_REVIEW_ENDPOINT_OVERRIDES:
+            raise ValueError("AI Taste review endpoint overrides differ from the AI-only route")
+        if self.forbidden_claims != _AI_REVIEW_FORBIDDEN_CLAIMS:
+            raise ValueError("AI Taste review forbidden claims differ from the AI-only route")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"contract_sha256"}))
+        if self.contract_sha256 != expected:
+            raise ValueError("AI Taste review contract hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AITasteReviewPanelContract:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("contract_sha256", None)
+        payload["required_artifact_roles"] = tuple(
+            AITasteReviewArtifactRole(item)  # type: ignore[arg-type]
+            for item in payload.get("required_artifact_roles", _AI_REVIEW_ARTIFACT_ROLES)
+        )
+        payload["forbidden_claims"] = tuple(payload.get("forbidden_claims", ()))
+        unsigned = cls.model_construct(contract_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            contract_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"contract_sha256"})
+            ),
+        )
+
+
+def load_ai_taste_review_panel_contract(path: str | Path) -> AITasteReviewPanelContract:
+    payload = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("AI Taste review contract must be a YAML object")
+    return AITasteReviewPanelContract.model_validate(payload)
+
+
+class AITasteReviewFirewallReport(BaseModel):
+    """Replayable evidence that one reviewer-visible packet excluded claim leakage."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    review_packet_sha256: str = Field(pattern=_SHA256)
+    input_projection_sha256: str = Field(pattern=_SHA256)
+    condition_identity_exposed: Literal[False] = False
+    paper_claims_exposed: Literal[False] = False
+    out_of_window_outcomes_exposed: Literal[False] = False
+    other_review_exposed: Literal[False] = False
+    producer_response_exposed: Literal[False] = False
+    report_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def report_is_closed(self) -> AITasteReviewFirewallReport:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"report_sha256"}))
+        if self.report_sha256 != expected:
+            raise ValueError("AI Taste review firewall report hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AITasteReviewFirewallReport:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("report_sha256", None)
+        unsigned = cls.model_construct(report_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            report_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"report_sha256"})
+            ),
+        )
+
+
+class AITasteReviewExecutionReceipt(BaseModel):
+    """Provider-reported identity and usage bound to one raw review response."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    provider_id: str = Field(min_length=1, max_length=300)
+    model_id: str = Field(min_length=1, max_length=500)
+    model_revision: str = Field(min_length=1, max_length=500)
+    run_id: str = Field(pattern=_ID)
+    prompt_sha256: str = Field(pattern=_SHA256)
+    input_projection_sha256: str = Field(pattern=_SHA256)
+    raw_response_sha256: str = Field(pattern=_SHA256)
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    cost_usd: float = Field(ge=0.0)
+    receipt_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def receipt_is_closed(self) -> AITasteReviewExecutionReceipt:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+        if self.receipt_sha256 != expected:
+            raise ValueError("AI Taste review execution receipt hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AITasteReviewExecutionReceipt:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("receipt_sha256", None)
+        unsigned = cls.model_construct(receipt_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            receipt_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"receipt_sha256"})
+            ),
+        )
+
+
+class AITasteReviewNormalizationReport(BaseModel):
+    """Bound transformation from one raw response to one review payload."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    run_id: str = Field(pattern=_ID)
+    candidate_sha256: str = Field(pattern=_SHA256)
+    raw_response_sha256: str = Field(pattern=_SHA256)
+    normalized_response_sha256: str = Field(pattern=_SHA256)
+    schema_valid: Literal[True] = True
+    fuzzy_repair_applied: Literal[False] = False
+    report_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def report_is_closed(self) -> AITasteReviewNormalizationReport:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"report_sha256"}))
+        if self.report_sha256 != expected:
+            raise ValueError("AI Taste review normalization report hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AITasteReviewNormalizationReport:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("report_sha256", None)
+        unsigned = cls.model_construct(report_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            report_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"report_sha256"})
+            ),
+        )
+
+
 class TasteEpisodeAttributionReview(BaseModel):
-    """Independent review of outcome credit, preference, and transfer scope."""
+    """Legacy self-attested review; it does not establish verified human identity."""
 
     model_config = _CONFIG
 
@@ -101,6 +317,102 @@ class TasteEpisodeAttributionReview(BaseModel):
     def review_sha256(self) -> str:
         return content_sha256(self.model_dump(mode="json"))
 
+    @property
+    def reviewer_kind(self) -> Literal["legacy-unverified"]:
+        return "legacy-unverified"
+
+    @property
+    def not_human_review(self) -> Literal[True]:
+        return True
+
+
+class AITasteEpisodeAttributionReview(BaseModel):
+    """Disclosed non-human review usable for policy training, not human validity."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    review_id: str = Field(pattern=_ID)
+    candidate_id: str = Field(pattern=_ID)
+    candidate_sha256: str = Field(pattern=_SHA256)
+    idea_revision_binding_sha256: str = Field(pattern=_SHA256)
+    reviewer_id: str = Field(pattern=_ID)
+    role: TasteAttributionReviewRole
+    verdict: TasteAttributionReviewVerdict
+    preferred_action_id: str | None = Field(default=None, max_length=300)
+    supported_credit_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    decision_trace_supported: bool
+    outcome_trace_supported: bool
+    alternatives_supported: bool
+    credit_assignment_supported: bool
+    transfer_scope_supported: bool
+    reversal_probe_supported: bool
+    attribution_confidence: float = Field(ge=0.0, le=1.0)
+    rationale: str = Field(min_length=1, max_length=10_000)
+    reviewed_at: datetime
+    reviewer_kind: Literal["ai"] = "ai"
+    human_performed: Literal[False] = False
+    not_human_review: Literal[True] = True
+    independent_review: Literal[True] = True
+    conflict_cleared: Literal[True] = True
+    blinded_to_other_reviews: Literal[True] = True
+    condition_blinded: Literal[True] = True
+    blinded_to_paper_claims: Literal[True] = True
+    isolated_execution: Literal[True] = True
+    model_id: str = Field(min_length=1, max_length=500)
+    model_revision: str = Field(min_length=1, max_length=500)
+    provider_id: str = Field(min_length=1, max_length=300)
+    prompt_sha256: str = Field(pattern=_SHA256)
+    normalized_response_sha256: str = Field(pattern=_SHA256)
+    run_id: str = Field(pattern=_ID)
+    producer_model_id: str | None = Field(default=None, max_length=500)
+    producer_run_id: str | None = Field(default=None, pattern=_ID)
+    panel_contract_sha256: str = Field(pattern=_SHA256)
+    artifacts: tuple[AITasteReviewArtifactBinding, ...] = Field(
+        min_length=len(_AI_REVIEW_ARTIFACT_ROLES),
+        max_length=len(_AI_REVIEW_ARTIFACT_ROLES),
+    )
+
+    @model_validator(mode="after")
+    def verdict_matches_dimensions(self) -> AITasteEpisodeAttributionReview:
+        if self.reviewed_at.utcoffset() is None:
+            raise ValueError("AI Taste attribution review time must include a timezone")
+        if len(self.supported_credit_ids) != len(set(self.supported_credit_ids)):
+            raise ValueError("AI Taste attribution supported credit IDs must be unique")
+        dimensions = (
+            self.decision_trace_supported,
+            self.outcome_trace_supported,
+            self.alternatives_supported,
+            self.credit_assignment_supported,
+            self.transfer_scope_supported,
+            self.reversal_probe_supported,
+        )
+        if self.verdict is TasteAttributionReviewVerdict.ACCEPT:
+            if not all(dimensions):
+                raise ValueError("accepted AI Taste attribution requires every dimension")
+            if self.preferred_action_id is None or not self.supported_credit_ids:
+                raise ValueError("accepted AI Taste attribution requires preference and credit")
+        elif all(dimensions):
+            raise ValueError("rejected AI Taste attribution must identify a failed dimension")
+        roles = tuple(item.role for item in self.artifacts)
+        if roles != _AI_REVIEW_ARTIFACT_ROLES:
+            raise ValueError("AI Taste attribution artifacts must use canonical role order")
+        if self.producer_model_id == self.model_id or self.producer_run_id == self.run_id:
+            raise ValueError("AI Taste reviewer cannot reuse the producer model or run identity")
+        return self
+
+    def artifact(self, role: AITasteReviewArtifactRole) -> AITasteReviewArtifactBinding:
+        return next(item for item in self.artifacts if item.role is role)
+
+    @property
+    def review_sha256(self) -> str:
+        return content_sha256(self.model_dump(mode="json"))
+
+
+TasteEpisodeAttributionReviewRecord = (
+    TasteEpisodeAttributionReview | AITasteEpisodeAttributionReview
+)
+
 
 class TasteEpisodeAdmissionFinding(BaseModel):
     model_config = _CONFIG
@@ -120,6 +432,13 @@ class TasteEpisodeAdmissionReport(BaseModel):
     episode_inspection: TasteEpisodeInspection
     primary_review_count: int = Field(ge=0)
     adjudicator_review_count: int = Field(ge=0)
+    human_review_count: int = Field(default=0, ge=0)
+    ai_review_count: int = Field(default=0, ge=0)
+    legacy_unverified_review_count: int = Field(default=0, ge=0)
+    review_evidence_kind: Literal["ai", "legacy-unverified", "mixed", "none"] = "none"
+    human_validity_claim_allowed: Literal[False] = False
+    ai_review_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
+    cross_model_ai_panel: bool = False
     accepted_review_ids: tuple[str, ...]
     decisive_review_ids: tuple[str, ...]
     preferred_action_id: str | None
@@ -136,15 +455,26 @@ class AdmittedTasteEpisode(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     admission_id: str = Field(pattern=_ID)
     candidate: TasteEpisodeCandidate
-    reviews: tuple[TasteEpisodeAttributionReview, ...] = Field(min_length=2, max_length=3)
+    reviews: tuple[TasteEpisodeAttributionReviewRecord, ...] = Field(
+        min_length=2,
+        max_length=3,
+    )
     decisive_review_ids: tuple[str, ...] = Field(min_length=2, max_length=3)
     preferred_action_id: str = Field(min_length=1, max_length=300)
     supported_credit_ids: tuple[str, ...] = Field(min_length=1, max_length=100)
     attribution_confidence: float = Field(gt=0.0, le=1.0)
     training_weight: float = Field(gt=0.0, le=1.0)
+    review_evidence_kind: Literal["ai", "legacy-unverified", "mixed"] = (
+        "legacy-unverified"
+    )
+    human_validity_claim_allowed: Literal[False] = False
+    ai_review_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
+    ai_review_count: int = Field(default=0, ge=0, le=3)
+    legacy_unverified_review_count: int = Field(default=0, ge=0, le=3)
+    cross_model_ai_panel: bool = False
     policy_training_eligible: Literal[True] = True
     policy_update_authorized: Literal[False] = False
     admission_sha256: str = Field(pattern=_SHA256)
@@ -162,14 +492,48 @@ class AdmittedTasteEpisode(BaseModel):
         credit_ids = {item.credit_id for item in self.candidate.credit_assignments}
         if not set(self.supported_credit_ids).issubset(credit_ids):
             raise ValueError("admitted Taste credit is absent from the candidate")
+        if self.ai_review_count != sum(
+            isinstance(item, AITasteEpisodeAttributionReview) for item in self.reviews
+        ):
+            raise ValueError("admitted Taste AI review count differs")
+        if self.legacy_unverified_review_count != sum(
+            isinstance(item, TasteEpisodeAttributionReview) for item in self.reviews
+        ):
+            raise ValueError("admitted Taste legacy review count differs")
+        if self.ai_review_count and self.ai_review_contract_sha256 is None:
+            raise ValueError("AI-reviewed Taste admission lacks its panel contract")
+        if not self.ai_review_count and self.ai_review_contract_sha256 is not None:
+            raise ValueError("non-AI Taste admission cannot bind an AI panel contract")
+        if self.review_evidence_kind == "ai" and self.ai_review_count != len(self.reviews):
+            raise ValueError("AI Taste evidence kind differs from review composition")
+        legacy_composition_differs = self.legacy_unverified_review_count != len(
+            self.reviews
+        )
+        if self.review_evidence_kind == "legacy-unverified" and legacy_composition_differs:
+            raise ValueError("legacy Taste evidence kind differs from review composition")
+        if self.review_evidence_kind == "mixed" and not (
+            self.ai_review_count and self.legacy_unverified_review_count
+        ):
+            raise ValueError("mixed Taste evidence kind lacks both review types")
         expected = content_sha256(self.model_dump(mode="json", exclude={"admission_sha256"}))
-        if self.admission_sha256 != expected:
+        legacy_payload = self.model_dump(mode="json", exclude={"admission_sha256"})
+        for field in (
+            "review_evidence_kind",
+            "human_validity_claim_allowed",
+            "ai_review_contract_sha256",
+            "ai_review_count",
+            "legacy_unverified_review_count",
+            "cross_model_ai_panel",
+        ):
+            legacy_payload.pop(field)
+        legacy_expected = content_sha256(legacy_payload) if self.schema_version == "1.0" else None
+        if self.admission_sha256 not in {expected, legacy_expected}:
             raise ValueError("admitted Taste episode hash mismatch")
         return self
 
     @classmethod
     def create(cls, **values: object) -> AdmittedTasteEpisode:
-        payload = {"schema_version": "1.0", **values}
+        payload = {"schema_version": "1.1", **values}
         payload.pop("admission_sha256", None)
         unsigned = cls.model_construct(admission_sha256="0" * 64, **payload)
         return cls(
@@ -182,10 +546,12 @@ class AdmittedTasteEpisode(BaseModel):
 
 def inspect_taste_episode_admission(
     candidate: TasteEpisodeCandidate,
-    reviews: tuple[TasteEpisodeAttributionReview, ...],
+    reviews: tuple[TasteEpisodeAttributionReviewRecord, ...],
     *,
     evidence_root: str | Path,
     current_idea_revision: ProjectIdeaRevisionBinding,
+    ai_review_contract: AITasteReviewPanelContract | None = None,
+    expected_ai_review_contract_sha256: str | None = None,
 ) -> TasteEpisodeAdmissionReport:
     """Require two independent reviews and adjudicate any substantive split."""
 
@@ -203,6 +569,124 @@ def inspect_taste_episode_admission(
         _admission_add(findings, "duplicate-review", "Taste attribution review IDs repeat")
     if len(reviewer_ids) != len(set(reviewer_ids)):
         _admission_add(findings, "duplicate-reviewer", "Taste reviewers must be distinct")
+    ai_run_ids = [
+        item.run_id for item in reviews if isinstance(item, AITasteEpisodeAttributionReview)
+    ]
+    if len(ai_run_ids) != len(set(ai_run_ids)):
+        _admission_add(
+            findings,
+            "duplicate-ai-review-run",
+            "independent AI Taste reviews must use distinct run identities",
+        )
+    ai_reviews = tuple(
+        item for item in reviews if isinstance(item, AITasteEpisodeAttributionReview)
+    )
+    if ai_reviews and ai_review_contract is None:
+        _admission_add(
+            findings,
+            "ai-review-contract-required",
+            "AI Taste reviews require a content-bound panel contract",
+        )
+    if ai_reviews and expected_ai_review_contract_sha256 is None:
+        _admission_add(
+            findings,
+            "ai-review-authority-required",
+            "AI Taste reviews require the expected contract hash from the review package",
+        )
+    if not ai_reviews and ai_review_contract is not None:
+        _admission_add(
+            findings,
+            "unused-ai-review-contract",
+            "AI Taste panel contract cannot attach to a non-AI review set",
+        )
+    if not ai_reviews and expected_ai_review_contract_sha256 is not None:
+        _admission_add(
+            findings,
+            "unused-ai-review-authority",
+            "AI Taste contract authority cannot attach to a non-AI review set",
+        )
+    if ai_review_contract is not None:
+        if ai_review_contract.contract_sha256 != expected_ai_review_contract_sha256:
+            _admission_add(
+                findings,
+                "ai-review-authority-mismatch",
+                "AI Taste panel contract differs from the review-package authority",
+            )
+        ai_primary_count = sum(
+            item.role is TasteAttributionReviewRole.PRIMARY for item in ai_reviews
+        )
+        ai_adjudicator_count = sum(
+            item.role is TasteAttributionReviewRole.ADJUDICATOR for item in ai_reviews
+        )
+        if ai_primary_count != ai_review_contract.primary_role_count:
+            _admission_add(
+                findings,
+                "ai-primary-panel-incomplete",
+                "AI Taste contract requires exactly two AI primary reviewers",
+            )
+        if ai_adjudicator_count > ai_review_contract.maximum_adjudicator_count:
+            _admission_add(
+                findings,
+                "ai-adjudicator-count",
+                "AI Taste panel exceeds its adjudicator limit",
+            )
+        if len(ai_reviews) != len(reviews):
+            _admission_add(
+                findings,
+                "mixed-ai-panel-forbidden",
+                "AI-only panel contract cannot admit legacy or mixed reviewers",
+            )
+        if any(
+            item.panel_contract_sha256 != ai_review_contract.contract_sha256
+            for item in ai_reviews
+        ):
+            _admission_add(
+                findings,
+                "ai-review-contract-mismatch",
+                "AI Taste review binds another panel contract",
+            )
+        if ai_review_contract.require_distinct_models and len(
+            {item.model_id for item in ai_reviews}
+        ) != len(ai_reviews):
+            _admission_add(
+                findings,
+                "ai-review-model-not-independent",
+                "AI Taste panel requires distinct reviewer models",
+            )
+        raw_hashes = [
+            item.artifact(AITasteReviewArtifactRole.RAW_RESPONSE).sha256
+            for item in ai_reviews
+        ]
+        if ai_review_contract.require_distinct_raw_responses and len(raw_hashes) != len(
+            set(raw_hashes)
+        ):
+            _admission_add(
+                findings,
+                "duplicate-ai-review-response",
+                "AI Taste panel contains a repeated raw response",
+            )
+    primary_ai = tuple(
+        item for item in ai_reviews if item.role is TasteAttributionReviewRole.PRIMARY
+    )
+    shared_primary_roles = (
+        AITasteReviewArtifactRole.REVIEW_PACKET,
+        AITasteReviewArtifactRole.INPUT_PROJECTION,
+        AITasteReviewArtifactRole.RUBRIC,
+        AITasteReviewArtifactRole.SYSTEM_PROMPT,
+        AITasteReviewArtifactRole.USER_PROMPT,
+        AITasteReviewArtifactRole.SAMPLING_CONFIG,
+    )
+    if len(primary_ai) == 2 and any(
+        primary_ai[0].artifact(role).sha256 != primary_ai[1].artifact(role).sha256
+        for role in shared_primary_roles
+    ):
+        _admission_add(
+            findings,
+            "ai-primary-packet-mismatch",
+            "AI Taste primary reviewers did not receive the same frozen packet",
+        )
+    for review in ai_reviews:
+        _inspect_ai_review_artifacts(review, evidence_root=evidence_root, findings=findings)
     producer_ids = {candidate.producer_id}
     if candidate.attribution_producer_id is not None:
         producer_ids.add(candidate.attribution_producer_id)
@@ -258,7 +742,7 @@ def inspect_taste_episode_admission(
     accepted = tuple(
         item for item in reviews if item.verdict is TasteAttributionReviewVerdict.ACCEPT
     )
-    decisive: tuple[TasteEpisodeAttributionReview, ...] = ()
+    decisive: tuple[TasteEpisodeAttributionReviewRecord, ...] = ()
     preferred: str | None = None
     supported: tuple[str, ...] = ()
     confidence: float | None = None
@@ -340,12 +824,33 @@ def inspect_taste_episode_admission(
             "episode evidence, Idea binding, or outcome attribution is incomplete",
         )
     ready = not findings and preferred is not None and confidence is not None and bool(supported)
+    human_review_count = 0
+    ai_review_count = len(ai_reviews)
+    legacy_unverified_review_count = len(reviews) - ai_review_count
+    review_evidence_kind: Literal["ai", "legacy-unverified", "mixed", "none"] = "none"
+    if legacy_unverified_review_count and ai_review_count:
+        review_evidence_kind = "mixed"
+    elif legacy_unverified_review_count:
+        review_evidence_kind = "legacy-unverified"
+    elif ai_review_count:
+        review_evidence_kind = "ai"
     return TasteEpisodeAdmissionReport(
         candidate_id=candidate.candidate_id,
         candidate_sha256=candidate.candidate_sha256,
         episode_inspection=episode_inspection,
         primary_review_count=len(primary),
         adjudicator_review_count=len(adjudicators),
+        human_review_count=human_review_count,
+        ai_review_count=ai_review_count,
+        legacy_unverified_review_count=legacy_unverified_review_count,
+        review_evidence_kind=review_evidence_kind,
+        human_validity_claim_allowed=False,
+        ai_review_contract_sha256=(
+            ai_review_contract.contract_sha256 if ai_review_contract is not None else None
+        ),
+        cross_model_ai_panel=bool(ai_reviews)
+        and len(ai_reviews) >= 2
+        and len({item.model_id for item in ai_reviews}) == len(ai_reviews),
         accepted_review_ids=tuple(item.review_id for item in accepted),
         decisive_review_ids=tuple(item.review_id for item in decisive),
         preferred_action_id=preferred,
@@ -358,11 +863,13 @@ def inspect_taste_episode_admission(
 
 def admit_taste_episode(
     candidate: TasteEpisodeCandidate,
-    reviews: tuple[TasteEpisodeAttributionReview, ...],
+    reviews: tuple[TasteEpisodeAttributionReviewRecord, ...],
     *,
     admission_id: str,
     evidence_root: str | Path,
     current_idea_revision: ProjectIdeaRevisionBinding,
+    ai_review_contract: AITasteReviewPanelContract | None = None,
+    expected_ai_review_contract_sha256: str | None = None,
 ) -> AdmittedTasteEpisode:
     """Construct an immutable training unit; do not fit or mutate a policy."""
 
@@ -371,6 +878,8 @@ def admit_taste_episode(
         reviews,
         evidence_root=evidence_root,
         current_idea_revision=current_idea_revision,
+        ai_review_contract=ai_review_contract,
+        expected_ai_review_contract_sha256=expected_ai_review_contract_sha256,
     )
     if not report.ready_for_policy_training:
         codes = ", ".join(item.code for item in report.findings)
@@ -386,6 +895,12 @@ def admit_taste_episode(
         supported_credit_ids=report.supported_credit_ids,
         attribution_confidence=report.attribution_confidence,
         training_weight=report.attribution_confidence,
+        review_evidence_kind=report.review_evidence_kind,
+        human_validity_claim_allowed=False,
+        ai_review_contract_sha256=report.ai_review_contract_sha256,
+        ai_review_count=report.ai_review_count,
+        legacy_unverified_review_count=report.legacy_unverified_review_count,
+        cross_model_ai_panel=report.cross_model_ai_panel,
         policy_training_eligible=True,
         policy_update_authorized=False,
     )
@@ -497,12 +1012,29 @@ class LifecycleTasteFeaturePosterior(BaseModel):
         return self
 
 
+class LifecycleTasteShuffleAssignment(BaseModel):
+    """One auditable donor-to-recipient label assignment in the placebo control."""
+
+    model_config = _CONFIG
+
+    block_sha256: str = Field(pattern=_SHA256)
+    recipient_admission_id: str = Field(pattern=_ID)
+    recipient_source_group_key: str = Field(min_length=1, max_length=1_000)
+    donor_admission_id: str = Field(pattern=_ID)
+    donor_source_group_key: str = Field(min_length=1, max_length=1_000)
+    original_action_id: str = Field(min_length=1, max_length=300)
+    original_action_type: str = Field(min_length=1, max_length=200)
+    assigned_action_id: str = Field(min_length=1, max_length=300)
+    assigned_action_type: str = Field(min_length=1, max_length=200)
+    effective_episode_weight: float = Field(gt=0.0, le=1.0)
+
+
 class LifecycleTastePolicyModel(BaseModel):
     """Hash-bound posterior table learned from independently admitted episodes."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.1"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     policy_id: str
     config: LifecycleTastePolicyConfig
     source_episode_ids: tuple[str, ...]
@@ -514,6 +1046,22 @@ class LifecycleTastePolicyModel(BaseModel):
     training_source_group_count: int = Field(default=0, ge=0)
     effective_training_weight: float = Field(default=0.0, ge=0.0)
     pairwise_comparison_count: int = Field(ge=0)
+    source_review_evidence_kinds: tuple[
+        Literal["ai", "legacy-unverified", "mixed"], ...
+    ] = ()
+    source_ai_reviewed_episode_count: int = Field(default=0, ge=0)
+    source_legacy_unverified_episode_count: int = Field(default=0, ge=0)
+    ai_review_contract_sha256s: tuple[str, ...] = ()
+    human_validity_claim_allowed: Literal[False] = False
+    shuffle_algorithm: Literal[
+        "not-applicable",
+        "blocked-action-type-permutation-v2",
+    ] = "not-applicable"
+    shuffle_block_count: int = Field(default=0, ge=0)
+    shuffled_episode_count: int = Field(default=0, ge=0)
+    shuffle_fixed_point_count: int = Field(default=0, ge=0)
+    shuffle_assignment_sha256: str | None = Field(default=None, pattern=_SHA256)
+    shuffle_assignments: tuple[LifecycleTasteShuffleAssignment, ...] = ()
     trained_stages: tuple[str, ...]
     trained_domain_tags: tuple[str, ...]
     trained_venue_tags: tuple[str, ...]
@@ -541,6 +1089,22 @@ class LifecycleTastePolicyModel(BaseModel):
             raise ValueError("lifecycle Taste training episode hashes do not close")
         if len(self.source_episode_ids) != len(self.source_episode_sha256):
             raise ValueError("lifecycle Taste source episode hashes do not close")
+        if list(self.source_review_evidence_kinds) != sorted(
+            self.source_review_evidence_kinds
+        ) or len(self.source_review_evidence_kinds) != len(
+            set(self.source_review_evidence_kinds)
+        ):
+            raise ValueError("lifecycle Taste review evidence kinds are not canonical")
+        if list(self.ai_review_contract_sha256s) != sorted(
+            self.ai_review_contract_sha256s
+        ) or len(self.ai_review_contract_sha256s) != len(set(self.ai_review_contract_sha256s)):
+            raise ValueError("lifecycle Taste AI review contracts are not canonical")
+        if self.source_ai_reviewed_episode_count > len(self.source_episode_ids):
+            raise ValueError("lifecycle Taste AI episode count exceeds source episodes")
+        if self.source_legacy_unverified_episode_count > len(self.source_episode_ids):
+            raise ValueError("lifecycle Taste legacy episode count exceeds source episodes")
+        if self.source_ai_reviewed_episode_count and not self.ai_review_contract_sha256s:
+            raise ValueError("AI-reviewed lifecycle Taste policy lacks panel contract")
         source = dict(zip(self.source_episode_ids, self.source_episode_sha256, strict=True))
         if len(self.training_episode_ids) != len(set(self.training_episode_ids)):
             raise ValueError("lifecycle Taste training episode IDs must be unique")
@@ -569,26 +1133,141 @@ class LifecycleTastePolicyModel(BaseModel):
             for item in self.feature_posteriors
         ):
             raise ValueError("lifecycle Taste posteriors differ from the configured prior")
-        if self.schema_version == "1.1" and any(
+        if self.schema_version in {"1.1", "1.2"} and any(
             item.support > self.effective_training_weight + 1e-9 for item in self.feature_posteriors
         ):
             raise ValueError("lifecycle Taste feature support exceeds source-group weight")
+        shuffled = self.config.update_mode is LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT
+        shuffle_details = (
+            self.shuffle_block_count,
+            self.shuffled_episode_count,
+            self.shuffle_fixed_point_count,
+            self.shuffle_assignment_sha256,
+            self.shuffle_assignments,
+        )
+        if shuffled:
+            if self.schema_version == "1.2":
+                self._validate_shuffle_v2()
+            elif self.shuffle_algorithm != "not-applicable" or any(shuffle_details):
+                raise ValueError("legacy shuffled-credit policy cannot carry v2 telemetry")
+        elif self.shuffle_algorithm != "not-applicable" or any(shuffle_details):
+            raise ValueError("non-shuffled policy cannot carry shuffle telemetry")
         expected = content_sha256(self.model_dump(mode="json", exclude={"policy_sha256"}))
         legacy_payload = self.model_dump(mode="json", exclude={"policy_sha256"})
         for field in (
-            "training_source_group_keys",
-            "training_source_group_count",
-            "effective_training_weight",
+            "shuffle_algorithm",
+            "shuffle_block_count",
+            "shuffled_episode_count",
+            "shuffle_fixed_point_count",
+            "shuffle_assignment_sha256",
+            "shuffle_assignments",
+            "source_review_evidence_kinds",
+            "source_ai_reviewed_episode_count",
+            "source_legacy_unverified_episode_count",
+            "ai_review_contract_sha256s",
+            "human_validity_claim_allowed",
         ):
-            legacy_payload.pop(field)
-        legacy_expected = content_sha256(legacy_payload) if self.schema_version == "1.0" else None
+            if self.schema_version in {"1.0", "1.1"}:
+                legacy_payload.pop(field)
+        if self.schema_version == "1.0":
+            for field in (
+                "training_source_group_keys",
+                "training_source_group_count",
+                "effective_training_weight",
+            ):
+                legacy_payload.pop(field)
+        legacy_expected = content_sha256(legacy_payload) if self.schema_version != "1.2" else None
         if self.policy_sha256 not in {expected, legacy_expected}:
             raise ValueError("lifecycle Taste policy hash mismatch")
         return self
 
+    def _validate_shuffle_v2(self) -> None:
+        if self.shuffle_algorithm != "blocked-action-type-permutation-v2":
+            raise ValueError("shuffled-credit policy requires the blocked v2 algorithm")
+        if self.shuffled_episode_count != self.training_episode_count:
+            raise ValueError("shuffled-credit telemetry omits training episodes")
+        if not self.shuffle_block_count or self.shuffle_assignment_sha256 is None:
+            raise ValueError("shuffled-credit policy lacks permutation evidence")
+        if len(self.shuffle_assignments) != self.shuffled_episode_count:
+            raise ValueError("shuffled-credit assignment ledger is incomplete")
+        if self.training_source_group_count != self.training_episode_count:
+            raise ValueError("shuffled-credit requires one episode per source group")
+        assignment_order = [
+            (item.block_sha256, item.recipient_admission_id)
+            for item in self.shuffle_assignments
+        ]
+        if assignment_order != sorted(assignment_order):
+            raise ValueError("shuffled-credit assignment ledger is not canonical")
+        if {item.recipient_admission_id for item in self.shuffle_assignments} != set(
+            self.training_episode_ids
+        ):
+            raise ValueError("shuffled-credit recipients differ from training episodes")
+        block_ids = {item.block_sha256 for item in self.shuffle_assignments}
+        if self.shuffle_block_count != len(block_ids):
+            raise ValueError("shuffled-credit block telemetry is inconsistent")
+        if {
+            item.recipient_source_group_key for item in self.shuffle_assignments
+        } != set(self.training_source_group_keys):
+            raise ValueError("shuffled-credit source groups differ from training policy")
+        if len(
+            {item.recipient_source_group_key for item in self.shuffle_assignments}
+        ) != len(self.shuffle_assignments):
+            raise ValueError("shuffled-credit ledger repeats a source-group unit")
+        for block_sha256 in block_ids:
+            block = tuple(
+                item for item in self.shuffle_assignments if item.block_sha256 == block_sha256
+            )
+            by_recipient = {item.recipient_admission_id: item for item in block}
+            if len(by_recipient) != len(block):
+                raise ValueError("shuffled-credit block repeats a recipient")
+            if {item.donor_admission_id for item in block} != set(by_recipient):
+                raise ValueError("shuffled-credit block is not a donor permutation")
+            for item in block:
+                donor = by_recipient[item.donor_admission_id]
+                if (
+                    item.assigned_action_type != donor.original_action_type
+                    or item.donor_source_group_key != donor.recipient_source_group_key
+                ):
+                    raise ValueError("shuffled-credit donor lineage is inconsistent")
+            original_marginal: dict[str, float] = defaultdict(float)
+            assigned_marginal: dict[str, float] = defaultdict(float)
+            for item in block:
+                original_marginal[item.original_action_type] += item.effective_episode_weight
+                assigned_marginal[item.assigned_action_type] += item.effective_episode_weight
+            if original_marginal != assigned_marginal:
+                raise ValueError("shuffled-credit weighted action marginal differs")
+        if self.shuffle_fixed_point_count != sum(
+            item.original_action_type == item.assigned_action_type
+            for item in self.shuffle_assignments
+        ):
+            raise ValueError("shuffled-credit fixed-point telemetry is inconsistent")
+        expected_assignment_sha256 = content_sha256(
+            [item.model_dump(mode="json") for item in self.shuffle_assignments]
+        )
+        if self.shuffle_assignment_sha256 != expected_assignment_sha256:
+            raise ValueError("shuffled-credit assignment ledger hash differs")
+
+    @property
+    def h3_policy_artifact_eligible(self) -> bool:
+        """Return policy-level eligibility; study sample/effects remain separate gates."""
+
+        return (
+            self.schema_version == "1.2"
+            and self.source_review_evidence_kinds == ("ai",)
+            and self.source_ai_reviewed_episode_count == len(self.source_episode_ids)
+            and self.source_legacy_unverified_episode_count == 0
+            and len(self.ai_review_contract_sha256s) == 1
+            and self.config.update_mode
+            in {
+                LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+                LifecycleTastePolicyUpdateMode.NO_UPDATE,
+                LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT,
+            }
+        )
+
     @classmethod
     def create(cls, **values: object) -> LifecycleTastePolicyModel:
-        payload = {"schema_version": "1.1", **values}
+        payload = {"schema_version": "1.2", **values}
         payload.pop("policy_sha256", None)
         unsigned = cls.model_construct(policy_sha256="0" * 64, **payload)
         return cls(
@@ -686,6 +1365,7 @@ def fit_lifecycle_taste_policy(
 ) -> LifecycleTastePolicyModel:
     """Fit a deterministic partial-pooling preference table from episode units."""
 
+    episodes = tuple(sorted(episodes, key=lambda item: item.admission_id))
     ids = [item.admission_id for item in episodes]
     if len(ids) != len(set(ids)):
         raise ValueError("lifecycle Taste update received duplicate episodes")
@@ -717,13 +1397,18 @@ def fit_lifecycle_taste_policy(
     group_counts: dict[str, int] = defaultdict(int)
     for episode in selected:
         group_counts[_source_group_key(episode)] += 1
+    training_preferences, shuffle_telemetry = _training_preferences(
+        selected,
+        config,
+        group_counts,
+    )
     observations: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
     comparisons = 0
     effective_weight = 0.0
     for episode in selected:
         group_key = _source_group_key(episode)
         alternatives = episode.candidate.alternatives
-        preferred_id = _training_preference(episode, config)
+        preferred_id = training_preferences[episode.admission_id]
         preferred = next(item for item in alternatives if item.action_id == preferred_id)
         competitors = tuple(item for item in alternatives if item.action_id != preferred_id)
         episode_weight = episode.training_weight / group_counts[group_key]
@@ -766,6 +1451,24 @@ def fit_lifecycle_taste_policy(
         training_source_group_count=len(group_counts),
         effective_training_weight=_rounded(effective_weight),
         pairwise_comparison_count=comparisons,
+        source_review_evidence_kinds=tuple(
+            sorted({item.review_evidence_kind for item in episodes})
+        ),
+        source_ai_reviewed_episode_count=sum(item.ai_review_count > 0 for item in episodes),
+        source_legacy_unverified_episode_count=sum(
+            item.legacy_unverified_review_count > 0 for item in episodes
+        ),
+        ai_review_contract_sha256s=tuple(
+            sorted(
+                {
+                    item.ai_review_contract_sha256
+                    for item in episodes
+                    if item.ai_review_contract_sha256 is not None
+                }
+            )
+        ),
+        human_validity_claim_allowed=False,
+        **shuffle_telemetry,
         trained_stages=tuple(sorted({item.candidate.stage for item in selected})),
         trained_domain_tags=tuple(
             sorted({tag.casefold() for item in selected for tag in item.candidate.domain_tags})
@@ -977,21 +1680,321 @@ def _unambiguous_outcome(
     return None
 
 
-def _training_preference(
+def _training_preferences(
+    episodes: tuple[AdmittedTasteEpisode, ...],
+    config: LifecycleTastePolicyConfig,
+    group_counts: dict[str, int],
+) -> tuple[dict[str, str], dict[str, object]]:
+    if config.update_mode is not LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT:
+        return (
+            {item.admission_id: item.preferred_action_id for item in episodes},
+            {
+                "shuffle_algorithm": "not-applicable",
+                "shuffle_block_count": 0,
+                "shuffled_episode_count": 0,
+                "shuffle_fixed_point_count": 0,
+                "shuffle_assignment_sha256": None,
+                "shuffle_assignments": (),
+            },
+        )
+
+    blocks: dict[tuple[object, ...], list[AdmittedTasteEpisode]] = defaultdict(list)
+    if any(count != 1 for count in group_counts.values()):
+        raise ValueError(
+            "blocked shuffled-credit requires one sampled episode per source group"
+        )
+    for episode in episodes:
+        action_types = [item.action_type for item in episode.candidate.alternatives]
+        if len(action_types) != len(set(action_types)):
+            raise ValueError(
+                "blocked shuffled-credit requires one alternative per action type"
+            )
+        block_key = (
+            episode.candidate.dataset_partition.value,
+            episode.candidate.stage,
+            tuple(sorted(action_types)),
+            _supported_outcome_stratum(episode, config),
+            (episode.training_weight / group_counts[_source_group_key(episode)]).hex(),
+        )
+        blocks[block_key].append(episode)
+
+    assignments: dict[str, str] = {}
+    assignment_records: list[LifecycleTasteShuffleAssignment] = []
+    fixed_points = 0
+    ordered_blocks = sorted(
+        (
+            (content_sha256(block_key), block_key, members)
+            for block_key, members in blocks.items()
+        ),
+        key=lambda item: item[0],
+    )
+    for block_sha256, _block_key, members in ordered_blocks:
+        ordered = sorted(members, key=lambda item: item.admission_id)
+        preferred_types = [
+            next(
+                action.action_type
+                for action in item.candidate.alternatives
+                if action.action_id == item.preferred_action_id
+            )
+            for item in ordered
+        ]
+        if len(ordered) < 2 or len(set(preferred_types)) < 2:
+            raise ValueError(
+                "blocked shuffled-credit requires at least two episodes and two "
+                "preferred action types in every frozen block"
+            )
+        donor_indices = _seeded_permutation(
+            len(ordered),
+            seed=config.shuffle_seed,
+            block_sha256=block_sha256,
+        )
+        for index, episode in enumerate(ordered):
+            donor = ordered[donor_indices[index]]
+            assigned_type = preferred_types[donor_indices[index]]
+            assigned_action_id = next(
+                action.action_id
+                for action in episode.candidate.alternatives
+                if action.action_type == assigned_type
+            )
+            assignments[episode.admission_id] = assigned_action_id
+            original_type = preferred_types[index]
+            fixed_points += assigned_type == original_type
+            assignment_records.append(
+                LifecycleTasteShuffleAssignment(
+                    block_sha256=block_sha256,
+                    recipient_admission_id=episode.admission_id,
+                    recipient_source_group_key=_source_group_key(episode),
+                    donor_admission_id=donor.admission_id,
+                    donor_source_group_key=_source_group_key(donor),
+                    original_action_id=episode.preferred_action_id,
+                    original_action_type=original_type,
+                    assigned_action_id=assigned_action_id,
+                    assigned_action_type=assigned_type,
+                    effective_episode_weight=(
+                        episode.training_weight
+                        / group_counts[_source_group_key(episode)]
+                    ),
+                )
+            )
+
+    assignment_payload = [item.model_dump(mode="json") for item in assignment_records]
+    return (
+        assignments,
+        {
+            "shuffle_algorithm": "blocked-action-type-permutation-v2",
+            "shuffle_block_count": len(blocks),
+            "shuffled_episode_count": len(episodes),
+            "shuffle_fixed_point_count": fixed_points,
+            "shuffle_assignment_sha256": content_sha256(assignment_payload),
+            "shuffle_assignments": tuple(assignment_records),
+        },
+    )
+
+
+def _seeded_permutation(
+    size: int,
+    *,
+    seed: int,
+    block_sha256: str,
+) -> list[int]:
+    """Return a label-independent deterministic Fisher--Yates permutation."""
+
+    values = list(range(size))
+    for upper in range(size - 1, 0, -1):
+        digest = hashlib.sha256(
+            f"blocked-action-type-permutation-v2:{seed}:{block_sha256}:{upper}".encode()
+        ).digest()
+        span = upper + 1
+        limit = (1 << 256) - ((1 << 256) % span)
+        nonce = 0
+        value = int.from_bytes(digest, "big")
+        while value >= limit:
+            nonce += 1
+            value = int.from_bytes(
+                hashlib.sha256(digest + nonce.to_bytes(8, "big")).digest(),
+                "big",
+            )
+        swap_index = value % span
+        values[upper], values[swap_index] = values[swap_index], values[upper]
+    return values
+
+
+def _supported_outcome_stratum(
     episode: AdmittedTasteEpisode,
     config: LifecycleTastePolicyConfig,
-) -> str:
-    if config.update_mode is not LifecycleTastePolicyUpdateMode.SHUFFLED_CREDIT:
-        return episode.preferred_action_id
-    alternatives = episode.candidate.alternatives
-    true_index = next(
-        index
-        for index, item in enumerate(alternatives)
-        if item.action_id == episode.preferred_action_id
+) -> tuple[tuple[str, str, str, str, str], ...]:
+    credit_by_id = {item.credit_id: item for item in episode.candidate.credit_assignments}
+    outcome_by_id = {item.outcome_id: item for item in episode.candidate.outcomes}
+    confounder_by_id = {
+        item.confounder_id: item for item in episode.candidate.confounders
+    }
+    return tuple(
+        sorted(
+            {
+                (
+                    credit.family.value,
+                    credit.direction.value,
+                    credit.confidence.hex(),
+                    outcome_by_id[outcome_id].polarity.value,
+                    ",".join(
+                        sorted(
+                            confounder_by_id[item].resolution
+                            for item in credit.confounder_ids
+                        )
+                    ),
+                )
+                for credit_id in episode.supported_credit_ids
+                for credit in (credit_by_id[credit_id],)
+                if credit.family in config.eligible_outcome_families
+                for outcome_id in credit.outcome_ids
+            }
+        )
     )
-    digest = hashlib.sha256(f"{config.shuffle_seed}:{episode.admission_id}".encode()).digest()
-    offset = 1 + int.from_bytes(digest[:8], "big") % (len(alternatives) - 1)
-    return alternatives[(true_index + offset) % len(alternatives)].action_id
+
+
+def _inspect_ai_review_artifacts(
+    review: AITasteEpisodeAttributionReview,
+    *,
+    evidence_root: str | Path,
+    findings: list[TasteEpisodeAdmissionFinding],
+) -> None:
+    root = Path(evidence_root).resolve()
+    for binding in review.artifacts:
+        path = (root / binding.locator).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError:
+            _admission_add(
+                findings,
+                "ai-review-artifact-outside-root",
+                f"AI review artifact leaves evidence root: {binding.locator}",
+            )
+            continue
+        if not path.is_file():
+            _admission_add(
+                findings,
+                "ai-review-artifact-missing",
+                f"AI review artifact is missing: {binding.locator}",
+            )
+            continue
+        observed = hashlib.sha256(path.read_bytes()).hexdigest()
+        if observed != binding.sha256:
+            _admission_add(
+                findings,
+                "ai-review-artifact-hash-mismatch",
+                f"AI review artifact hash differs: {binding.locator}",
+            )
+
+    firewall_binding = review.artifact(AITasteReviewArtifactRole.FIREWALL_REPORT)
+    firewall_path = root / firewall_binding.locator
+    if not firewall_path.is_file():
+        return
+    try:
+        payload = yaml.safe_load(firewall_path.read_text(encoding="utf-8"))
+        firewall = AITasteReviewFirewallReport.model_validate(payload)
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        _admission_add(
+            findings,
+            "ai-review-firewall-invalid",
+            f"AI review firewall report is invalid: {exc}",
+        )
+        return
+    if (
+        firewall.review_packet_sha256
+        != review.artifact(AITasteReviewArtifactRole.REVIEW_PACKET).sha256
+        or firewall.input_projection_sha256
+        != review.artifact(AITasteReviewArtifactRole.INPUT_PROJECTION).sha256
+    ):
+        _admission_add(
+            findings,
+            "ai-review-firewall-binding-mismatch",
+            "AI review firewall report binds another visible input",
+        )
+
+    expected_prompt_sha256 = content_sha256(
+        {
+            role.value: review.artifact(role).sha256
+            for role in (
+                AITasteReviewArtifactRole.SYSTEM_PROMPT,
+                AITasteReviewArtifactRole.USER_PROMPT,
+            )
+        }
+    )
+    if review.prompt_sha256 != expected_prompt_sha256:
+        _admission_add(
+            findings,
+            "ai-review-prompt-binding-mismatch",
+            "AI review prompt hash differs from its prompt artifacts",
+        )
+
+    receipt_binding = review.artifact(AITasteReviewArtifactRole.EXECUTION_RECEIPT)
+    receipt_path = root / receipt_binding.locator
+    if receipt_path.is_file():
+        try:
+            receipt = AITasteReviewExecutionReceipt.model_validate(
+                yaml.safe_load(receipt_path.read_text(encoding="utf-8"))
+            )
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            _admission_add(
+                findings,
+                "ai-review-execution-receipt-invalid",
+                f"AI review execution receipt is invalid: {exc}",
+            )
+        else:
+            expected_receipt_identity = (
+                review.provider_id,
+                review.model_id,
+                review.model_revision,
+                review.run_id,
+                review.prompt_sha256,
+                review.artifact(AITasteReviewArtifactRole.INPUT_PROJECTION).sha256,
+                review.artifact(AITasteReviewArtifactRole.RAW_RESPONSE).sha256,
+            )
+            observed_receipt_identity = (
+                receipt.provider_id,
+                receipt.model_id,
+                receipt.model_revision,
+                receipt.run_id,
+                receipt.prompt_sha256,
+                receipt.input_projection_sha256,
+                receipt.raw_response_sha256,
+            )
+            if observed_receipt_identity != expected_receipt_identity:
+                _admission_add(
+                    findings,
+                    "ai-review-execution-identity-mismatch",
+                    "AI review execution receipt differs from the normalized review",
+                )
+
+    normalization_binding = review.artifact(
+        AITasteReviewArtifactRole.NORMALIZATION_REPORT
+    )
+    normalization_path = root / normalization_binding.locator
+    if normalization_path.is_file():
+        try:
+            normalization = AITasteReviewNormalizationReport.model_validate(
+                yaml.safe_load(normalization_path.read_text(encoding="utf-8"))
+            )
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            _admission_add(
+                findings,
+                "ai-review-normalization-report-invalid",
+                f"AI review normalization report is invalid: {exc}",
+            )
+        else:
+            if (
+                normalization.run_id != review.run_id
+                or normalization.candidate_sha256 != review.candidate_sha256
+                or normalization.raw_response_sha256
+                != review.artifact(AITasteReviewArtifactRole.RAW_RESPONSE).sha256
+                or normalization.normalized_response_sha256
+                != review.normalized_response_sha256
+            ):
+                _admission_add(
+                    findings,
+                    "ai-review-normalization-binding-mismatch",
+                    "AI review normalization report differs from the review evidence",
+                )
 
 
 def _episode_action_features(episode, action) -> tuple[tuple[str, str], ...]:  # type: ignore[no-untyped-def]

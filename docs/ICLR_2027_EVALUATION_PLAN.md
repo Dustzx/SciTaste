@@ -16,6 +16,15 @@ lifecycle policy. The earlier evidence-program v1, Qwen v11, and DeepSeek V4.1
 proposals remain immutable feasibility/history artifacts rather than the final
 formal design.
 
+The owner selected the disclosed AI-only operational route on 2026-09-15.
+[`AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md`](research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md)
+therefore replaces reviewer staffing with two independent agent roles plus a
+disagreement-only agent adjudicator. This does not relabel AI evidence as human
+or expert evidence: H1--H3 decision endpoints become AI-panel/natural-outcome
+proxies, while H4 retains its scorer-owned objective endpoint. Human-study
+requirements below describe the stronger unexecuted validation route, not a
+blocker that an agent may claim to have satisfied.
+
 The broad source pool is now governed by the no-action contract in
 [`SCIENTIFIC_REFERENCE_MINING.md`](SCIENTIFIC_REFERENCE_MINING.md). It starts
 from the registered decision and evidence gaps, covers six contrastive query
@@ -66,8 +75,8 @@ external estimand is complete.
 
 The preferred result-dependent title is **“SciTaste: Improving Autonomous
 Research through Scientific Taste.”** If the headline comparison is not
-positive and complete, use the bounded title **“SciTaste: Scientific Taste for
-Autonomous Research.”** The current word *Learning* is not justified unless the
+positive and complete, use the bounded title **“SciTaste: Grounded Scientific
+Taste for Autonomous Research.”** The word *Learning* is not justified unless the
 submitted method actually estimates or updates a learned taste policy; retrieval
 from a precedent library alone is not sufficient.
 
@@ -100,8 +109,10 @@ external-baseline evidence in the routed review ResearchState; multi-task
 validity additionally requires at least two matched held-out tasks. The derived
 state transition can emit exact paper-revision closure proofs, but it cannot
 revise the manuscript or certify review closure. Original-reviewer verification
-and two conflict-cleared independent experts remain mandatory. No current
-self-development result satisfies this path.
+and two conflict-cleared independent experts remain mandatory only for a
+human/expert validity claim. Under the active AI-only route, agents may close
+an internal revision audit while the result stays explicitly non-human. No
+current self-development result satisfies the stronger validity path.
 
 The accepted-literature basis and the resulting evaluation-stack decision are
 recorded in
