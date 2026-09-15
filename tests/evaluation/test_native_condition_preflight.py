@@ -22,6 +22,7 @@ V2_MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path
 V3_MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml")
 V4_MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml")
 V5_MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path_v5.yaml")
+V6_MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path_v6.yaml")
 FIXTURE_WORKFLOW = Path("configs/workflows/full_offline_native_conditions_v1.yaml")
 
 
@@ -160,6 +161,9 @@ def test_v4_behavioral_attestation_fails_closed_after_implementation_drift(
         "src/scitaste/taste/conditions.py",
         "src/scitaste/taste/controller.py",
         "src/scitaste/executor/native.py",
+        "src/scitaste/schema/decisions.py",
+        "src/scitaste/evaluation/taste_corpus_curation.py",
+        "src/scitaste/evaluation/native_condition_preflight.py",
     }
     assert report.exact_condition_population_verified is False
     assert report.workflow_component_routes_verified is False
@@ -168,6 +172,39 @@ def test_v4_behavioral_attestation_fails_closed_after_implementation_drift(
     assert report.taste_routing_probe is None
     assert report.critic_routing_probe is None
     assert report.local_fixture_execution_performed is False
+    assert report.real_task_or_experiment_execution_performed is False
+    assert report.model_calls == report.api_calls == report.gpu_jobs == 0
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_v6_behaviorally_attests_current_clean_native_implementation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    inspection = load_native_condition_preflight_manifest(V6_MANIFEST)
+
+    report = attest_native_condition_implementations(
+        inspection,
+        fixture_workflow=FIXTURE_WORKFLOW,
+        source_root=".",
+        workspace_root=tmp_path,
+        seed=7,
+        allow_local_fixture_execution=True,
+    )
+
+    assert report.implementation_qualified is True
+    assert report.findings == ()
+    assert report.exact_condition_population_verified is True
+    assert report.workflow_component_routes_verified is True
+    assert report.full_placebo_single_factor_verified is True
+    assert len(report.condition_probes) == 6
+    assert all(item.condition_contract_verified for item in report.condition_probes)
+    assert report.taste_routing_probe is not None
+    assert report.taste_routing_probe.verified is True
+    assert report.critic_routing_probe is not None
+    assert report.critic_routing_probe.verified is True
+    assert report.local_fixture_execution_performed is True
     assert report.real_task_or_experiment_execution_performed is False
     assert report.model_calls == report.api_calls == report.gpu_jobs == 0
     assert list(tmp_path.iterdir()) == []

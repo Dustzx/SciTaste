@@ -5,12 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
-- Added a v5 Git-pinned behavioral preflight for the current six-condition native
-  implementation at `52c2294...`. The historical v4 proof now fails closed after
-  controller, condition, executor, and workflow changes instead of being silently
-  reused. The v5 local fixture re-attests all six routes with zero API, GPU,
-  network, or real-task execution; matched/placebo corpus construction and the
-  checkpoint run remain explicitly blocked.
+- Added a v6 Git-and-worktree-pinned behavioral preflight for the current
+  six-condition native implementation at `83a2e77...`. Implementation evidence
+  now covers every requirement locator plus the verifier itself and must match
+  both the pinned source commit and the current worktree. The historical v4/v5
+  proofs fail closed after implementation drift instead of being silently reused.
+  The v6 local fixture re-attests all six routes with zero API, GPU, network, or
+  real-task execution; matched/placebo corpus construction and the checkpoint run
+  remain explicitly blocked.
 - Added project-owned deadline work routing so an imminent venue milestone
   changes the Core priority queue instead of serving only as a countdown;
   noncritical feature polish and non-release verification are explicitly deferred.
