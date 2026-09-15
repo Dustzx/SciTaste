@@ -16,6 +16,7 @@ from scitaste.evaluation.model_role_conformance import (
 from scitaste.evaluation.model_role_conformance_campaign import (
     inspect_bytebound_conformance_campaign,
     load_bytebound_campaign_plan,
+    materialize_conformance_executor_bindings,
     prepare_bytebound_conformance_campaign,
 )
 
@@ -89,6 +90,15 @@ def register_model_role_cli(
     campaign_request.add_argument("--request-id", required=True)
     _add_log_level_option(campaign_request)
     campaign_request.set_defaults(handler=_handle_campaign_request)
+
+    materialize_bindings = subcommands.add_parser(
+        "materialize-bindings",
+        help="Render content-bound configs for the existing model-node runtime",
+    )
+    materialize_bindings.add_argument("--plan", type=Path, required=True)
+    materialize_bindings.add_argument("--repository-root", type=Path, default=Path("."))
+    _add_log_level_option(materialize_bindings)
+    materialize_bindings.set_defaults(handler=_handle_materialize_bindings)
 
 
 def _add_log_level_option(parser: argparse.ArgumentParser) -> None:
@@ -172,6 +182,16 @@ def _handle_campaign_request(args: argparse.Namespace) -> int:
     print(request.model_dump_json(indent=2))
     print(f"request_sha256: {request.request_sha256}")
     return 0
+
+
+def _handle_materialize_bindings(args: argparse.Namespace) -> int:
+    _, path = materialize_conformance_executor_bindings(
+        args.plan,
+        repository_root=args.repository_root,
+    )
+    status = inspect_bytebound_conformance_campaign(path)
+    print(status.model_dump_json(indent=2))
+    return 0 if status.launch_ready_requests else 1
 
 
 __all__ = ["register_model_role_cli"]

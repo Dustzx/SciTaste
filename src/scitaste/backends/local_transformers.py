@@ -22,6 +22,9 @@ from scitaste.backends.base import (
     PreferenceResponse,
     Usage,
 )
+from scitaste.backends.checkpoint_manifest import (
+    verify_local_checkpoint_identity_manifest,
+)
 from scitaste.backends.openai_compatible import (
     _SYSTEM_PROMPT,
     _parse_json_object,
@@ -44,6 +47,11 @@ class LocalTransformersConfig(BaseModel):
     model_id: str
     model_revision: str = Field(min_length=7)
     checkpoint_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    checkpoint_identity_manifest_path: Path | None = None
+    checkpoint_identity_manifest_file_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    checkpoint_identity_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     architecture: str = "Qwen3VLForConditionalGeneration"
     device: str = "cuda:0"
     dtype: str = "bfloat16"
@@ -58,6 +66,15 @@ class LocalTransformersConfig(BaseModel):
     def generation_fits_context(self) -> LocalTransformersConfig:
         if self.max_new_tokens >= self.max_context_tokens:
             raise ValueError("max_new_tokens must be below max_context_tokens")
+        manifest = (
+            self.checkpoint_identity_manifest_path,
+            self.checkpoint_identity_manifest_file_sha256,
+            self.checkpoint_identity_sha256,
+        )
+        if any(manifest) != all(manifest):
+            raise ValueError("checkpoint identity manifest binding must be atomic")
+        if self.checkpoint_sha256 is not None and all(manifest):
+            raise ValueError("select either full-tree or manifest checkpoint verification")
         return self
 
     @property
@@ -226,6 +243,19 @@ class TransformersTextRuntime:
         """Verify the complete local checkpoint once before model loading."""
 
         if self._checkpoint_verified:
+            return
+        if self.config.checkpoint_identity_manifest_path is not None:
+            assert self.config.checkpoint_identity_manifest_file_sha256 is not None
+            assert self.config.checkpoint_identity_sha256 is not None
+            verify_local_checkpoint_identity_manifest(
+                self.config.model_path,
+                self.config.checkpoint_identity_manifest_path,
+                expected_manifest_file_sha256=(
+                    self.config.checkpoint_identity_manifest_file_sha256
+                ),
+                expected_checkpoint_identity_sha256=self.config.checkpoint_identity_sha256,
+            )
+            self._checkpoint_verified = True
             return
         if self.config.checkpoint_sha256 is None:
             return

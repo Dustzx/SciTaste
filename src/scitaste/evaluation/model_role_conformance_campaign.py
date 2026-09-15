@@ -10,8 +10,10 @@ flags.
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import os
+import shlex
 import tempfile
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
@@ -20,6 +22,11 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, model_validator
 
+from scitaste.backends.checkpoint_manifest import (
+    LocalCheckpointIdentityManifest,
+    build_local_checkpoint_identity_manifest,
+)
+from scitaste.backends.local_transformers import LocalTransformersConfig
 from scitaste.evaluation.model_role_conformance import (
     ConformanceCase,
     ConformanceCaseManifest,
@@ -32,6 +39,28 @@ from scitaste.evaluation.model_role_conformance import (
     compile_model_role_selection,
     plan_model_role_conformance,
     save_model_role_document,
+)
+from scitaste.model_nodes.models import (
+    CumulativeProjectBudget,
+    NodeAdmissionBudget,
+    NodePolicy,
+    ProviderGenerationEnvelope,
+)
+from scitaste.model_nodes.openai_compatible import (
+    load_structured_openai_compatible_config,
+)
+from scitaste.model_nodes.profiles import (
+    ModelNodeProfile,
+    ModelNodeProfileReference,
+    ModelNodeProfileSet,
+    load_model_node_profile_set,
+)
+from scitaste.model_nodes.role_conformance import RoleConformanceInput
+from scitaste.model_nodes.runtime_config import (
+    LiveRuntimeBackend,
+    LocalRuntimeBackend,
+    ModelNodeRuntimeConfig,
+    load_model_node_runtime_config,
 )
 from scitaste.project import ProjectRuntime
 
@@ -150,6 +179,8 @@ class DispatchResource(BaseModel):
     exact_checkpoint_hash_resolved: bool = False
     local_checkpoint_sha256: str | None = Field(default=None, pattern=_SHA256)
     local_revision: str | None = None
+    local_checkpoint_manifest_ref: str | None = None
+    local_checkpoint_manifest_file_sha256: str | None = Field(default=None, pattern=_SHA256)
 
     @model_validator(mode="after")
     def resource_route_is_atomic(self) -> DispatchResource:
@@ -161,13 +192,20 @@ class DispatchResource(BaseModel):
                 or any(value is not None for value in local)
                 or self.local_checkpoint_sha256 is not None
                 or self.local_revision is not None
+                or self.local_checkpoint_manifest_ref is not None
+                or self.local_checkpoint_manifest_file_sha256 is not None
                 or self.exact_checkpoint_hash_resolved
             ):
                 raise ValueError("API dispatch requires an atomic backend config binding")
         else:
             if not all(local) or any(value is not None for value in api):
                 raise ValueError("local dispatch requires only a local checkpoint binding")
-            exact = (self.local_checkpoint_sha256, self.local_revision)
+            exact = (
+                self.local_checkpoint_sha256,
+                self.local_revision,
+                self.local_checkpoint_manifest_ref,
+                self.local_checkpoint_manifest_file_sha256,
+            )
             if self.exact_checkpoint_hash_resolved != all(exact):
                 raise ValueError("local exact-identity status differs from its bindings")
         return self
@@ -187,6 +225,10 @@ class ExistingRunnerBinding(BaseModel):
     runtime_config_sha256: str | None = Field(default=None, pattern=_SHA256)
     profile_set_ref: str | None = None
     profile_set_sha256: str | None = Field(default=None, pattern=_SHA256)
+    receipt_output_root: str
+    recording_output_locator: str
+    campaign_run_result_ref: str
+    receipt_adapter_state: Literal["required-after-execution"]
     executor_receipt_contract: Literal["scitaste-model-node-runtime-v1"]
     next_command: str = Field(min_length=1)
 
@@ -284,6 +326,31 @@ class ConformanceDispatchRequest(BaseModel):
     def request_sha256(self) -> str:
         return _canonical_sha256(self.model_dump(mode="json"))
 
+    @property
+    def execution_payload_sha256(self) -> str:
+        return _canonical_sha256(
+            self.model_dump(
+                mode="json",
+                exclude={"readiness", "blockers", "existing_runner_binding"},
+            )
+        )
+
+
+class ModelSelectionGuard(BaseModel):
+    model_config = _CONFIG
+
+    default_model_candidate_id: Literal[None] = None
+    qwen3_vl_2b_role: Literal["low-cost-lower-bound-only"]
+    inventory_presence_selects_model: Literal[False] = False
+    all_registered_inventory_candidates_supported: Literal[True] = True
+    task_required_external_candidates_supported: Literal[True] = True
+    external_candidate_max_download_bytes: Literal[10_000_000_000]
+    role_scope_selection_requires_task_excluded_receipts: Literal[True] = True
+
+    @property
+    def guard_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"guard_sha256"}))
+
 
 class ByteBoundConformanceCampaignPlan(BaseModel):
     model_config = _CONFIG
@@ -303,6 +370,7 @@ class ByteBoundConformanceCampaignPlan(BaseModel):
     development_source_groups: tuple[str, ...]
     source_groups_disjoint: Literal[True] = True
     budget: CampaignBudget
+    model_selection_guard: ModelSelectionGuard
     model_candidate_ids: tuple[str, ...] = Field(min_length=5)
     task_ids: tuple[str, ...] = Field(min_length=5)
     requests: tuple[ConformanceDispatchRequest, ...] = Field(min_length=1)
@@ -357,6 +425,7 @@ class ByteBoundCampaignStatus(BaseModel):
     request_prepared_ids: tuple[str, ...]
     launch_ready_request_ids: tuple[str, ...]
     blocked_request_ids: tuple[str, ...]
+    blocker_counts: dict[str, int]
     receipt_paths: tuple[str, ...]
     selection_status: SelectionStatus
     selection_ref: str | None
@@ -467,6 +536,10 @@ def prepare_bytebound_conformance_campaign(
         formal_partition_source_groups=spec.formal_partition_source_groups,
         development_source_groups=tuple(dict.fromkeys(source_by_task.values())),
         budget=spec.campaign_budget,
+        model_selection_guard=ModelSelectionGuard(
+            qwen3_vl_2b_role="low-cost-lower-bound-only",
+            external_candidate_max_download_bytes=10_000_000_000,
+        ),
         model_candidate_ids=tuple(item.candidate.candidate_id for item in candidates),
         task_ids=tuple(case.task_id for case in cases),
         requests=requests,
@@ -516,6 +589,8 @@ def inspect_bytebound_conformance_campaign(
         )
         if persisted != request:
             raise ValueError(f"campaign request file drift: {request.request_id}")
+        if request.readiness is CampaignReadiness.LAUNCH_READY:
+            _verify_launch_binding(request, campaign_root=campaign_root)
     receipt_root = campaign_root / "receipts"
     receipt_paths = (
         tuple(sorted(receipt_root.glob("*/RUN_RESULT.json"))) if receipt_root.exists() else ()
@@ -577,6 +652,10 @@ def inspect_bytebound_conformance_campaign(
         request_prepared_ids=prepared,
         launch_ready_request_ids=launch_ready,
         blocked_request_ids=blocked,
+        blocker_counts={
+            reason: sum(reason in item.blockers for item in plan.requests)
+            for reason in sorted({reason for item in plan.requests for reason in item.blockers})
+        },
         receipt_paths=tuple(path.relative_to(campaign_root).as_posix() for path in receipt_paths),
         selection_status=selection.status,
         selection_ref=(
@@ -585,6 +664,283 @@ def inspect_bytebound_conformance_campaign(
         selection_sha256=(selection.selection_sha256 if selection_path else None),
         headline_eligible=selection.headline_eligible,
         next_action=next_action,
+    )
+
+
+def materialize_conformance_executor_bindings(
+    plan_path: str | Path,
+    *,
+    repository_root: str | Path = ".",
+) -> tuple[ByteBoundConformanceCampaignPlan, Path]:
+    """Render existing-runtime inputs without loading or invoking any model."""
+
+    source = _regular_file(plan_path, "byte-bound campaign plan")
+    campaign_root = source.parent
+    root = Path(repository_root).resolve(strict=True)
+    plan = _load_json_model(source, ByteBoundConformanceCampaignPlan, "campaign plan")
+    outputs_root = _outputs_root_from_campaign(campaign_root, plan)
+    snapshot = ProjectRuntime(outputs_root).open(plan.project_id)
+    if plan.project_run_id not in {item.run_id for item in snapshot.manifest.runs}:
+        raise ValueError("campaign project run is no longer registered")
+
+    manifest_cache: dict[str, tuple[LocalCheckpointIdentityManifest, Path, str]] = {}
+    updated: list[ConformanceDispatchRequest] = []
+    for request in plan.requests:
+        if request.runner_kind is ConformanceRunnerKind.EMBEDDING_LOCAL:
+            updated.append(request)
+            continue
+        blockers = [item for item in request.blockers if not item.startswith("executor-")]
+        resource = request.resource
+        checkpoint_manifest_path: Path | None = None
+        if resource.execution_kind is ExecutionKind.LOCAL and not blockers:
+            assert resource.local_model_path is not None
+            try:
+                cached = manifest_cache.get(resource.local_model_path)
+                if cached is None:
+                    manifest = build_local_checkpoint_identity_manifest(resource.local_model_path)
+                    checkpoint_manifest_path = (
+                        campaign_root / "checkpoint_identities" / f"{resource.resource_id}.json"
+                    )
+                    _save_document(manifest, checkpoint_manifest_path)
+                    cached = (
+                        manifest,
+                        checkpoint_manifest_path,
+                        _file_sha256(checkpoint_manifest_path),
+                    )
+                    manifest_cache[resource.local_model_path] = cached
+                manifest, checkpoint_manifest_path, manifest_file_sha256 = cached
+                revision = f"hf-manifest-{manifest.checkpoint_identity_sha256[:12]}"
+                resource = resource.model_copy(
+                    update={
+                        "exact_checkpoint_hash_resolved": True,
+                        "local_checkpoint_sha256": manifest.checkpoint_identity_sha256,
+                        "local_revision": revision,
+                        "local_checkpoint_manifest_ref": checkpoint_manifest_path.relative_to(
+                            campaign_root
+                        ).as_posix(),
+                        "local_checkpoint_manifest_file_sha256": manifest_file_sha256,
+                    }
+                )
+                if not _architecture_available(resource.local_architecture):
+                    blockers.append("local-model-architecture-unavailable")
+            except (OSError, RuntimeError, ValueError):
+                blockers.append("local-checkpoint-identity-unresolved")
+
+        draft = request.model_copy(
+            update={
+                "resource": resource,
+                "readiness": (
+                    CampaignReadiness.BLOCKED if blockers else CampaignReadiness.REQUEST_PREPARED
+                ),
+                "blockers": tuple(dict.fromkeys(blockers)),
+            }
+        )
+        if blockers:
+            updated.append(draft)
+            continue
+        binding = _materialize_model_node_binding(
+            draft,
+            plan=plan,
+            campaign_root=campaign_root,
+            outputs_root=outputs_root,
+            project_revision=snapshot.revision,
+            repository_root=root,
+            checkpoint_manifest_path=checkpoint_manifest_path,
+        )
+        updated.append(
+            draft.model_copy(
+                update={
+                    "existing_runner_binding": binding,
+                    "readiness": CampaignReadiness.LAUNCH_READY,
+                }
+            )
+        )
+
+    materialized = plan.model_copy(update={"requests": tuple(updated)})
+    materialized_path = _save_document(materialized, source)
+    request_root = campaign_root / "requests"
+    for request in materialized.requests:
+        _save_document(request, request_root / f"{request.request_id}.json")
+    return materialized, materialized_path
+
+
+def _materialize_model_node_binding(
+    request: ConformanceDispatchRequest,
+    *,
+    plan: ByteBoundConformanceCampaignPlan,
+    campaign_root: Path,
+    outputs_root: Path,
+    project_revision: int,
+    repository_root: Path,
+    checkpoint_manifest_path: Path | None,
+) -> ExistingRunnerBinding:
+    exact_model = request.resource.model_id
+    if request.resource.execution_kind is ExecutionKind.LOCAL:
+        assert request.resource.local_revision is not None
+        exact_model = f"{exact_model}@{request.resource.local_revision}"
+    profile = ModelNodeProfile(
+        profile_id=request.candidate.profile.profile_id,
+        profile_version=request.candidate.profile.profile_version,
+        provider=request.resource.provider,
+        model=exact_model,
+        allowed_node_names=("role-conformance",),
+        live_execution_permitted=request.resource.execution_kind is ExecutionKind.API,
+        local_execution_permitted=request.resource.execution_kind is ExecutionKind.LOCAL,
+        generation=ProviderGenerationEnvelope(
+            max_request_bytes=1_048_576,
+            max_output_tokens=request.max_output_tokens,
+            context_window_tokens=request.max_input_tokens + request.max_output_tokens,
+            deterministic_seed_supported=request.resource.execution_kind is ExecutionKind.LOCAL,
+        ),
+        admission=NodeAdmissionBudget(
+            max_request_bytes=1_048_576,
+            max_input_tokens=request.max_input_tokens,
+            max_output_tokens=request.max_output_tokens,
+            max_total_tokens=request.max_input_tokens + request.max_output_tokens,
+            max_latency_ms=request.candidate.budget.max_latency_ms,
+            max_response_cost_usd=request.max_api_cost_usd,
+            allowed_tool_names=list(request.case_payload.allowed_tool_names),
+            max_tool_call_proposals=len(request.case_payload.allowed_tool_names),
+        ),
+        cumulative_project=CumulativeProjectBudget(
+            max_invocations=len(plan.requests),
+            max_total_tokens=len(plan.requests)
+            * (request.max_input_tokens + request.max_output_tokens),
+            max_api_cost_usd=plan.budget.max_api_cost_usd,
+        ),
+    )
+    policy = NodePolicy(
+        policy_id=f"{request.request_id}-policy",
+        enabled=True,
+        allowed_node_names=["role-conformance"],
+        expected_backend=request.resource.provider,
+        expected_model=exact_model,
+        allowed_tool_names=list(request.case_payload.allowed_tool_names),
+        max_request_bytes=profile.admission.max_request_bytes,
+        max_input_tokens=profile.admission.max_input_tokens,
+        max_output_tokens=profile.admission.max_output_tokens,
+        max_total_tokens=profile.admission.max_total_tokens,
+        max_api_cost_usd=profile.cumulative_project.max_api_cost_usd,
+        max_latency_ms=profile.admission.max_latency_ms,
+    )
+    if request.resource.execution_kind is ExecutionKind.API:
+        assert request.resource.backend_config_ref is not None
+        backend_source = _verify_bound_file(
+            repository_root,
+            request.resource.backend_config_ref,
+            request.resource.backend_config_sha256 or "",
+            "API backend config",
+        )
+        backend_config = load_structured_openai_compatible_config(backend_source).model_copy(
+            update={"live_enabled": True, "max_output_tokens": request.max_output_tokens}
+        )
+        backend = LiveRuntimeBackend(config=backend_config)
+    else:
+        assert request.resource.local_model_path is not None
+        assert request.resource.local_revision is not None
+        assert request.resource.local_checkpoint_sha256 is not None
+        assert request.resource.local_checkpoint_manifest_file_sha256 is not None
+        assert checkpoint_manifest_path is not None
+        backend = LocalRuntimeBackend(
+            config=LocalTransformersConfig(
+                provider=request.resource.provider,
+                model_path=Path(request.resource.local_model_path),
+                model_id=request.resource.model_id,
+                model_revision=request.resource.local_revision,
+                checkpoint_identity_manifest_path=checkpoint_manifest_path,
+                checkpoint_identity_manifest_file_sha256=(
+                    request.resource.local_checkpoint_manifest_file_sha256
+                ),
+                checkpoint_identity_sha256=request.resource.local_checkpoint_sha256,
+                architecture=request.resource.local_architecture or "unknown",
+                max_new_tokens=request.max_output_tokens,
+                max_context_tokens=request.max_input_tokens + request.max_output_tokens,
+                max_retries=0,
+                execution_enabled=True,
+            )
+        )
+    runtime_config = ModelNodeRuntimeConfig(
+        node_name="role-conformance",
+        request_id=request.request_id,
+        node_input={
+            **request.case_payload.model_dump(mode="json", exclude={"expected"}),
+            "case_id": request.case_id,
+        },
+        state_projection={
+            "project_id": request.project_id,
+            "state_snapshot_id": request.case_sha256,
+            "state_revision": project_revision,
+            "stage": "model-role-conformance",
+            "metadata": {
+                "campaign_id": request.campaign_id,
+                "model_role_plan_sha256": request.model_role_plan_sha256,
+                "case_sha256": request.case_sha256,
+                "execution_payload_sha256": request.execution_payload_sha256,
+                "model_selection_guard_sha256": plan.model_selection_guard.guard_sha256,
+                "formal_or_heldout": False,
+            },
+        },
+        trigger={
+            "trigger_id": request.request_id,
+            "reason": "byte-bound task-excluded B0 model-role conformance",
+        },
+        policy=policy,
+        backend=backend,
+        seed=request.repetition,
+    )
+    RoleConformanceInput.model_validate(runtime_config.node_input)
+    binding_root = campaign_root / "bindings" / request.request_id
+    profile_path = _save_config_document(profile, binding_root / "profile.json")
+    profile_set = ModelNodeProfileSet(
+        profile_set_id=f"{request.request_id}-profiles",
+        profile_set_version="1.0.0",
+        live_enabled=request.resource.execution_kind is ExecutionKind.API,
+        profiles=(
+            ModelNodeProfileReference(
+                path=profile_path.name,
+                sha256=_file_sha256(profile_path),
+                profile_sha256=profile.fingerprint,
+            ),
+        ),
+    )
+    profile_set_path = _save_config_document(profile_set, binding_root / "profile-set.json")
+    runtime_path = _save_config_document(runtime_config, binding_root / "runtime.json")
+    load_model_node_profile_set(profile_set_path)
+    load_model_node_runtime_config(runtime_path)
+    flag = "--allow-live" if request.required_execution_flag == "allow-live" else "--allow-local"
+    command = " ".join(
+        (
+            "python -m scitaste.cli model-node runtime execute",
+            f"--project-id {shlex.quote(request.project_id)}",
+            f"--run-id {shlex.quote(request.project_run_id)}",
+            f"--invocation-id {shlex.quote(request.request_id)}",
+            f"--expected-revision {project_revision}",
+            f"--config {shlex.quote(str(runtime_path))}",
+            f"--profile-set {shlex.quote(str(profile_set_path))}",
+            f"--profile-id {shlex.quote(profile.profile_id)}",
+            f"--outputs-root {shlex.quote(str(outputs_root))}",
+            flag,
+        )
+    )
+    return ExistingRunnerBinding(
+        command="python -m scitaste.cli model-node runtime execute",
+        node_name="role-conformance",
+        invocation_id=request.request_id,
+        runtime_config_ref=runtime_path.relative_to(campaign_root).as_posix(),
+        runtime_config_sha256=_file_sha256(runtime_path),
+        profile_set_ref=profile_set_path.relative_to(campaign_root).as_posix(),
+        profile_set_sha256=_file_sha256(profile_set_path),
+        receipt_output_root=(
+            f"projects/{request.project_id}/runs/{request.project_run_id}/model_nodes"
+        ),
+        recording_output_locator=(
+            f"projects/{request.project_id}/runs/{request.project_run_id}/model_nodes/"
+            f"recordings/{request.request_id}.jsonl"
+        ),
+        campaign_run_result_ref=f"receipts/{request.request_id}/RUN_RESULT.json",
+        receipt_adapter_state="required-after-execution",
+        executor_receipt_contract="scitaste-model-node-runtime-v1",
+        next_command=command,
     )
 
 
@@ -642,6 +998,13 @@ def _build_requests(
                         command="python -m scitaste.cli model-node runtime execute",
                         node_name="role-conformance",
                         invocation_id=request_id,
+                        receipt_output_root=(f"projects/{project_id}/runs/{run_id}/model_nodes"),
+                        recording_output_locator=(
+                            f"projects/{project_id}/runs/{run_id}/model_nodes/recordings/"
+                            f"{request_id}.jsonl"
+                        ),
+                        campaign_run_result_ref=f"receipts/{request_id}/RUN_RESULT.json",
+                        receipt_adapter_state="required-after-execution",
                         executor_receipt_contract="scitaste-model-node-runtime-v1",
                         next_command=(
                             "python -m scitaste.cli model-node runtime execute "
@@ -877,6 +1240,122 @@ def _save_document(document: BaseModel, path: Path) -> Path:
     return path
 
 
+def _save_config_document(document: BaseModel, path: Path) -> Path:
+    if path.is_symlink():
+        raise ValueError("campaign config output cannot be a symlink")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = document.model_dump_json(indent=2, exclude_computed_fields=True) + "\n"
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return path
+
+
+def _outputs_root_from_campaign(
+    campaign_root: Path,
+    plan: ByteBoundConformanceCampaignPlan,
+) -> Path:
+    try:
+        outputs_root = campaign_root.parents[5]
+    except IndexError as exc:
+        raise ValueError("campaign plan is outside a project-owned run") from exc
+    expected = _campaign_root(
+        outputs_root,
+        plan.project_id,
+        plan.project_run_id,
+        plan.campaign_id,
+    ).resolve()
+    if campaign_root.resolve() != expected:
+        raise ValueError("campaign plan path differs from its project/run identity")
+    return outputs_root
+
+
+def _architecture_available(architecture: str | None) -> bool:
+    if not architecture or architecture == "unknown":
+        return False
+    try:
+        transformers = importlib.import_module("transformers")
+    except ImportError:
+        return False
+    return getattr(transformers, architecture, None) is not None
+
+
+def _verify_launch_binding(
+    request: ConformanceDispatchRequest,
+    *,
+    campaign_root: Path,
+) -> None:
+    binding = request.existing_runner_binding
+    if binding is None or not binding.materialized:
+        raise ValueError("launch-ready request has no materialized executor binding")
+    assert binding.runtime_config_ref is not None
+    assert binding.runtime_config_sha256 is not None
+    assert binding.profile_set_ref is not None
+    assert binding.profile_set_sha256 is not None
+    runtime_path = _resolve_owned_file(campaign_root, binding.runtime_config_ref, "runtime binding")
+    profile_set_path = _resolve_owned_file(
+        campaign_root, binding.profile_set_ref, "profile-set binding"
+    )
+    if _file_sha256(runtime_path) != binding.runtime_config_sha256:
+        raise ValueError("runtime binding hash drift")
+    if _file_sha256(profile_set_path) != binding.profile_set_sha256:
+        raise ValueError("profile-set binding hash drift")
+    runtime = load_model_node_runtime_config(runtime_path).config
+    profiles = load_model_node_profile_set(profile_set_path)
+    if runtime.node_name != "role-conformance" or runtime.request_id != request.request_id:
+        raise ValueError("runtime binding belongs to another conformance request")
+    metadata = runtime.state_projection.metadata
+    if (
+        metadata.get("execution_payload_sha256") != request.execution_payload_sha256
+        or metadata.get("case_sha256") != request.case_sha256
+        or runtime.policy.expected_backend != request.resource.provider
+    ):
+        raise ValueError("runtime binding content differs from its dispatch request")
+    profile = profiles.profiles.get(request.candidate.profile.profile_id)
+    if profile is None:
+        raise ValueError("profile-set binding omits the selected role profile")
+    if (profile.provider, profile.model) != (
+        runtime.policy.expected_backend,
+        runtime.policy.expected_model,
+    ):
+        raise ValueError("runtime and profile identities differ")
+    if request.resource.execution_kind is ExecutionKind.LOCAL:
+        assert request.resource.local_checkpoint_manifest_ref is not None
+        assert request.resource.local_checkpoint_manifest_file_sha256 is not None
+        assert request.resource.local_checkpoint_sha256 is not None
+        manifest_path = _resolve_owned_file(
+            campaign_root,
+            request.resource.local_checkpoint_manifest_ref,
+            "checkpoint identity manifest",
+        )
+        if _file_sha256(manifest_path) != (request.resource.local_checkpoint_manifest_file_sha256):
+            raise ValueError("checkpoint identity-manifest file hash drift")
+        manifest = LocalCheckpointIdentityManifest.model_validate_json(
+            manifest_path.read_bytes(), strict=True
+        )
+        if manifest.checkpoint_identity_sha256 != request.resource.local_checkpoint_sha256:
+            raise ValueError("local checkpoint identity differs from its dispatch request")
+
+
+def _resolve_owned_file(root: Path, ref: str, label: str) -> Path:
+    _validate_relative(ref, f"{label} path")
+    try:
+        source = (root / PurePosixPath(ref)).resolve(strict=True)
+        source.relative_to(root.resolve(strict=True))
+    except (FileNotFoundError, ValueError) as exc:
+        raise ValueError(f"{label} is missing or escapes the campaign") from exc
+    return _regular_file(source, label)
+
+
 def _verify_bound_file(root: Path, ref: str, expected: str, label: str) -> Path:
     source = _resolve(root, ref, label)
     if _file_sha256(source) != expected:
@@ -945,5 +1424,6 @@ __all__ = [
     "ExistingRunnerBinding",
     "inspect_bytebound_conformance_campaign",
     "load_bytebound_campaign_plan",
+    "materialize_conformance_executor_bindings",
     "prepare_bytebound_conformance_campaign",
 ]

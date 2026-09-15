@@ -106,6 +106,36 @@ runtime/profile files and (for local models) exact checkpoint identity may be
 reported as `launch-ready`. Consequently the initial dry plan's next action is
 to materialize executor bindings, never to dispatch a model directly.
 
+`model-role materialize-bindings` closes that gap for generative roles without
+running a model. It writes one existing-runtime `runtime.json`, `profile.json`,
+and content-addressed `profile-set.json` per request, pins the case bytes,
+provider/model, role budget, project revision, output recording locator, and
+expected campaign receipt path, then reloads each artifact through the normal
+runtime/profile parsers. API configs are executable only with `--allow-live`;
+local configs require `--allow-local` and an exact checkpoint manifest identity.
+
+```bash
+scitaste model-role materialize-bindings \
+  --plan <CAMPAIGN_PLAN.json> \
+  --repository-root .
+```
+
+Local checkpoint identities use `scitaste-hf-checkpoint-manifest-v1`: complete
+content hashes for configuration/tokenizer/control files plus the safetensors
+header structure and byte size for every weight shard. The project-owned,
+self-hashed manifest is checked by the existing local-transformers backend
+before model loading, avoiding a full reread of giant tensor payloads for every
+request. The revision is derived from that identity hash. Unsupported installed
+Transformers architectures remain `blocked` rather than being mislabeled
+launch-ready.
+
+The campaign also carries a content-addressed model-selection guard: there is no
+default model; Qwen3-VL-2B is admissible only as a low-cost lower bound;
+inventory presence never selects a model; all registered inventory and
+task-required external candidates up to 10 GB may enter the candidate pool, but
+each role/scope selection still requires task-excluded receipts. Materializing
+bindings performs no download and does not promote any candidate.
+
 An empty receipt set is valid for planning/status and reports all role/scope
 bindings missing;
 it never promotes inventory presence into a selection. Formal runs bind the

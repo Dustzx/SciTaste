@@ -8,8 +8,11 @@ from scitaste.evaluation.model_role_conformance_campaign import (
     ConformanceRunnerKind,
     inspect_bytebound_conformance_campaign,
     load_bytebound_campaign_plan,
+    materialize_conformance_executor_bindings,
     prepare_bytebound_conformance_campaign,
 )
+from scitaste.model_nodes.profiles import load_model_node_profile_set
+from scitaste.model_nodes.runtime_config import load_model_node_runtime_config
 from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
 REPOSITORY_ROOT = Path(__file__).parents[2]
@@ -119,3 +122,47 @@ def test_status_compiles_no_receipts_as_incomplete_and_names_next_action(
         assert status.next_action.startswith("materialize executor bindings")
     else:
         assert status.blocked_request_ids
+
+
+def test_materialize_produces_real_existing_runtime_bindings_without_execution(
+    tmp_path: Path,
+) -> None:
+    outputs_root = tmp_path / "outputs"
+    _registered_project(outputs_root)
+    _, plan_path = prepare_bytebound_conformance_campaign(
+        CAMPAIGN_SPEC,
+        project_id="campaign-test",
+        run_id="b0-role-selection",
+        outputs_root=outputs_root,
+        repository_root=REPOSITORY_ROOT,
+    )
+
+    plan, _ = materialize_conformance_executor_bindings(
+        plan_path,
+        repository_root=REPOSITORY_ROOT,
+    )
+    status = inspect_bytebound_conformance_campaign(plan_path)
+
+    api_requests = [item for item in plan.requests if item.resource.execution_kind.value == "api"]
+    assert len(api_requests) == 20
+    assert all(item.readiness is CampaignReadiness.LAUNCH_READY for item in api_requests)
+    assert status.launch_ready_requests >= 20
+    assert status.readiness is CampaignReadiness.LAUNCH_READY
+    assert status.blocker_counts.get("embedding-dispatcher-not-implemented") == 2
+    assert plan.model_selection_guard.default_model_candidate_id is None
+    assert plan.model_selection_guard.qwen3_vl_2b_role == "low-cost-lower-bound-only"
+    assert plan.model_selection_guard.external_candidate_max_download_bytes == 10_000_000_000
+    for request in api_requests:
+        binding = request.existing_runner_binding
+        assert binding is not None and binding.materialized
+        runtime_path = plan_path.parent / str(binding.runtime_config_ref)
+        profile_set_path = plan_path.parent / str(binding.profile_set_ref)
+        runtime = load_model_node_runtime_config(runtime_path).config
+        profiles = load_model_node_profile_set(profile_set_path)
+        assert runtime.request_id == request.request_id
+        assert runtime.node_input["case_id"] == request.case_id
+        assert "expected" not in runtime.node_input
+        assert request.candidate.profile.profile_id in profiles.profiles
+        assert binding.campaign_run_result_ref == (f"receipts/{request.request_id}/RUN_RESULT.json")
+    assert plan.no_api_call_performed is True
+    assert plan.no_gpu_work_performed is True
