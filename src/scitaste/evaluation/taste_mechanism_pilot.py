@@ -1204,6 +1204,16 @@ def _precedent_projection(source: _LoadedSource, decision: TasteSourceDecisionSe
             "semantic_roles": ["alternative", "evidence", "limitation"],
             "value": context.predecision_review_context,
         }
+    if source.privacy.author_response:
+        fields["deidentified_author_response"] = {
+            "semantic_roles": ["justification", "evidence", "outcome"],
+            "value": source.privacy.author_response,
+        }
+    if source.privacy.revised_abstract != source.privacy.reviewed_abstract:
+        fields["revised_abstract"] = {
+            "semantic_roles": ["evidence", "outcome"],
+            "value": source.privacy.revised_abstract,
+        }
     return _canonical_json(
         {
             "schema_version": "1.0",

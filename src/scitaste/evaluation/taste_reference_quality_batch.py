@@ -327,6 +327,8 @@ def _quality_projection(source_projection: str) -> str:
         "predecision_review_context": ("alternative", "evidence", "limitation"),
         "verbatim_scientific_action": ("alternative", "scientific_action"),
         "observed_natural_outcome": ("outcome",),
+        "deidentified_author_response": ("justification", "evidence", "outcome"),
+        "revised_abstract": ("evidence", "outcome"),
     }
     required = {
         "reviewed_abstract",
