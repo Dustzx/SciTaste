@@ -84,7 +84,7 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
     """Distill a source-traceable principle with explicit transfer limits."""
 
     node_name = GROUNDED_TASTE_ABSTRACTION_NODE
-    prompt_version = "grounded-taste-abstraction-v4"
+    prompt_version = "grounded-taste-abstraction-v5"
     system_instruction = (
         "Distill one transferable scientific decision precedent from only the supplied canonical "
         "source projection. Return a closed decision with alternatives, selected action, "
@@ -110,12 +110,27 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         "to null because no reviewer-context source field is provided. Do not mention the request "
         "stage, domain tag, model, AI role, controller, or review workflow in any proposal text. "
         "Before returning JSON, check these exact-copy constraints and every grounding excerpt "
-        "against source_projection. "
+        "against source_projection. Every grounding support object must contain exactly the two "
+        "schema keys projection_field and verbatim_evidence; never add semantic-role annotations "
+        "or explanatory keys inside a support object. "
         "This is an untrusted proposal for independent review; a reviewer may be AI and must never "
         "be represented as human."
     )
     input_model = TasteAbstractionInput
     output_model = GroundedTasteCaseAbstraction
+
+    def _normalize_output_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        input_data: TasteAbstractionInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> dict[str, Any]:
+        """Drop only a redundant role echo that exactly matches source-projection metadata."""
+
+        del context, policy
+        return _normalize_redundant_grounding_role_echo(payload, input_data)
 
     def _normalize_proposal(
         self,
@@ -587,6 +602,38 @@ def _normalize_grounding_quote_escapes(
             supports.append(support)
         grounding.append(claim.model_copy(update={"supports": tuple(supports)}))
     return proposal.model_copy(update={"grounding": tuple(grounding)}) if changed else proposal
+
+
+def _normalize_redundant_grounding_role_echo(
+    payload: dict[str, Any],
+    input_data: TasteAbstractionInput,
+) -> dict[str, Any]:
+    try:
+        projection = json.loads(input_data.source_projection)
+        normalized = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return payload
+    fields = projection.get("fields") if isinstance(projection, dict) else None
+    grounding = normalized.get("grounding") if isinstance(normalized, dict) else None
+    if not isinstance(fields, dict) or not isinstance(grounding, list):
+        return payload
+    for claim in grounding:
+        supports = claim.get("supports") if isinstance(claim, dict) else None
+        if not isinstance(supports, list):
+            continue
+        for support in supports:
+            if not isinstance(support, dict) or "semantic_role_support" not in support:
+                continue
+            field = fields.get(support.get("projection_field"))
+            if not isinstance(field, dict):
+                continue
+            roles = field.get("semantic_roles")
+            if roles is None and isinstance(field.get("semantic_role"), str):
+                roles = [field["semantic_role"]]
+            echoed = support.get("semantic_role_support")
+            if isinstance(roles, list) and echoed in roles:
+                support.pop("semantic_role_support")
+    return normalized
 
 
 def load_verified_taste_abstraction_ledger(

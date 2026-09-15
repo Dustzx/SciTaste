@@ -6,7 +6,7 @@ import json
 from abc import ABC
 from copy import deepcopy
 from decimal import Decimal
-from typing import Generic, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
 
@@ -163,8 +163,14 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         )
         parsed_proposal: OutputT | None = None
         try:
-            payload_json = json.dumps(
+            proposal_payload = self._normalize_output_payload(
                 response.output_payload,
+                input_data=validated_input,
+                context=validated_context,
+                policy=validated_policy,
+            )
+            payload_json = json.dumps(
+                proposal_payload,
                 ensure_ascii=False,
                 allow_nan=False,
                 separators=(",", ":"),
@@ -226,6 +232,19 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
 
         del input_data, context, policy
         return proposal
+
+    def _normalize_output_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        input_data: InputT,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> dict[str, Any]:
+        """Apply a node-owned structural adapter before typed parsing."""
+
+        del input_data, context, policy
+        return payload
 
     def _build_request(
         self,
