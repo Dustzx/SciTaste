@@ -4604,3 +4604,34 @@ requirements and frozen budgets choose the lane. The owner's standing permission
 allows an individually identified model resource up to 10 GiB to be downloaded;
 every download and model use still enters the exact run manifest and cannot be
 triggered merely by loading this program file.
+
+### ADR-142: Training is a research-workload property, not a SciTaste product fork
+
+Status: accepted and implemented at the shared workload-contract boundary; one
+T0 runtime and one T1 runtime are available, while formal paired results remain
+open.
+
+SciTaste has one system identity. `training-free-research` means that the
+scientific workload changes code, analysis, prompts, retrieval, or algorithms
+without updating a task model. `training-based-research` means that the
+scientific workload trains or fine-tunes a benchmark-owned task model and must
+retain its initialization, training recipe, checkpoint, learning evidence, and
+resource use. Neither term says whether SciTaste is a different product or uses
+a different research-agent backbone.
+
+`ResearchWorkloadContract` makes that distinction executable. A T0 contract
+rejects task-model weight updates, training recipes, and produced checkpoints;
+a T1 contract requires all of them. Both contracts keep the SciTaste research
+backbone frozen and allow the same outcome-updated Taste state. Neural training
+of a Taste scorer remains an optional mechanism study rather than a prerequisite
+for either workload.
+
+The NewtonBench interactive runtime is the current T0 route. Its measurement
+RNG is isolated per event and bound to an environment seed; new protocols and
+receipts carry an opaque hidden-environment commitment. Locked Taste actions are
+execution constraints: an incompatible model proposal terminates as
+`agent_noncompliance` before tools or the scorer run. The MLRC Perception route
+is the current T1 route and explicitly declares `training-based-research` while
+retaining its fixed initialization, 50-epoch recipe, candidate checkpoint, and
+one-way hidden scorer. T0 and T1 outcomes are reported separately rather than
+pooled into one headline score.

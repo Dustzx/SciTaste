@@ -1,16 +1,16 @@
 # Resource catalog layout
 
-`compute_catalog_v12.yaml` is the current project-superordinate resource index.
+`compute_catalog_v13.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
 
 ```text
 configs/resources/
-├── compute_catalog_v12.yaml
+├── compute_catalog_v13.yaml
 ├── assets/
 │   └── model_asset_catalog_v1.yaml
 ├── api/
-│   ├── deepseek_v4_flash_v3.yaml       # current V4 identity and tariff
-│   ├── deepseek_v4_flash*.yaml         # immutable earlier V4 snapshots
+│   ├── deepseek_v41_flash_v5.yaml      # current V4.1 identity and peak tariff ceiling
+│   ├── deepseek_v4_flash*.yaml         # immutable retired V4 snapshots
 │   ├── deepseek_v41_flash*.yaml        # immutable V4.1 snapshots
 │   ├── zhipu_glm53_flash_v3.yaml
 │   └── bailian_qwen38_max.yaml
@@ -28,7 +28,7 @@ configs/resources/
 │       ├── scijudge_4b_2605_remote_v1.yaml
 │       └── scithinker_4b_remote_v1.yaml
 ├── projects/
-│   └── scitaste_self_development_v12.yaml
+│   └── scitaste_self_development_v13.yaml
 └── observations/
     ├── *.yaml                 # historical API and remote-host observations
     ├── v2/                    # local v2 observations
@@ -81,6 +81,12 @@ task-excluded load/final-channel B0; the Thinking base also retained its failed
 1024-token attempt and requires a 2048-token role envelope. These resources are
 narrow external controls, not SciTaste Native/Base arms or model-selection
 authority.
+V13 follows the 2026-09-10 provider release: `deepseek-flash` now serves
+`DeepSeek-V4.1-Flash`, while the retired `deepseek-v4-flash` alias is only a
+temporary compatibility route to the same current service. It makes the
+canonical V4.1 resource current, moves V4 to historical status, and uses the
+published peak rates as admission ceilings; prior files and no-run proposals
+remain immutable.
 
 Generation as Content projects both a project's attached resources and compatible
 catalog alternatives. A user-reviewed, model-authored resource directive may add

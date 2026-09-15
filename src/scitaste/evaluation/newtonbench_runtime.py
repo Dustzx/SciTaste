@@ -6,11 +6,14 @@ import hashlib
 import importlib
 import json
 import math
+import random
 import re
 import subprocess
 import sys
 import threading
 import types
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from time import perf_counter
 from typing import Protocol, runtime_checkable
@@ -31,7 +34,7 @@ _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _COMMIT = r"^[0-9a-f]{40}$"
 _MODULE = r"^m[0-9]+_[a-z0-9_]+$"
 _IMPORT_LOCK = threading.RLock()
-_JUDGE_LOCK = threading.RLock()
+_RNG_LOCK = threading.RLock()
 
 
 class NewtonBenchTask(BaseModel):
@@ -44,6 +47,7 @@ class NewtonBenchTask(BaseModel):
     system: str = Field(pattern=r"^(vanilla_equation|simple_system|complex_system)$")
     law_version: str = Field(pattern=r"^v[0-9]+$")
     noise_level: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    environment_seed: int = Field(default=0, ge=0, le=2**32 - 1)
     score_seed: int = Field(default=0, ge=0, le=2**32 - 1)
     code_assisted: bool = False
 
@@ -132,6 +136,7 @@ class NewtonBenchToolbox:
             self.checkout / "modules" / "common" / "evaluation.py"
         )
         self._module_sha256 = _module_tree_sha256(self.checkout / "modules" / task.module)
+        self._experiment_index = 0
 
     @property
     def task_id(self) -> str:
@@ -153,11 +158,30 @@ class NewtonBenchToolbox:
         )
 
     @property
+    def environment_sha256(self) -> str:
+        """Opaque commitment to the exact hidden law and measurement process."""
+
+        return content_sha256(
+            {
+                "implementation": "scitaste-newtonbench-environment-v2",
+                "benchmark": "NewtonBench",
+                "repository_commit": self.repository_commit,
+                "module_sha256": self._module_sha256,
+                "difficulty": self.task.difficulty,
+                "system": self.task.system,
+                "law_version": self.task.law_version,
+                "noise_level": self.task.noise_level,
+                "environment_seed": self.task.environment_seed,
+            }
+        )
+
+    @property
     def fingerprint(self) -> str:
         return content_sha256(
             {
-                "implementation": "scitaste-newtonbench-toolbox-v1",
+                "implementation": "scitaste-newtonbench-toolbox-v2",
                 "task_sha256": self.task_sha256,
+                "environment_sha256": self.environment_sha256,
                 "task_prompt_sha256": content_sha256(self.task_prompt),
                 "evaluation_sha256": self._evaluation_sha256,
                 "symbolic_judge_sha256": self.symbolic_judge.fingerprint,
@@ -173,17 +197,26 @@ class NewtonBenchToolbox:
     ) -> JsonValue:
         results: list[JsonValue] = []
         for request in requests:
-            value = self.module.run_experiment_for_module(
-                **request.parameters,
-                noise_level=self.task.noise_level,
-                difficulty=self.task.difficulty,
-                system=self.task.system,
-                law_version=self.task.law_version,
+            event_index = self._experiment_index
+            event_seed = _derive_experiment_seed(
+                environment_seed=self.task.environment_seed,
+                event_index=event_index,
+                parameters=request.parameters,
             )
+            with _RNG_LOCK, _isolated_random_state(event_seed):
+                value = self.module.run_experiment_for_module(
+                    **request.parameters,
+                    noise_level=self.task.noise_level,
+                    difficulty=self.task.difficulty,
+                    system=self.task.system,
+                    law_version=self.task.law_version,
+                )
+            self._experiment_index += 1
             results.append(_json_value(value))
         return {
             "tool": "run_experiments",
             "task_id": self.task_id,
+            "environment_sha256": self.environment_sha256,
             "results": results,
         }
 
@@ -195,7 +228,6 @@ class NewtonBenchToolbox:
     def score(self, submission: str) -> InteractiveObjectiveScore:
         common_evaluation = importlib.import_module("modules.common.evaluation")
         original_judge = common_evaluation.llm_symbolic_equivalence_judge
-        prior_random_state = np.random.get_state()
         started = perf_counter()
 
         def bound_judge(
@@ -210,21 +242,20 @@ class NewtonBenchToolbox:
                 parameter_description=param_description,
             )
 
-        with _JUDGE_LOCK:
+        with _RNG_LOCK:
             try:
-                np.random.seed(self.task.score_seed)
-                common_evaluation.llm_symbolic_equivalence_judge = bound_judge
-                raw = self.module.evaluate_law(
-                    submission,
-                    self.module.PARAM_DESCRIPTION,
-                    difficulty=self.task.difficulty,
-                    law_version=self.task.law_version,
-                    judge_model_name=self.symbolic_judge.model,
-                    trial_info={"trial_id": self.task_id},
-                )
+                with _isolated_random_state(self.task.score_seed):
+                    common_evaluation.llm_symbolic_equivalence_judge = bound_judge
+                    raw = self.module.evaluate_law(
+                        submission,
+                        self.module.PARAM_DESCRIPTION,
+                        difficulty=self.task.difficulty,
+                        law_version=self.task.law_version,
+                        judge_model_name=self.symbolic_judge.model,
+                        trial_info={"trial_id": self.task_id},
+                    )
             finally:
                 common_evaluation.llm_symbolic_equivalence_judge = original_judge
-                np.random.set_state(prior_random_state)
 
         exact = float(raw.get("exact_accuracy", 0.0))
         if not math.isfinite(exact):
@@ -242,6 +273,7 @@ class NewtonBenchToolbox:
                 "evaluation_sha256": self._evaluation_sha256,
                 "module_sha256": self._module_sha256,
                 "task": self.task.model_dump(mode="json"),
+                "environment_sha256": self.environment_sha256,
                 "judge_fingerprint": self.symbolic_judge.fingerprint,
             }
         )
@@ -260,6 +292,38 @@ class NewtonBenchToolbox:
             usage=self.symbolic_judge.last_usage,
             latency_ms=latency_ms,
         )
+
+
+def _derive_experiment_seed(
+    *,
+    environment_seed: int,
+    event_index: int,
+    parameters: dict[str, JsonValue],
+) -> int:
+    digest = content_sha256(
+        {
+            "namespace": "newtonbench-measurement-event-v1",
+            "environment_seed": environment_seed,
+            "event_index": event_index,
+            "parameters": parameters,
+        }
+    )
+    return int(digest[:8], 16)
+
+
+@contextmanager
+def _isolated_random_state(seed: int) -> Iterator[None]:
+    """Seed benchmark-global RNGs for one event and restore caller state."""
+
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    try:
+        random.seed(seed)
+        np.random.seed(seed)
+        yield
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
 
 
 class StructuredNewtonBenchJudge:

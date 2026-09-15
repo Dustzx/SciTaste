@@ -98,13 +98,13 @@ candidate was also syntactically invalid. This is retained negative engineering
 evidence, not a reason to invent a zero price, silently repair code, or bypass
 admission.
 
-DeepSeek's live official catalog was rechecked again on 2026-09-13 after an
-earlier same-day snapshot. The current canonical callable ID is
-`deepseek-v4-flash` and the displayed family is `DeepSeek-V4-Flash`. Catalog v6
-binds that identity and the current tariff without modifying the historical
-`deepseek-flash` / `DeepSeek-V4.1-Flash` records; every future call must retain
-the provider-returned identifier. No current approved authenticated response is
-registered.
+DeepSeek's live official catalog was rechecked on 2026-09-16 after the V4.1
+release. The current canonical callable ID is `deepseek-flash` and the displayed
+family is `DeepSeek-V4.1-Flash`. Catalog v13 binds that identity and the
+conservative peak tariff without modifying the retired V4 records; every future
+call must retain the provider-returned identifier. The old `deepseek-v4-flash`
+name is only a temporary compatibility route. No current approved authenticated
+response is registered.
 Any later call must also be bracketed by the no-task-data identity protocol and
 must open a new non-pooled stratum if the provider identity changes.
 

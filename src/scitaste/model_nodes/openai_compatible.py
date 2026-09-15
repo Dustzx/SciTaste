@@ -75,7 +75,16 @@ class HttpxStructuredTransport:
     ) -> StructuredHTTPResponse:
         with httpx.Client(timeout=timeout) as client:
             response = client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                # Preserve a bounded provider-owned error code/message without
+                # echoing request headers, credentials, or the submitted prompt.
+                raise httpx.HTTPStatusError(
+                    _provider_http_error_summary(response),
+                    request=response.request,
+                    response=response,
+                ) from exc
             raw_body = response.text
         try:
             data = json.loads(raw_body, parse_constant=_reject_non_finite_json)
@@ -86,6 +95,33 @@ class HttpxStructuredTransport:
         if not isinstance(data, dict):
             raise StructuredProviderResponseError("provider response root must be an object")
         return StructuredHTTPResponse(data=data, raw_body=raw_body)
+
+
+def _provider_http_error_summary(response: httpx.Response) -> str:
+    status = response.status_code
+    code = "unknown"
+    message = "provider rejected the request"
+    try:
+        payload = response.json()
+    except (json.JSONDecodeError, ValueError):
+        payload = None
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        if isinstance(error, dict):
+            raw_code = error.get("code")
+            raw_message = error.get("message")
+            if isinstance(raw_code, (str, int)):
+                code = str(raw_code)[:120]
+            if isinstance(raw_message, str) and raw_message.strip():
+                message = raw_message.strip()[:1_000]
+        else:
+            raw_code = payload.get("code")
+            raw_message = payload.get("message")
+            if isinstance(raw_code, (str, int)):
+                code = str(raw_code)[:120]
+            if isinstance(raw_message, str) and raw_message.strip():
+                message = raw_message.strip()[:1_000]
+    return f"provider HTTP {status} (code={code}): {message}"
 
 
 class StructuredOpenAICompatibleConfig(BaseModel):
@@ -403,10 +439,31 @@ def _parse_json_object(text: str) -> dict[str, JsonValue]:
     try:
         value = json.loads(cleaned, parse_constant=_reject_non_finite_json)
     except (json.JSONDecodeError, ValueError) as exc:
-        raise StructuredProviderResponseError("model did not return one valid JSON object") from exc
+        shape = _structured_text_shape(cleaned)
+        digest = hashlib.sha256(cleaned.encode()).hexdigest()
+        raise StructuredProviderResponseError(
+            "model did not return one valid JSON object "
+            f"(shape={shape}, chars={len(cleaned)}, sha256={digest})"
+        ) from exc
     if not isinstance(value, dict):
         raise StructuredProviderResponseError("model response JSON must be an object")
     return value
+
+
+def _structured_text_shape(value: str) -> str:
+    if not value:
+        return "empty"
+    if value.startswith("<think") or value.startswith("<analysis"):
+        return "reasoning-markup"
+    if value.startswith("{"):
+        return "object-like"
+    if value.startswith("["):
+        return "array-like"
+    if value.startswith("```"):
+        return "code-fence"
+    if "{" in value:
+        return "prose-before-object"
+    return "prose-or-markup-without-object"
 
 
 def _tool_call_proposals(value: JsonValue | None) -> list[ToolCallProposal]:

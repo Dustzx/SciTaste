@@ -1,0 +1,61 @@
+schema_version: "1.0"
+program_id: newtonbench-taste-development-v2
+project_id: scitaste-self-development
+supersedes_for_remaining_tasks: newtonbench-taste-development-v1
+purpose: source-disjoint prospective scientific outcomes after structured-action adapter repair
+unified_scitaste_system: true
+research_workload_paradigm: training-free-research
+taste_mechanism: frozen-backbone-outcome-updated-controller-state
+formal_evidence: false
+policy_update_authorized: false
+adapter_change:
+  prior_configuration: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v1.yaml
+  current_configuration: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v2.yaml
+  retained_failures:
+    - 2026-09-16__zhipu-glm53__newton-fourier-dev__seed-29
+    - 2026-09-16__zhipu-glm53__newton-fourier-dev-v2__seed-29
+  diagnosis: high-thinking-content-did-not-reliably-satisfy-json-action-contract
+  repair: disable-hidden-reasoning-and-sampling-at-machine-action-boundary
+  source: https://docs.bigmodel.cn/cn/guide/capabilities/thinking
+  interpretation: provider-adapter-repair-not-a-scientific-method-change
+benchmark:
+  benchmark_id: newtonbench
+  repository_commit: 912a4ba5f4356ddd06acc16e44460ca30be4abc2
+  checkout: outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout
+  qualification: docs/research/data/newtonbench_t0_source_qualification_v1.yaml
+  limits: configs/evaluation/newtonbench/development_limits_v1.json
+tasks:
+  - task_config: configs/evaluation/newtonbench/development_task_fourier_v1.json
+    source_stratum: heat-conduction-medium-simple-v1
+  - task_config: configs/evaluation/newtonbench/development_task_heat_v1.json
+    source_stratum: heat-transfer-hard-complex-v2
+model_roles:
+  research_agent:
+    provider: zhipu-direct
+    model_id: glm-5.3-flash
+    configuration: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v2.yaml
+  symbolic_judge:
+    provider: zhipu-direct
+    model_id: glm-5.3-flash
+    configuration: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v2.yaml
+    independence_limit: same-model-development-judge-not-valid-for-formal-evidence
+  attribution_review:
+    required_models: 2
+    distinct_model_identities: true
+    status: pending-after-trajectory
+resource_ceiling:
+  api_calls_per_task: 9
+  maximum_total_tokens_per_task: 120000
+  maximum_tasks: 2
+  gpu_hours: 0
+  provider_retries_inside_trajectory: 0
+execution_contract:
+  - register-one-project-owned-run-per-task
+  - freeze-source-group-task-tools-models-and-budget-before-first-call
+  - lock-each-controller-decision-before-agent-or-tool-execution
+  - terminalize-provider-format-failures-without-retry-or-imputation
+  - attach-terminal-hidden-score-strictly-after-lock
+  - quarantine-episode-candidates-until-two-model-independent-attribution
+claim_boundary:
+  establishes: adapter-repaired-development-trajectories-and-quarantined-Taste-candidates
+  does_not_establish: [SciTaste-effectiveness, formal-NewtonBench-performance, human-validity]

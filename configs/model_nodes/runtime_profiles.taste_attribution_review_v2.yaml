@@ -1,0 +1,14 @@
+# Development panel: both reviewers are model-distinct and disjoint from the
+# GLM-5.3-Flash research-agent producer. This does not claim provider-family or
+# human independence and is not formal construct-validity evidence.
+schema_version: "1.0"
+profile_set_id: taste-attribution-review-v2
+profile_set_version: 2.0.0
+live_enabled: true
+profiles:
+  - path: profile_bailian_qwen38max_taste_review_v1.yaml
+    sha256: a89a76ee0460ca16ddf9e8b5bcec4983a3d278003cf0ced3e30e13aa72f2a3e9
+    profile_sha256: f33dbb8574d4228ab6df1c34161db65e49526ae43776dea878cd6691ae89ae36
+  - path: profile_bailian_qwen3max_taste_review_v2.yaml
+    sha256: 4dff0f85ad26ae56214b19dd2e1536a6c60d5bcd7d1b1e0cb70f0089bbf1d986
+    profile_sha256: 2575e3d8a9413dd3633aa20858330aabecf9d012d1284803e8cb35b80255b4aa

@@ -118,11 +118,11 @@ no silent fallback between Zhipu and DeepSeek.
 | `robustness-v2-multitask-prepilot` | historical local small-model scope with an invalid endpoint/task binding | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablations × 2 tasks × 2 seeds = 24 cells | immutable no-run history; rebuild against qualified objective-score tasks or an explicit package-review endpoint before any GPU approval |
 | `robustness-v1-prepilot` | historical local scope proposal | the same local Qwen checkpoint candidate | 6 ablation × task × seed cells | immutable one-task/one-seed history |
 
-The later 2026-09-13 official DeepSeek catalog exposes callable ID
-`deepseek-v4-flash` and family `DeepSeek-V4-Flash`. Resource catalog v6 records
-the current tariff—USD 0.0028/M cache-hit input, USD 0.14/M cache-miss input,
-and USD 0.28/M output. The V4.1 snapshot and every proposal that binds it remain
-historical no-run evidence, not current launch candidates. A new
+The 2026-09-10 DeepSeek V4.1 release exposes canonical callable ID
+`deepseek-flash` and family `DeepSeek-V4.1-Flash`. Resource catalog v13 records
+the conservative peak tariff—USD 0.006/M cache-hit input, USD 0.30/M cache-miss
+input, and USD 1.20/M output. The prior V4 snapshot and every proposal that
+binds it remain historical no-run evidence, not current launch candidates. A new
 proposal and an authenticated returned-model observation are required. See the
 official [model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 

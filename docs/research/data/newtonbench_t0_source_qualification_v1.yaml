@@ -88,23 +88,26 @@ runtime_implementation:
   state: implemented-and-development-integrated
   provider_neutral_loop:
     locator: src/scitaste/evaluation/interactive_research.py
-    sha256: 896bef08f7756209b95323ef1998b0d4457fa1690379aef51ebe34b891ac4b1d
+    sha256: 8c324647367c310b8b2d4f246b94940d88dd10acd47f3222715e21db3e7917b1
     capabilities:
       - exclusive-experiment-code-or-submit-actions
       - fixed-turn-experiment-code-token-and-cost-envelopes
       - immutable-turn-evidence-and-terminal-failure-receipts
       - failure-retaining-task-level-paired-effects
+      - fail-closed-locked-action-compliance
   causal_taste_bridge:
     locator: src/scitaste/evaluation/interactive_taste.py
-    sha256: 6de03d2e5888881da1be8f6cc23fadf42c471102bcc6ebb488856480c76310d6
+    sha256: 835deeaaaa0c1b2daf4dc638d10a1523f9ebcc179c4989bc397dfe4e759d53dc
     treatment: same-frozen-backbone-outcome-updated-policy-at-weight-one-versus-zero
     condition_side_channel_prevented: true
     audit_envelope_hidden_from_research_agent: true
   benchmark_toolbox:
     locator: src/scitaste/evaluation/newtonbench_runtime.py
-    sha256: cb80da8f9148ba4806128731bede4a4371dc6476c8e8b258d0f7c2ca089760f1
+    sha256: bdf719a8e570c592b5a36ebdb66f9a92ad5fe1bcd17f15da805598116a2a869b
     hidden_law_and_numerical_test_points_agent_visible: false
     upstream_provider_path_disabled: true
+    deterministic_measurement_replay: true
+    hidden_environment_commitment_in_new_protocols_and_receipts: true
   code_interpreter:
     locator: src/scitaste/evaluation/sandboxed_code.py
     sha256: 268b245827cb9936c91e6f9a44f60be86c9645a057a1ee0a5e2dff9cccd6d84b
@@ -113,7 +116,7 @@ runtime_implementation:
     limits: [wall-time, cpu-time, memory, process-count, file-output, captured-output]
   preparation_entrypoint:
     locator: scripts/prepare_newtonbench_interactive.py
-    sha256: 737959c2cae5fd54142133151c0260cfe4eefc22e144b940b155ae2127e7446d
+    sha256: 2d55edbd07a683d4b1959aa09ea0a590b34728c89a0e5d6fe015702cd092d7b4
   execution_entrypoint:
     locator: scripts/run_newtonbench_interactive.py
     sha256: 9aa5b91f58b93cca78b03d05029b8aae2b2d9ec82618ef3f7a0c6321966e4993

@@ -23,7 +23,7 @@ budget, approval, or execution authority. Existing resources therefore cannot
 silently redefine the paper's scientific question.
 
 A rolling API alias is not rejected merely because it is rolling. DeepSeek's
-current official route is `deepseek-v4-flash` / `DeepSeek-V4-Flash`, whereas
+current official route is `deepseek-flash` / `DeepSeek-V4.1-Flash`, whereas
 GLM-5.3-Flash currently requires a temporal-only stratum. Both require
 approved authenticated sentinels around any later call window; drift closes the
 window and creates a non-pooled stratum. See `docs/API_MODEL_IDENTITY.md`.

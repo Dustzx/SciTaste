@@ -96,6 +96,8 @@ class RelatedWorkModelCandidate(BaseModel):
     task_fit_rationale: str = Field(min_length=20)
     access_state: Literal[
         "available-exact",
+        "available-exact-b0-passed",
+        "available-exact-b0-passed-with-2048-token-envelope",
         "download-authorized-pending",
         "access-not-configured",
         "historical-comparability-only",
@@ -122,7 +124,7 @@ class RelatedWorkModelCandidate(BaseModel):
             plane in self.planes for plane in ("paper-reviewer", "adjudicator")
         ):
             raise ValueError("impact prediction is not full-paper peer review")
-        if self.access_state == "available-exact" and self.resource_locator is None:
+        if self.access_state.startswith("available-exact") and self.resource_locator is None:
             raise ValueError("available exact candidates require a resource locator")
         if self.source_kind == "benchmark-owned-model" and (
             self.selection_state != "task-model-fixed-by-benchmark"
@@ -216,7 +218,7 @@ class RelatedWorkModelCatalog(BaseModel):
             if not set(requirement.required_experimental_roles).issubset(roles):
                 raise ValueError(f"missing experimental model role for {plane}")
 
-        if all(item.access_state == "available-exact" for item in self.candidates):
+        if all(item.access_state.startswith("available-exact") for item in self.candidates):
             raise ValueError("candidate universe appears improperly restricted to inventory")
         return self
 

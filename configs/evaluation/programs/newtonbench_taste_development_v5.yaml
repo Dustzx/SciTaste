@@ -1,0 +1,35 @@
+schema_version: "1.0"
+program_id: newtonbench-taste-development-v5
+project_id: scitaste-self-development
+supersedes_for_remaining_tasks: newtonbench-taste-development-v4
+purpose: complete T0 development outcomes with a realistic always-thinking output envelope
+unified_scitaste_system: true
+research_workload_paradigm: training-free-research
+taste_mechanism: frozen-backbone-outcome-updated-controller-state
+formal_evidence: false
+policy_update_authorized: false
+adapter_change:
+  prior_configuration: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v4.yaml
+  current_configuration: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v5.yaml
+  retained_failure: 2026-09-16__zhipu-glm53__newton-fourier-dev-v6__seed-29
+  diagnosis: provider-finish-reason-length-under-8192-output-envelope
+  repair: increase-per-call-ceiling-to-32768-with-unchanged-120000-task-cap
+  unchanged: [model-id, json-response-mode, low-reasoning, zero-retry]
+tasks:
+  - configs/evaluation/newtonbench/development_task_fourier_v1.json
+  - configs/evaluation/newtonbench/development_task_heat_v1.json
+resource_ceiling:
+  api_calls_per_task: 9
+  maximum_total_tokens_per_task: 120000
+  maximum_output_tokens_per_call: 32768
+  maximum_tasks: 2
+  gpu_hours: 0
+  provider_retries_inside_trajectory: 0
+execution_contract:
+  - immutable-run-per-attempt
+  - terminalize-all-provider-and-tool-failures
+  - preserve-preaction-locks-and-terminal-receipts
+  - quarantine-all-Taste-candidates-pending-independent-attribution
+claim_boundary:
+  establishes: development-only-scientific-outcome-trajectories
+  does_not_establish: [SciTaste-effectiveness, formal-benchmark-performance]

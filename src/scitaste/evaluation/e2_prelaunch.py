@@ -28,6 +28,10 @@ from scitaste.evaluation.mlrc_perception_runtime import (
 from scitaste.evaluation.related_work_model_selection import (
     load_related_work_model_catalog,
 )
+from scitaste.evaluation.research_workload import (
+    ResearchWorkloadContract,
+    ResearchWorkloadParadigm,
+)
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -128,6 +132,9 @@ class E2ProjectBinding(BaseModel):
 class E2TaskWorkload(BaseModel):
     model_config = _CONFIG
 
+    workload_paradigm: Literal[ResearchWorkloadParadigm.TRAINING_BASED] = (
+        ResearchWorkloadParadigm.TRAINING_BASED
+    )
     benchmark_id: Literal["mlrc-bench"]
     task_id: Literal["perception-temporal-action-loc"]
     runtime: E2FileBinding
@@ -162,6 +169,36 @@ class E2TaskWorkload(BaseModel):
         if self.tiou_thresholds != (0.1, 0.2, 0.3, 0.4, 0.5):
             raise ValueError("E2 MLRC Perception requires the benchmark tIoU thresholds")
         return self
+
+    @property
+    def research_workload_contract(self) -> ResearchWorkloadContract:
+        """Project the benchmark recipe into the shared SciTaste T1 contract."""
+
+        return ResearchWorkloadContract.create(
+            contract_id="mlrc-perception-t1",
+            task_id=self.task_id,
+            paradigm=ResearchWorkloadParadigm.TRAINING_BASED,
+            task_model_id="loc-point-transformer",
+            task_model_weight_updates=True,
+            task_model_initialization_sha256=content_sha256(
+                {
+                    "architecture": self.architecture,
+                    "initialization": self.initialization,
+                    "initialization_seed": self.initialization_seed,
+                    "initial_task_weights": self.initial_task_weights,
+                }
+            ),
+            training_recipe_sha256=content_sha256(
+                {
+                    "epochs": self.training_epochs,
+                    "warmup_epochs": self.warmup_epochs,
+                    "batch_size": self.batch_size,
+                    "input_feature_dimension": self.input_feature_dimension,
+                    "class_count": self.class_count,
+                }
+            ),
+            candidate_checkpoint_required=True,
+        )
 
 
 class E2ModelCandidate(BaseModel):
@@ -519,6 +556,11 @@ class E2PrelaunchManifest(BaseModel):
 
     @model_validator(mode="after")
     def lifecycle_and_commands_are_closed(self) -> E2PrelaunchManifest:
+        if (
+            self.workload.research_workload_contract.paradigm
+            is not ResearchWorkloadParadigm.TRAINING_BASED
+        ):
+            raise ValueError("E2 must bind one training-based research workload")
         phase_ids = tuple(item.phase_id for item in self.workflow)
         if phase_ids != _EXPECTED_WORKFLOW:
             raise ValueError("E2 workflow must close the complete project lifecycle in order")

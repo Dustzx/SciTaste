@@ -1,0 +1,18 @@
+# Development-only structured backend. Cost telemetry is intentionally unknown;
+# the run retains token counts and uses a hard call/token ceiling with zero retry.
+provider: zhipu-direct
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.3-flash
+api_key_env: ZAI_API_KEY
+live_enabled: true
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 8192
+pricing_confirmed: false
+pricing: null
+unpriced_engineering_probe: true
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled
+  reasoning_effort: high

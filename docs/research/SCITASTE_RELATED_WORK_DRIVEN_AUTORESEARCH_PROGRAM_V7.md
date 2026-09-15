@@ -172,7 +172,7 @@ The immediate critical path is therefore:
 
 The current no-run E2 handoff is
 [`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
-SHA-256 `35d40ace350bf8ab5e7c7e85491209b08e7dcfcf2ae4767b91e0106bd0d92357`.
+SHA-256 `f21aa7747088b1f6fd784caa0866d7d8e1a98d6839463249b1965944874de10f`.
 Its eleven static scientific and execution boundaries pass, including exact
 bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
 and the related-work candidate catalog. The E2 pool now includes unconfigured

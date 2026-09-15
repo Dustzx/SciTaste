@@ -20,11 +20,12 @@ The current no-run protocol is
 
 DeepSeek and Zhipu currently have different evidence:
 
-- DeepSeek's current official catalog names callable ID `deepseek-v4-flash` and
-  family `DeepSeek-V4-Flash`. Catalog v6 binds its current public tariff. The
-  earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` snapshot remains historical
-  evidence only. A formal window still needs an explicitly approved
-  authenticated start/end attestation.
+- DeepSeek's current official catalog names canonical callable ID
+  `deepseek-flash` and served family `DeepSeek-V4.1-Flash`. Catalog v13 binds
+  the current public peak tariff as a conservative ceiling. The retired
+  `deepseek-v4-flash` name is only a temporary compatibility route and remains
+  historical evidence, not a distinct current model. A formal window still
+  needs an explicitly approved authenticated start/end attestation.
 - Zhipu's official page names callable ID `glm-5.3-flash`, but does not disclose
   an immutable served revision or an exact machine-readable API tariff on that
   page. It therefore uses a shorter temporal-only stratum and remains ineligible

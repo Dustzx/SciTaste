@@ -1,0 +1,17 @@
+schema_version: "1.2"
+catalog_id: scitaste-shared-compute-v13
+resource_refs:
+  - {resource_id: deepseek-v41-flash, kind: api_model, locator: api/deepseek_v41_flash_v5.yaml, sha256: b62a705f6e2ba4a7209685c7ba2fa57b234bfc568924cbe5b95d277727d78cca, selection_status: current}
+  - {resource_id: deepseek-v4-flash, kind: api_model, locator: api/deepseek_v4_flash_v3.yaml, sha256: bf227050319c6720ec4d4eb4fe3d245f4b639bf5716b210cb415b96a64f8e349, selection_status: historical}
+  - {resource_id: zhipu-glm53-flash, kind: api_model, locator: api/zhipu_glm53_flash_v3.yaml, sha256: 0810d7b015a6d4d3de3572e1a47689221410096ec0bd4ec061b087ac67d5373a, selection_status: current}
+  - {resource_id: bailian-qwen38-max, kind: api_model, locator: api/bailian_qwen38_max.yaml, sha256: 3bb2757dc050eb4cf58c53e96693309e018491c57e4bf0c0c87580d24c987a37, selection_status: disabled}
+  - {resource_id: gpu-host-local-3090, kind: gpu_host, locator: gpu/hosts/local_3090_v3.yaml, sha256: f4075e4eb5de45c64b69abac94808ad00d652b5161fc4d747738f3cc80f2ef23, selection_status: current}
+  - {resource_id: gpu-host-3090-2, kind: gpu_host, locator: gpu/hosts/remote_3090_2_verified_20260912.yaml, sha256: 9ce8d2e4d97a8361c0ae7dd0471bcf772aacfc3d13877290bc154684c3d8089c, selection_status: current}
+  - {resource_id: qwen3-vl-2b-local-47f9c0e0, kind: model_checkpoint, locator: gpu/checkpoints/qwen3_vl_2b_instruct_local_v3.yaml, sha256: 82237212401bea2f844c9055aef69b5f6456bee9cbd55e50932534fe1ce1eec6, selection_status: current}
+  - {resource_id: qwen3-5-4b-local-b4e05070, kind: model_checkpoint, locator: gpu/checkpoints/qwen3_5_4b_local.yaml, sha256: 8814f17b95a18831586338a13c9e26a850bc19b696b6df8a1c067ceaa676ccd2, selection_status: current}
+  - {resource_id: qwen3-5-4b-remote-b4e05070, kind: model_checkpoint, locator: gpu/checkpoints/qwen3_5_4b_remote.yaml, sha256: 6528061f2657a5fa9f3ced6418324260f9164ef604416491a22944a7ca7cb877, selection_status: current}
+  - {resource_id: qwen3-5-9b-remote-eb331598, kind: model_checkpoint, locator: gpu/checkpoints/qwen3_5_9b_remote_v2.yaml, sha256: 4655f2d511e4f4a2dff24a1356da34003a09ca63025e1702d595599d49e1b817, selection_status: current}
+  - {resource_id: scijudge-4b-2605-remote-da748ee3, kind: model_checkpoint, locator: gpu/checkpoints/scijudge_4b_2605_remote_v1.yaml, sha256: 41417c8dd4afbc7920f331768ac8fbb3ff00d231bb1f64910bc126729e92e67c, selection_status: current}
+  - {resource_id: scithinker-4b-remote-e6544721, kind: model_checkpoint, locator: gpu/checkpoints/scithinker_4b_remote_v1.yaml, sha256: 67f8b83cf3584e6a7bc28de764ef6abf5fecc41a1a21c6587c0e67a4bfe37121, selection_status: current}
+  - {resource_id: qwen3-4b-instruct-2507-remote-c573dd87, kind: model_checkpoint, locator: gpu/checkpoints/qwen3_4b_instruct_2507_remote_v1.yaml, sha256: 3962a9b2ed8a5c6ccb7657caf82ba51c487864eb7d9d54e6a9c2a387f1a419d4, selection_status: current}
+  - {resource_id: qwen3-4b-thinking-2507-remote-ef0d4f69, kind: model_checkpoint, locator: gpu/checkpoints/qwen3_4b_thinking_2507_remote_v1.yaml, sha256: 410a25967abd25c14b0d0a870e91ba0af53aa435a45a38671dfe76367dc7bc24, selection_status: current}

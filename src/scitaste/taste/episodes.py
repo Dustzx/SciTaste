@@ -206,7 +206,7 @@ class TasteEpisodeDecisionContext(BaseModel):
     failure_count: Literal["zero", "one", "two-plus"]
     no_improvement_streak: Literal["zero", "one", "two-plus"]
     score_trend: Literal["unknown", "declining", "flat", "improving"]
-    best_vs_baseline: Literal["below", "equal", "above"]
+    best_vs_baseline: Literal["unknown", "below", "equal", "above"]
 
 
 class TasteEpisodeCandidate(BaseModel):

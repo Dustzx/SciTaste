@@ -14,6 +14,10 @@ from scitaste.evaluation.interactive_research import (
     InteractiveGuidanceEnvelope,
     InteractiveResearchContext,
 )
+from scitaste.evaluation.research_workload import (
+    ResearchWorkloadContract,
+    ResearchWorkloadParadigm,
+)
 from scitaste.project.idea_revision import (
     ProjectIdeaRevisionBinding,
     idea_scientific_contract_sha256,
@@ -55,8 +59,13 @@ class InteractiveTasteExecutionProtocol(BaseModel):
     protocol_id: str
     project_id: str
     benchmark_id: str
+    workload_paradigm: Literal[ResearchWorkloadParadigm.TRAINING_FREE] = (
+        ResearchWorkloadParadigm.TRAINING_FREE
+    )
+    workload_contract: ResearchWorkloadContract | None = None
     task_id: str
     task_sha256: str = Field(pattern=_SHA256)
+    environment_sha256: str | None = Field(default=None, pattern=_SHA256)
     toolbox_sha256: str = Field(pattern=_SHA256)
     target_domain: str
     target_venue: str = "ICLR 2027"
@@ -112,14 +121,40 @@ class InteractiveTasteExecutionProtocol(BaseModel):
             raise ValueError("interactive canonical source-group coverage differs")
         if (self.family_conditioned_policy_sha256 is None) != (self.decision_family is None):
             raise ValueError("interactive family policy and decision family must be paired")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"protocol_sha256"}))
+        if self.workload_contract is not None and (
+            self.workload_contract.paradigm is not ResearchWorkloadParadigm.TRAINING_FREE
+            or self.workload_contract.task_id != self.task_id
+        ):
+            raise ValueError("interactive workload contract differs from its T0 task")
+        excluded = {"protocol_sha256"}
+        if "workload_paradigm" not in self.model_fields_set:
+            excluded.add("workload_paradigm")
+        if "workload_contract" not in self.model_fields_set:
+            excluded.add("workload_contract")
+        if self.environment_sha256 is None:
+            excluded.add("environment_sha256")
+        expected = content_sha256(self.model_dump(mode="json", exclude=excluded))
         if self.protocol_sha256 != expected:
             raise ValueError("interactive Taste protocol hash mismatch")
         return self
 
     @classmethod
     def create(cls, **values: object) -> InteractiveTasteExecutionProtocol:
-        payload = {"schema_version": "1.0", **values}
+        workload_contract = values.get("workload_contract")
+        if workload_contract is None:
+            workload_contract = ResearchWorkloadContract.create(
+                contract_id=f"{values['protocol_id']}-workload",
+                task_id=str(values["task_id"]),
+                paradigm=ResearchWorkloadParadigm.TRAINING_FREE,
+                task_model_weight_updates=False,
+                candidate_checkpoint_required=False,
+            )
+        payload = {
+            "schema_version": "1.0",
+            "workload_paradigm": ResearchWorkloadParadigm.TRAINING_FREE,
+            **values,
+            "workload_contract": workload_contract,
+        }
         payload.pop("protocol_sha256", None)
         for field in (
             "canonical_source_group_ids",
@@ -214,6 +249,11 @@ class TasteControllerInteractiveGuidanceProvider:
             raise ValueError("interactive context task differs from protocol")
         if context.task_sha256 != self.protocol.task_sha256:
             raise ValueError("interactive context task content differs from protocol")
+        if (
+            self.protocol.environment_sha256 is not None
+            and context.environment_sha256 != self.protocol.environment_sha256
+        ):
+            raise ValueError("interactive hidden environment differs from protocol")
         if context.toolbox_sha256 != self.protocol.toolbox_sha256:
             raise ValueError("interactive toolbox differs from protocol")
         if context.resource_envelope_sha256 != self.protocol.resource_envelope_sha256:

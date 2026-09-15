@@ -21,6 +21,7 @@ project:
     sha256: 4b592572eb58236def8d273329995472b9f05ce0435fa16b7b551d758b13a765
 
 workload:
+  workload_paradigm: training-based-research
   benchmark_id: mlrc-bench
   task_id: perception-temporal-action-loc
   runtime:
@@ -68,7 +69,7 @@ model_selection:
     sha256: 4b7ceaa3038acf2c1d45d37d1116a67a41a6c97bce1f66399d042058906f3e63
   candidate_catalog:
     locator: configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml
-    sha256: bc9ed447fae93da9787195c947a310e31c12ea0da45e89c58bbdd406729995c5
+    sha256: 1de8a2d1ac0241f7ae301d09b497b9cc06ec5983fba31ebd4358931f36152a6b
   candidates:
     - candidate_id: zhipu-glm53-flash
       model_id: glm-5.3-flash
@@ -87,8 +88,8 @@ model_selection:
       eligible_roles: [research_agent, code_agent]
       inventory_id: deepseek-v41-flash
       resource_manifest:
-        locator: configs/resources/api/deepseek_v41_flash_v4.yaml
-        sha256: b97802546f5b2e5501fbb79a5ad5492ace4cd3bab7556b447060e81d47e733dc
+        locator: configs/resources/api/deepseek_v41_flash_v5.yaml
+        sha256: b62a705f6e2ba4a7209685c7ba2fa57b234bfc568924cbe5b95d277727d78cca
       checkpoint_sha256: null
       checkpoint_bytes: null
       status: task-excluded-conformance-candidate

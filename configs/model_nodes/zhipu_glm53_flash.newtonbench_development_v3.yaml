@@ -1,0 +1,18 @@
+# Development-only structured action backend. v2's additional do_sample=false
+# parameter was rejected by the current provider route; v3 keeps only the
+# officially documented thinking switch and the backend-owned JSON mode.
+provider: zhipu-direct
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.3-flash
+api_key_env: ZAI_API_KEY
+live_enabled: true
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 8192
+pricing_confirmed: false
+pricing: null
+unpriced_engineering_probe: true
+extra_headers: {}
+extra_body:
+  thinking:
+    type: disabled

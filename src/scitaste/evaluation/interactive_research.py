@@ -34,6 +34,7 @@ class InteractiveResearchLimits(BaseModel):
     max_total_tokens: int = Field(ge=1)
     max_api_cost_usd: float = Field(ge=0, allow_inf_nan=False)
     require_cost_telemetry: bool = True
+    enforce_guidance_compliance: bool = True
 
     @model_validator(mode="after")
     def per_turn_work_fits_total(self) -> InteractiveResearchLimits:
@@ -140,6 +141,7 @@ class InteractiveResearchContext(BaseModel):
     condition_id: str
     task_id: str
     task_sha256: str = Field(pattern=_SHA256)
+    environment_sha256: str = Field(pattern=_SHA256)
     toolbox_sha256: str = Field(pattern=_SHA256)
     resource_envelope_sha256: str = Field(pattern=_SHA256)
     research_agent_sha256: str = Field(pattern=_SHA256)
@@ -147,6 +149,7 @@ class InteractiveResearchContext(BaseModel):
     turn: int = Field(ge=1)
     remaining_turns: int = Field(ge=1)
     remaining_experiments: int = Field(ge=0)
+    max_experiments_per_turn: int = Field(ge=1)
     remaining_code_calls: int = Field(ge=0)
     history: tuple[dict[str, JsonValue], ...] = Field(default=(), max_length=50)
 
@@ -260,6 +263,7 @@ class InteractiveResearchRunReceipt(BaseModel):
     run_id: str
     condition_id: str
     task_id: str
+    environment_sha256: str | None = Field(default=None, pattern=_SHA256)
     status: Literal[
         "completed",
         "turn_budget_exhausted",
@@ -267,6 +271,8 @@ class InteractiveResearchRunReceipt(BaseModel):
         "code_budget_exhausted",
         "token_budget_exhausted",
         "cost_budget_exhausted",
+        "agent_failure",
+        "agent_noncompliance",
         "tool_failure",
         "scorer_failure",
     ]
@@ -299,7 +305,12 @@ class InteractiveResearchRunReceipt(BaseModel):
             raise ValueError("only a post-score budget failure may retain an objective score")
         if self.objective_score is not None and self.submission is None:
             raise ValueError("an interactive objective score requires a submission")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+        excluded = {"receipt_sha256"}
+        # Receipts produced before environment commitments were introduced remain
+        # readable; every new loop execution supplies the commitment.
+        if self.environment_sha256 is None:
+            excluded.add("environment_sha256")
+        expected = content_sha256(self.model_dump(mode="json", exclude=excluded))
         if self.receipt_sha256 != expected:
             raise ValueError("interactive run receipt hash mismatch")
         return self
@@ -367,6 +378,8 @@ class InteractivePairedResult(BaseModel):
     ) -> InteractivePairedResult:
         if native.task_id != base.task_id:
             raise ValueError("interactive paired receipts name different tasks")
+        if native.environment_sha256 != base.environment_sha256:
+            raise ValueError("interactive paired receipts use different hidden environments")
         if native.condition_id != "full-scitaste-learned-policy":
             raise ValueError("interactive native receipt has the wrong condition")
         if base.condition_id != "native-base-without-learned-taste":
@@ -437,6 +450,9 @@ class InteractiveResearchToolbox(Protocol):
     @property
     def fingerprint(self) -> str: ...
 
+    @property
+    def environment_sha256(self) -> str: ...
+
     def run_experiments(self, requests: tuple[InteractiveExperimentRequest, ...]) -> JsonValue: ...
 
     def run_code(self, code: str) -> JsonValue: ...
@@ -504,8 +520,9 @@ class StructuredInteractiveResearchAgent:
             system_instruction=(
                 "Act as a scientific researcher in an interactive hidden-law environment. "
                 "Use observations rather than guessing. The high-level guidance is a strategy "
-                "decision, not evidence. Return exactly one JSON action. Never claim access to "
-                "the hidden law or scorer."
+                "decision, not evidence. Return exactly one JSON action and never request more "
+                "experiments than the stated per-turn limit. Never claim access to the hidden "
+                "law or scorer."
             ),
             input_payload={
                 "task_prompt": context.task_prompt,
@@ -513,6 +530,7 @@ class StructuredInteractiveResearchAgent:
                 "remaining": {
                     "turns": context.remaining_turns,
                     "experiments": context.remaining_experiments,
+                    "experiments_per_turn": context.max_experiments_per_turn,
                     "code_calls": context.remaining_code_calls,
                 },
                 "high_level_guidance": guidance.model_dump(mode="json"),
@@ -527,6 +545,10 @@ class StructuredInteractiveResearchAgent:
                     },
                     "experiments": {
                         "type": "array",
+                        "maxItems": min(
+                            context.max_experiments_per_turn,
+                            context.remaining_experiments,
+                        ),
                         "items": {
                             "type": "object",
                             "required": ["parameters"],
@@ -595,6 +617,7 @@ class InteractiveResearchLoop:
                 condition_id=condition_id,
                 task_id=self.toolbox.task_id,
                 task_sha256=self.toolbox.task_sha256,
+                environment_sha256=self.toolbox.environment_sha256,
                 toolbox_sha256=self.toolbox.fingerprint,
                 resource_envelope_sha256=self.limits.fingerprint,
                 research_agent_sha256=self.agent.fingerprint,
@@ -602,11 +625,32 @@ class InteractiveResearchLoop:
                 turn=turn,
                 remaining_turns=self.limits.max_turns - turn + 1,
                 remaining_experiments=self.limits.max_experiments - experiment_count,
+                max_experiments_per_turn=self.limits.max_experiments_per_turn,
                 remaining_code_calls=self.limits.max_code_calls - code_call_count,
                 history=tuple(history),
             )
             guidance = self.guidance_provider.guide(context)
-            decision = self.agent.decide(context, guidance.guidance)
+            try:
+                decision = self.agent.decide(context, guidance.guidance)
+            except Exception as exc:
+                # The prospective guidance lock already exists at this point.
+                # Treat an invalid or unavailable provider response as a terminal
+                # intention-to-treat outcome rather than abandoning the run in a
+                # non-terminal project state.  Telemetry for the failed provider
+                # call is unavailable, so cost is explicitly unknown.
+                return self._receipt(
+                    project_id,
+                    run_id,
+                    condition_id,
+                    "agent_failure",
+                    records,
+                    experiment_count,
+                    code_call_count,
+                    input_tokens,
+                    output_tokens,
+                    None,
+                    terminal_error=f"{type(exc).__name__}: {exc}",
+                )
             input_tokens += decision.usage.input_tokens
             output_tokens += decision.usage.output_tokens
             if decision.usage.cost_usd is None:
@@ -638,6 +682,29 @@ class InteractiveResearchLoop:
                 )
 
             proposal = decision.proposal
+            if self.limits.enforce_guidance_compliance and not guidance_action_complied(
+                guidance.guidance.action_type,
+                proposal.action,
+            ):
+                records.append(
+                    InteractiveTurnRecord(turn=turn, guidance=guidance, decision=decision)
+                )
+                return self._receipt(
+                    project_id,
+                    run_id,
+                    condition_id,
+                    "agent_noncompliance",
+                    records,
+                    experiment_count,
+                    code_call_count,
+                    input_tokens,
+                    output_tokens,
+                    total_cost,
+                    terminal_error=(
+                        f"model action {proposal.action!r} is incompatible with locked "
+                        f"Taste action {guidance.guidance.action_type!r}"
+                    ),
+                )
             if proposal.action == "run_experiments":
                 if len(proposal.experiments) > self.limits.max_experiments_per_turn or (
                     experiment_count + len(proposal.experiments) > self.limits.max_experiments
@@ -865,6 +932,7 @@ class InteractiveResearchLoop:
             run_id=run_id,
             condition_id=condition_id,
             task_id=self.toolbox.task_id,
+            environment_sha256=self.toolbox.environment_sha256,
             status=status,
             turns=tuple(records),
             submission=submission,
@@ -882,6 +950,29 @@ def raw_response_sha256(raw_response: str) -> str:
     """Public helper for non-structured adapters producing the same receipt contract."""
 
     return hashlib.sha256(raw_response.encode()).hexdigest()
+
+
+def guidance_action_complied(action_type: str, model_action: str) -> bool:
+    """Return whether an executable proposal honors one locked lifecycle action.
+
+    The high-level controller selects scientific intent while the research agent
+    chooses concrete tool inputs.  STOP is the only intent allowed to submit;
+    every active evidence-development intent must perform an experiment or a
+    bounded code analysis.  Unknown action types fail closed.
+    """
+
+    if action_type == "STOP":
+        return model_action == "submit_hypothesis"
+    if action_type in {
+        "PROBE",
+        "PILOT",
+        "EXPERIMENT",
+        "ANALYZE",
+        "REFINE",
+        "PIVOT",
+    }:
+        return model_action in {"run_experiments", "run_code"}
+    return False
 
 
 def save_interactive_research_run_receipt(
@@ -952,6 +1043,7 @@ __all__ = [
     "InteractiveResearchToolbox",
     "InteractiveTurnRecord",
     "StructuredInteractiveResearchAgent",
+    "guidance_action_complied",
     "load_interactive_research_run_receipt",
     "raw_response_sha256",
     "save_interactive_research_run_receipt",

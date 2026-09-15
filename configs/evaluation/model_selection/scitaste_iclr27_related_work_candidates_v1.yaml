@@ -94,7 +94,7 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Direct learned-Taste baseline for impact preference, with released Apache-2.0 checkpoint and temporal/metric controls.
-    access_state: available-exact
+    access_state: available-exact-b0-passed
     resource_locator: configs/resources/gpu/checkpoints/scijudge_4b_2605_remote_v1.yaml
     exact_revision: 06109d60950dd15ac9a0fa7f804280386c25b113
     selection_state: external-baseline-pending-execution
@@ -109,7 +109,7 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Direct learned-Taste ideation baseline for comparing one-paper follow-up generation against lifecycle-conditioned SciTaste ideation.
-    access_state: available-exact
+    access_state: available-exact-b0-passed-with-2048-token-envelope
     resource_locator: configs/resources/gpu/checkpoints/scithinker_4b_remote_v1.yaml
     exact_revision: ddd5752d9bfebc858570ec9e6db94cb460a8d985
     selection_state: external-baseline-pending-execution
@@ -156,7 +156,7 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Exact base checkpoint required to separate Scientific Judge training from generic Qwen pairwise impact prediction.
-    access_state: available-exact-b0-passed
+    access_state: available-exact
     resource_locator: configs/resources/gpu/checkpoints/qwen3_4b_instruct_2507_remote_v1.yaml
     exact_revision: cdbee75f17c01a7cc42f958dc650907174af0554
     selection_state: external-baseline-pending-execution
@@ -171,7 +171,7 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Exact base policy required to isolate Scientific Thinker preference-alignment gains before ecological comparison with SciTaste.
-    access_state: available-exact-b0-passed-with-2048-token-envelope
+    access_state: available-exact
     resource_locator: configs/resources/gpu/checkpoints/qwen3_4b_thinking_2507_remote_v1.yaml
     exact_revision: 768f209d9ea81521153ed38c47d515654e938aea
     selection_state: external-baseline-pending-execution
@@ -262,12 +262,12 @@ candidates:
     evidence_anchor_ids: [ai-can-learn-scientific-taste, mlr-bench]
     task_fit_rationale: Current DeepSeek-family successor to reported DeepSeek reasoning baselines, admitted only after the same role-level conformance.
     access_state: access-not-configured
-    resource_locator: configs/resources/api/deepseek_v41_flash_v4.yaml
+    resource_locator: configs/resources/api/deepseek_v41_flash_v5.yaml
     exact_revision: provider-observed-serving-identity-required-per-formal-window
     selection_state: task-excluded-conformance-pending
     availability_may_select_model: false
     limitations:
-      - The currently stored credential fails authentication and no conformance result exists.
+      - The local credential binding is empty and no authenticated task-excluded V4.1 conformance window has been recorded.
   - candidate_id: qwen38-max-current
     model_id: qwen3.8-max
     model_family: alibaba-qwen

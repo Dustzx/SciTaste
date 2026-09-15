@@ -1,0 +1,59 @@
+schema_version: "1.0"
+program_id: newtonbench-taste-development-v1
+project_id: scitaste-self-development
+purpose: source-disjoint prospective scientific-outcome episodes for fitting, never formal effect evidence
+unified_scitaste_system: true
+research_workload_paradigm: training-free-research
+scitaste_policy_status: pre-fit-development-foundation
+formal_evidence: false
+policy_update_authorized: false
+benchmark:
+  benchmark_id: newtonbench
+  repository_commit: 912a4ba5f4356ddd06acc16e44460ca30be4abc2
+  checkout: outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout
+  qualification: docs/research/data/newtonbench_t0_source_qualification_v1.yaml
+  limits: configs/evaluation/newtonbench/development_limits_v1.json
+tasks:
+  - task_config: configs/evaluation/newtonbench/development_task_gravity_v1.json
+    source_stratum: gravity-easy-vanilla-v0
+    role: development
+  - task_config: configs/evaluation/newtonbench/development_task_fourier_v1.json
+    source_stratum: heat-conduction-medium-simple-v1
+    role: development
+  - task_config: configs/evaluation/newtonbench/development_task_heat_v1.json
+    source_stratum: heat-transfer-hard-complex-v2
+    role: development
+model_roles:
+  research_agent:
+    provider: zhipu-direct
+    model_id: glm-5.3-flash
+    rationale: currently available general research-and-tool model; frozen identically across the three development sources
+  symbolic_judge:
+    provider: zhipu-direct
+    model_id: glm-5.3-flash
+    rationale: development-only hidden scorer adapter; formal evaluation will use a separately frozen independent judging stratum
+  attribution_review:
+    required_models: 2
+    distinct_model_identities: true
+    status: pending-after-trajectory
+resource_ceiling:
+  api_calls_per_task: 9
+  maximum_total_tokens_per_task: 120000
+  maximum_tasks: 3
+  gpu_hours: 0
+  retries: 0
+execution_contract:
+  - register-one-project-owned-run-per-task
+  - freeze-source-group-task-tools-models-and-budget-before-first-call
+  - lock-each-controller-decision-before-agent-or-tool-execution
+  - attach-terminal-hidden-score-strictly-after-lock
+  - retain-failures-without-imputation
+  - quarantine-episode-candidates-until-two-model-independent-attribution
+  - normalize-multiple-turns-within-one-task-to-one-source-group
+claim_boundary:
+  establishes: real-development-trajectories-and-prospective-Taste-supervision-candidates
+  does_not_establish:
+    - SciTaste-effectiveness
+    - formal-NewtonBench-performance
+    - human-validity
+    - policy-improvement
