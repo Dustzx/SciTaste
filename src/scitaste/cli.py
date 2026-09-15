@@ -96,6 +96,7 @@ from scitaste.evaluation import (
     approve_structured_metadata_audit,
     attest_native_condition_implementations,
     bind_objective_measurement_set,
+    bridge_track_a_run_to_ai_preference,
     build_source_projection_plan,
     build_structured_metadata_audit_plan_bundle,
     compile_ai_preference_request_pack,
@@ -108,6 +109,7 @@ from scitaste.evaluation import (
     derive_h4_formal_preparation_request,
     execute_ai_preference_adjudicator,
     execute_ai_preference_primary_panel,
+    execute_track_a_decision_batch,
     finalize_ai_preference_reviews,
     finalize_ai_taste_abstraction_reviews,
     import_codex_agent_abstraction_review,
@@ -219,6 +221,7 @@ from scitaste.evaluation import (
     prepare_project_evaluation,
     prepare_project_evaluation_result,
     prepare_taste_source_segmentation_request_pack,
+    prepare_track_a_decision_batch,
     project_benchmark_metadata_population,
     publish_project_evaluation,
     publish_project_evaluation_result,
@@ -2278,9 +2281,7 @@ def build_parser() -> argparse.ArgumentParser:
     track_a_suite_materialize.add_argument(
         "--spec",
         type=Path,
-        default=Path(
-            "configs/evaluation/pilots/scitastebench_track_a_ai_suite_v1.yaml"
-        ),
+        default=Path("configs/evaluation/pilots/scitastebench_track_a_ai_suite_v1.yaml"),
     )
     track_a_suite_materialize.add_argument("--accepted-set", type=Path, default=None)
     track_a_suite_materialize.add_argument(
@@ -2290,9 +2291,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="formal-candidate only; provide one qualification per planned precedent",
     )
-    track_a_suite_materialize.add_argument(
-        "--evidence-root", type=Path, default=Path(".")
-    )
+    track_a_suite_materialize.add_argument("--evidence-root", type=Path, default=Path("."))
     track_a_suite_materialize.add_argument("--output", type=Path, required=True)
     track_a_suite_materialize.add_argument(
         "--require-ready",
@@ -2300,17 +2299,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="return nonzero unless all twenty-four targets are runnable",
     )
     _add_log_level_option(track_a_suite_materialize)
-    track_a_suite_materialize.set_defaults(
-        handler=_handle_evaluation_track_a_suite_materialize
-    )
+    track_a_suite_materialize.set_defaults(handler=_handle_evaluation_track_a_suite_materialize)
     track_a_suite_inspect = evaluation_commands.add_parser(
         "track-a-suite-inspect",
         help="Replay a Track-A suite status, manifest, and generated request bindings",
     )
     track_a_suite_inspect.add_argument("--status", type=Path, required=True)
-    track_a_suite_inspect.add_argument(
-        "--evidence-root", type=Path, default=Path(".")
-    )
+    track_a_suite_inspect.add_argument("--evidence-root", type=Path, default=Path("."))
     track_a_suite_inspect.add_argument(
         "--require-ready",
         action="store_true",
@@ -2318,6 +2313,58 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(track_a_suite_inspect)
     track_a_suite_inspect.set_defaults(handler=_handle_evaluation_track_a_suite_inspect)
+    track_a_decision_prepare = evaluation_commands.add_parser(
+        "track-a-decision-batch-prepare",
+        help=(
+            "Compile the eligible Track-A three-arm subset into exact, "
+            "condition-hidden provider requests without calling a model"
+        ),
+    )
+    track_a_decision_prepare.add_argument("--suite-manifest", type=Path, required=True)
+    track_a_decision_prepare.add_argument("--backend-config", type=Path, required=True)
+    track_a_decision_prepare.add_argument("--budget", type=Path, required=True)
+    track_a_decision_prepare.add_argument("--token-manifest", type=Path, required=True)
+    track_a_decision_prepare.add_argument("--evidence-root", type=Path, default=Path("."))
+    track_a_decision_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(track_a_decision_prepare)
+    track_a_decision_prepare.set_defaults(handler=_handle_evaluation_track_a_decision_prepare)
+    track_a_decision_execute = evaluation_commands.add_parser(
+        "track-a-decision-batch-execute",
+        help=(
+            "Execute every eligible Track-A arm once; any failure terminates the "
+            "batch without an admissible recording or replacement sample"
+        ),
+    )
+    track_a_decision_execute.add_argument("--batch", type=Path, required=True)
+    track_a_decision_execute.add_argument("--evidence-root", type=Path, default=Path("."))
+    track_a_decision_execute.add_argument("--output", type=Path, required=True)
+    track_a_decision_execute.add_argument(
+        "--allow-live",
+        action="store_true",
+        help="authorize only the frozen zero-retry eligible calls in this batch",
+    )
+    _add_log_level_option(track_a_decision_execute)
+    track_a_decision_execute.set_defaults(handler=_handle_evaluation_track_a_decision_execute)
+    track_a_preference_bridge = evaluation_commands.add_parser(
+        "track-a-ai-preference-bridge",
+        help=(
+            "Blind one complete Track-A eligible-subset run and compile the existing "
+            "AI-only preference panel without making more model calls"
+        ),
+    )
+    track_a_preference_bridge.add_argument("--run", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--ai-preference-protocol", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--study-protocol", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--rubric", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--interface", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--analysis-contract", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--study-output", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--pack-output", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--report", type=Path, required=True)
+    track_a_preference_bridge.add_argument("--randomization-seed", type=int, required=True)
+    track_a_preference_bridge.add_argument("--evidence-root", type=Path, default=Path("."))
+    _add_log_level_option(track_a_preference_bridge)
+    track_a_preference_bridge.set_defaults(handler=_handle_evaluation_track_a_preference_bridge)
     ai_preference_pack = evaluation_commands.add_parser(
         "ai-preference-pack-prepare",
         help="Compile two identity-distinct AI-only requests from a public H1/H2 blind pack",
@@ -7908,9 +7955,7 @@ def _handle_evaluation_track_a_suite_materialize(args: argparse.Namespace) -> in
         suite_spec_path=args.spec,
         output_dir=args.output,
         accepted_abstraction_set_path=args.accepted_set,
-        reference_quality_qualification_paths=tuple(
-            args.reference_quality_qualification
-        ),
+        reference_quality_qualification_paths=tuple(args.reference_quality_qualification),
     )
     print(
         json.dumps(
@@ -7961,6 +8006,112 @@ def _handle_evaluation_track_a_suite_inspect(args: argparse.Namespace) -> int:
         )
     )
     return int(args.require_ready and result.status != "ready")
+
+
+def _handle_evaluation_track_a_decision_prepare(args: argparse.Namespace) -> int:
+    preparation = prepare_track_a_decision_batch(
+        evidence_root=args.evidence_root,
+        suite_manifest_path=args.suite_manifest,
+        backend_config_path=args.backend_config,
+        budget_path=args.budget,
+        token_manifest_path=args.token_manifest,
+        output_dir=args.output,
+    )
+    batch = preparation.batch
+    print(
+        json.dumps(
+            {
+                "batch_id": batch.batch_id,
+                "batch_sha256": batch.batch_sha256,
+                "planned_case_count": batch.planned_case_count,
+                "eligible_case_count": batch.eligible_case_count,
+                "excluded_or_unmaterialized_case_count": (
+                    batch.excluded_or_unmaterialized_case_count
+                ),
+                "planned_call_count": batch.planned_call_count,
+                "eligible_call_count": batch.eligible_call_count,
+                "model_calls_performed": False,
+                "model_calls_authorized": False,
+                "missing_cases_will_not_be_resampled": True,
+                "batch": str(preparation.batch_path),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_track_a_decision_execute(args: argparse.Namespace) -> int:
+    run = execute_track_a_decision_batch(
+        evidence_root=args.evidence_root,
+        batch_path=args.batch,
+        output_dir=args.output,
+        allow_live=args.allow_live,
+    )
+    print(
+        json.dumps(
+            {
+                "run_id": run.run_id,
+                "run_sha256": run.run_sha256,
+                "planned_case_count": run.planned_case_count,
+                "eligible_case_count": run.eligible_case_count,
+                "executed_case_count": run.executed_case_count,
+                "planned_call_count": run.planned_call_count,
+                "eligible_call_count": run.eligible_call_count,
+                "executed_call_count": run.executed_call_count,
+                "total_tokens": run.total_tokens,
+                "total_cost_usd": run.total_cost_usd,
+                "retries_performed": 0,
+                "missing_or_failed_cases_resampled": False,
+                "output": str(args.output / "RUN.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_track_a_preference_bridge(args: argparse.Namespace) -> int:
+    report = bridge_track_a_run_to_ai_preference(
+        evidence_root=args.evidence_root,
+        decision_run_path=args.run,
+        ai_preference_protocol_path=args.ai_preference_protocol,
+        study_protocol_path=args.study_protocol,
+        rubric_path=args.rubric,
+        interface_path=args.interface,
+        analysis_contract_path=args.analysis_contract,
+        study_output_dir=args.study_output,
+        ai_preference_pack_output_dir=args.pack_output,
+        report_path=args.report,
+        randomization_seed=args.randomization_seed,
+    )
+    print(
+        json.dumps(
+            {
+                "bridge_sha256": report.bridge_sha256,
+                "planned_case_count": report.planned_case_count,
+                "eligible_case_count": report.eligible_case_count,
+                "executed_case_count": report.executed_case_count,
+                "excluded_or_unmaterialized_case_count": (
+                    report.excluded_or_unmaterialized_case_count
+                ),
+                "planned_decision_call_count": report.planned_decision_call_count,
+                "eligible_decision_call_count": report.eligible_decision_call_count,
+                "executed_decision_call_count": report.executed_decision_call_count,
+                "ai_primary_request_count": report.ai_primary_request_count,
+                "reviewer_kind": "ai",
+                "not_human_review": True,
+                "human_validity_claim_allowed": False,
+                "additional_model_calls_performed": False,
+                "report": str(args.report),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
 
 
 def _handle_evaluation_ai_preference_pack(args: argparse.Namespace) -> int:

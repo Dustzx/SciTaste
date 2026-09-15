@@ -4397,3 +4397,39 @@ one AI result per H1/H2 case block. `ai-preference-analyze` first replays this
 public chain, then and only then reads the committed private condition map. Its
 input and descriptive result use endpoint kind `ai-only-paired-preference`, set
 `human_or_expert_endpoint=false`, and preserve the source-group paired rows.
+
+### ADR-136: Track-A execution preserves partial coverage without replacement
+
+Status: accepted and implemented; real model execution remains separately
+authorized and has not occurred through this adapter.
+
+The Track-A source design targets 24 cases and 72 three-arm decisions, but the
+materialized suite may be a smaller coverage-aware subset. Execution therefore
+records three numbers rather than silently treating the subset as the planned
+population: `planned` remains 24/72, `eligible` is the frozen suite coverage,
+and `executed` is the successfully completed eligible coverage. Every eligible
+case must retain all three arms. Missing source cases are never resampled, and
+one failed call makes the output directory terminal without producing an
+admissible partial recording.
+
+Preparation performs no external action. It requires an exact pre-execution
+token manifest, including tokenizer/revision, prompt-template revision, token
+IDs, and hashes for every eligible model-visible request. It then persists the
+exact OpenAI-compatible request bytes only after checking one model identity,
+one sampling profile, hidden controller conditions, and hard per-call and
+aggregate byte, input/output/total-token, cost, latency, and call limits. Live
+execution requires both a secret-free config opt-in and an explicit CLI flag;
+the API secret is resolved only from its named environment variable. Calls run
+sequentially once, with zero retry. Exact request bytes, provider response body,
+strict decision JSON, provider request identity, timestamps, measured usage,
+derived price, receipt, and semantic/file hashes remain replayable.
+
+Only a successful complete eligible-subset run may cross into preference
+review. The bridge creates condition-hidden X/Y artifacts and reuses the
+existing schema-1.2 study, blind-key, generation-ledger, and AI request-pack
+contracts as a compatibility envelope. Human-named fields in that legacy
+envelope do not change the endpoint: the bridge and all downstream panel
+artifacts state `reviewer_kind=ai`, `not_human_review=true`, and
+`human_validity_claim_allowed=false`. Two provider-distinct primary AI judges
+review identical blinded blocks; a third distinct AI sees disputed blocks only.
+The bridge itself performs no call and grants no additional execution authority.

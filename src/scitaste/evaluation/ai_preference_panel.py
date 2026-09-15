@@ -29,6 +29,7 @@ from scitaste.evaluation.human_outcomes import (
     load_human_outcome_study,
 )
 from scitaste.evaluation.human_study_preparation import BlindedDecisionArtifact
+from scitaste.evaluation.taste_mechanism_suite import TrackAPilotSuiteManifest
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
@@ -709,7 +710,7 @@ def lock_ai_preference_primary_reviews(
     suite_file = _bound_public_file(root, pack.benchmark_suite)
     protocol_file = _bound_public_file(root, pack.protocol)
     study = load_human_outcome_study(study_file)
-    suite = load_benchmark_suite(suite_file)
+    suite = _load_review_context_suite(suite_file)
     protocol = load_ai_blind_preference_protocol(protocol_file)
     _verify_study_suite(study, suite, suite_file)
     _verify_pack(pack, study, suite, protocol, root)
@@ -819,9 +820,9 @@ def lock_ai_preference_primary_reviews(
         adjudicator = _build_adjudicator_request(
             root=root,
             study=study,
-            suite=suite,
             protocol=protocol,
             lock=lock,
+            requests=request_by_reviewer,
         )
         adjudicator_target.mkdir(parents=True, exist_ok=False)
         adjudicator_path = adjudicator_target / "adjudicator.json"
@@ -902,7 +903,7 @@ def _load_primary_requests(
 def _verify_pack(
     pack: AIPreferenceRequestPack,
     study: HumanOutcomeStudyManifest,
-    suite: BenchmarkSuite,
+    suite: BenchmarkSuite | TrackAPilotSuiteManifest,
     protocol: AIBlindPreferenceProtocol,
     root: Path,
 ) -> None:
@@ -910,9 +911,10 @@ def _verify_pack(
         raise ValueError("AI request pack binds another public study")
     if pack.protocol_sha256 != protocol.protocol_sha256:
         raise ValueError("AI request pack binds another AI review protocol")
+    suite_sha256 = suite.sha256 if isinstance(suite, BenchmarkSuite) else suite.manifest_sha256
     if (
         pack.benchmark_suite != protocol.benchmark_suite
-        or pack.benchmark_suite_semantic_sha256 != suite.sha256
+        or pack.benchmark_suite_semantic_sha256 != suite_sha256
     ):
         raise ValueError("AI request pack binds another benchmark context suite")
     requests = _load_primary_requests(pack, root)
@@ -921,6 +923,26 @@ def _verify_pack(
     comparison_ids = {item.comparison_id for request in requests.values() for item in request.items}
     if comparison_ids != {item.comparison_id for item in study.comparisons}:
         raise ValueError("AI request pack does not cover the public study assignments")
+    expected_reviewers = {
+        (item.reviewer_id, item.identity_sha256) for item in protocol.primary_reviewers
+    }
+    if {
+        (item.reviewer.reviewer_id, item.reviewer.identity_sha256) for item in requests.values()
+    } != expected_reviewers:
+        raise ValueError("AI request pack reviewer identities differ from its protocol")
+    blocks_by_request = [
+        {
+            (
+                item.hypothesis,
+                item.case_id,
+                frozenset((item.output_x.output_sha256, item.output_y.output_sha256)),
+            )
+            for item in request.items
+        }
+        for request in requests.values()
+    ]
+    if len(blocks_by_request) != 2 or blocks_by_request[0] != blocks_by_request[1]:
+        raise ValueError("AI primary requests do not expose identical blinded blocks")
     if sum(len(item.items) for item in requests.values()) != pack.comparison_count:
         raise ValueError("AI request pack comparison count mismatch")
 
@@ -1030,16 +1052,27 @@ def _build_adjudicator_request(
     *,
     root: Path,
     study: HumanOutcomeStudyManifest,
-    suite: BenchmarkSuite,
     protocol: AIBlindPreferenceProtocol,
     lock: LockedAIPreferenceReviewSet,
+    requests: dict[str, AIPreferencePrimaryRequest],
 ) -> AIAdjudicationRequest:
     comparisons_by_block = {(item.hypothesis, item.case_id): item for item in study.comparisons}
-    cases = {item.case_id: item for item in suite.cases}
+    request_items: dict[tuple[TasteMechanismHypothesis, str], list[AIPreferenceRequestItem]] = (
+        defaultdict(list)
+    )
+    for request in requests.values():
+        for item in request.items:
+            request_items[(item.hypothesis, item.case_id)].append(item)
     items: list[AIAdjudicationRequestItem] = []
     for ordinal, dispute in enumerate(lock.disputes, 1):
         comparison = comparisons_by_block[(dispute.hypothesis, dispute.case_id)]
-        case = cases[dispute.case_id]
+        source_items = request_items[(dispute.hypothesis, dispute.case_id)]
+        if (
+            len(source_items) != 2
+            or len({(item.case_context, item.task, item.stage) for item in source_items}) != 1
+        ):
+            raise ValueError("AI disputed block has inconsistent reviewer context")
+        source_item = source_items[0]
         visible = sorted(
             (
                 _visible_decision(root, comparison.x_output.path, comparison.x_output.sha256),
@@ -1054,9 +1087,9 @@ def _build_adjudicator_request(
                 hypothesis=dispute.hypothesis,
                 case_id=dispute.case_id,
                 source_group=dispute.source_group,
-                case_context=case.decision_context,
-                task=case.task.value,
-                stage=case.stage,
+                case_context=source_item.case_context,
+                task=source_item.task,
+                stage=source_item.stage,
                 output_x=visible[0],
                 output_y=visible[1],
             )
@@ -1077,21 +1110,44 @@ def _build_adjudicator_request(
 
 
 def _verify_study_suite(
-    study: HumanOutcomeStudyManifest, suite: BenchmarkSuite, suite_file: Path
+    study: HumanOutcomeStudyManifest,
+    suite: BenchmarkSuite | TrackAPilotSuiteManifest,
+    suite_file: Path,
 ) -> None:
     commitment = study.treatment_commitment
     if commitment is None:
         raise ValueError("AI preference review requires a treatment-bound public study")
     if _sha256(suite_file) != commitment.benchmark_suite_file_sha256:
         raise ValueError("AI preference benchmark bytes differ from the study commitment")
-    if suite.sha256 != commitment.benchmark_suite_semantic_sha256:
+    suite_sha256 = suite.sha256 if isinstance(suite, BenchmarkSuite) else suite.manifest_sha256
+    if suite_sha256 != commitment.benchmark_suite_semantic_sha256:
         raise ValueError("AI preference benchmark semantics differ from the study commitment")
-    case_ids = {item.case_id for item in suite.cases}
+    case_ids = {
+        item.case_id if isinstance(suite, BenchmarkSuite) else item.target_id
+        for item in suite.cases
+    }
     if {item.case_id for item in study.comparisons} != case_ids:
         raise ValueError("AI preference study and benchmark case populations differ")
-    source_groups = {item.case_id: item.source_group_id for item in suite.cases}
+    source_groups = {
+        (item.case_id, item.source_group_id)
+        if isinstance(suite, BenchmarkSuite)
+        else (item.target_id, item.target_source_group_id)
+        for item in suite.cases
+    }
+    source_groups = dict(source_groups)
     if any(source_groups[item.case_id] != item.source_group for item in study.comparisons):
         raise ValueError("AI preference study and benchmark source groups differ")
+
+
+def _load_review_context_suite(
+    path: Path,
+) -> BenchmarkSuite | TrackAPilotSuiteManifest:
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("AI preference review context suite must contain a mapping")
+    if "manifest_sha256" in payload and "arm_count" in payload:
+        return TrackAPilotSuiteManifest.model_validate(payload)
+    return BenchmarkSuite.model_validate(payload)
 
 
 def _resolve_public_study(root: Path, source: str | Path) -> Path:

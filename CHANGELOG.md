@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the executable Track-A three-arm decision lane and its AI-only review
+  bridge. A no-call compiler binds the coverage-aware suite subset, exact
+  tokenizer traces, one model/parameter profile, and hard per-call/aggregate
+  call, token, cost, byte, and latency ceilings. Live execution requires two
+  opt-ins, makes every eligible call once with zero retries, persists exact HTTP
+  bodies, raw responses, receipts, usage, cost, and hashes, and treats any
+  failure as terminal without replacement sampling. A successful complete
+  eligible subset can then be blinded into the established two-primary,
+  disputed-only-adjudicator AI preference panel while reporting planned,
+  eligible, and executed counts separately and making no human-validity claim.
 - Added a no-call Track-A H1/H2 AI blind-preference adapter. It projects the
   existing public condition-hidden study into two provider-distinct primary
   request packs with the exact study-bound decision context, validates raw JSON
