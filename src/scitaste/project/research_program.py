@@ -556,7 +556,10 @@ _PHASE_METADATA: dict[
         "none",
     ),
     "experiment-plan-frozen": (
-        ("scitaste evaluation cell-plan", "scitaste evaluation activation-plan"),
+        (
+            "scitaste evaluation cell-plan",
+            "scitaste evaluation campaign-activation-plan",
+        ),
         ("benchmark-assets", "api-budget", "gpu-budget"),
         PhaseExecutionAuthority.PROJECT_ARTIFACT,
         "none",
@@ -580,7 +583,7 @@ _PHASE_METADATA: dict[
         "benchmark-hidden-scorer",
     ),
     "evidence-admission": (
-        ("scitaste project evaluation result-register",),
+        ("scitaste project evaluation register-result",),
         ("evidence-graph", "failure-ledger"),
         PhaseExecutionAuthority.PROJECT_ARTIFACT,
         "admitted-evidence-only",
@@ -594,14 +597,21 @@ _PHASE_METADATA: dict[
     "dual-ai-review": (
         (
             "scitaste project paper review prepare",
-            "scitaste project paper review import-model",
+            "scitaste project paper review model-input",
+            "scitaste project paper review runtime-config",
+            "scitaste model-node runtime execute",
+            "scitaste project paper review import-model-report",
         ),
         ("judge-primary-a", "judge-primary-b"),
         PhaseExecutionAuthority.INDEPENDENT_AI,
         "none",
     ),
     "ai-adjudication": (
-        ("scitaste project paper review import-model",),
+        (
+            "scitaste model-node runtime execute",
+            "scitaste project paper review import-model-report",
+            "scitaste evaluation review-finality",
+        ),
         ("judge-adjudicator",),
         PhaseExecutionAuthority.INDEPENDENT_AI_ADJUDICATOR,
         "none",
@@ -616,7 +626,11 @@ _PHASE_METADATA: dict[
         "none",
     ),
     "final-ai-review-and-package-freeze": (
-        ("scitaste project paper review verify",),
+        (
+            "scitaste project paper review prepare",
+            "scitaste project paper review import-model-report",
+            "scitaste evaluation review-finality",
+        ),
         ("judge-primary-a", "judge-primary-b"),
         PhaseExecutionAuthority.INDEPENDENT_AI,
         "none",
