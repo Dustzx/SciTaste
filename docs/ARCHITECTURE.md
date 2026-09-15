@@ -4493,3 +4493,23 @@ and loop-result receipts. Those files can establish a real fixed action menu and
 selection, but development scores are retained only as post-run bindings. The H4
 source remains pending until a dedicated delayed scientific-outcome attribution
 contract and independent AI panel are joined.
+
+### ADR-139: Held-out objective labels live outside candidate inference
+
+Status: accepted and implemented for MLRC Perception adapter qualification.
+
+Freezing model-authored source before test execution is necessary but not
+sufficient when the candidate process can still read test annotations. The
+Perception v2 runtime therefore projects two scorer roles from the already
+receipt-bound held-out view. Candidate inference mounts feature arrays plus a
+deterministic metadata-only manifest whose action lists are empty. It emits an
+exact prediction hash and no objective. A separate scorer process imports no
+candidate module, opens the original label bytes only after prediction freeze,
+and requires both prediction and ground-truth SHA-256 values.
+
+The scorer reproduces the fixed upstream label IDs, microseconds-to-seconds
+conversion, tIoU thresholds, and interpolated mAP. Readiness requires a
+content-bound parity receipt against the fixed upstream metric, in addition to
+source, data, environment-import, and projection integrity. This adapter gate
+does not imply a reproduced GPU baseline, formal execution authority, or a
+scientific result.

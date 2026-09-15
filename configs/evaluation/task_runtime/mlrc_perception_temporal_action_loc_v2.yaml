@@ -1,0 +1,89 @@
+schema_version: "1.0"
+runtime_id: mlrc-perception-temporal-action-loc-v2
+source_checkout: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-bench-source-v1/checkout
+repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+require_clean_checkout: true
+visible_root: MLAgentBench/benchmarks_base/perception_temporal_action_loc/env
+visible_tree_sha256: 225fd533b702f2e5f63583237cbc63a8ab550fa0dbb9b6e39c72c367be92f0b6
+materialization_receipt:
+  locator: outputs/projects/scitaste-self-development/evaluations/materializations/mlrc-perception-temporal-action-loc-materialization-v1/RECEIPT.json
+  sha256: d2421ffde7c71c91f7083db256942d21f894e8489b3c201bda72ca8d3537063d
+development_view: outputs/projects/scitaste-self-development/evaluations/materializations/mlrc-perception-temporal-action-loc-materialization-v1/development/data
+development_view_sha256: 58a538560c797ddddcc9319b64c06a107071251565301249c4a4326f9c40c339
+heldout_view: outputs/projects/scitaste-self-development/evaluations/materializations/mlrc-perception-temporal-action-loc-materialization-v1/heldout/data
+heldout_view_sha256: 7c21017f97416e4cd56e5917b4391f581acf1eca9ef3844c7560722af65abf10
+heldout_feature_directories:
+  - pt/action_localisation_test_video_features
+  - pt/sound_localisation_test_audio_features
+heldout_label_locator: pt/challenge_action_localisation_test.json
+heldout_label_sha256: bab04d7562b2d69eba8702e16aa18d2e441df156cad495deff685dc32e82c508
+projection_root: outputs/projects/scitaste-self-development/evaluations/runtime-views/mlrc-perception-temporal-action-loc-v2
+python_executable: .venv/bin/python3.12
+python_package_root: outputs/projects/scitaste-self-development/evaluations/runtime-environments/mlrc-perception-python312-v1/packages
+python_package_tree_sha256: 6bbf6a8264ae6fa2151f900ada5daa85f36d6071cad707a5d9459d45dd71600a
+required_versions:
+  h5py: 3.12.1
+  tensorboard: 2.17.0
+  tensorboard-data-server: 0.7.2
+  absl-py: 2.1.0
+  grpcio: 1.70.0
+  protobuf: 4.25.5
+  Markdown: "3.7"
+  Werkzeug: 3.1.3
+  nms-1d-cpu: 0.0.0
+  torch: 2.5.1
+  numpy: 2.5.3
+  scipy: 1.18.1
+  pandas: 2.3.3
+  joblib: 1.6.0
+development_entrypoint:
+  locator: src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py
+  sha256: 5484dff30e359ebf5dced186cbc1efd0615740dd83db324c969a0db60d701bb4
+heldout_inference_entrypoint:
+  locator: src/scitaste/evaluation/runtime_assets/mlrc_perception_heldout_inference.py
+  sha256: c6ab5ef0dcc3d929ef540bff8910ff4a3e67d9d67c7a590012f3c6561060d537
+objective_scorer:
+  locator: src/scitaste/evaluation/runtime_assets/mlrc_perception_objective_scorer.py
+  sha256: 5f92dc7146f781d63fd478246b8188fc5d997689d64ecb1ffef0fe7e2a549c83
+scorer_parity_receipt:
+  locator: outputs/projects/scitaste-self-development/evaluations/runtime-environments/mlrc-perception-python312-v1/SCORER_PARITY_RECEIPT.json
+  sha256: efb16ab4ff22b382532c128533c9b89215a7f7deb647345aff86d09b14c0b80a
+development_command:
+  - python
+  - /scitaste/runtime/mlrc_objective_entrypoint.py
+  - --task
+  - perception_temporal_action_loc
+  - --result-task-id
+  - perception-temporal-action-loc
+  - --method
+  - my_method
+  - --phase
+  - dev
+heldout_inference_command:
+  - python
+  - /scitaste/runtime/mlrc_perception_heldout_inference.py
+  - --result-task-id
+  - perception-temporal-action-loc
+  - --method
+  - my_method
+objective_score_command:
+  - python
+  - /scitaste/scorer/mlrc_perception_objective_scorer.py
+  - --ground-truth
+  - /scorer/challenge_action_localisation_test.json
+  - --ground-truth-sha256
+  - bab04d7562b2d69eba8702e16aa18d2e441df156cad495deff685dc32e82c508
+  - --predictions
+  - /candidate/predictions.json
+  - --predictions-sha256
+  - <frozen-prediction-sha256>
+  - --task-id
+  - perception-temporal-action-loc
+  - --method
+  - my_method
+primary_metric: mean_average_precision
+tiou_thresholds: [0.1, 0.2, 0.3, 0.4, 0.5]
+agent_network_access: false
+heldout_labels_visible_to_model: false
+model_execution_authorized: false
+benchmark_execution_authorized: false

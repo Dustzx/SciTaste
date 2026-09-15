@@ -509,7 +509,13 @@ protocol.
    exact acquired inputs; freeze output package hashes, reviewer blinding, and
    runtime policy. Do not promote these broad prompts to empirical tasks. After
    an approved MLRC acquisition and package qualification, reproduce each
-   baseline and held-out path before a formal objective-progress proposal.
+   baseline and held-out path before a formal objective-progress proposal. The
+   Perception v2 adapter now makes that future execution label-safe: development
+   uses only train/validation bytes, test inference receives features plus a
+   metadata-only manifest, and the independent fixed-upstream-parity scorer
+   opens original labels only after prediction bytes freeze. The scorer and
+   Python 3.12 import/NMS path are ready; GPU baseline reproduction and launch
+   authority remain open.
 2. The dual-estimand architecture is materialized as native v11 and external v7
    immutable proposals. The six native structural policies are real and
    hash-bound; bounded candidate generation and fixed-candidate selection are

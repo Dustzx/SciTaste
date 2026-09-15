@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a label-isolated MLRC Perception runtime. It binds the fixed upstream
+  commit and existing materialized views, builds a metadata-only held-out
+  inference projection, freezes exact prediction bytes before a separate
+  scorer-owned label process, and fail-closes malformed scores. The standalone
+  mAP scorer matches fixed-upstream `ANETdetection` on a 63-label parity fixture
+  within `1e-15`; a content-hashed Python 3.12 overlay imports the real task and
+  executes compiled NMS on CPU without a model, GPU job, API call, or benchmark
+  claim.
 - Added prospective SciTasteBench decision-episode cohort ingress. It reuses the
   existing frozen trajectory/capture/outcome/episode/admission chain, verifies
   predecision alternatives and selections against exact decision-log bytes,
