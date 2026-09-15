@@ -283,6 +283,10 @@ from scitaste.evaluation import (
     source_projection_protocol_sha256,
     summarize_evaluation_readiness,
 )
+from scitaste.evaluation.decision_episode_integrity import (
+    inspect_track_a_decision_episode_integrity_plan,
+    prepare_track_a_decision_episode_integrity_plan,
+)
 from scitaste.evaluation.reference_selection_comparison import (
     ReferenceSelectionDownstreamEnvelope,
     ReferenceSelectionSourceLink,
@@ -2208,6 +2212,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(taste_corpus_curation)
     taste_corpus_curation.set_defaults(handler=_handle_evaluation_taste_corpus_curation)
+    track_a_integrity_prepare = evaluation_commands.add_parser(
+        "track-a-decision-integrity-prepare",
+        help="Fail closed on Track-A records that are not complete natural decisions",
+    )
+    track_a_integrity_prepare.add_argument("--source-plan", type=Path, required=True)
+    track_a_integrity_prepare.add_argument("--evidence-root", type=Path, default=Path("."))
+    track_a_integrity_prepare.add_argument("--output", type=Path, required=True)
+    track_a_integrity_prepare.add_argument(
+        "--require-eligible",
+        action="store_true",
+        help="return nonzero when no target or precedent passes episode integrity",
+    )
+    _add_log_level_option(track_a_integrity_prepare)
+    track_a_integrity_prepare.set_defaults(
+        handler=_handle_evaluation_track_a_decision_integrity_prepare
+    )
+    track_a_integrity_inspect = evaluation_commands.add_parser(
+        "track-a-decision-integrity-inspect",
+        help="Replay a Track-A v4 decision-episode integrity plan",
+    )
+    track_a_integrity_inspect.add_argument("--plan", type=Path, required=True)
+    track_a_integrity_inspect.add_argument("--evidence-root", type=Path, default=Path("."))
+    track_a_integrity_inspect.add_argument(
+        "--require-eligible",
+        action="store_true",
+        help="return nonzero when no target or precedent passes episode integrity",
+    )
+    _add_log_level_option(track_a_integrity_inspect)
+    track_a_integrity_inspect.set_defaults(
+        handler=_handle_evaluation_track_a_decision_integrity_inspect
+    )
     abstraction_review_prepare = evaluation_commands.add_parser(
         "ai-abstraction-review-prepare",
         help="Bridge accepted grounded abstractions into two AI-only review requests",
@@ -7869,6 +7904,72 @@ def _handle_evaluation_taste_corpus_curation(args: argparse.Namespace) -> int:
         payload["materialization"] = receipt.model_dump(mode="json")
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_ready and not report.ready_to_materialize:
+        return 1
+    return 0
+
+
+def _handle_evaluation_track_a_decision_integrity_prepare(args: argparse.Namespace) -> int:
+    plan = prepare_track_a_decision_episode_integrity_plan(
+        source_plan_path=args.source_plan,
+        evidence_root=args.evidence_root,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": plan.status,
+                "plan_revision": plan.plan_revision,
+                "plan_sha256": plan.plan_sha256,
+                "source_target_count": plan.source_target_count,
+                "eligible_target_count": plan.eligible_target_count,
+                "excluded_target_count": plan.excluded_target_count,
+                "source_precedent_count": plan.source_precedent_count,
+                "eligible_precedent_count": plan.eligible_precedent_count,
+                "excluded_precedent_count": plan.excluded_precedent_count,
+                "exclusion_reason_counts": plan.exclusion_reason_counts,
+                "required_source_data": plan.required_source_data,
+                "model_calls_performed": plan.model_calls_performed,
+                "api_calls_performed": plan.api_calls_performed,
+                "gpu_work_performed": plan.gpu_work_performed,
+                "output": str(args.output / "PLAN.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_eligible and (
+        plan.eligible_target_count == 0 or plan.eligible_precedent_count == 0
+    ):
+        return 1
+    return 0
+
+
+def _handle_evaluation_track_a_decision_integrity_inspect(args: argparse.Namespace) -> int:
+    inspection = inspect_track_a_decision_episode_integrity_plan(
+        args.plan,
+        evidence_root=args.evidence_root,
+    )
+    plan = inspection.plan
+    print(
+        json.dumps(
+            {
+                "status": plan.status,
+                "plan_sha256": plan.plan_sha256,
+                "file_sha256": inspection.file_sha256,
+                "source_plan_replayed": inspection.source_plan_replayed,
+                "target_bindings_verified": inspection.target_bindings_verified,
+                "precedent_bindings_verified": inspection.precedent_bindings_verified,
+                "eligible_target_count": plan.eligible_target_count,
+                "eligible_precedent_count": plan.eligible_precedent_count,
+                "exclusion_reason_counts": plan.exclusion_reason_counts,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_eligible and (
+        plan.eligible_target_count == 0 or plan.eligible_precedent_count == 0
+    ):
         return 1
     return 0
 
