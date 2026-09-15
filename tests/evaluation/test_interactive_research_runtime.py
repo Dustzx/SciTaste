@@ -270,6 +270,54 @@ def test_development_stop_gate_requires_belief_and_observed_coverage() -> None:
     assert rejected["checks"]["structured_support"] is False
 
 
+def test_development_stop_gate_does_not_force_a_redundant_third_evidence_turn() -> None:
+    context = _stop_gate_context().model_copy(
+        update={
+            "turn": 3,
+            "remaining_turns": 6,
+            "remaining_experiments": 15,
+            "history": _stop_gate_context().history[:2],
+        }
+    )
+    proposal = InteractiveAgentProposal(
+        action="submit_hypothesis",
+        submission="y = x",
+        rationale="Nine noiseless controlled observations exactly support one law.",
+        evidence_status="candidate-supported",
+        evidence_confidence=0.95,
+        next_experiment_value=0.05,
+    )
+
+    gate = interactive_development_module._development_submission_stop_gate(context, proposal)
+
+    assert gate["approved"] is False  # the synthetic two-turn fixture has only four experiments
+    assert gate["checks"]["minimum_completed_evidence_turns"] is True
+    assert gate["checks"]["phase_coverage"] is True
+
+    nine_experiment_history = tuple(
+        {
+            **item,
+            "model_action": {
+                **item["model_action"],
+                "experiments": [
+                    {"parameters": {"x": 10 * item["turn"] + offset}}
+                    for offset in range(1, count + 1)
+                ],
+            },
+            "observation": {"results": list(range(count))},
+        }
+        for item, count in zip(context.history, (6, 3), strict=True)
+    )
+    covered = context.model_copy(update={"history": nine_experiment_history})
+
+    approved = interactive_development_module._development_submission_stop_gate(
+        covered,
+        proposal,
+    )
+    assert approved["approved"] is True
+    assert approved["experiment_count"] == 9
+
+
 class _RandomNewtonModule:
     @staticmethod
     def run_experiment_for_module(**parameters):

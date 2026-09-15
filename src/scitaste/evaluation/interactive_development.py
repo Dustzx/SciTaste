@@ -1052,21 +1052,22 @@ def _development_submission_stop_gate(
                 observation_count += len(results)
             elif results is not None:
                 observation_count += 1
-    required_phases = ("PROBE", "ANALYZE", "EXPERIMENT")
+    required_phases = ("PROBE", "ANALYZE")
     phase_coverage = tuple(phases[: len(required_phases)]) == required_phases
     checks = {
         "submission_action": proposal.action == "submit_hypothesis",
         "structured_support": proposal.evidence_status == "candidate-supported",
         "confidence_threshold": proposal.evidence_confidence >= 0.9,
         "low_next_experiment_value": proposal.next_experiment_value <= 0.1,
-        "minimum_turn": context.turn >= 4,
+        "minimum_turn": context.turn >= 3,
+        "minimum_completed_evidence_turns": len(phases) >= 2,
         "phase_coverage": phase_coverage,
         "minimum_experiment_count": experiment_count >= 6,
         "minimum_distinct_experiments": len(distinct_experiments) >= 6,
         "complete_observation_coverage": observation_count >= experiment_count > 0,
     }
     return {
-        "policy": "structured-belief-plus-observed-coverage-v1",
+        "policy": "structured-belief-plus-observed-coverage-v2",
         "approved": all(checks.values()),
         "checks": checks,
         "evidence_status": proposal.evidence_status,
