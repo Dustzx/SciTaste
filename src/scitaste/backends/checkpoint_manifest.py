@@ -1,4 +1,4 @@
-"""Fast, content-addressed Hugging Face checkpoint identity manifests."""
+"""Content-addressed Hugging Face checkpoint identity manifests."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True)
 _SHA256 = r"^[0-9a-f]{64}$"
-_MAX_HEADER_BYTES = 128 * 1024 * 1024
+_HASH_CHUNK_BYTES = 8 * 1024 * 1024
 
 
 class CheckpointManifestFile(BaseModel):
@@ -19,7 +19,7 @@ class CheckpointManifestFile(BaseModel):
 
     path: str
     size_bytes: int = Field(ge=0)
-    identity_scope: Literal["complete-file", "safetensors-header-and-size"]
+    identity_scope: Literal["complete-file"]
     identity_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -31,12 +31,12 @@ class CheckpointManifestFile(BaseModel):
 
 
 class LocalCheckpointIdentityManifest(BaseModel):
-    """Portable checkpoint identity without repeatedly hashing tensor payloads."""
+    """Portable checkpoint identity that binds every checkpoint byte."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
-    algorithm: Literal["scitaste-hf-checkpoint-manifest-v1"]
+    schema_version: Literal["2.0"] = "2.0"
+    algorithm: Literal["scitaste-hf-checkpoint-manifest-v2"]
     model_path: str
     files: tuple[CheckpointManifestFile, ...] = Field(min_length=1)
     checkpoint_identity_sha256: str = Field(pattern=_SHA256)
@@ -66,7 +66,7 @@ class LocalCheckpointIdentityManifest(BaseModel):
         model_path: str | Path,
         files: tuple[CheckpointManifestFile, ...],
     ) -> LocalCheckpointIdentityManifest:
-        algorithm = "scitaste-hf-checkpoint-manifest-v1"
+        algorithm = "scitaste-hf-checkpoint-manifest-v2"
         identity = _canonical_sha256(
             {
                 "algorithm": algorithm,
@@ -74,7 +74,7 @@ class LocalCheckpointIdentityManifest(BaseModel):
             }
         )
         unsigned = {
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "algorithm": algorithm,
             "model_path": str(Path(model_path).resolve(strict=True)),
             "files": [item.model_dump(mode="json") for item in files],
@@ -86,19 +86,15 @@ class LocalCheckpointIdentityManifest(BaseModel):
 def build_local_checkpoint_identity_manifest(
     model_path: str | Path,
 ) -> LocalCheckpointIdentityManifest:
-    """Hash control bytes and safetensors structure, never tensor payload bytes."""
+    """Stream-hash every regular checkpoint file, including tensor payloads."""
 
     root = _checkpoint_root(model_path)
     files: list[CheckpointManifestFile] = []
     for source in _regular_checkpoint_files(root):
         relative = source.relative_to(root).as_posix()
         size = source.stat().st_size
-        if source.suffix == ".safetensors":
-            scope = "safetensors-header-and-size"
-            digest = _safetensors_header_sha256(source, size)
-        else:
-            scope = "complete-file"
-            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        scope = "complete-file"
+        digest = _file_sha256(source)
         files.append(
             CheckpointManifestFile(
                 path=relative,
@@ -117,7 +113,7 @@ def verify_local_checkpoint_identity_manifest(
     expected_manifest_file_sha256: str,
     expected_checkpoint_identity_sha256: str,
 ) -> LocalCheckpointIdentityManifest:
-    """Recompute the bounded manifest and reject any structural or control drift."""
+    """Recompute the manifest and reject drift in any checkpoint byte."""
 
     source = Path(manifest_path).resolve(strict=True)
     raw = source.read_bytes()
@@ -160,21 +156,11 @@ def _regular_checkpoint_files(root: Path) -> tuple[Path, ...]:
     return tuple(files)
 
 
-def _safetensors_header_sha256(path: Path, size: int) -> str:
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
     with path.open("rb") as handle:
-        length_bytes = handle.read(8)
-        if len(length_bytes) != 8:
-            raise RuntimeError("safetensors shard omits its header length")
-        header_size = int.from_bytes(length_bytes, "little")
-        if header_size < 2 or header_size > _MAX_HEADER_BYTES or header_size + 8 > size:
-            raise RuntimeError("safetensors shard has an invalid header length")
-        header = handle.read(header_size)
-        if len(header) != header_size:
-            raise RuntimeError("safetensors shard header is truncated")
-    digest = hashlib.sha256(b"SCITASTE_SAFETENSORS_HEADER_V1\0")
-    digest.update(size.to_bytes(8, "big"))
-    digest.update(length_bytes)
-    digest.update(header)
+        for chunk in iter(lambda: handle.read(_HASH_CHUNK_BYTES), b""):
+            digest.update(chunk)
     return digest.hexdigest()
 
 

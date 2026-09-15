@@ -11,7 +11,7 @@ from scitaste.backends.checkpoint_manifest import (
 )
 
 
-def test_checkpoint_manifest_binds_control_bytes_and_safetensors_structure(
+def test_checkpoint_manifest_binds_every_checkpoint_byte(
     tmp_path: Path,
 ) -> None:
     model = tmp_path / "model"
@@ -33,6 +33,23 @@ def test_checkpoint_manifest_binds_control_bytes_and_safetensors_structure(
     )
     assert verified == manifest
 
+    # A tensor-payload mutation with the same safetensors header and file size
+    # must invalidate exact experimental identity.
+    safetensors = model / "model.safetensors"
+    mutated = bytearray(safetensors.read_bytes())
+    mutated[-1] = 1
+    safetensors.write_bytes(mutated)
+    with pytest.raises(RuntimeError, match="differs from its identity manifest"):
+        verify_local_checkpoint_identity_manifest(
+            model,
+            manifest_path,
+            expected_manifest_file_sha256=hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            expected_checkpoint_identity_sha256=manifest.checkpoint_identity_sha256,
+        )
+
+    safetensors.write_bytes(
+        len(header).to_bytes(8, "little") + header + b"\x00\x00\x00\x00"
+    )
     (model / "config.json").write_text('{"model_type":"drifted"}\n', encoding="utf-8")
     with pytest.raises(RuntimeError, match="differs from its identity manifest"):
         verify_local_checkpoint_identity_manifest(

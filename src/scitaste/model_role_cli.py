@@ -5,6 +5,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from scitaste.evaluation.model_role_batch_execution import (
+    execute_local_model_role_batch,
+)
 from scitaste.evaluation.model_role_conformance import (
     compile_model_role_selection,
     inspect_model_role_conformance,
@@ -110,6 +113,19 @@ def register_model_role_cli(
     _add_log_level_option(import_receipts)
     import_receipts.set_defaults(handler=_handle_import_runtime_receipts)
 
+    execute_local_batch = subcommands.add_parser(
+        "execute-local-batch",
+        help="Execute an explicit local subset while keeping each checkpoint resident",
+    )
+    execute_local_batch.add_argument("--plan", type=Path, required=True)
+    execute_local_batch.add_argument("--request-id", action="append", default=[])
+    execute_local_batch.add_argument("--candidate-id", action="append", default=[])
+    execute_local_batch.add_argument("--max-requests", type=int)
+    execute_local_batch.add_argument("--allow-local", action="store_true")
+    execute_local_batch.add_argument("--stop-on-failure", action="store_true")
+    _add_log_level_option(execute_local_batch)
+    execute_local_batch.set_defaults(handler=_handle_execute_local_batch)
+
 
 def _add_log_level_option(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
@@ -211,6 +227,19 @@ def _handle_import_runtime_receipts(args: argparse.Namespace) -> int:
     )
     print(status.model_dump_json(indent=2))
     return 0
+
+
+def _handle_execute_local_batch(args: argparse.Namespace) -> int:
+    status = execute_local_model_role_batch(
+        args.plan,
+        request_ids=tuple(args.request_id),
+        candidate_ids=tuple(args.candidate_id),
+        max_requests=args.max_requests,
+        allow_local=args.allow_local,
+        stop_on_failure=args.stop_on_failure,
+    )
+    print(status.model_dump_json(indent=2))
+    return 0 if status.failed_count == 0 else 1
 
 
 __all__ = ["register_model_role_cli"]
