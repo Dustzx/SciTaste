@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the capability-driven ICLR 2027 AutoResearch program v4 and made it the
+  default for new project-program initialization. The controller preserves v3
+  replay while v4 rejects partial research workflows, requires the full
+  task/reference/Taste/idea/experiment/hidden-score/evidence/paper/review/revision
+  chain, and keeps the objective E2 route as title authority. Model assignment
+  is role-specific and task-excluded, the registered local and remote inventory
+  is a candidate floor rather than a design constraint, individual task-fit
+  downloads up to the owner-authorized 10 GiB boundary can expand the pool, and
+  Qwen3-VL-2B is explicitly limited to a low-cost lower bound rather than a
+  headline default.
 - Added a project-owned complete AutoResearch controller for the ICLR 2027
   program. Its 17 hash-chained states span acquisition through hidden scoring,
   evidence-linked paper construction, independent dual-AI review, conditional

@@ -172,7 +172,7 @@ class ResearchProgramContract(BaseModel):
     project_id: str
     program_id: str
     source_program_id: str
-    source_program_schema_version: Literal["3.0"]
+    source_program_schema_version: Literal["3.0", "4.0"]
     source_program_locator: Literal["inputs/experiment_program.yaml"]
     source_program_file_sha256: str = Field(pattern=_SHA256)
     model_inventory_id: str
@@ -732,7 +732,7 @@ class ResearchProgramRuntime:
                 run_id=contract.program_id,
                 provider="scitaste-native",
                 model="task-excluded-selection-pending",
-                condition="complete-autoresearch-program-v3",
+                condition=f"complete-autoresearch-program-v{contract.source_program_schema_version[0]}",
                 seed=0,
                 status="program-initializing",
                 evidence_scope="orchestration-only-no-scientific-result",
@@ -1384,6 +1384,97 @@ def _registered_review_id(binding: ResearchProgramArtifactBinding) -> str:
     return validate_entry_id(parts[1], field_name="review_id")
 
 
+_V4_REQUIRED_CAPABILITIES = {
+    "research-goal-and-task-intake",
+    "literature-and-reference-acquisition",
+    "source-quality-admission",
+    "grounded-taste-abstraction",
+    "candidate-idea-and-hypothesis-generation",
+    "taste-guided-selection-and-abstention",
+    "experiment-design-and-preregistration",
+    "role-and-resource-allocation",
+    "implementation-and-bounded-repair",
+    "experiment-execution-and-telemetry",
+    "candidate-freeze-and-hidden-scoring",
+    "evidence-analysis-and-contradiction-accounting",
+    "claim-evidence-linked-paper-generation",
+    "independent-dual-ai-review",
+    "disagreement-adjudication",
+    "review-driven-revision",
+    "final-review-and-package-freeze",
+}
+
+
+def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> None:
+    """Reject v4 plans that regress to a checkpoint-driven partial workflow."""
+
+    supersedes = program_payload.get("supersedes")
+    if not isinstance(supersedes, dict) or supersedes.get("program_id") != (
+        "scitaste-iclr2027-complete-autoresearch-program-v3"
+    ):
+        raise ValueError("program v4 must explicitly supersede the complete v3 plan")
+
+    completeness = program_payload.get("automation_completeness")
+    if not isinstance(completeness, dict):
+        raise ValueError("program v4 lacks the automation completeness contract")
+    raw_capabilities = completeness.get("required_capabilities")
+    if (
+        not isinstance(raw_capabilities, list)
+        or set(raw_capabilities) != _V4_REQUIRED_CAPABILITIES
+        or completeness.get("success_requires_all_capabilities") is not True
+        or completeness.get("partial_pipeline_may_be_reported_as_complete") is not False
+    ):
+        raise ValueError("program v4 does not require the complete research workflow")
+    feedback = completeness.get("required_feedback_loops")
+    if not isinstance(feedback, dict) or any(
+        feedback.get(key) != "required"
+        for key in ("review_to_paper", "review_to_evidence", "review_to_experiment_plan")
+    ):
+        raise ValueError("program v4 must preserve review-driven return paths")
+
+    tracks = program_payload.get("research_tracks")
+    if not isinstance(tracks, list):
+        raise ValueError("program v4 lacks the complete research-track matrix")
+    by_study = {
+        item.get("study_id"): item for item in tracks if isinstance(item, dict)
+    }
+    if set(by_study) != {"E0", "E1", "E2", "E3", "E4"}:
+        raise ValueError("program v4 must bind E0 through E4 exactly once")
+    if by_study["E2"].get("title_authority") is not True:
+        raise ValueError("program v4 title authority must remain with objective E2")
+    terminal = by_study["E3"].get("required_terminal_artifacts")
+    if not isinstance(terminal, list) or set(terminal) != {
+        "paper",
+        "two-reviews",
+        "revision",
+        "final-disposition",
+    }:
+        raise ValueError("program v4 E3 must end in a reviewed and revised paper package")
+
+    selection = program_payload.get("model_selection")
+    if not isinstance(selection, dict):
+        raise ValueError("program v4 lacks capability-driven model selection")
+    downloads = selection.get("owner_download_authority")
+    role_gates = selection.get("role_gates")
+    if (
+        selection.get("fixed_primary_model_id") is not None
+        or selection.get("inventory_presence_selects_model") is not False
+        or selection.get("qwen3_vl_2b_status") != "low-cost-lower-bound-only"
+        or selection.get("qwen3_vl_2b_may_be_headline_default") is not False
+        or not isinstance(downloads, dict)
+        or downloads.get("automatic_single_resource_max_bytes") != 10 * 1024**3
+        or not isinstance(role_gates, dict)
+        or set(role_gates) != {
+            "research_agent",
+            "code_agent",
+            "judge",
+            "embedding",
+            "task_training",
+        }
+    ):
+        raise ValueError("program v4 model selection is not capability-driven and expandable")
+
+
 def _compile_contract(
     *,
     project_id: str,
@@ -1392,8 +1483,9 @@ def _compile_contract(
     inventory_payload: dict[str, object],
     inventory_bytes: bytes,
 ) -> ResearchProgramContract:
-    if program_payload.get("schema_version") != "3.0":
-        raise ValueError("complete research controller requires program schema 3.0")
+    source_schema_version = program_payload.get("schema_version")
+    if source_schema_version not in {"3.0", "4.0"}:
+        raise ValueError("complete research controller requires program schema 3.0 or 4.0")
     program_id = program_payload.get("program_id")
     if not isinstance(program_id, str):
         raise ValueError("experiment program_id is missing")
@@ -1468,11 +1560,13 @@ def _compile_contract(
         or boundary.get("pseudo_implementation_of_blocked_system_allowed") is not False
     ):
         raise ValueError("program must forbid pseudo-implementation of blocked systems")
+    if source_schema_version == "4.0":
+        _validate_capability_driven_v4(program_payload)
     return ResearchProgramContract.create(
         project_id=project_id,
         program_id=program_id,
         source_program_id=program_id,
-        source_program_schema_version="3.0",
+        source_program_schema_version=source_schema_version,
         source_program_locator="inputs/experiment_program.yaml",
         source_program_file_sha256=_bytes_sha256(program_bytes),
         model_inventory_id=inventory_id,

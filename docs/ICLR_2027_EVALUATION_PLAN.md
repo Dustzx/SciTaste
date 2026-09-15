@@ -3,14 +3,24 @@
 Status: **proposal for author approval; no API, GPU, remote-environment, human-study,
 or formal-cell execution is authorized by this document**.
 
-The resource-independent title strategy is now
+The current main execution authority is the capability-driven
+[`AutoResearch program v4`](research/SCITASTE_CAPABILITY_DRIVEN_AUTORESEARCH_PROGRAM_V4.md).
+It requires the complete task/idea/experiment/evidence/paper/review/revision
+loop and selects research, coding, judging, retrieval, and task-training models
+independently by task-excluded capability gates. Qwen3-VL-2B is only a cheap
+lower-bound candidate; the local and remote inventories are candidate floors,
+and task-fit downloads may extend them. The former v3 plan and the Qwen v11
+prepilot remain immutable history and do not authorize a new run.
+
+The resource-independent title strategy is
 [`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md).
-The current machine-readable scientific authority is the lifecycle-policy
+The underlying scientific intervention design remains the lifecycle-policy
 [`evidence program v2`](../configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml),
 with a concise rationale in
 [`SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md`](research/SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md).
 It preserves same-source abstraction and contextual-selection controls while
-adding outcome-updated versus no-update and shuffled-credit interventions. This
+adding outcome-updated versus no-update and shuffled-credit interventions. v4
+wraps that design in the executable whole-research lifecycle. This
 closes the design gap between static Taste retrieval and the paper's learned
 lifecycle policy. The earlier evidence-program v1, Qwen v11, and DeepSeek V4.1
 proposals remain immutable feasibility/history artifacts rather than the final

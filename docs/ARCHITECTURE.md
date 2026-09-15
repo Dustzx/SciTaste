@@ -4570,3 +4570,37 @@ controller reports the exact next interface and authority flags, but performs no
 implicit download, API call, GPU job, hidden scoring, or external-system launch.
 Those operations belong to explicit executors whose receipts are then admitted by
 the controller.
+
+### ADR-141: Scientific capability selects experiment resources
+
+Status: accepted and implemented at the v4 program boundary; B0 execution and
+formal evidence remain open.
+
+Historical feasibility work bound Qwen3-VL-2B because it was locally available,
+but checkpoint availability is not a scientific design criterion. The v4 main
+program therefore treats every registered local checkpoint, remote checkpoint,
+hosted endpoint, and task-fit download as a candidate. It assigns the research
+agent, code agent, judge, embedding model, and task-training model independently
+only after role-specific, source-disjoint conformance. Existing bytes break ties
+on cost and reproducibility after capability equivalence; they do not select a
+study, endpoint, or headline model. Qwen3-VL-2B remains useful solely as a cheap
+lower bound or compatibility slice.
+
+Completeness is also a semantic constraint rather than a directory convention.
+A v4 program cannot initialize unless it requires all capabilities from goal and
+reference intake through grounded Taste, idea and experiment choice, objective
+execution and hidden scoring, evidence admission, paper assembly, independent
+dual-AI review, disagreement adjudication, review-driven revision, final review,
+and immutable package freeze. Review can return work to experiment planning,
+execution, evidence analysis, or paper assembly; a draft without this return path
+is not a complete autonomous-research trajectory.
+
+The v4 plan keeps four scientific jobs distinct: SciTasteBench identifies Taste
+mechanisms, MLRC/MLE-style hidden objectives authorize the improvement claim,
+MLR-Bench measures idea-to-reviewed-paper ecology against unchanged external
+methods, and EXP-Bench diagnoses the experiment chain. The local RTX 3090 is a
+development lane and the remote eight-RTX-3090 host is a formal lane, but workload
+requirements and frozen budgets choose the lane. The owner's standing permission
+allows an individually identified model resource up to 10 GiB to be downloaded;
+every download and model use still enters the exact run manifest and cannot be
+triggered merely by loading this program file.

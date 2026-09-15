@@ -16,6 +16,11 @@ ROOT = Path(__file__).resolve().parents[2]
 PROGRAM = (
     ROOT / "configs/evaluation/programs/iclr2027_scitaste_complete_autoresearch_program_v3.yaml"
 )
+CAPABILITY_PROGRAM = (
+    ROOT
+    / "configs/evaluation/programs/"
+    / "iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml"
+)
 MODEL_INVENTORY = ROOT / "configs/resources/assets/model_role_inventory_v1.yaml"
 
 
@@ -115,6 +120,29 @@ def test_initialize_binds_v3_and_records_block_resume_without_execution(tmp_path
     assert '"controller_launched_api": false' in transition
     assert '"controller_launched_gpu": false' in transition
     assert '"controller_launched_download": false' in transition
+
+
+def test_initialize_binds_capability_driven_v4_without_selecting_qwen2b(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path, "capability-program")
+    initialized = runtime.initialize(
+        project_id="capability-program",
+        program_path=CAPABILITY_PROGRAM,
+        model_inventory_path=MODEL_INVENTORY,
+        expected_revision=0,
+    )
+
+    assert initialized.contract.source_program_schema_version == "4.0"
+    assert initialized.contract.model_selection_gate == "task-excluded-conformance"
+    project = runtime.project_runtime.open("capability-program")
+    run = next(
+        item
+        for item in project.manifest.runs
+        if item.run_id == initialized.state.program_id
+    )
+    assert run.condition == "complete-autoresearch-program-v4"
+    assert run.model == "task-excluded-selection-pending"
 
 
 def test_review_disagreement_adjudicates_and_revision_can_return_to_experiment(

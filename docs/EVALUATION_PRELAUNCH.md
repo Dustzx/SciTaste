@@ -4,6 +4,12 @@ Status: **resource proposals only**. A read-only remote inventory has been
 recorded, but no model transfer, dataset download, GPU execution, reviewer
 recruitment, or formal cell is authorized by these files.
 
+For every new run, the controlling experiment is now the capability-driven
+[`AutoResearch program v4`](research/SCITASTE_CAPABILITY_DRIVEN_AUTORESEARCH_PROGRAM_V4.md).
+The model-specific proposals catalogued below are historical or bounded
+substudies. In particular, Qwen3-VL-2B is not the primary-model default; v4
+selects each role from all qualified resources or task-fit downloads.
+
 SciTaste keeps three experimental objects separate:
 
 | Object | Examples | What it determines |

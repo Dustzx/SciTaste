@@ -12,7 +12,8 @@ from scitaste.project.research_program import (
 )
 
 _DEFAULT_PROGRAM = Path(
-    "configs/evaluation/programs/iclr2027_scitaste_complete_autoresearch_program_v3.yaml"
+    "configs/evaluation/programs/"
+    "iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml"
 )
 _DEFAULT_MODEL_INVENTORY = Path("configs/resources/assets/model_role_inventory_v1.yaml")
 
@@ -28,7 +29,7 @@ def register_research_program_cli(
 
     initialize = commands.add_parser(
         "initialize",
-        help="Bind the v3 experiment program and task-excluded model inventory",
+        help="Bind the capability-driven experiment program and task-excluded model inventory",
     )
     initialize.add_argument("--project-id", required=True)
     initialize.add_argument("--expected-revision", type=int, required=True)

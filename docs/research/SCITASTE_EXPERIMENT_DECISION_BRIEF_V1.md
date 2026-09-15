@@ -3,12 +3,12 @@
 Status: **historical feasibility brief; superseded for launch planning**. The
 Qwen3-VL-2B choice, 120-case floor, and 100-trajectory API matrix below predate
 the resource-independent lifecycle H1/H2/H2b/H3/H4/E1/D1 evidence program and must not
-authorize or size a current experiment. Current scientific authority belongs to
-`configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml`; current
-resource joining belongs to
-`configs/evaluation/activation/iclr2027_review_followup_v3.yaml` only where its
-bindings remain compatible; a new v2 review/activation package is required
-before approval. Those records
+authorize or size a current experiment. Current execution authority belongs to
+`configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml`,
+which retains the v2 lifecycle intervention design but requires the complete
+idea-to-reviewed-and-revised-paper loop and capability-driven role selection.
+Current resource joining belongs to the v4 exact run manifest only where its
+bindings remain compatible. Those records
 leave the primary model, formal sample size, repetitions, and compute allocation
 unset until task metadata, a task-excluded conformance pilot, and power analysis
 are complete. No experiment execution is authorized.
