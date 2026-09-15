@@ -28,7 +28,7 @@ local-gpu = [
   "jinja2>=3.1,<4",
   "safetensors>=0.4,<1",
   "torch>=2.5,<2.6",
-  "transformers>=4.57,<4.58",
+  "transformers>=4.57,<5.18",
 ]
 study = [
   "matplotlib>=3.7,<4",
