@@ -22,31 +22,36 @@ association is heuristic and explicitly not a human label. The combined local
 construction inventory is therefore 357 candidates across 128 source groups,
 but the original calibration sample and the new reserve remain separately
 identified rather than being pooled after inspection.
-The candidates are not benchmark items or gold outcomes. The formally admitted
-population is currently zero because independent domain, quality, privacy,
-decision-family, grounded-abstraction, and attribution review has not completed.
-All four source populations have executable, outcome-blind review packages. The
-active deadline route uses identity-distinct AI reviewers and records
+The candidates are not benchmark items or gold outcomes. A source enters a
+formal population only after the applicable domain, quality, privacy,
+decision-family, grounded-abstraction, attribution, and decision-episode
+integrity gates accept it. Missing human staffing is not one of those gates.
+The active deadline route uses operationally final, identity-distinct AI
+reviewers and records
 `reviewer_kind=ai`, `not_human_review=true`; it does not claim human or expert
-validity. The new reserve has not yet received that AI quality/privacy pass and
-cannot enter a protocol merely because its byte and source-group gates passed.
+validity. A valid rejection closes its review node while keeping the source out;
+malformed or incomplete evidence remains fail-closed.
 
 Version 3 already specifies the title-critical H1/H2 conditions: same-source raw
 evidence, same-source abstracted Taste, and source-disjoint mismatched Taste under
-token and source-identity controls, with blinded human preference as the primary
-endpoint. The lifecycle evidence program extends this instrument with H2b
+token and source-identity controls. AI-panel judgments are mechanism/proxy
+measurements; held-out objective scorers own title authority. The lifecycle
+evidence program extends this instrument with H2b
 autonomous precedent selection and H3 reviewed delayed-credit learning. Their
 software and evidence contracts do not authorize a paper claim until real
-source-group-disjoint cases, labels, treatments, splits, model identity, power,
-and reviewer assignments are frozen.
+source-group-disjoint cases, treatments, splits, model identity, power, exact AI
+panel identities, and objective claim-admission contracts are frozen.
 
 Version 1 remains a synthetic engineering acceptance suite. It is useful for
 testing metrics and condition isolation but is not publication-effectiveness
-evidence. Version 2 has a separate human-labelled curation boundary: natural
+evidence. The historical Version 2 compiler retains a separate human-labelled
+curation boundary: natural
 cases contain no answer, source groups are disjoint from the evaluated Taste
 precedents, rubric and precedent corpora are content-addressed, and at least two
 independent human labels are compiled into the hidden expert distribution.
-Model-generated labels are structurally inadmissible.
+Model-generated labels are structurally inadmissible to that historical human
+estimand. The active v2 AI-finality route is a distinct nonhuman estimand and
+must not relabel its output as human evidence.
 
 ## Version 1 protocol
 

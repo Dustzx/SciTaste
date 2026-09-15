@@ -2,8 +2,10 @@
 
 Status: **design and software contract only**. No human/expert label, benchmark
 result, checkpoint transfer, or GPU workload is authorized by this document.
-The active operational route is the explicitly nonhuman AI-panel amendment in
-`docs/research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md`.
+The active operational route is the explicitly nonhuman, operationally final
+AI-panel policy in `docs/research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V2.md`. This
+document preserves the historical human-labelled estimand; it is no longer an
+active staffing dependency.
 
 ## Scientific role
 
@@ -64,9 +66,12 @@ not receive state-transition authority.
 These labels support an internal AI-panel measurement instrument only. Every
 record and report must state `reviewer_kind=ai` and `not_human_review=true`.
 They cannot be described as human preference, expert agreement, inter-annotator
-agreement, or independent construct validation, and they do not authorize the
-stronger *Improving Autonomous Research* title. A later human study is a separate
-protocol and estimand; it must not reinterpret the AI-only runs after the fact.
+agreement, or independent human construct validation. The panel neither
+authorizes nor permanently freezes the stronger *Improving Autonomous Research*
+title: that authority is decided only by the v2 gate over prospectively
+registered, complete, positive held-out objective causal contrasts. A later
+human study is a separate protocol and estimand; it must not reinterpret the
+AI-only runs after the fact.
 
 The curation compiler verifies reviewer identity separation per case, action
 identity, rubric and precedent-corpus hashes, canonical source/Taste group

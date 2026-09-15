@@ -1,0 +1,57 @@
+schema_version: "2.0"
+contract_id: iclr2027-scitaste-ai-review-finality-v2
+base_program_id: scitaste-iclr2027-lifecycle-evidence-program-v2
+base_program_proposal_sha256: ef6731ae05be2c2a6cf4c6a243a553e2f201aa89598474d3a9c6e575c6fa8e57
+primary_role_count: 2
+maximum_adjudicator_count: 1
+require_distinct_reviewer_identities: true
+require_distinct_models: true
+require_distinct_run_identities: true
+require_distinct_raw_responses: true
+adjudication_trigger: primary-disagreement-only
+operationally_final_nodes:
+  - protocol
+  - source
+  - abstraction
+  - outcome-attribution
+  - paper-review
+accepted_review_effect: close-node-and-admit-subject
+rejected_review_effect: close-node-and-block-subject
+reviewer_kind: ai
+not_human_review: true
+human_validity_claim_allowed: false
+human_review_required_to_close_node: false
+human_staffing_gate_active: false
+operational_readiness_override: replace-reviewer-recruitment-with-ai-panel-completion
+endpoint_overrides:
+  H1_taste_abstraction: ai-panel-and-natural-outcome-proxy
+  H2_taste_specificity: ai-panel-and-transfer-error-proxy
+  H2b_taste_selection: ai-panel-and-reversal-proxy
+  H3_lifecycle_credit: ai-panel-and-heldout-decision-proxy
+  H4_objective_progress: scorer-owned-objective-endpoint-unchanged
+ai_panel_evidence_role: mechanism-and-proxy-only
+ai_panel_can_authorize_title: false
+title_authority_source: held-out-objective-scorer-only
+candidate_title: "SciTaste: Improving Autonomous Research through Scientific Taste"
+fallback_title: "SciTaste: Grounded Scientific Taste for Autonomous Research"
+required_title_claim_ids:
+  - grounded-episodes-beat-raw-retrieval
+  - contextual-transfer-is-causal
+  - autonomous-selection-is-decision-grounded
+  - reviewed-delayed-credit-improves-policy
+  - learned-taste-improves-objective-progress
+require_all_registered_title_critical_claims: true
+require_all_positive_confirmatory_contrasts: true
+require_formal_objective_endpoint: true
+require_project_registered_complete_results: true
+forbidden_claims:
+  - human preference
+  - expert agreement
+  - expert-aligned scientific quality
+  - human-validated SciTasteBench
+  - general scientific-taste construct validity from AI-panel evidence alone
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false
+contract_sha256: ffdcb1927e162708c594603963505c37c0065e8f330da239e7dd16d6c88070e4

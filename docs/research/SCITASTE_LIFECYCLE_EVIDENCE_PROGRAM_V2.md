@@ -68,16 +68,26 @@ Natural source trajectories are grouped before outcomes are reviewed. Formal
 held-out cases and self-development records cannot fit the policy. One source
 trajectory contributes at most one effective unit, irrespective of how many
 decisions are reconstructed from it. H3 and H4 retain every failed run. The
-primary decision endpoint is condition-blinded expert preference with at least
-two conflict-screened reviewers and adjudication; an automated judge is only a
-validated secondary measure. H4 uses scorer-owned objective progress.
+base program records the original expert-preference estimand, while the active
+deadline route uses an explicitly nonhuman AI-panel mechanism/proxy endpoint.
+H4 and strong-title admission use scorer-owned held-out objective progress.
 
 The owner subsequently selected the AI-only operational amendment for the
 current deadline. The base expert endpoint remains visible here rather than
 being rewritten, while the self-hashed
-[`AI review substitution protocol`](AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md)
-resolves H1--H3 to explicitly non-human proxy endpoints and binds every AI
-admission. It does not satisfy or inherit the expert endpoint above.
+[`AI review operational-finality protocol`](AI_REVIEW_SUBSTITUTION_PROTOCOL_V2.md)
+resolves H1--H3 to explicitly nonhuman proxy endpoints and binds every AI
+admission. Two independent AI primaries, plus an identity-distinct adjudicator
+only on disagreement, are operationally final: lack of human staffing no longer
+keeps a review node open. This does not satisfy or inherit the expert endpoint.
+
+Review finality and title authority are separate. The AI panel cannot authorize
+a title. The candidate *SciTaste: Improving Autonomous Research through
+Scientific Taste* is selected only after every title-critical claim is
+prospectively bound to a formal objective prelaunch claim-admission contract and
+every project-registered held-out objective causal contrast is complete, valid,
+and positive. Until then the gate deterministically selects the grounded
+fallback title.
 
 The self-development project remains a recursive process case: its decisions,
 interventions, defects, paper revisions, and costs can demonstrate system use
@@ -91,11 +101,12 @@ and compute allocation unset until task-excluded conformance pilots and power
 analysis. It therefore does not prescribe an impressive-looking cell count.
 Inventory may constrain feasibility but cannot choose the scientific comparison.
 
-Before any API, GPU, external checkout, or human study, a separate immutable
-prelaunch manifest must name exact tasks and licenses, source and split hashes,
-model/checkpoint or provider revision, external-system commits, reviewer plan,
-cost ceilings, stop rules, and output locations. The owner must approve the
-exact manifest hash. All four execution flags in the v2 program are `false`.
+Before any API, GPU, external checkout, or optional human study, a separate
+immutable prelaunch manifest must name exact tasks and licenses, source and
+split hashes, model/checkpoint or provider revision, external-system commits,
+reviewer plan, cost ceilings, stop rules, and output locations. The owner must
+approve the exact manifest hash. All four execution flags in the v2 program are
+`false`.
 
 ## Current blockers
 
@@ -104,15 +115,13 @@ is not experiment-ready. Its exact existing proposal bindings are ready for
 owner scope review, while external actions remain closed. SciTasteBench has a
 real 273-candidate construction pool across 81 source groups and three observed
 domain or publisher-subject strata, but zero formally admitted cases: independent
-domain, quality, privacy, grounded-abstraction, and attribution review is still
-open. Outcome-blind ARIES and F1000 review packages now cover the complete pool
-and expose an exact workload of 546 scientific plus 273 privacy assessments;
-no reviewer contact or result exists. A deterministic assignment now partitions
-that workload across eight scientific and two privacy slots, with 68--69 and
-136--137 assessments per slot respectively, but no slot has a reviewer identity
-or staffing authority. A fixed 12-case dual-agent screen exposed material
-decision-family disagreement and a public-attribution versus de-identification
-ambiguity; it is process calibration and cannot satisfy human review. One
+domain, quality, privacy, grounded-abstraction, attribution, and decision-episode
+integrity admission is incomplete. Outcome-blind ARIES and F1000 review packages
+cover the source pool; their review work is assigned to identity-distinct AI
+panels under the active finality protocol. A fixed dual-agent screen exposed
+material decision-family disagreement and a public-attribution versus
+de-identification ambiguity; this is process calibration and not human validity.
+One
 MLRC-Bench task has exact development
 and scorer-held-out bytes, but its
 environment/scorer and a source-group-disjoint task population are not qualified.
@@ -123,5 +132,6 @@ is reference-only while its repository lacks a code license. The remaining
 scientific critical path is therefore to admit natural SciTasteBench cases,
 reproduce the MLRC environment/scorer, qualify the external adapters, freeze
 task/source groups, select a primary model by a task-excluded conformance pilot,
-complete power analysis, and secure blinded reviewers. These are
+complete power analysis, and register exact AI-panel and objective-title
+authority bindings. These are
 evidence-production gaps, not reasons to add more product features.

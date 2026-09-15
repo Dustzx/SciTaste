@@ -300,6 +300,13 @@ from scitaste.evaluation.reference_selection_comparison import (
     save_reference_selection_plan,
     save_reference_selection_report,
 )
+from scitaste.evaluation.review_authority import (
+    inspect_ai_operational_review_closure,
+    inspect_objective_title_authority,
+    load_ai_operational_review_closure,
+    load_ai_review_finality_policy,
+    load_objective_title_evidence_registration,
+)
 from scitaste.evaluation.taste_abstraction_batch import (
     compile_taste_abstraction_runtime_batch,
 )
@@ -2134,6 +2141,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(evidence_review)
     evidence_review.set_defaults(handler=_handle_evaluation_evidence_review)
+    review_finality = evaluation_commands.add_parser(
+        "review-finality",
+        help="Verify that an AI-only panel operationally closes one internal review node",
+    )
+    review_finality.add_argument("--policy", type=Path, required=True)
+    review_finality.add_argument("--closure", type=Path, required=True)
+    _add_log_level_option(review_finality)
+    review_finality.set_defaults(handler=_handle_evaluation_review_finality)
+    title_authority = evaluation_commands.add_parser(
+        "title-authority",
+        help="Resolve strong-title authority from preregistered held-out objective results",
+    )
+    title_authority.add_argument("--policy", type=Path, required=True)
+    title_authority.add_argument("--program", type=Path, required=True)
+    title_authority.add_argument("--registration", type=Path, required=True)
+    title_authority.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    title_authority.add_argument(
+        "--require-authorized",
+        action="store_true",
+        help="Return non-zero until every objective title claim is complete and positive",
+    )
+    _add_log_level_option(title_authority)
+    title_authority.set_defaults(handler=_handle_evaluation_title_authority)
     benchmark_alignment = evaluation_commands.add_parser(
         "benchmark-alignment",
         help="Check exact H1/H2 alignment between an evidence program and SciTasteBench",
@@ -7808,6 +7838,42 @@ def _handle_evaluation_evidence_review(args: argparse.Namespace) -> int:
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_owner_review_ready and not report.ready_for_owner_review:
+        return 1
+    return 0
+
+
+def _handle_evaluation_review_finality(args: argparse.Namespace) -> int:
+    policy = load_ai_review_finality_policy(args.policy)
+    closure = load_ai_operational_review_closure(args.closure)
+    verified = inspect_ai_operational_review_closure(policy, closure)
+    print(
+        json.dumps(
+            {
+                "policy_contract_sha256": policy.contract_sha256,
+                **verified.model_dump(mode="json"),
+                "subject_admitted": verified.final_verdict.value == "accept",
+                "human_or_expert_validity_claimed": False,
+                "no_external_action_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_title_authority(args: argparse.Namespace) -> int:
+    policy = load_ai_review_finality_policy(args.policy)
+    program = load_evidence_program(args.program).program
+    registration = load_objective_title_evidence_registration(args.registration)
+    report = inspect_objective_title_authority(
+        policy,
+        program,
+        registration,
+        outputs_root=args.outputs_root,
+    )
+    print(report.model_dump_json(indent=2))
+    if args.require_authorized and not report.objective_title_authorized:
         return 1
     return 0
 
