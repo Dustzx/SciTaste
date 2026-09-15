@@ -4041,8 +4041,8 @@ by the fixture-level implementation.
 
 ### ADR-129: Trajectory reconstruction preserves decisions without inventing rewards
 
-Status: accepted and implemented; prospective natural collection and delayed
-scientific outcomes remain open.
+Status: accepted and implemented; delayed scientific-outcome collection remains
+open.
 
 A continual policy cannot learn honestly by scanning old successful runs. That
 would select on observed outcomes, blur trajectory dependence, and turn executor
@@ -4069,6 +4069,14 @@ and reviewed causal credit. A real retrospective self-development replay exposed
 one valid comparative decision and one missing intermediate state; both remained
 audit-only. This is implementation evidence for the reconstruction boundary, not
 evidence that Scientific Taste improves research.
+
+The capture path is now also first class: after a pre-source plan is frozen and
+that exact source run is registered, `taste capture-prospective-decision` writes
+the content-addressed state and append-only decision line. Its receipt binds the
+current project revision, current Idea, executor outcome, and exact stored bytes.
+It cannot label delayed scientific success or make the record training-eligible;
+those authorities remain in the independent outcome-attribution and admission
+stages.
 
 ### ADR-130: Venue deadlines are project state, not remembered dates
 

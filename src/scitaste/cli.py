@@ -449,6 +449,7 @@ from scitaste.taste.semantic import (
 from scitaste.taste.trajectory_reconstruction import (
     TasteTrajectoryAssignmentTiming,
     TasteTrajectorySamplingPlan,
+    capture_prospective_taste_decision,
     load_taste_trajectory_sampling_plan,
     reconstruct_taste_trajectory,
     save_taste_trajectory_inventory,
@@ -1614,6 +1615,18 @@ def build_parser() -> argparse.ArgumentParser:
     trajectory_reconstruct.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(trajectory_reconstruct)
     trajectory_reconstruct.set_defaults(handler=_handle_taste_trajectory_reconstruct)
+    trajectory_capture = taste_commands.add_parser(
+        "capture-prospective-decision",
+        help="Persist one natural state/decision/outcome foundation under a frozen plan",
+    )
+    trajectory_capture.add_argument("--plan", type=Path, required=True)
+    trajectory_capture.add_argument("--state", type=Path, required=True)
+    trajectory_capture.add_argument("--decision", type=Path, required=True)
+    trajectory_capture.add_argument("--expected-revision", type=int, required=True)
+    trajectory_capture.add_argument("--output", type=Path, required=True)
+    trajectory_capture.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(trajectory_capture)
+    trajectory_capture.set_defaults(handler=_handle_taste_capture_prospective_decision)
     family_policy_fit = taste_commands.add_parser(
         "fit-family-policy",
         help="Fit isolated scientific decision-family Taste heads without model execution",
@@ -5897,6 +5910,53 @@ def _handle_taste_trajectory_reconstruct(args: argparse.Namespace) -> int:
                 "decision_count": inventory.decision_count,
                 "foundation_eligible_count": inventory.foundation_eligible_count,
                 "policy_training_authorized": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_capture_prospective_decision(args: argparse.Namespace) -> int:
+    plan = load_taste_trajectory_sampling_plan(args.plan)
+    state = ResearchState.model_validate_json(
+        _bounded_regular_input(args.state, label="prospective research state"),
+        strict=True,
+    )
+    decision = ResearchDecision.model_validate_json(
+        _bounded_regular_input(args.decision, label="prospective research decision"),
+        strict=True,
+    )
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, plan.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"prospective capture requires a verified current Idea: {codes}")
+    receipt = capture_prospective_taste_decision(
+        plan,
+        runtime=runtime,
+        state=state,
+        decision=decision,
+        current_idea_revision=idea_report.current_binding,
+        expected_project_revision=args.expected_revision,
+        output=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "prospective-taste-decision-captured",
+                "capture": str(args.output),
+                "capture_sha256": receipt.capture_sha256,
+                "decision_id": receipt.decision_id,
+                "state_snapshot_id": receipt.state_snapshot_id,
+                "alternative_count": receipt.alternative_count,
+                "awaiting_delayed_scientific_outcome": True,
+                "scientific_outcome_labels_created": False,
+                "policy_training_authorized": False,
+                "no_model_calls_performed": True,
+                "no_api_calls_performed": True,
+                "no_gpu_work_performed": True,
             },
             indent=2,
             ensure_ascii=False,

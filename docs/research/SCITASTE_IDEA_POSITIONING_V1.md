@@ -512,9 +512,11 @@ open on natural project trajectories.
 - Native execution writes the selected `ResearchDecision` and its actual
   executor outcome. Project-aware trajectory reconstruction now verifies the
   exact pre-decision state, alternatives, execution binding, source group, and
-  dataset partition without manufacturing a scientific outcome label.
-  Retrospective self-project logs remain audit-only, and prospective records
-  still require delayed outcome collection.
+  dataset partition without manufacturing a scientific outcome label. A
+  first-class prospective capture command now persists a natural state,
+  multi-alternative decision, and immediate executor outcome under the frozen
+  source plan. Retrospective self-project logs remain audit-only, and
+  prospectively captured records still require delayed outcome collection.
 - Deterministic process-candidate compilation, two independent attribution
   reviews with conditional adjudication, immutable admission, source-group-
   weighted policy estimation, held-out partition exclusion, exact-scope

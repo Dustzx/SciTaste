@@ -5,17 +5,18 @@ from __future__ import annotations
 import hashlib
 import os
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from scitaste.project import ProjectRuntime
 from scitaste.project.idea_revision import ProjectIdeaRevisionBinding, idea_binding_matches_current
 from scitaste.project.models import content_sha256, validate_project_id, validate_relative_locator
 from scitaste.schema.decisions import ResearchDecision
-from scitaste.state.persistence import snapshot_id
+from scitaste.state.persistence import DecisionLogger, StateStore, snapshot_id
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.episodes import TasteEpisodePartition, TasteEpisodeSourceRelationship
 
@@ -228,6 +229,143 @@ class TasteTrajectoryInventory(BaseModel):
                 unsigned.model_dump(mode="json", exclude={"inventory_sha256"})
             ),
         )
+
+
+class TasteProspectiveDecisionCaptureReceipt(BaseModel):
+    """Exact natural decision foundation captured under a pre-source sampling plan."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    plan_id: str = Field(pattern=_ID)
+    plan_sha256: str = Field(pattern=_SHA256)
+    source_project_id: str
+    source_run_id: str = Field(pattern=_ID)
+    observed_project_revision: int = Field(ge=0)
+    observed_project_snapshot_sha256: str = Field(pattern=_SHA256)
+    decision_id: str
+    decision_sha256: str = Field(pattern=_SHA256)
+    decision_log_locator: str
+    decision_line_number: int = Field(ge=1)
+    decision_line_sha256: str = Field(pattern=_SHA256)
+    state_snapshot_id: str = Field(pattern=_STATE_ID)
+    state_snapshot_locator: str
+    state_file_sha256: str = Field(pattern=_SHA256)
+    executor_result_id: str
+    executor_outcome_sha256: str = Field(pattern=_SHA256)
+    alternative_count: int = Field(ge=2)
+    captured_at: datetime
+    awaiting_delayed_scientific_outcome: Literal[True] = True
+    scientific_outcome_labels_created: Literal[False] = False
+    policy_training_authorized: Literal[False] = False
+    capture_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def capture_is_closed(self) -> TasteProspectiveDecisionCaptureReceipt:
+        validate_project_id(self.source_project_id)
+        validate_relative_locator(self.decision_log_locator, field_name="decision log locator")
+        validate_relative_locator(
+            self.state_snapshot_locator,
+            field_name="state snapshot locator",
+        )
+        if self.captured_at.utcoffset() is None:
+            raise ValueError("Taste decision capture time must include a timezone")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"capture_sha256"}))
+        if self.capture_sha256 != expected:
+            raise ValueError("Taste decision capture hash differs")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TasteProspectiveDecisionCaptureReceipt:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("capture_sha256", None)
+        unsigned = cls.model_construct(capture_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            capture_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"capture_sha256"})
+            ),
+        )
+
+
+def capture_prospective_taste_decision(
+    plan: TasteTrajectorySamplingPlan,
+    *,
+    runtime: ProjectRuntime,
+    state: ResearchState,
+    decision: ResearchDecision,
+    current_idea_revision: ProjectIdeaRevisionBinding,
+    expected_project_revision: int,
+    output: str | Path,
+) -> TasteProspectiveDecisionCaptureReceipt:
+    """Persist one already-made natural decision; do not generate or relabel it."""
+
+    if plan.assignment_timing is not TasteTrajectoryAssignmentTiming.PROSPECTIVE:
+        raise ValueError("natural decision capture requires a prospective sampling plan")
+    if not idea_binding_matches_current(plan.idea_revision, current_idea_revision):
+        raise ValueError("natural decision capture plan belongs to a stale Idea revision")
+    snapshot = runtime.open(plan.source_project_id)
+    if snapshot.revision != expected_project_revision:
+        raise ValueError(
+            f"stale project revision {expected_project_revision}; current is {snapshot.revision}"
+        )
+    if plan.source_run_id not in {item.run_id for item in snapshot.manifest.runs}:
+        raise ValueError("prospective source run is not registered")
+    if state.project_id != plan.source_project_id:
+        raise ValueError("captured research state belongs to another project")
+    identifier = snapshot_id(state)
+    if decision.state_snapshot_id != identifier:
+        raise ValueError("captured decision does not bind the supplied state")
+    if decision.stage != state.current_stage.value:
+        raise ValueError("captured decision stage differs from the supplied state")
+    if len(decision.candidate_actions) < 2:
+        raise ValueError("captured Taste decision requires at least two alternatives")
+    if decision.executor_result_id is None or decision.actual_outcome is None:
+        raise ValueError("captured Taste decision requires an immediate executor outcome")
+
+    run_root = runtime.projects_root / plan.source_project_id / "runs" / plan.source_run_id
+    decision_log = run_root / PurePosixPath(plan.decision_log_locator)
+    logger = DecisionLogger(decision_log)
+    existing = logger.read_all()
+    matches = [item for item in existing if item.decision_id == decision.decision_id]
+    if matches and matches != [decision]:
+        raise ValueError("captured decision ID already binds different bytes")
+
+    state_store = StateStore(run_root / PurePosixPath(plan.state_snapshot_root_locator))
+    saved_identifier = state_store.save(state)
+    if saved_identifier != identifier:
+        raise ValueError("captured state identity changed during persistence")
+    if not matches:
+        logger.append(decision)
+        line_number = len(existing) + 1
+    else:
+        line_number = next(index for index, item in enumerate(existing, 1) if item == decision)
+    raw_lines = decision_log.read_bytes().splitlines(keepends=True)
+    raw_line = raw_lines[line_number - 1]
+    state_path = state_store.snapshot_dir / f"{identifier}.json"
+    state_locator = state_path.relative_to(run_root).as_posix()
+    receipt = TasteProspectiveDecisionCaptureReceipt.create(
+        plan_id=plan.plan_id,
+        plan_sha256=plan.plan_sha256,
+        source_project_id=plan.source_project_id,
+        source_run_id=plan.source_run_id,
+        observed_project_revision=snapshot.revision,
+        observed_project_snapshot_sha256=snapshot.snapshot_sha256,
+        decision_id=decision.decision_id,
+        decision_sha256=content_sha256(decision.model_dump(mode="json")),
+        decision_log_locator=plan.decision_log_locator,
+        decision_line_number=line_number,
+        decision_line_sha256=hashlib.sha256(raw_line).hexdigest(),
+        state_snapshot_id=identifier,
+        state_snapshot_locator=state_locator,
+        state_file_sha256=hashlib.sha256(state_path.read_bytes()).hexdigest(),
+        executor_result_id=decision.executor_result_id,
+        executor_outcome_sha256=content_sha256(decision.actual_outcome),
+        alternative_count=len(decision.candidate_actions),
+        captured_at=datetime.now(UTC),
+    )
+    _write_new_json(output, receipt.model_dump_json(indent=2) + "\n")
+    return receipt
 
 
 def reconstruct_taste_trajectory(
@@ -478,11 +616,13 @@ def _write_new_json(value: str | Path, contents: str) -> Path:
 
 
 __all__ = [
+    "TasteProspectiveDecisionCaptureReceipt",
     "TasteTrajectoryAssignmentTiming",
     "TasteTrajectoryDecisionSeed",
     "TasteTrajectoryFollowup",
     "TasteTrajectoryInventory",
     "TasteTrajectorySamplingPlan",
+    "capture_prospective_taste_decision",
     "load_taste_trajectory_sampling_plan",
     "reconstruct_taste_trajectory",
     "save_taste_trajectory_inventory",

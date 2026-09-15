@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added first-class prospective natural-decision capture. A project can now
+  persist an exact pre-decision state, multi-alternative decision, and immediate
+  executor outcome only after its sampling plan was frozen and source run was
+  registered. The immutable receipt binds project revision, Idea, source run,
+  JSONL line, state snapshot, executor result, and all relevant content hashes;
+  it explicitly creates no scientific-outcome label and authorizes no policy
+  training while the delayed outcome is still unknown.
 - Added the missing production bridge from project-owned Taste episodes to a
   disclosed cross-model AI attribution panel. One shared, condition- and
   claim-blinded evidence packet can now produce provider-bound GLM-5.3-Flash and
