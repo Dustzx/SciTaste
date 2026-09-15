@@ -10,10 +10,13 @@ idea:
   sha256: 4b592572eb58236def8d273329995472b9f05ce0435fa16b7b551d758b13a765
 model_candidates:
   locator: configs/evaluation/model_selection/scitaste_iclr27_related_work_candidates_v1.yaml
-  sha256: c1c7fbb9458048a0eaf768cefa90747f01c11fb10342c3188c94653cfcf521b6
+  sha256: bc9ed447fae93da9787195c947a310e31c12ea0da45e89c58bbdd406729995c5
 dataset:
   locator: docs/research/data/scijudgebench_eval_assets_v1.yaml
   sha256: 4beeec37322b304a13046a47640d9807e8ad5339e460edc245171cf52d275e86
+task_excluded_b0:
+  locator: configs/evaluation/model_roles/direct_taste_neighbor_b0_receipts_v1.yaml
+  sha256: 4ad8fd4c9e585cd3ab7a31f90a7caa746d67e17cc677be81995761c7db5ed848
 
 purpose: >-
   Distinguish the direct neighbors' learned pointwise impact/ideation Taste from
@@ -103,7 +106,7 @@ reporting:
 
 execution_state:
   dataset_eval_splits_downloaded: true
-  direct_neighbor_checkpoints_complete: false
+  direct_neighbor_checkpoints_complete: true
   exact_base_checkpoints_complete: false
-  task_excluded_load_generation_preflight_complete: false
+  task_excluded_load_generation_preflight_complete: true
   formal_execution_started: false

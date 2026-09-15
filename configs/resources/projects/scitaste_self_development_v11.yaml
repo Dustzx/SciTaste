@@ -1,0 +1,94 @@
+schema_version: "1.0"
+binding_set_id: scitaste-self-development-resources-v11
+project_id: scitaste-self-development
+catalog_id: scitaste-shared-compute-v11
+catalog_semantic_sha256: b94cff1e8455157329eb54de89d8907961913659e1d75c410533564d6861176d
+bindings:
+  - binding_id: primary-api-deepseek-v4
+    resource_id: deepseek-v4-flash
+    expected_kind: api_model
+    role: primary-api-candidate
+    priority: 1
+    status: pending
+    purpose: Current official DeepSeek V4 Flash candidate; selection requires a separately approved task-excluded conformance window.
+    required_for: [api-causal-pilot-candidate, api-system-comparison-candidate]
+  - binding_id: robustness-api-zhipu
+    resource_id: zhipu-glm53-flash
+    expected_kind: api_model
+    role: robustness-api-candidate
+    priority: 1
+    status: verified
+    purpose: Authenticated GLM-5.3-Flash availability is verified through a project-owned Generation as Content generation and feedback-edit interaction; formal experiment selection remains separate.
+    required_for: [generation-as-content-planner, cross-provider-robustness-candidate, multimodal-system-pilot-candidate]
+  - binding_id: historical-api-bailian
+    resource_id: bailian-qwen38-max
+    expected_kind: api_model
+    role: historical-api
+    priority: 1
+    status: blocked
+    purpose: Preserve historical Qwen3.8-Max provenance; a refreshed local key does not override the last arrearage observation.
+    required_for: [historical-replay]
+  - binding_id: development-gpu-local
+    resource_id: gpu-host-local-3090
+    expected_kind: gpu_host
+    role: development-gpu
+    priority: 1
+    status: verified
+    purpose: The repository-owned Python 3.12 local-generation stack and one RTX 3090 are visible; model loading and the Reference Quality calibration remain separately authorized actions.
+    required_for: [local-model-preflight, reference-quality-calibration]
+  - binding_id: scaleout-gpu-remote
+    resource_id: gpu-host-3090-2
+    expected_kind: gpu_host
+    role: scaleout-gpu
+    priority: 1
+    status: verified
+    purpose: Eight-card remote capacity is verified; availability does not determine the ICLR experiment backbone.
+    required_for: [selected-gpu-pilot, powered-gpu-formal, direct-neighbor-b0]
+  - binding_id: verified-local-qwen3vl2b
+    resource_id: qwen3-vl-2b-local-47f9c0e0
+    expected_kind: model_checkpoint
+    role: verified-checkpoint
+    priority: 1
+    status: verified
+    purpose: Content hash and regular-file payload size are verified; this snapshot is selected only for bounded Reference Quality instrument calibration, not the headline paper backbone.
+    required_for: [asset-inventory, reference-quality-calibration]
+  - binding_id: discovered-local-qwen35-4b
+    resource_id: qwen3-5-4b-local-b4e05070
+    expected_kind: model_checkpoint
+    role: replicated-checkpoint
+    priority: 1
+    status: verified
+    purpose: Local replica of one discovered Qwen3.5-4B content tree; selection and loadability remain independent gates.
+    required_for: [asset-inventory]
+  - binding_id: discovered-remote-qwen35-4b
+    resource_id: qwen3-5-4b-remote-b4e05070
+    expected_kind: model_checkpoint
+    role: replicated-checkpoint
+    priority: 2
+    status: verified
+    purpose: Remote replica of the same discovered Qwen3.5-4B content tree; it carries no main-experiment role.
+    required_for: [asset-inventory]
+  - binding_id: robustness-remote-qwen35-9b
+    resource_id: qwen3-5-9b-remote-eb331598
+    expected_kind: model_checkpoint
+    role: robustness-checkpoint-candidate
+    priority: 1
+    status: verified
+    purpose: Fixed-revision open 9B checkpoint for cross-model robustness after task-excluded role conformance; static completeness cannot select it over a related-work-matched model.
+    required_for: [cross-model-robustness-candidate]
+  - binding_id: direct-neighbor-scijudge-4b
+    resource_id: scijudge-4b-2605-remote-da748ee3
+    expected_kind: model_checkpoint
+    role: direct-neighbor-impact-baseline
+    priority: 1
+    status: verified
+    purpose: Fixed-revision direct Scientific Taste impact-preference baseline; its narrow citation task cannot act as peer review or lifecycle policy.
+    required_for: [direct-neighbor-b0, direct-neighbor-N1]
+  - binding_id: direct-neighbor-scithinker-4b
+    resource_id: scithinker-4b-remote-e6544721
+    expected_kind: model_checkpoint
+    role: direct-neighbor-ideation-baseline
+    priority: 1
+    status: verified
+    purpose: Fixed-revision direct Scientific Taste ideation baseline; title-and-abstract generation cannot establish full AutoResearch completion.
+    required_for: [direct-neighbor-b0, direct-neighbor-N2]

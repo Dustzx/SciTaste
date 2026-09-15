@@ -1,0 +1,64 @@
+schema_version: "1.0"
+campaign_id: direct-taste-neighbor-task-excluded-b0-v1
+executed_at: 2026-09-16T00:00:00+08:00
+formal_evidence: false
+purpose: verify fixed direct-neighbor checkpoints load, generate, and satisfy their narrow output contracts without opening any formal split
+runner:
+  locator: scripts/run_direct_taste_neighbor_b0.py
+  sha256: 29c385f72ce34e9cd9fa059090b251fc7d2db2a46ef32dcd932303743992991f
+environment:
+  locator: configs/resources/gpu/environments/scitaste_py312_remote_v1.yaml
+  sha256: feb4778f3b79ab5717e1361e638d624785546ca6e708a31a86066444355ce54a
+  host_resource_id: gpu-host-3090-2
+receipts:
+  - role: taste-impact-judge
+    model_id: OpenMOSS-Team/SciJudge-4B-2605
+    model_revision: 06109d60950dd15ac9a0fa7f804280386c25b113
+    checkpoint_sha256: da748ee3f99aa3c28e037dc2baae64f37f597582c3987f38898ccc37432f0976
+    project_locator: outputs/projects/scitaste-self-development/evaluations/direct-neighbor-b0/scijudge-4b-2605-b0-v1.json
+    receipt_sha256: 08f4fa64fe3014e515e68d34247d869001e8ff7c3df3421990cb05ad81f33307
+    prompt_sha256: f0bf82417ba2679a4bef3a4377a3dc01a9f4b6b1d9c7400bab727d637678044d
+    formal_dataset_rows_read: 0
+    schema_accepted: true
+    parsed_answer: B
+    device: cuda:0
+    peak_allocated_memory_bytes: 8223046144
+    elapsed_seconds: 15.488049507141113
+  - role: taste-ideator
+    model_id: OpenMOSS-Team/SciThinker-4B
+    model_revision: ddd5752d9bfebc858570ec9e6db94cb460a8d985
+    checkpoint_sha256: e6544721b68fc241b0af7fc769de0e309a2993e0ad86b0114cdf6eb7de6dd0e1
+    project_locator: outputs/projects/scitaste-self-development/evaluations/direct-neighbor-b0/scithinker-4b-b0-v1.json
+    receipt_sha256: 7126b825e7182b98389335819390c2e9657732833152b17b71ed6321e0b8db22
+    prompt_sha256: b9085c2b201ec65fb4555f284ccfcb4eb369f5ed382dec44d6c2942d72fbc125
+    formal_dataset_rows_read: 0
+    schema_accepted: true
+    parsed_title: Proactive Reproducibility Assurance via Execution Receipt Cross-Validation
+    device: cuda:1
+    peak_allocated_memory_bytes: 8251090944
+    elapsed_seconds: 25.870579719543457
+attempt_history:
+  - attempt: 1
+    gpu_model_load_started: false
+    result: failed-before-load
+    cause: inherited NumPy-2.3.5 versus SciPy-and-scikit-learn NumPy-1.x ABI mismatch
+  - attempt: 2
+    gpu_model_load_started: false
+    result: failed-before-load
+    cause: runner passed a CUDA string where the installed PyTorch memory telemetry required torch.device
+  - attempt: 3
+    gpu_model_load_started: false
+    result: failed-before-load
+    cause: inherited torchvision-0.20.1-cu118 did not match torch-2.5.1-cu124
+  - attempt: 4
+    gpu_model_load_started: true
+    result: two-of-two-passed
+conclusions_allowed:
+  - both exact 4B checkpoints load on one RTX 3090 each under the recorded Python 3.12 environment
+  - both checkpoints generated one schema-accepted task-excluded response
+conclusions_forbidden:
+  - SciJudgeBench accuracy or transfer
+  - ideation quality superiority
+  - lifecycle Scientific Taste improvement
+  - end-to-end AutoResearch improvement
+next_gate: acquire-and-qualify-the-two-exact-4b-base-checkpoints-before-any-native-task-comparison

@@ -47,7 +47,7 @@ scientific agent.
 
 The no-run direct-neighbor study extension is
 [`iclr2027_scitaste_direct_neighbor_extension_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_direct_neighbor_extension_v1.yaml),
-SHA-256 `19b66d053658a72506e674eea6992ff36069270f48d35ada3b63f9c3ce4dc77d`.
+SHA-256 `fdf51ec564d3bb0a6ea9160b4299cb2e04dbc5ff787b792b16711a7b00a31ba0`.
 It reports 4B native-task reproduction, conditional 30B scale-by-training
 robustness, lifecycle transfer, SciTaste mechanisms, and downstream objective
 progress as separate estimands. Aggregating those heterogeneous tasks into one
@@ -104,14 +104,41 @@ review-driven revision cannot be marked complete. Formal review may return work
 to experiment planning, execution, evidence analysis, or paper assembly. Hidden
 scores cannot update the same formal policy split.
 
+## SciTaste policy versus research workload training
+
+“Training-free” applies first to the current SciTaste method: the frozen
+research-agent weights are not updated. SciTaste instead updates grounded Taste
+memory, delayed outcome credit, routing statistics, and abstention state. It
+does **not** imply that every scientific experiment run by SciTaste is
+training-free.
+
+The workload contract is independently two-stratum and is frozen in
+[`iclr2027_scitaste_workload_paradigms_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_workload_paradigms_v1.yaml),
+SHA-256 `60fe5de9e3554e685c18d15d66d53d1648e96ab8b4969bfb29ff304a9913f13b`:
+
+- **T0 training-free research** executes a complete project by changing
+  analysis, code, prompts, retrieval, or algorithms while keeping task-model
+  weights fixed. It still requires a hidden objective endpoint, evidence,
+  paper, review, revision, and final disposition.
+- **T1 training-based research** trains or fine-tunes a benchmark-owned task
+  model and retains learning curves, failures, and resource telemetry. The
+  current first route is MLRC Perception with its `LocPointTransformer`.
+
+Both T0 and T1 compare `scitaste-native` with `native-base` under the same
+research-agent model and budget. Their primary results are reported separately.
+The direct Scientific Judge/Thinker training comparison is a third, external
+mechanism-reproduction question; it is not one of these SciTaste workload
+strata. A learned-weight SciTaste policy may be studied later, but it is not
+required by the current title or primary causal claim.
+
 ## Main evidence program
 
 | Track | Question | Data/benchmark | Model and compute shape |
 |---|---|---|---|
-| E1 | Which Scientific Taste mechanisms improve decisions? | source-disjoint SciTasteBench natural decisions | parameter-training-free; one frozen strong agent per contrast, two independent judges; no GPU required unless the local robustness stratum is run |
-| E2 | Does SciTaste improve objective research progress? | MLRC-Bench primary, another scorer-owned route only after qualification | same scientific agent for Native and Native Base; benchmark task model on 8×3090; hidden scorer owns the endpoint |
-| E3 | Can SciTaste complete Idea to reviewed and revised paper better than admitted AutoResearch methods? | MLR-Bench | matched-model primary and native-best secondary reported separately; actual task-dependent API/GPU work and complete paper-review loop |
-| E4 | Where does the executable research chain fail? | EXP-Bench | smallest Native/Base diagnostic pair covering hypothesis through conclusion |
+| E1 | Which Scientific Taste mechanisms improve decisions? | source-disjoint SciTasteBench D-layer natural decisions | training-free SciTaste policy; one frozen strong agent per contrast, two independent judges; no GPU required unless the local robustness stratum is run |
+| E2 | Does SciTaste improve objective training-based research progress? | MLRC-Bench primary, another scorer-owned route only after qualification | same scientific agent for Native and Native Base; benchmark task model on 8×3090; hidden scorer owns the endpoint |
+| E3 | Can SciTaste complete Idea to reviewed and revised paper better than admitted AutoResearch methods? | MLR-Bench plus a qualified T0 task | matched-model primary and native-best secondary reported separately; at least one complete training-free and one training-based research workload, with actual task-dependent API/GPU work and paper-review loop |
+| E4 | Where does the executable research chain fail? | EXP-Bench | smallest Native/Base diagnostic pair spanning T0/T1 where qualified and covering hypothesis through conclusion |
 
 B0 exercises roles and the complete interface graph only on excluded development
 content. B1 runs the smallest complete formal trajectories needed to cover the
@@ -143,7 +170,7 @@ The immediate critical path is therefore:
 
 The current no-run E2 handoff is
 [`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
-SHA-256 `4377ccafc1371fb2f6bfc8613d588f244feaf97cfd740d1e0339211a3f2ca35b`.
+SHA-256 `35d40ace350bf8ab5e7c7e85491209b08e7dcfcf2ae4767b91e0106bd0d92357`.
 Its eleven static scientific and execution boundaries pass, including exact
 bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
 and the related-work candidate catalog. The E2 pool now includes unconfigured
@@ -160,3 +187,15 @@ Only the previously missing 3,345,623,595 bytes were downloaded. No model load,
 generation, GPU job, or benchmark run occurred. This changes feasibility, not
 selection; the checkpoint still needs source-disjoint role conformance and
 cannot replace the frontier matched-model stratum.
+
+The two released 4B direct-neighbor checkpoints are now fixed-revision,
+full-tree hashed, and attached to the self-development project resource set.
+One task-excluded B0 run per checkpoint loaded successfully on separate RTX
+3090s under Python 3.12: Scientific Judge returned its required answer schema in
+15.49 seconds at 8,223,046,144 peak allocated bytes, and Scientific Thinker
+returned its required title/abstract schema in 25.87 seconds at 8,251,090,944
+bytes. Both receipts record zero formal dataset rows. These observations prove
+only load/generation compatibility; they do not establish impact accuracy,
+ideation quality, lifecycle transfer, or AutoResearch improvement. The exact
+4B Qwen bases are being acquired next so any N1/N2 difference can be attributed
+to the neighbor's Taste training rather than an unmatched backbone.

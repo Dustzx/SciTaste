@@ -1,0 +1,24 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: scijudge-4b-2605-remote-da748ee3
+  model_id: OpenMOSS-Team/SciJudge-4B-2605
+  model_revision: 06109d60950dd15ac9a0fa7f804280386c25b113
+  local_path: /media/sdb/wwh/models/SciJudge-4B-2605
+  storage_scope: gpu_host
+  storage_gpu_resource_id: gpu-host-3090-2
+  checkpoint_sha256: da748ee3f99aa3c28e037dc2baae64f37f597582c3987f38898ccc37432f0976
+  checkpoint_bytes: 8838815338
+  format: Hugging Face indexed safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids:
+    - gpu-host-3090-2
+  evidence_ref: configs/resources/observations/v9/scijudge_4b_2605_remote_20260916_v1.yaml
+  evidence_sha256: 143660e70edb468d907d5b411d424751b4b1ad2bbe86abc610aa5071de6a6b51
+  observed_at: 2026-09-16T00:00:00+08:00
+  availability: verified
+  availability_reason: >-
+    All 14 regular files, both indexed weight shards, tokenizer assets, and
+    required JSON files were present at the fixed upstream revision and hashed.
+    No model load, generation, GPU job, benchmark row, or formal experiment was
+    executed.

@@ -1,11 +1,11 @@
 # Resource catalog layout
 
-`compute_catalog_v10.yaml` is the current project-superordinate resource index.
+`compute_catalog_v11.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
 
 ```text
 configs/resources/
-├── compute_catalog_v10.yaml
+├── compute_catalog_v11.yaml
 ├── assets/
 │   └── model_asset_catalog_v1.yaml
 ├── api/
@@ -21,9 +21,12 @@ configs/resources/
 │   └── checkpoints/
 │       ├── qwen3_vl_2b_instruct_local.yaml
 │       ├── qwen3_5_4b_local.yaml
-│       └── qwen3_5_4b_remote.yaml
+│       ├── qwen3_5_4b_remote.yaml
+│       ├── qwen3_5_9b_remote_v2.yaml
+│       ├── scijudge_4b_2605_remote_v1.yaml
+│       └── scithinker_4b_remote_v1.yaml
 ├── projects/
-│   └── scitaste_self_development_v10.yaml
+│   └── scitaste_self_development_v11.yaml
 └── observations/
     ├── *.yaml                 # historical API and remote-host observations
     ├── v2/                    # local v2 observations
@@ -65,6 +68,11 @@ V10 registers a current authenticated GLM-5.3-Flash Generation as Content
 generation/edit observation and advances only that project binding to verified.
 It does not change DeepSeek availability, select an experiment model, or claim
 scientific quality.
+V11 registers the now-complete fixed-revision Qwen3.5-9B robustness candidate
+and the fixed-revision 4B Scientific Judge and Thinker direct-neighbor
+checkpoints. Their static completeness and project attachment do not select a
+formal model; each remains behind its role-specific task-excluded execution
+gate.
 
 Generation as Content projects both a project's attached resources and compatible
 catalog alternatives. A user-reviewed, model-authored resource directive may add
@@ -88,10 +96,11 @@ not hot-load a new provider or expose a credential value to the project surface.
 `assets/model_asset_catalog_v1.yaml` indexes bounded local and remote discovery
 inventories. Discovery records what already exists, not what the ICLR experiment
 should use. Only content-verified snapshots enter the compute catalog;
-structurally complete but unhashed models remain candidates, and the partial
-remote Qwen3.5-9B snapshot is explicitly blocked. Scientific design selects a
-model first, after which exact license, hash, loading, and runtime preflights are
-completed only for selected candidates.
+structurally complete but unhashed models remain candidates. The former partial
+remote Qwen3.5-9B snapshot is now fixed-revision complete and hashed, but remains
+only a robustness candidate. Scientific design selects a model first, after
+which exact license, hash, loading, and runtime qualification are completed only
+for selected candidates.
 
 The catalog is stable identity; observation files are time-stamped facts. The
 runtime copies accepted observations into `outputs/resources/observations/`, so

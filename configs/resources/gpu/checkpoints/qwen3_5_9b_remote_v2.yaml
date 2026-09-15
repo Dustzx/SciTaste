@@ -7,12 +7,9 @@ resource:
   local_path: /media/sdb/wwh/models/Qwen3.5-9B
   storage_scope: gpu_host
   storage_gpu_resource_id: gpu-host-3090-2
-  checkpoint_hash_scheme: SCITASTE_REMOTE_CHECKPOINT_V1
   checkpoint_sha256: eb33159890e4493dd7fa36b611020576535ecbcf776bcfd3f540f92914f63884
   checkpoint_bytes: 15664539861
-  regular_file_count: 16
   format: Hugging Face indexed safetensors
-  weight_shards: 4
   license_identifier: Apache-2.0
   compatible_gpu_resource_ids:
     - gpu-host-3090-2
@@ -24,5 +21,3 @@ resource:
     All 16 regular files, all four indexed weight shards, the tokenizer, and
     required JSON files were present at the fixed upstream revision and hashed.
     No model load, generation, GPU job, or benchmark execution was performed.
-  scientific_selection_authority: none
-  next_gate: source-disjoint-task-excluded-role-conformance

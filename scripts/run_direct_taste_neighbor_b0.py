@@ -106,16 +106,20 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         raise RuntimeError("CUDA is required for direct-neighbor B0")
     if not args.device.startswith("cuda:"):
         raise ValueError("device must be an explicit CUDA device")
+    device_index = int(args.device.split(":", 1)[1])
+    device = torch.device(args.device)
+    torch.cuda.set_device(device)
 
     messages = _judge_messages() if args.role == "judge" else _thinker_messages()
     prompt_bytes = json.dumps(messages, ensure_ascii=False, sort_keys=True).encode()
     started = time.time()
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
-    torch.cuda.reset_peak_memory_stats(args.device)
+    torch.cuda.reset_peak_memory_stats(device)
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,
+        fix_mistral_regex=True,
         local_files_only=True,
         trust_remote_code=False,
     )
@@ -124,14 +128,14 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         dtype=torch.bfloat16,
         local_files_only=True,
         trust_remote_code=False,
-    ).to(args.device).eval()
+    ).to(device).eval()
     prompt = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True,
     )
     inputs = tokenizer(prompt, return_tensors="pt")
-    inputs = {key: value.to(args.device) for key, value in inputs.items()}
+    inputs = {key: value.to(device) for key, value in inputs.items()}
     input_tokens = int(inputs["input_ids"].shape[-1])
     with torch.inference_mode():
         generated = model.generate(
@@ -143,7 +147,6 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     new_tokens = generated[0, input_tokens:]
     raw_response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
     elapsed = time.time() - started
-    device_index = int(args.device.split(":", 1)[1])
     device_properties = torch.cuda.get_device_properties(device_index)
     parsed = _parse(args.role, raw_response)
     return {
@@ -168,10 +171,10 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             "python": platform.python_version(),
             "torch": torch.__version__,
             "transformers": transformers.__version__,
-            "device": args.device,
+            "device": str(device),
             "device_name": device_properties.name,
             "device_total_memory_bytes": device_properties.total_memory,
-            "peak_allocated_memory_bytes": torch.cuda.max_memory_allocated(args.device),
+            "peak_allocated_memory_bytes": torch.cuda.max_memory_allocated(device),
             "elapsed_seconds": elapsed,
         },
     }

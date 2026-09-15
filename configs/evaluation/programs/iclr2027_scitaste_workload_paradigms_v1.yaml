@@ -1,0 +1,93 @@
+schema_version: "1.0"
+extension_id: scitaste-iclr2027-research-workload-paradigms-v1
+base_program:
+  program_id: scitaste-iclr2027-capability-driven-autoresearch-program-v7
+  locator: configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml
+  sha256: 5c27721ab923516129de8b6ea9c40ddc20a82fab668190b2df2d6980a0ebec41
+
+concept_partition:
+  scitaste_policy_adaptation:
+    primary_method: parameter-training-free-lifecycle-taste-policy
+    agent_model_gradient_updates: forbidden
+    allowed_updates: [source-grounded-taste-memory, delayed-outcome-credit, routing-statistics, calibrated-abstention]
+    optional_learned_taste_extension: non-headline-future-or-secondary-study
+  research_workload_execution:
+    required_paradigms: [training-free-research, training-based-research]
+    meaning: whether the scientific experiment designed and executed by SciTaste updates a task-model parameter
+  direct_neighbor_training:
+    role: external-mechanism-comparison-only
+    systems: [Scientific-Judge-or-Thinker, exact-Qwen-base]
+    not_a_scitaste_workload_paradigm: true
+
+scitastebench_layers:
+  - layer_id: D
+    name: lifecycle-decision-mechanisms
+    workload_paradigm: training-free-research
+    unit: source-grounded-action-choice-with-delayed-outcome
+    purpose: isolate reference-quality, Taste abstraction, selection, abstention, and outcome-credit mechanisms
+    current_track: E1
+  - layer_id: T0
+    name: training-free-end-to-end-research
+    workload_paradigm: training-free-research
+    unit: complete-research-trajectory-on-fixed-models-data-or-analytic-artifacts
+    required_execution:
+      - formulate-a-testable-hypothesis
+      - change-code-analysis-prompt-retrieval-or-algorithm-without-task-model-weight-update
+      - execute-the-change
+      - score-with-an-agent-hidden-objective-evaluator
+      - assemble-evidence-paper-review-revision-and-final-disposition
+    forbidden_substitutes: [paper-only-generation, judge-only-preference, simulated-metrics]
+    formal_task_selection: pending-source-disjoint-objective-task-qualification
+  - layer_id: T1
+    name: training-based-end-to-end-research
+    workload_paradigm: training-based-research
+    unit: complete-research-trajectory-that-trains-or-finetunes-a-benchmark-owned-task-model
+    required_execution:
+      - freeze-data-model-initialization-training-and-evaluation-contract
+      - implement-and-run-training
+      - retain-learning-curve-failure-and-resource-telemetry
+      - score-through-an-agent-hidden-objective-evaluator
+      - assemble-evidence-paper-review-revision-and-final-disposition
+    current_primary_route: MLRC-Perception-LocPointTransformer
+
+causal_comparison:
+  systems_per_task: [scitaste-native, native-base]
+  scitaste_native_difference: training-free-lifecycle-taste-policy-only
+  fixed_within_pair:
+    - exact-research-agent-model-and-serving-window
+    - task-inputs-and-hidden-scorer
+    - tools-and-repair-policy
+    - task-model-architecture-and-initialization-when-applicable
+    - API-token-wall-time-and-compute-budget
+  report_by_workload_paradigm: true
+  pooled_primary_score_across_paradigms: forbidden
+
+minimum_title_relevant_execution:
+  training_free_B1: one-complete-source-disjoint-T0-Native-Base-pair
+  training_based_B1: one-complete-source-disjoint-T1-Native-Base-pair
+  current_training_based_candidate: MLRC-Perception-LocPointTransformer
+  current_training_free_candidate: null
+  training_free_candidate_gate:
+    - objective-executable-endpoint
+    - no-task-model-gradient-update
+    - agent-visible-input-scorer-only-label-separation
+    - enough-action-space-for-Taste-to-change-a-research-decision
+    - task-license-and-source-group-split-qualified
+  expansion_rule: scale-only-after-both-B1-pairs-execute-and-variance-failure-analysis-is-complete
+
+reporting:
+  primary_questions:
+    - does-training-free-lifecycle-Taste-improve-training-free-research
+    - does-the-same-policy-improve-training-based-research
+    - which-Taste-mechanisms-and-failures-differ-between-workload-paradigms
+  learned-versus-training-free-scitaste_claim_required: false
+  direct_neighbor_results_reported_separately: true
+  resource_inventory_may_choose_paradigm_or_task: false
+  failures_and_abstentions_retained: true
+
+execution_state:
+  policy_definition_frozen: true
+  scitastebench_D_available_for-development: true
+  scitastebench_T0_formal_task_selected: false
+  scitastebench_T1_formal_task_selected: true
+  both_workload_paradigms_executed: false

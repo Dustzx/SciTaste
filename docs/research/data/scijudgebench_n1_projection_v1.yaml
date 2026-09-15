@@ -1,0 +1,62 @@
+schema_version: "1.0"
+projection_id: scijudgebench-n1-agent-scorer-separation-v1
+project_id: scitaste-self-development
+projection_runner:
+  locator: scripts/project_scijudgebench_eval.py
+  sha256: 762c2c952f6af6dcc324b927dc60febbc4234b9315fc6ba93ad0d57fa42b63cb
+purpose: reproduce direct-neighbor native tasks without exposing labels, citation counts, or ICLR ratings to model inference
+splits:
+  - split: test
+    source_sha256: b0c831f2d43dbc993f36f1134f2115e8032019e1343d2557c2846bb85b01b767
+    pair_groups: 1000
+    agent_visible:
+      locator: outputs/projects/scitaste-self-development/evaluations/scijudgebench-n1-v1/agent-visible/test.jsonl
+      sha256: 68dec79f3d05e96f48870e7aa67ab93506ba55d5fc3f8405c1c23ebd855f7253
+      rows: 2000
+    scorer_only:
+      locator: outputs/projects/scitaste-self-development/evaluations/scijudgebench-n1-v1/scorer-only/test.jsonl
+      sha256: 75357bc3838dd90684ce4fb9245a9b58e685dc10563c5298d215a9c69db6d75e
+      rows: 2000
+  - split: test_ood_year
+    source_sha256: ce0c9503c4563b7d6f7f325bb67a3dc1265c9682ac4f5fd873bd3e8c3902a5e4
+    pair_groups: 904
+    agent_visible:
+      locator: outputs/projects/scitaste-self-development/evaluations/scijudgebench-n1-v1/agent-visible/test_ood_year.jsonl
+      sha256: c55a1f041f8c320d9c99330e1b757760ab997eef3762cac8b4d4e48b9173657e
+      rows: 1808
+    scorer_only:
+      locator: outputs/projects/scitaste-self-development/evaluations/scijudgebench-n1-v1/scorer-only/test_ood_year.jsonl
+      sha256: e6657962a3a64ef8f64ea913cbdc2361c60f6118bd625d84a9f6c7abf0d1bbab
+      rows: 1808
+  - split: test_ood_iclr
+    source_sha256: ef711e63cf0f8b3dc1fd714bb862eaee250b764274c26716f469596b89dd237c
+    pair_groups: 611
+    agent_visible:
+      locator: outputs/projects/scitaste-self-development/evaluations/scijudgebench-n1-v1/agent-visible/test_ood_iclr.jsonl
+      sha256: a9a6d83cea0b76c7827cfdab6cab20089377f6a5bb12f39de73505a97d94643c
+      rows: 1222
+    scorer_only:
+      locator: outputs/projects/scitaste-self-development/evaluations/scijudgebench-n1-v1/scorer-only/test_ood_iclr.jsonl
+      sha256: 4d6b212a7cb94721de15face80c58ee706111a0aff5c87e393cf18b30b7934b0
+      rows: 1222
+totals:
+  pair_groups: 2515
+  position_instances: 5030
+position_protocol: each source pair appears once in original order and once with A/B swapped
+agent_visible_exclusions:
+  - correct_answer
+  - paper_citation_counts
+  - iclr_ratings
+  - scorer_category
+scoring_policy:
+  primary: group-level-both-positions-correct
+  secondary:
+    - per-position-accuracy
+    - position-swap-consistency
+    - schema-failure-rate
+  report_splits_separately: true
+  aggregate_with_lifecycle_or_autoresearch_scores: forbidden
+execution_state:
+  projection_complete: true
+  model_inference_started: false
+  scoring_started: false

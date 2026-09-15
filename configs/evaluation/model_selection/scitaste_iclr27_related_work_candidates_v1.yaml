@@ -94,9 +94,9 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Direct learned-Taste baseline for impact preference, with released Apache-2.0 checkpoint and temporal/metric controls.
-    access_state: download-authorized-pending
-    resource_locator: null
-    exact_revision: null
+    access_state: available-exact
+    resource_locator: configs/resources/gpu/checkpoints/scijudge_4b_2605_remote_v1.yaml
+    exact_revision: 06109d60950dd15ac9a0fa7f804280386c25b113
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false
     limitations:
@@ -109,9 +109,9 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Direct learned-Taste ideation baseline for comparing one-paper follow-up generation against lifecycle-conditioned SciTaste ideation.
-    access_state: download-authorized-pending
-    resource_locator: null
-    exact_revision: null
+    access_state: available-exact
+    resource_locator: configs/resources/gpu/checkpoints/scithinker_4b_remote_v1.yaml
+    exact_revision: ddd5752d9bfebc858570ec9e6db94cb460a8d985
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false
     limitations:
@@ -126,7 +126,7 @@ candidates:
     task_fit_rationale: Direct 31B MoE learned-Taste baseline needed to determine whether conclusions from the low-cost 4B reproduction survive the scale used by the strongest released Scientific Judge.
     access_state: access-not-configured
     resource_locator: null
-    exact_revision: null
+    exact_revision: 971fd220879acefccb85c448a5f28fff4e200ec4
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false
     limitations:
@@ -142,7 +142,7 @@ candidates:
     task_fit_rationale: Direct 31B MoE ideation baseline needed to separate the released training-based Scientific Thinker result from a small-checkpoint artifact before lifecycle transfer is assessed.
     access_state: access-not-configured
     resource_locator: null
-    exact_revision: null
+    exact_revision: cbbfdf4a16d7571e8212f69723c4931e47cab675
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false
     limitations:
@@ -188,7 +188,7 @@ candidates:
     task_fit_rationale: Exact architecture-matched base required to attribute any 30B Scientific Judge gain to Taste training rather than model family, scale, or MoE capacity.
     access_state: access-not-configured
     resource_locator: null
-    exact_revision: null
+    exact_revision: 0d7cf23991f47feeb3a57ecb4c9cee8ea4a17bfe
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false
     limitations:
@@ -203,7 +203,7 @@ candidates:
     task_fit_rationale: Exact architecture-matched thinking base required to isolate Scientific Thinker alignment effects at 30B before comparing training-based ideation with SciTaste's training-free policy.
     access_state: access-not-configured
     resource_locator: null
-    exact_revision: null
+    exact_revision: 144afc2f379b542fdd4e85a1fcd5e1f79112d95d
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false
     limitations:

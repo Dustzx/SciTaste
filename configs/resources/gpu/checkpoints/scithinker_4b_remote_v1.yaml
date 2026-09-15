@@ -1,0 +1,24 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: scithinker-4b-remote-e6544721
+  model_id: OpenMOSS-Team/SciThinker-4B
+  model_revision: ddd5752d9bfebc858570ec9e6db94cb460a8d985
+  local_path: /media/sdb/wwh/models/SciThinker-4B
+  storage_scope: gpu_host
+  storage_gpu_resource_id: gpu-host-3090-2
+  checkpoint_sha256: e6544721b68fc241b0af7fc769de0e309a2993e0ad86b0114cdf6eb7de6dd0e1
+  checkpoint_bytes: 8060902929
+  format: Hugging Face indexed safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids:
+    - gpu-host-3090-2
+  evidence_ref: configs/resources/observations/v9/scithinker_4b_remote_20260916_v1.yaml
+  evidence_sha256: afcbac34d7ab76c0ef454d45d1ea494378025e5597c3d671be984e2656cdc6b9
+  observed_at: 2026-09-16T00:00:00+08:00
+  availability: verified
+  availability_reason: >-
+    All 13 regular files, both indexed weight shards, tokenizer assets, and
+    required JSON files were present at the fixed upstream revision and hashed.
+    No model load, generation, GPU job, formal ideation seed, or benchmark was
+    executed.

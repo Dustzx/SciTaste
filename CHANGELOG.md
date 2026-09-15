@@ -5,6 +5,18 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Separated SciTaste policy adaptation from the research workloads it executes.
+  The primary lifecycle Taste policy remains parameter-training-free, while the
+  formal task program now requires both a complete T0 training-free research
+  Native/Base pair and a complete T1 training-based research Native/Base pair.
+  Direct Scientific Judge/Thinker training remains an external mechanism
+  reproduction, not a SciTaste mode.
+- Registered the fixed-revision 4B Scientific Judge and Thinker checkpoints in
+  shared compute catalog/project binding v11 alongside the completed Qwen3.5-9B
+  robustness candidate. Both direct-neighbor models passed one real
+  task-excluded Python 3.12/RTX 3090 load-and-generation B0 with zero formal
+  rows read; receipts retain environment failures and forbid interpreting the
+  result as benchmark or end-to-end evidence.
 - Expanded the related-work-first model universe to include the released 30B
   Scientific Judge and Thinker checkpoints plus their exact architecture/scale
   Qwen3 bases even though those weights are not locally present. The direct

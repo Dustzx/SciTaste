@@ -6,7 +6,7 @@ experiment proposal, approval, result, and paper evidence.
 
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v10.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v11.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
   `configs/resources/gpu/`; v1 through v4 remain immutable, readable history.
@@ -44,6 +44,9 @@ turning a weak password hash or bearer key into a tracked artifact.
 | checkpoint | `qwen3-vl-2b-local-47f9c0e0` | verified current local Qwen3-VL-2B-Instruct tree |
 | checkpoint | `qwen3-5-4b-local-b4e05070` | content-verified local Qwen3.5-4B asset; not selected for an experiment |
 | checkpoint | `qwen3-5-4b-remote-b4e05070` | host-scoped replica of the same Qwen3.5-4B bytes; not selected for an experiment |
+| checkpoint | `qwen3-5-9b-remote-eb331598` | fixed-revision, full-tree-hashed open 9B robustness candidate; not formally selected |
+| checkpoint | `scijudge-4b-2605-remote-da748ee3` | fixed-revision direct-neighbor impact-preference baseline; task-excluded B0 pending |
+| checkpoint | `scithinker-4b-remote-e6544721` | fixed-revision direct-neighbor follow-up ideation baseline; task-excluded B0 pending |
 
 The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 `10.7.33.15`, port 22, user `ubuntu`, password binding
@@ -51,10 +54,12 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development_v10.yaml` explicitly binds
-all eight current resources to the self-development project. The
+`configs/resources/projects/scitaste_self_development_v11.yaml` explicitly binds
+all eleven current resources to the self-development project. The
 two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
-select the paper backbone. The registered copy
+select the paper backbone. Qwen3.5-9B is only a cross-model robustness
+candidate, while Scientific Judge and Thinker retain their narrow external
+baseline roles. The registered copy
 lives at `outputs/resources/projects/scitaste-self-development/`; it does not
 duplicate the resources inside the project paper/run tree.
 
@@ -64,16 +69,27 @@ duplicate the resources inside the project paper/run tree.
 inventories. The local weights root contains 18 top-level assets: 15 model or
 vision-component candidates and three experiment/project directories. The
 bounded remote search found eight model paths. Qwen3.5-4B was independently
-full-tree hashed on both hosts and produced the same digest; the remote
-Qwen3.5-9B directory is blocked because one of four weight shards, the index,
-and tokenizer files are absent. Other models remain structurally discovered but
-unhashed.
+full-tree hashed on both hosts and produced the same digest. The remote
+Qwen3.5-9B snapshot was subsequently completed at fixed revision, including all
+four indexed shards and tokenizer assets, and received aggregate digest
+`eb33159890e4493dd7fa36b611020576535ecbcf776bcfd3f540f92914f63884`.
+The direct-neighbor 4B Scientific Judge and Thinker snapshots were separately
+fixed and full-tree hashed. Other discovered models remain structurally
+inventoried rather than scientifically selected.
 
 This inventory is deliberately not an experiment menu. The ICLR design first
 chooses an estimand, comparison systems, task distribution, and model-control
 policy. Only then may an already present asset receive license review, a full
 hash, a bounded load check, and an experimental role. This prevents hardware
 convenience from determining the scientific question.
+
+The related-work-first selection has now added two resources that were not in
+the original inventory: fixed-revision `SciJudge-4B-2605` and `SciThinker-4B`.
+Each passed one task-excluded load/schema-generation B0 on a separate remote
+RTX 3090. The receipts live with the self-development project, record zero
+formal rows read, and do not authorize a formal evaluation. Their exact Qwen3
+4B bases are separate required controls; the released 30B pairs remain in the
+scientific candidate universe despite not being downloaded.
 
 ## Current observations
 
@@ -134,7 +150,7 @@ Validate the shared catalog and its local evidence without contacting anything:
 
 ```bash
 scitaste resource inspect \
-  --catalog configs/resources/compute_catalog_v10.yaml \
+  --catalog configs/resources/compute_catalog_v11.yaml \
   --evidence-root .
 ```
 
@@ -143,26 +159,26 @@ observations:
 
 ```bash
 scitaste resource update-catalog \
-  --catalog configs/resources/compute_catalog_v10.yaml \
+  --catalog configs/resources/compute_catalog_v11.yaml \
   --evidence-root . --outputs-root outputs
 
 scitaste resource bind-project \
-  --catalog configs/resources/compute_catalog_v10.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v10.yaml \
+  --catalog configs/resources/compute_catalog_v11.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v11.yaml \
   --outputs-root outputs
 
 # After a content-bound catalog change, archive and replace an existing binding:
 scitaste resource update-project-binding \
-  --catalog configs/resources/compute_catalog_v10.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v10.yaml \
+  --catalog configs/resources/compute_catalog_v11.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v11.yaml \
   --outputs-root outputs
 
 scitaste resource status \
-  --catalog configs/resources/compute_catalog_v10.yaml \
+  --catalog configs/resources/compute_catalog_v11.yaml \
   --outputs-root outputs
 
 scitaste resource access-status \
-  --catalog configs/resources/compute_catalog_v10.yaml \
+  --catalog configs/resources/compute_catalog_v11.yaml \
   --credential-file outputs/resources/access/credentials.env \
   --output outputs/resources/access/STATUS.json
 ```
