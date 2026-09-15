@@ -666,14 +666,26 @@ def materialize_track_a_pilot_suite(
                     file_sha256=_sha256_file(accepted_file),
                     semantic_sha256=accepted_set.accepted_set_sha256,
                 )
-                accepted_by_input, coverage_by_input = _verify_accepted_set(
+                accepted_by_input, coverage_by_input, accepted_pack = _verify_accepted_set(
                     root=root,
                     plan_file=plan_file,
                     plan_inputs=plan.abstraction_inputs,
                     accepted_set=accepted_set,
                 )
-                if accepted_set.input_candidate_count != len(plan.abstraction_inputs):
-                    blocker_codes.append("accepted-set-candidate-count-mismatch")
+                if accepted_pack.schema_version == "1.0":
+                    if accepted_set.input_candidate_count != len(plan.abstraction_inputs):
+                        blocker_codes.append("accepted-set-candidate-count-mismatch")
+                else:
+                    if accepted_pack.planned_source_count != len(plan.abstraction_inputs):
+                        raise ValueError("coverage-aware review pack differs from the pilot plan")
+                    if accepted_pack.eligible_source_count != len(plan.abstraction_inputs):
+                        blocker_codes.append("quality-qualified-source-coverage-incomplete")
+                    if accepted_pack.runtime_accepted_source_count != (
+                        accepted_pack.eligible_source_count
+                    ):
+                        blocker_codes.append("runtime-abstraction-coverage-incomplete")
+                    if not accepted_set.accepted:
+                        blocker_codes.append("ai-review-accepted-abstraction-empty")
                 if len(accepted_by_input) != len(plan.abstraction_inputs):
                     blocker_codes.append("accepted-abstraction-set-incomplete")
         expected_ids = {item.input_id for item in plan.abstraction_inputs}
@@ -1018,6 +1030,7 @@ def _verify_accepted_set(
 ) -> tuple[
     dict[str, _AcceptedAbstraction],
     dict[str, tuple[str, str | None, str]],
+    AIAbstractionRequestPack,
 ]:
     pack_path = _bound_ai_file(root, accepted_set.request_pack)
     pack = load_ai_abstraction_request_pack(pack_path)
@@ -1122,7 +1135,7 @@ def _verify_accepted_set(
             accepted.review_item_id,
             "operational-ai-review-accepted",
         )
-    return accepted_by_input, coverage_by_input
+    return accepted_by_input, coverage_by_input, pack
 
 
 def _verify_accepted_review_chain(
@@ -1489,9 +1502,20 @@ def _load_plan_input(
     return value
 
 
-def _bound_ai_file(root: Path, binding: AIAbstractionFileBinding) -> Path:
-    source = _regular_file(root, binding.locator)
-    if _sha256_file(source) != binding.sha256:
+def _bound_ai_file(
+    root: Path,
+    binding: AIAbstractionFileBinding | TrackASuiteFileBinding,
+) -> Path:
+    """Resolve both AI ``path/sha256`` and legacy suite ``locator/file_sha256``."""
+
+    if isinstance(binding, AIAbstractionFileBinding):
+        locator = binding.path
+        expected_sha256 = binding.sha256
+    else:
+        locator = binding.locator
+        expected_sha256 = binding.file_sha256
+    source = _regular_file(root, locator)
+    if _sha256_file(source) != expected_sha256:
         raise ValueError("Track-A AI-review artifact hash drifted")
     return source
 
