@@ -287,6 +287,9 @@ from scitaste.evaluation.decision_episode_integrity import (
     inspect_track_a_decision_episode_integrity_plan,
     prepare_track_a_decision_episode_integrity_plan,
 )
+from scitaste.evaluation.lifecycle_benchmark_bridge_cli import (
+    register_lifecycle_benchmark_bridge_cli,
+)
 from scitaste.evaluation.prospective_decision_cohort import (
     inspect_prospective_decision_cohort,
     materialize_prospective_decision_cohort,
@@ -2140,6 +2143,7 @@ def build_parser() -> argparse.ArgumentParser:
         "evaluation", help="Evaluation design and no-run resource gates"
     )
     evaluation_commands = evaluation.add_subparsers(dest="evaluation_command", required=True)
+    register_lifecycle_benchmark_bridge_cli(evaluation_commands)
     prelaunch = evaluation_commands.add_parser(
         "prelaunch", help="Inspect a hash-bound experiment resource manifest"
     )
