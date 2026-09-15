@@ -279,6 +279,10 @@ class SegmentationProtocolEvidenceUnitSelection(BaseModel):
     context_ranges_may_overlap_across_decisions: bool | None = None
     context_may_overlap_another_decision_trigger: bool | None = None
     own_trigger_context_overlap_allowed: bool | None = None
+    unknown_null_provider_fields_ignored: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+    )
 
 
 class SegmentationProtocolInputFirewall(BaseModel):

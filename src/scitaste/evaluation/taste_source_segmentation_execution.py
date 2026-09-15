@@ -535,7 +535,7 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     run_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     authorization_sha256: str = Field(pattern=_SHA256)
@@ -595,7 +595,9 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
         observed_cost = sum(item.estimated_cost_cny for item in self.call_receipts)
         if abs(self.estimated_cost_cny - observed_cost) > 1e-9:
             raise ValueError("Segmentation calibration estimated cost drifted")
-        if (self.schema_version == "1.1") != (self.group_uncertainty is not None):
+        if (self.schema_version in {"1.1", "1.2"}) != (
+            self.group_uncertainty is not None
+        ):
             raise ValueError("Segmentation calibration schema differs from group uncertainty")
         workload_calls = tuple(
             item for item in self.call_receipts if item.call.role is ApiIdentityCallRole.WORKLOAD
@@ -662,11 +664,13 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
             or self.returned_models != observed_returned_models
         ):
             raise ValueError("Segmentation identity report differs from call evidence")
-        if self.schema_version == "1.1":
+        if self.schema_version in {"1.1", "1.2"}:
             uncertainty = self.group_uncertainty
             assert uncertainty is not None
+            expected_workload_schema = "1.2" if self.schema_version == "1.2" else "1.1"
             if (
-                any(item.schema_version != "1.1" for item in self.call_receipts)
+                any(item.schema_version != expected_workload_schema for item in workload_calls)
+                or any(item.schema_version != "1.1" for item in sentinel_calls)
                 or any(item.anchor_ranges_verified is not True for item in workload_calls)
                 or any(item.anchor_ranges_verified is not None for item in sentinel_calls)
                 or self.metrics.decision_presence_agreement_micros is None
@@ -685,7 +689,7 @@ class TasteSourceSegmentationCalibrationReceipt(BaseModel):
                 or self.metrics.adjudication_item_rate_micros
                 != uncertainty.adjudication_item_rate.point_micros
             ):
-                raise ValueError("Segmentation schema-1.1 calibration evidence drifted")
+                raise ValueError("Segmentation anchored calibration evidence drifted")
         expected = _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
         if self.receipt_sha256 != expected:
             raise ValueError("Segmentation calibration receipt hash mismatch")
@@ -887,7 +891,7 @@ class SegmentationProviderTransportReceipt(BaseModel):
 class SegmentationProviderCallReceipt(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = Field(
+    schema_version: Literal["1.0", "1.1", "1.2"] = Field(
         default="1.0", exclude_if=lambda value: value == "1.0"
     )
     call: ApiIdentityCallReceipt
@@ -921,6 +925,11 @@ class SegmentationProviderCallReceipt(BaseModel):
     identity_sentinel_output_verified: bool | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    ignored_unknown_null_field_paths: tuple[str, ...] = Field(
+        default=(),
+        max_length=256,
+        exclude_if=lambda value: not value,
+    )
 
     @model_validator(mode="after")
     def role_matches_packet(self) -> SegmentationProviderCallReceipt:
@@ -945,14 +954,17 @@ class SegmentationProviderCallReceipt(BaseModel):
                 or self.span_reconstruction_receipts
                 or self.evidence_unit_selection_receipts
                 or self.evidence_unit_item_receipts
+                or self.ignored_unknown_null_field_paths
             ):
                 raise ValueError("Segmentation sentinel cannot claim source-range validation")
-            if self.schema_version == "1.1" and self.identity_sentinel_output_verified is not True:
+            if self.schema_version in {"1.1", "1.2"} and (
+                self.identity_sentinel_output_verified is not True
+            ):
                 raise ValueError("Segmentation sentinel lacks exact-output verification")
             return self
         if self.identity_sentinel_output_verified is not None:
             raise ValueError("Segmentation workload cannot claim sentinel verification")
-        if self.schema_version == "1.1" and self.anchor_ranges_verified is not True:
+        if self.schema_version in {"1.1", "1.2"} and self.anchor_ranges_verified is not True:
             raise ValueError("Schema-1.1 workload lacks evidence-unit validation")
         if self.anchor_ranges_verified is True:
             if self.verbatim_spans_verified is not None or self.span_reconstruction_receipts:
@@ -1844,6 +1856,92 @@ def build_segmentation_provider_request(
     }
 
 
+def _adapt_unknown_null_provider_fields(
+    payload: object,
+    *,
+    protocol: TasteSourceSegmentationProspectiveProtocol | None,
+    rubric: dict[str, JsonValue] | None,
+    adjudication: bool,
+) -> tuple[object, tuple[str, ...]]:
+    """Drop only rubric-authorized unknown nulls while retaining strict validation."""
+
+    protocol_enabled = bool(
+        protocol is not None
+        and protocol.evidence_unit_selection is not None
+        and protocol.evidence_unit_selection.unknown_null_provider_fields_ignored
+    )
+    rubric_adapter = (rubric or {}).get("provider_output_adapter")
+    rubric_enabled = bool(
+        isinstance(rubric_adapter, dict)
+        and rubric_adapter.get("unknown_null_provider_fields_ignored") is True
+    )
+    if protocol_enabled != rubric_enabled:
+        if protocol_enabled or rubric_enabled:
+            raise ValueError(
+                "Segmentation protocol and rubric disagree on unknown-null adaptation"
+            )
+        return payload, ()
+    if not protocol_enabled:
+        return payload, ()
+    if protocol is None or protocol.schema_version != "1.5":
+        raise ValueError("Unknown-null adaptation requires segmentation schema 1.5")
+
+    ignored: list[str] = []
+
+    def prune(mapping: object, allowed: set[str], path: str) -> None:
+        if not isinstance(mapping, dict):
+            return
+        for key in tuple(mapping):
+            if key not in allowed and mapping[key] is None:
+                del mapping[key]
+                escaped = str(key).replace("~", "~0").replace("/", "~1")
+                ignored.append(f"{path}/{escaped}")
+
+    prune(payload, {"items"}, "")
+    if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+        return payload, tuple(ignored)
+    item_fields = {
+        "campaign_token",
+        "review_item_id",
+        "segments",
+        "no_decision_rationale",
+        "residual_decision_bearing_text_possible",
+    }
+    if adjudication:
+        item_fields.add("resolution_rationale")
+    segment_fields = {
+        "trigger_range",
+        "context_ranges",
+        "primary_decision_family",
+        "atomic_decision_statement",
+        "rationale",
+        "uncertainty",
+    }
+    range_fields = {"start_unit_id", "end_unit_id"}
+    for item_index, item in enumerate(payload["items"]):
+        item_path = f"/items/{item_index}"
+        prune(item, item_fields, item_path)
+        if not isinstance(item, dict) or not isinstance(item.get("segments"), list):
+            continue
+        for segment_index, segment in enumerate(item["segments"]):
+            segment_path = f"{item_path}/segments/{segment_index}"
+            prune(segment, segment_fields, segment_path)
+            if not isinstance(segment, dict):
+                continue
+            trigger = segment.get("trigger_range")
+            prune(trigger, range_fields, f"{segment_path}/trigger_range")
+            contexts = segment.get("context_ranges")
+            if not isinstance(contexts, list):
+                continue
+            for context_index, context in enumerate(contexts):
+                prune(
+                    context,
+                    range_fields,
+                    f"{segment_path}/context_ranges/{context_index}",
+                )
+    return payload, tuple(ignored)
+
+
 def validate_segmentation_provider_output(
     raw_text: str,
     *,
@@ -1859,6 +1957,12 @@ def validate_segmentation_provider_output(
         payload = json.loads(cleaned)
     except json.JSONDecodeError as error:
         raise ValueError("Segmentation provider output is not valid JSON") from error
+    payload, _ = _adapt_unknown_null_provider_fields(
+        payload,
+        protocol=protocol,
+        rubric=packet.rubric,
+        adjudication=False,
+    )
     if protocol is not None:
         expected_packet_schema = (
             "1.2"
@@ -1918,6 +2022,7 @@ def validate_adjudication_provider_output(
     *,
     expected_items: dict[tuple[str, str], str],
     protocol: TasteSourceSegmentationProspectiveProtocol | None = None,
+    rubric: dict[str, JsonValue] | None = None,
 ) -> SegmentationAdjudicationProviderOutput:
     """Validate disputed-only adjudication coverage and exact source spans."""
 
@@ -1928,6 +2033,12 @@ def validate_adjudication_provider_output(
         payload = json.loads(cleaned)
     except json.JSONDecodeError as error:
         raise ValueError("Segmentation adjudication output is not valid JSON") from error
+    payload, _ = _adapt_unknown_null_provider_fields(
+        payload,
+        protocol=protocol,
+        rubric=rubric,
+        adjudication=True,
+    )
     if protocol is not None and protocol.evidence_unit_selection is not None:
         if protocol.schema_version == "1.5":
             anchored_output_v15 = SegmentationAnchoredAdjudicationProviderOutputV15.model_validate(
@@ -2636,11 +2747,20 @@ def run_taste_source_segmentation_calibration(
                     extracted.text,
                     expected_items=adjudication_expected,
                     protocol=protocol,
+                    rubric=adjudication_rubric,
                 )
             else:
                 output = json.loads(extracted.text)
                 if output != {"sentinel": "scitaste-api-identity-v3"}:
                     raise ValueError("Segmentation identity sentinel output drifted")
+            ignored_unknown_null_field_paths: tuple[str, ...] = ()
+            if role is ApiIdentityCallRole.WORKLOAD:
+                _, ignored_unknown_null_field_paths = _adapt_unknown_null_provider_fields(
+                    json.loads(extracted.text),
+                    protocol=protocol,
+                    rubric=(packet.rubric if packet is not None else adjudication_rubric),
+                    adjudication=packet is None,
+                )
             identity_call = ApiIdentityCallReceipt(
                 sequence=sequence,
                 role=role,
@@ -2667,7 +2787,15 @@ def run_taste_source_segmentation_calibration(
                 task_or_benchmark_content_present=role is ApiIdentityCallRole.WORKLOAD,
             )
             receipt = SegmentationProviderCallReceipt(
-                schema_version=("1.1" if protocol.schema_version == "1.5" else "1.0"),
+                schema_version=(
+                    "1.2"
+                    if role is ApiIdentityCallRole.WORKLOAD
+                    and protocol.evidence_unit_selection is not None
+                    and protocol.evidence_unit_selection.unknown_null_provider_fields_ignored
+                    else "1.1"
+                    if protocol.schema_version == "1.5"
+                    else "1.0"
+                ),
                 call=identity_call,
                 packet_id=packet_id,
                 packet_sha256=packet_sha256,
@@ -2699,6 +2827,7 @@ def run_taste_source_segmentation_calibration(
                         raw_text=extracted.text,
                         output=output,
                         protocol=protocol,
+                        rubric=(packet.rubric if packet is not None else adjudication_rubric),
                         source_texts=(
                             {
                                 (item.campaign_token, item.review_item_id): item.review_comment
@@ -2749,6 +2878,7 @@ def run_taste_source_segmentation_calibration(
                 identity_sentinel_output_verified=(
                     True if role is not ApiIdentityCallRole.WORKLOAD else None
                 ),
+                ignored_unknown_null_field_paths=ignored_unknown_null_field_paths,
             )
             projected = [*call_receipts, receipt]
             if (
@@ -3115,7 +3245,14 @@ def run_taste_source_segmentation_calibration(
             ),
         )
         receipt = TasteSourceSegmentationCalibrationReceipt.create(
-            schema_version="1.1" if protocol.schema_version == "1.5" else "1.0",
+            schema_version=(
+                "1.2"
+                if protocol.evidence_unit_selection is not None
+                and protocol.evidence_unit_selection.unknown_null_provider_fields_ignored
+                else "1.1"
+                if protocol.schema_version == "1.5"
+                else "1.0"
+            ),
             run_id=authorization.run_id,
             project_id=authorization.project_id,
             authorization_sha256=authorization.authorization_sha256,
@@ -3591,6 +3728,7 @@ def _compile_evidence_unit_selection_receipts(
     raw_text: str,
     output: object,
     protocol: TasteSourceSegmentationProspectiveProtocol,
+    rubric: dict[str, JsonValue],
     source_texts: dict[tuple[str, str], str] | None,
 ) -> tuple[SegmentationEvidenceUnitSelectionReceipt, ...]:
     if not isinstance(
@@ -3600,7 +3738,12 @@ def _compile_evidence_unit_selection_receipts(
         return ()
     if source_texts is None:
         raise ValueError("Segmentation evidence-unit receipt lacks source text")
-    payload = json.loads(raw_text)
+    payload, _ = _adapt_unknown_null_provider_fields(
+        json.loads(raw_text),
+        protocol=protocol,
+        rubric=rubric,
+        adjudication=isinstance(output, SegmentationAdjudicationProviderOutput),
+    )
     if protocol.schema_version == "1.5":
         anchored = (
             SegmentationAnchoredAdjudicationProviderOutputV15.model_validate(payload)

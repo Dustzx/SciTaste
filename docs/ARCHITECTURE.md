@@ -4318,3 +4318,22 @@ range overlapping its own trigger. V7 changes only that contract: exact source
 unit ranges are retained and explicitly marked, with no fuzzy reconstruction,
 response repair, or retry. AI quality/privacy review remains operational
 nonhuman evidence and cannot itself admit the benchmark.
+
+### ADR-134: Unknown null provider fields require dual opt-in and disclosure
+
+Status: accepted for future protocols; v7 remains frozen and consumed.
+
+The v7 provider returned 179 otherwise reviewable decisions, but its first
+workload response also contained two unknown fields whose values were exactly
+`null`. The frozen runner rejected those keys at request two. This is adapter
+strictness evidence, not evidence about the model's scientific judgment or the
+effect of Scientific Taste, and the source sample cannot be rerun.
+
+A later protocol may ignore an unknown provider-output field only when both the
+protocol and its exact rubric enable the behavior, the value is strictly null,
+and every removed JSON-pointer path is written to the call receipt. The raw
+response remains immutable and hash-bound. Missing required fields, unknown
+non-null fields, malformed structures, and all semantic constraints still fail
+closed. The flag defaults to false and is omitted from serialized historical
+protocols, preserving their artifact hashes. No new reserve run is scheduled
+before the deadline-critical Track-A H1/H2 pilot.

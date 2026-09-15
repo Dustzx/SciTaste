@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Recorded prospective segmentation v7 as consumed after its second provider
+  contact rejected two unknown fields whose values were both `null`. This is a
+  strict adapter-contract failure, not evidence about model quality or Taste
+  effectiveness. Future protocols may jointly enable a rubric-declared adapter
+  that ignores and receipts only unknown null-valued fields; unknown non-null
+  fields remain strict errors. V7 is never retried, and the deadline-critical
+  path now returns to the Track-A H1/H2 pilot.
 - Ran the frozen v6 GLM-5.3-Flash decision-segmentation calibration until its
   preregistered fail-closed policy stopped at request four: one valid response
   selected a shared context range overlapping its own decision trigger. The
