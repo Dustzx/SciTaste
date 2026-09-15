@@ -46,6 +46,7 @@ def test_private_registry_resolves_legacy_alias_without_raw_identifier(
     registry = CanonicalSourceIdentityRegistry.create(
         registry_id="formal-source-identities-v1",
         entries=(entry,),
+        source_artifact_sha256s=("a" * 64,),
     )
     path = save_canonical_source_identity_registry(registry, tmp_path / "registry.json")
     loaded = load_canonical_source_identity_registry(path)
@@ -73,6 +74,7 @@ def test_registry_rejects_alias_collision() -> None:
         CanonicalSourceIdentityRegistry.create(
             registry_id="collision-v1",
             entries=(left, right),
+            source_artifact_sha256s=("b" * 64,),
         )
 
 
@@ -84,6 +86,7 @@ def test_registry_loader_rejects_hash_drift(tmp_path: Path) -> None:
     registry = CanonicalSourceIdentityRegistry.create(
         registry_id="forum-identities-v1",
         entries=(entry,),
+        source_artifact_sha256s=("c" * 64,),
     )
     payload = registry.model_dump(mode="json")
     payload["registry_id"] = "changed-v1"

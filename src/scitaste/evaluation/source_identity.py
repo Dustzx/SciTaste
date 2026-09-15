@@ -105,6 +105,7 @@ class CanonicalSourceIdentityRegistry(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     registry_id: str = Field(pattern=_ID)
     entries: tuple[CanonicalSourceIdentity, ...] = Field(min_length=1, max_length=100_000)
+    source_artifact_sha256s: tuple[str, ...] = Field(min_length=1, max_length=10_000)
     raw_source_identifiers_stored: Literal[False] = False
     registry_sha256: str = Field(pattern=_SHA256)
 
@@ -114,12 +115,14 @@ class CanonicalSourceIdentityRegistry(BaseModel):
         *,
         registry_id: str,
         entries: tuple[CanonicalSourceIdentity, ...],
+        source_artifact_sha256s: tuple[str, ...],
     ) -> CanonicalSourceIdentityRegistry:
         ordered = tuple(sorted(entries, key=lambda item: item.canonical_source_group_id))
         payload = {
             "schema_version": "1.0",
             "registry_id": registry_id,
             "entries": ordered,
+            "source_artifact_sha256s": tuple(sorted(set(source_artifact_sha256s))),
             "raw_source_identifiers_stored": False,
         }
         unsigned = cls.model_construct(registry_sha256="0" * 64, **payload)
@@ -138,6 +141,8 @@ class CanonicalSourceIdentityRegistry(BaseModel):
         ]
         if canonical != sorted(set(canonical)) or len(identities) != len(set(identities)):
             raise ValueError("canonical source identities must be sorted and unique")
+        if self.source_artifact_sha256s != tuple(sorted(set(self.source_artifact_sha256s))):
+            raise ValueError("source artifact hashes must be sorted and unique")
         aliases: dict[str, str] = {}
         for item in self.entries:
             for alias in item.legacy_source_group_ids:
