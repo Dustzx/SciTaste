@@ -10,7 +10,7 @@ import secrets
 import tempfile
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path, PurePosixPath
 from typing import Literal
@@ -110,12 +110,164 @@ class TrackAInputTokenCount(BaseModel):
     token_trace: TrackADecisionFileBinding
 
 
+class TrackATokenizerTemplateArguments(BaseModel):
+    """Pinned arguments that affect the official GLM chat-template rendering."""
+
+    model_config = _CONFIG
+
+    add_generation_prompt: Literal[True] = True
+    tools: None = None
+    reasoning_effort: Literal["max"] = "max"
+    clear_thinking: Literal[False] = False
+    add_special_tokens: Literal[False] = False
+
+
+class TrackATokenizerAssetAttestation(BaseModel):
+    """One locally verified file from the pinned official tokenizer snapshot."""
+
+    model_config = _CONFIG
+
+    path: str = Field(min_length=1, max_length=2_000)
+    bytes: int = Field(gt=0, le=_MAX_INPUT_BYTES)
+    sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def path_is_relative(self) -> TrackATokenizerAssetAttestation:
+        pure = PurePosixPath(self.path)
+        if (
+            pure.is_absolute()
+            or not pure.parts
+            or pure.as_posix() != self.path
+            or any(part in {"", ".", ".."} for part in pure.parts)
+        ):
+            raise ValueError("Track-A tokenizer asset path must be normalized and relative")
+        return self
+
+
+class TrackATokenizerSourceConfig(BaseModel):
+    model_config = _CONFIG
+
+    repository: str = Field(
+        min_length=3,
+        max_length=300,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    revision: str = Field(pattern=r"^[0-9a-f]{40}$")
+    resolved_on: date
+    source_url: str = Field(min_length=1, max_length=2_000)
+
+    @model_validator(mode="after")
+    def source_url_binds_revision(self) -> TrackATokenizerSourceConfig:
+        expected = f"https://huggingface.co/{self.repository}/tree/{self.revision}"
+        if self.source_url != expected:
+            raise ValueError("Track-A tokenizer source URL does not bind its HF revision")
+        return self
+
+
+class TrackATokenizerSnapshotConfig(BaseModel):
+    model_config = _CONFIG
+
+    path: str = Field(min_length=1, max_length=2_000)
+    payload_bytes: int = Field(gt=0, le=_MAX_INPUT_BYTES)
+    files: tuple[TrackATokenizerAssetAttestation, ...] = Field(min_length=4, max_length=32)
+
+    @model_validator(mode="after")
+    def snapshot_is_closed(self) -> TrackATokenizerSnapshotConfig:
+        root = Path(self.path)
+        if not root.is_absolute() or ".." in root.parts:
+            raise ValueError("Track-A tokenizer snapshot path must be absolute and normalized")
+        if len({item.path for item in self.files}) != len(self.files):
+            raise ValueError("Track-A tokenizer snapshot repeats an asset")
+        if sum(item.bytes for item in self.files) != self.payload_bytes:
+            raise ValueError("Track-A tokenizer snapshot byte total drifted")
+        return self
+
+
+class TrackATokenizerLoadingConfig(BaseModel):
+    model_config = _CONFIG
+
+    library: Literal["transformers"] = "transformers"
+    library_revision: str = Field(min_length=1, max_length=100)
+    implementation: Literal["PreTrainedTokenizerFast"] = "PreTrainedTokenizerFast"
+    tokenizer_file: str = Field(min_length=1, max_length=300)
+    chat_template_file: str = Field(min_length=1, max_length=300)
+    add_generation_prompt: Literal[True] = True
+    tools: None = None
+    reasoning_effort: Literal["max"] = "max"
+    clear_thinking: Literal[False] = False
+    add_special_tokens: Literal[False] = False
+    trust_remote_code: Literal[False] = False
+    load_verified: Literal[True] = True
+    verified_on: date
+
+    @model_validator(mode="after")
+    def loader_paths_are_relative(self) -> TrackATokenizerLoadingConfig:
+        for value in (self.tokenizer_file, self.chat_template_file):
+            pure = PurePosixPath(value)
+            if (
+                pure.is_absolute()
+                or not pure.parts
+                or pure.as_posix() != value
+                or any(part in {"", ".", ".."} for part in pure.parts)
+            ):
+                raise ValueError("Track-A tokenizer loader paths must be normalized and relative")
+        return self
+
+
+class TrackATokenizerUseConfig(BaseModel):
+    model_config = _CONFIG
+
+    selected_for: Literal["scitastebench-track-a-natural-pilot-input-accounting"]
+    exact_for_pinned_local_template: Literal[True] = True
+    provider_serving_build_attested: Literal[False] = False
+    formal_provider_token_equivalence_claim_allowed: Literal[False] = False
+    note: str = Field(min_length=1, max_length=4_000)
+
+
+class TrackATokenizerMaterializationConfig(BaseModel):
+    """Strict, secret-free declaration of one local tokenizer implementation."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    tokenizer_config_id: str = Field(pattern=_ID)
+    model: str = Field(min_length=1, max_length=300)
+    model_family: str = Field(min_length=1, max_length=300)
+    source: TrackATokenizerSourceConfig
+    local_snapshot: TrackATokenizerSnapshotConfig
+    loading: TrackATokenizerLoadingConfig
+    use: TrackATokenizerUseConfig
+
+    @model_validator(mode="after")
+    def model_family_is_the_source(self) -> TrackATokenizerMaterializationConfig:
+        if self.model_family != self.source.repository:
+            raise ValueError("Track-A tokenizer model family differs from its HF source")
+        family_leaf = self.model_family.rsplit("/", 1)[-1].casefold()
+        if family_leaf != self.model.casefold():
+            raise ValueError("Track-A tokenizer HF model differs from its API model alias")
+        assets = {item.path for item in self.local_snapshot.files}
+        required = {
+            self.loading.tokenizer_file,
+            self.loading.chat_template_file,
+            "tokenizer_config.json",
+            "config.json",
+        }
+        if not required.issubset(assets):
+            raise ValueError("Track-A tokenizer snapshot omits a required pinned file")
+        return self
+
+    @computed_field
+    @property
+    def config_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"config_sha256"}))
+
+
 class TrackAInputTokenTrace(BaseModel):
     """Exact tokenizer output used to authorize one call."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "1.0"
     request_sha256: str = Field(pattern=_SHA256)
     tokenizer_id: str = Field(min_length=1, max_length=300)
     tokenizer_revision: str = Field(min_length=1, max_length=300)
@@ -123,18 +275,40 @@ class TrackAInputTokenTrace(BaseModel):
     add_special_tokens: bool
     token_ids: tuple[int, ...] = Field(min_length=1, max_length=262_144)
     token_sequence_sha256: str = Field(pattern=_SHA256)
+    provider_payload_sha256: str | None = Field(default=None, pattern=_SHA256)
+    provider_messages_sha256: str | None = Field(default=None, pattern=_SHA256)
+    provider_request_identity_sha256: str | None = Field(default=None, pattern=_SHA256)
+    rendered_prompt_sha256: str | None = Field(default=None, pattern=_SHA256)
+    rendered_prompt_bytes: int | None = Field(default=None, gt=0, le=_MAX_INPUT_BYTES)
+    tokenizer_config_sha256: str | None = Field(default=None, pattern=_SHA256)
+    chat_template_sha256: str | None = Field(default=None, pattern=_SHA256)
+    template_arguments: TrackATokenizerTemplateArguments | None = None
 
     @model_validator(mode="after")
     def sequence_is_self_hashed(self) -> TrackAInputTokenTrace:
         if self.token_sequence_sha256 != _canonical_sha256(list(self.token_ids)):
             raise ValueError("Track-A input token sequence hash mismatch")
+        v2_values = (
+            self.provider_payload_sha256,
+            self.provider_messages_sha256,
+            self.provider_request_identity_sha256,
+            self.rendered_prompt_sha256,
+            self.rendered_prompt_bytes,
+            self.tokenizer_config_sha256,
+            self.chat_template_sha256,
+            self.template_arguments,
+        )
+        if self.schema_version == "2.0" and any(item is None for item in v2_values):
+            raise ValueError("Track-A v2 token trace lacks exact rendering evidence")
+        if self.schema_version == "1.0" and any(item is not None for item in v2_values):
+            raise ValueError("Track-A v1 token trace cannot contain v2 rendering evidence")
         return self
 
 
 class TrackAInputTokenManifest(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "1.0"
     token_manifest_id: str = Field(pattern=_ID)
     suite_manifest_sha256: str = Field(pattern=_SHA256)
     model: str = Field(min_length=1, max_length=300)
@@ -142,17 +316,72 @@ class TrackAInputTokenManifest(BaseModel):
     prompt_template_revision: str = Field(min_length=1, max_length=300)
     counts: tuple[TrackAInputTokenCount, ...] = Field(min_length=3, max_length=72)
     all_requests_measured_before_execution: Literal[True] = True
+    backend_config: TrackADecisionFileBinding | None = None
+    backend_config_sha256: str | None = Field(default=None, pattern=_SHA256)
+    tokenizer_config: TrackADecisionFileBinding | None = None
+    tokenizer_config_sha256: str | None = Field(default=None, pattern=_SHA256)
+    tokenizer_repository: str | None = Field(default=None, min_length=1, max_length=300)
+    tokenizer_assets: tuple[TrackATokenizerAssetAttestation, ...] | None = None
+    tokenizer_snapshot_path: str | None = Field(default=None, min_length=1, max_length=2_000)
+    tokenizer_library: str | None = Field(default=None, min_length=1, max_length=100)
+    tokenizer_library_revision: str | None = Field(default=None, min_length=1, max_length=100)
+    tokenizer_implementation: str | None = Field(default=None, min_length=1, max_length=200)
+    chat_template_sha256: str | None = Field(default=None, pattern=_SHA256)
+    template_arguments: TrackATokenizerTemplateArguments | None = None
+    exact_for_pinned_local_template: bool | None = None
+    provider_serving_build_attested: bool | None = None
+    formal_provider_token_equivalence_claim_allowed: bool | None = None
+    observed_api_usage_receipt_is_authoritative: bool | None = None
+    natural_pilot_only: bool | None = None
 
     @model_validator(mode="after")
     def requests_are_unique(self) -> TrackAInputTokenManifest:
         if len({item.request_sha256 for item in self.counts}) != len(self.counts):
             raise ValueError("Track-A token manifest repeats a request")
+        v2_values = (
+            self.backend_config,
+            self.backend_config_sha256,
+            self.tokenizer_config,
+            self.tokenizer_config_sha256,
+            self.tokenizer_repository,
+            self.tokenizer_assets,
+            self.tokenizer_snapshot_path,
+            self.tokenizer_library,
+            self.tokenizer_library_revision,
+            self.tokenizer_implementation,
+            self.chat_template_sha256,
+            self.template_arguments,
+            self.exact_for_pinned_local_template,
+            self.provider_serving_build_attested,
+            self.formal_provider_token_equivalence_claim_allowed,
+            self.observed_api_usage_receipt_is_authoritative,
+            self.natural_pilot_only,
+        )
+        if self.schema_version == "2.0":
+            if any(item is None for item in v2_values):
+                raise ValueError("Track-A v2 token manifest lacks tokenizer provenance")
+            if (
+                self.exact_for_pinned_local_template is not True
+                or self.provider_serving_build_attested is not False
+                or self.formal_provider_token_equivalence_claim_allowed is not False
+                or self.observed_api_usage_receipt_is_authoritative is not True
+                or self.natural_pilot_only is not True
+            ):
+                raise ValueError("Track-A v2 tokenizer claim boundary is unsafe")
+        elif any(item is not None for item in v2_values):
+            raise ValueError("Track-A v1 token manifest cannot contain v2 provenance")
         return self
 
     @computed_field
     @property
     def token_manifest_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"token_manifest_sha256"}))
+        return _canonical_sha256(
+            self.model_dump(
+                mode="json",
+                exclude={"token_manifest_sha256"},
+                exclude_none=self.schema_version == "1.0",
+            )
+        )
 
 
 class TrackADecisionCallBudget(BaseModel):
@@ -341,6 +570,13 @@ class TrackADecisionPreparation(BaseModel):
     output_dir: Path
     batch_path: Path
     batch: TrackADecisionBatch
+
+
+@dataclass(frozen=True)
+class TrackATokenManifestMaterialization:
+    output_dir: Path
+    manifest_path: Path
+    manifest: TrackAInputTokenManifest
 
 
 class TrackARawDecision(BaseModel):
@@ -593,6 +829,14 @@ def load_track_a_decision_backend_config(path: str | Path) -> TrackADecisionBack
     )
 
 
+def load_track_a_tokenizer_materialization_config(
+    path: str | Path,
+) -> TrackATokenizerMaterializationConfig:
+    return TrackATokenizerMaterializationConfig.model_validate(
+        _load_mapping(Path(path), "Track-A tokenizer materialization config")
+    )
+
+
 def load_track_a_decision_budget(path: str | Path) -> TrackADecisionExecutionBudget:
     return TrackADecisionExecutionBudget.model_validate(
         _load_mapping(Path(path), "Track-A execution budget")
@@ -608,6 +852,163 @@ def load_track_a_input_token_manifest(path: str | Path) -> TrackAInputTokenManif
     if recorded != manifest.token_manifest_sha256:
         raise ValueError("Track-A token manifest semantic hash mismatch")
     return manifest
+
+
+def materialize_track_a_input_token_manifest(
+    *,
+    evidence_root: str | Path,
+    suite_manifest_path: str | Path,
+    backend_config_path: str | Path,
+    tokenizer_config_path: str | Path,
+    output_dir: str | Path,
+) -> TrackATokenManifestMaterialization:
+    """Render and freeze exact local-template token IDs without any model call."""
+
+    root = Path(evidence_root).resolve(strict=True)
+    suite_file = _regular_file(root, suite_manifest_path)
+    backend_file = _regular_file(root, backend_config_path)
+    tokenizer_config_file = _regular_file(root, tokenizer_config_path)
+    target = _new_target(root, output_dir)
+    suite = _load_suite_manifest(suite_file)
+    backend = load_track_a_decision_backend_config(backend_file)
+    tokenizer_config = load_track_a_tokenizer_materialization_config(tokenizer_config_file)
+    arm_configs = _verify_suite(root, suite_file, suite)
+    if not suite.natural_pilot or suite.study_mode != "natural-ai-pilot":
+        raise ValueError("Pinned GLM tokenizer manifest is authorized only for a natural pilot")
+    if (suite.provider, suite.model) != (backend.provider, backend.model):
+        raise ValueError("Track-A tokenizer input suite differs from its backend")
+    if tokenizer_config.model != suite.model:
+        raise ValueError("Track-A tokenizer model differs from suite/backend model")
+    snapshot = _verify_tokenizer_snapshot(tokenizer_config)
+    tokenizer = _load_pinned_fast_tokenizer(tokenizer_config, snapshot)
+    template = snapshot / tokenizer_config.loading.chat_template_file
+    template_sha256 = _sha256(template)
+    template_revision = (
+        f"hf-{tokenizer_config.source.revision}-template-{template_sha256[:16]}"
+    )
+    arguments = TrackATokenizerTemplateArguments()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=f".{target.name}.", dir=target.parent) as temporary:
+        workspace = Path(temporary)
+        counts: list[TrackAInputTokenCount] = []
+        for case in suite.cases:
+            for arm in case.arms:
+                execution = arm_configs[arm.model_request_sha256]
+                payload = _provider_payload(execution.model_visible_request)
+                messages = payload.get("messages")
+                if not isinstance(messages, list):
+                    raise ValueError("Track-A provider payload does not expose chat messages")
+                rendered = tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    tools=None,
+                    reasoning_effort="max",
+                    clear_thinking=False,
+                )
+                token_ids = tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=True,
+                    add_generation_prompt=True,
+                    tools=None,
+                    reasoning_effort="max",
+                    clear_thinking=False,
+                )
+                if not isinstance(rendered, str) or not rendered:
+                    raise ValueError("Track-A chat template produced no rendered prompt")
+                if not isinstance(token_ids, list) or not token_ids or not all(
+                    isinstance(item, int) and item >= 0 for item in token_ids
+                ):
+                    raise ValueError("Track-A chat template produced invalid token IDs")
+                replay_ids = tokenizer.encode(rendered, add_special_tokens=False)
+                if token_ids != replay_ids:
+                    raise ValueError("Track-A tokenizer trace does not replay rendered prompt")
+                if len(token_ids) > execution.model_visible_request.maximum_input_tokens:
+                    raise ValueError("Track-A rendered prompt exceeds its request token ceiling")
+                payload_sha256 = _canonical_sha256(payload)
+                messages_sha256 = _canonical_sha256(messages)
+                request_identity_sha256 = _canonical_sha256(
+                    {
+                        "model_visible_request_sha256": arm.model_request_sha256,
+                        "provider_payload_sha256": payload_sha256,
+                        "provider_messages_sha256": messages_sha256,
+                    }
+                )
+                sequence_sha256 = _canonical_sha256(token_ids)
+                trace = TrackAInputTokenTrace(
+                    schema_version="2.0",
+                    request_sha256=arm.model_request_sha256,
+                    tokenizer_id=tokenizer_config.model_family,
+                    tokenizer_revision=tokenizer_config.source.revision,
+                    prompt_template_revision=template_revision,
+                    add_special_tokens=False,
+                    token_ids=tuple(token_ids),
+                    token_sequence_sha256=sequence_sha256,
+                    provider_payload_sha256=payload_sha256,
+                    provider_messages_sha256=messages_sha256,
+                    provider_request_identity_sha256=request_identity_sha256,
+                    rendered_prompt_sha256=hashlib.sha256(rendered.encode("utf-8")).hexdigest(),
+                    rendered_prompt_bytes=len(rendered.encode("utf-8")),
+                    tokenizer_config_sha256=tokenizer_config.config_sha256,
+                    chat_template_sha256=template_sha256,
+                    template_arguments=arguments,
+                )
+                relative = Path("traces") / f"{arm.model_request_sha256}.json"
+                _write_json(workspace / relative, trace.model_dump(mode="json"))
+                counts.append(
+                    TrackAInputTokenCount(
+                        request_sha256=arm.model_request_sha256,
+                        tokenizer_id=tokenizer_config.model_family,
+                        tokenizer_revision=tokenizer_config.source.revision,
+                        input_tokens=len(token_ids),
+                        token_sequence_sha256=sequence_sha256,
+                        token_trace=_workspace_binding(root, target, workspace, relative),
+                    )
+                )
+        manifest_identity = _canonical_sha256(
+            [
+                suite.manifest_sha256,
+                backend.config_sha256,
+                tokenizer_config.config_sha256,
+                [item.request_sha256 for item in counts],
+            ]
+        )
+        manifest = TrackAInputTokenManifest(
+            schema_version="2.0",
+            token_manifest_id=f"track-a-token-manifest-{manifest_identity[:20]}",
+            suite_manifest_sha256=suite.manifest_sha256,
+            model=suite.model,
+            model_revision=backend.model_revision,
+            prompt_template_revision=template_revision,
+            counts=tuple(counts),
+            backend_config=_binding(root, backend_file),
+            backend_config_sha256=backend.config_sha256,
+            tokenizer_config=_binding(root, tokenizer_config_file),
+            tokenizer_config_sha256=tokenizer_config.config_sha256,
+            tokenizer_repository=tokenizer_config.source.repository,
+            tokenizer_assets=tokenizer_config.local_snapshot.files,
+            tokenizer_snapshot_path=str(snapshot),
+            tokenizer_library=tokenizer_config.loading.library,
+            tokenizer_library_revision=tokenizer_config.loading.library_revision,
+            tokenizer_implementation=tokenizer_config.loading.implementation,
+            chat_template_sha256=template_sha256,
+            template_arguments=arguments,
+            exact_for_pinned_local_template=True,
+            provider_serving_build_attested=False,
+            formal_provider_token_equivalence_claim_allowed=False,
+            observed_api_usage_receipt_is_authoritative=True,
+            natural_pilot_only=True,
+        )
+        relative = Path("MANIFEST.json")
+        _write_json(workspace / relative, manifest.model_dump(mode="json"))
+        if target.exists() or target.is_symlink():
+            raise FileExistsError(target)
+        os.replace(workspace, target)
+    return TrackATokenManifestMaterialization(
+        output_dir=target,
+        manifest_path=target / relative,
+        manifest=manifest,
+    )
 
 
 def load_track_a_decision_batch(path: str | Path) -> TrackADecisionBatch:
@@ -972,6 +1373,43 @@ def _verify_control_contract(
         or token_manifest.model_revision != config.model_revision
     ):
         raise ValueError("Track-A token manifest binds another suite or model")
+    tokenizer_config: TrackATokenizerMaterializationConfig | None = None
+    if token_manifest.schema_version == "2.0":
+        if not suite.natural_pilot:
+            raise ValueError("Track-A v2 local tokenizer evidence is natural-pilot only")
+        if token_manifest.tokenizer_config is None:
+            raise ValueError("Track-A v2 token manifest lacks its tokenizer config")
+        if token_manifest.backend_config is None:
+            raise ValueError("Track-A v2 token manifest lacks its backend config")
+        bound_backend_file = _bound_file(root, token_manifest.backend_config)
+        bound_backend = load_track_a_decision_backend_config(bound_backend_file)
+        tokenizer_config_file = _bound_file(root, token_manifest.tokenizer_config)
+        tokenizer_config = load_track_a_tokenizer_materialization_config(tokenizer_config_file)
+        snapshot = _verify_tokenizer_snapshot(tokenizer_config)
+        if (
+            bound_backend.config_sha256 != config.config_sha256
+            or bound_backend.config_sha256 != token_manifest.backend_config_sha256
+            or tokenizer_config.config_sha256 != token_manifest.tokenizer_config_sha256
+            or tokenizer_config.model != suite.model
+            or tokenizer_config.source.repository != token_manifest.tokenizer_repository
+            or tokenizer_config.source.revision
+            != token_manifest.counts[0].tokenizer_revision
+            or tokenizer_config.local_snapshot.files != token_manifest.tokenizer_assets
+            or str(snapshot) != token_manifest.tokenizer_snapshot_path
+            or tokenizer_config.loading.library != token_manifest.tokenizer_library
+            or tokenizer_config.loading.library_revision
+            != token_manifest.tokenizer_library_revision
+            or tokenizer_config.loading.implementation
+            != token_manifest.tokenizer_implementation
+            or tokenizer_config.loading.chat_template_file
+            not in {item.path for item in tokenizer_config.local_snapshot.files}
+            or tokenizer_config.loading.tokenizer_file
+            not in {item.path for item in tokenizer_config.local_snapshot.files}
+            or _sha256(snapshot / tokenizer_config.loading.chat_template_file)
+            != token_manifest.chat_template_sha256
+            or token_manifest.template_arguments != TrackATokenizerTemplateArguments()
+        ):
+            raise ValueError("Track-A v2 tokenizer provenance drifted")
     counts = {item.request_sha256: item for item in token_manifest.counts}
     if set(counts) != set(arm_configs):
         raise ValueError("Track-A token manifest does not exactly cover eligible arms")
@@ -987,6 +1425,29 @@ def _verify_control_contract(
             or trace.token_sequence_sha256 != item.token_sequence_sha256
         ):
             raise ValueError("Track-A token-count entry differs from its exact trace")
+        if token_manifest.schema_version == "2.0":
+            execution = arm_configs[item.request_sha256]
+            payload = _provider_payload(execution.model_visible_request)
+            messages = payload.get("messages")
+            request_identity = _canonical_sha256(
+                {
+                    "model_visible_request_sha256": item.request_sha256,
+                    "provider_payload_sha256": _canonical_sha256(payload),
+                    "provider_messages_sha256": _canonical_sha256(messages),
+                }
+            )
+            if (
+                tokenizer_config is None
+                or trace.schema_version != "2.0"
+                or trace.provider_payload_sha256 != _canonical_sha256(payload)
+                or trace.provider_messages_sha256 != _canonical_sha256(messages)
+                or trace.provider_request_identity_sha256 != request_identity
+                or trace.tokenizer_config_sha256 != tokenizer_config.config_sha256
+                or trace.chat_template_sha256 != token_manifest.chat_template_sha256
+                or trace.template_arguments != token_manifest.template_arguments
+                or trace.add_special_tokens
+            ):
+                raise ValueError("Track-A v2 token trace differs from provider-visible request")
         if item.input_tokens > suite.context_budget.maximum_input_tokens:
             raise ValueError("Track-A measured input exceeds the suite token budget")
     if suite.sampling.maximum_output_tokens > budget.per_call.max_output_tokens:
@@ -2003,6 +2464,86 @@ def _load_observations(path: Path) -> tuple[TrackADecisionObservation, ...]:
     return tuple(observations)
 
 
+def _verify_tokenizer_snapshot(config: TrackATokenizerMaterializationConfig) -> Path:
+    declared = Path(config.local_snapshot.path)
+    if declared.is_symlink():
+        raise ValueError("Track-A tokenizer snapshot cannot be a symlink")
+    snapshot = declared.resolve(strict=True)
+    if snapshot != declared or not snapshot.is_dir():
+        raise ValueError("Track-A tokenizer snapshot path drifted or is not a directory")
+    observed_total = 0
+    for asset in config.local_snapshot.files:
+        relative = PurePosixPath(asset.path)
+        candidate = snapshot.joinpath(*relative.parts)
+        cursor = candidate
+        while cursor != snapshot:
+            if cursor.is_symlink():
+                raise ValueError("Track-A tokenizer assets cannot traverse symlinks")
+            cursor = cursor.parent
+        resolved = candidate.resolve(strict=True)
+        try:
+            resolved.relative_to(snapshot)
+        except ValueError as exc:
+            raise ValueError("Track-A tokenizer asset escapes its snapshot") from exc
+        if not resolved.is_file() or resolved.stat().st_size != asset.bytes:
+            raise ValueError("Track-A tokenizer asset size differs from its config")
+        if _sha256(resolved) != asset.sha256:
+            raise ValueError("Track-A tokenizer asset hash differs from its config")
+        observed_total += resolved.stat().st_size
+    if observed_total != config.local_snapshot.payload_bytes:
+        raise ValueError("Track-A tokenizer snapshot observed byte total drifted")
+    return snapshot
+
+
+def _load_pinned_fast_tokenizer(
+    config: TrackATokenizerMaterializationConfig,
+    snapshot: Path,
+):
+    try:
+        import transformers
+        from transformers import PreTrainedTokenizerFast
+    except ImportError as exc:
+        raise RuntimeError(
+            "Track-A token materialization requires the local-gpu transformers extra"
+        ) from exc
+    if transformers.__version__ != config.loading.library_revision:
+        raise ValueError("Track-A installed transformers version differs from its pin")
+    tokenizer_metadata_file = snapshot / "tokenizer_config.json"
+    metadata = _json_object(
+        tokenizer_metadata_file.read_bytes(),
+        "Track-A official tokenizer_config.json",
+    )
+    if metadata.get("tokenizer_class") != "TokenizersBackend":
+        raise ValueError("Track-A official tokenizer metadata class drifted")
+    eos_token = metadata.get("eos_token")
+    pad_token = metadata.get("pad_token")
+    special_tokens = metadata.get("extra_special_tokens")
+    model_max_length = metadata.get("model_max_length")
+    if (
+        not isinstance(eos_token, str)
+        or not isinstance(pad_token, str)
+        or not isinstance(special_tokens, list)
+        or not special_tokens
+        or not all(isinstance(item, str) and item for item in special_tokens)
+        or not isinstance(model_max_length, int)
+        or model_max_length <= 0
+    ):
+        raise ValueError("Track-A official tokenizer metadata is incomplete")
+    chat_template = (snapshot / config.loading.chat_template_file).read_text(encoding="utf-8")
+    if not chat_template:
+        raise ValueError("Track-A official chat template is empty")
+    # Direct tokenizer-file construction is deliberate: no AutoTokenizer and no
+    # dynamic model code can run, even though upstream metadata names a newer class.
+    return PreTrainedTokenizerFast(
+        tokenizer_file=str(snapshot / config.loading.tokenizer_file),
+        chat_template=chat_template,
+        eos_token=eos_token,
+        pad_token=pad_token,
+        additional_special_tokens=special_tokens,
+        model_max_length=model_max_length,
+    )
+
+
 def _load_mapping(path: Path, label: str) -> dict[str, object]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -2254,6 +2795,10 @@ __all__ = [
     "TrackAInputTokenManifest",
     "TrackAInputTokenTrace",
     "TrackARawDecision",
+    "TrackATokenManifestMaterialization",
+    "TrackATokenizerAssetAttestation",
+    "TrackATokenizerMaterializationConfig",
+    "TrackATokenizerTemplateArguments",
     "bridge_track_a_run_to_ai_preference",
     "execute_track_a_decision_batch",
     "load_track_a_decision_backend_config",
@@ -2261,5 +2806,7 @@ __all__ = [
     "load_track_a_decision_budget",
     "load_track_a_decision_run",
     "load_track_a_input_token_manifest",
+    "load_track_a_tokenizer_materialization_config",
+    "materialize_track_a_input_token_manifest",
     "prepare_track_a_decision_batch",
 ]

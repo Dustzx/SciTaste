@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added no-call Track-A token-manifest materialization from the pinned official
+  GLM-5.3-Flash tokenizer. It validates all local asset sizes and hashes, uses
+  `PreTrainedTokenizerFast` without remote code, applies the fixed chat-template
+  arguments to every eligible arm, and atomically records complete token-ID and
+  request-identity traces. The v2 schema loads historical v1 manifests while
+  explicitly limiting local-template equivalence to the natural pilot; provider
+  usage receipts remain authoritative for observed API tokens.
 - Added the executable Track-A three-arm decision lane and its AI-only review
   bridge. A no-call compiler binds the coverage-aware suite subset, exact
   tokenizer traces, one model/parameter profile, and hard per-call/aggregate

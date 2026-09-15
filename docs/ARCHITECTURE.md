@@ -4433,3 +4433,27 @@ artifacts state `reviewer_kind=ai`, `not_human_review=true`, and
 `human_validity_claim_allowed=false`. Two provider-distinct primary AI judges
 review identical blinded blocks; a third distinct AI sees disputed blocks only.
 The bridge itself performs no call and grants no additional execution authority.
+
+### ADR-137: Track-A token evidence pins local rendering, not provider internals
+
+Status: accepted and implemented for the natural AI pilot.
+
+`track-a-token-manifest-materialize` validates the configured official tokenizer
+snapshot path, every file size and SHA-256, the Hugging Face repository and
+revision, installed Transformers version, suite/backend model identity, and the
+pinned chat template before it emits anything. It directly constructs
+`PreTrainedTokenizerFast` from `tokenizer.json`; it never uses `AutoTokenizer`
+or remote model code. Every eligible provider message list is rendered with
+`add_generation_prompt=true`, `tools=null`, `reasoning_effort=max`,
+`clear_thinking=false`, and `add_special_tokens=false`. The resulting trace
+stores all token IDs plus hashes of the message list, complete provider payload,
+rendered prompt, template, tokenizer config, and compound request identity.
+
+The v2 manifest remains a no-call, atomic, non-overwriting artifact, while the
+loader retains semantic-hash compatibility with existing v1 manifests. The
+official local snapshot proves exact token IDs for that pinned local template;
+it does not prove that the provider's rolling alias uses the same serving build.
+Consequently v2 records `provider_serving_build_attested=false`, forbids a formal
+provider-token-equivalence claim, and is restricted to the natural pilot. A
+successful API usage receipt remains authoritative for observed provider token
+counts.

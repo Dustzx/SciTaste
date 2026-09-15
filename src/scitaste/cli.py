@@ -205,6 +205,7 @@ from scitaste.evaluation import (
     materialize_objective_analysis,
     materialize_source_projections,
     materialize_taste_corpus_pair,
+    materialize_track_a_input_token_manifest,
     normalize_taste_source_ai_screen,
     normalize_taste_source_decision_segmentation,
     normalize_taste_source_segmentation_resolution,
@@ -2355,6 +2356,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(track_a_suite_inspect)
     track_a_suite_inspect.set_defaults(handler=_handle_evaluation_track_a_suite_inspect)
+    track_a_token_manifest = evaluation_commands.add_parser(
+        "track-a-token-manifest-materialize",
+        help=(
+            "Apply a pinned local chat template to every eligible Track-A arm and "
+            "freeze exact token-ID traces without calling a model"
+        ),
+    )
+    track_a_token_manifest.add_argument("--suite-manifest", type=Path, required=True)
+    track_a_token_manifest.add_argument("--backend-config", type=Path, required=True)
+    track_a_token_manifest.add_argument("--tokenizer-config", type=Path, required=True)
+    track_a_token_manifest.add_argument("--evidence-root", type=Path, default=Path("."))
+    track_a_token_manifest.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(track_a_token_manifest)
+    track_a_token_manifest.set_defaults(
+        handler=_handle_evaluation_track_a_token_manifest_materialize
+    )
     track_a_decision_prepare = evaluation_commands.add_parser(
         "track-a-decision-batch-prepare",
         help=(
@@ -8116,6 +8133,41 @@ def _handle_evaluation_track_a_decision_prepare(args: argparse.Namespace) -> int
                 "model_calls_authorized": False,
                 "missing_cases_will_not_be_resampled": True,
                 "batch": str(preparation.batch_path),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_track_a_token_manifest_materialize(args: argparse.Namespace) -> int:
+    materialization = materialize_track_a_input_token_manifest(
+        evidence_root=args.evidence_root,
+        suite_manifest_path=args.suite_manifest,
+        backend_config_path=args.backend_config,
+        tokenizer_config_path=args.tokenizer_config,
+        output_dir=args.output,
+    )
+    manifest = materialization.manifest
+    print(
+        json.dumps(
+            {
+                "token_manifest_id": manifest.token_manifest_id,
+                "token_manifest_sha256": manifest.token_manifest_sha256,
+                "eligible_call_count": len(manifest.counts),
+                "total_local_template_input_tokens": sum(
+                    item.input_tokens for item in manifest.counts
+                ),
+                "exact_for_pinned_local_template": True,
+                "provider_serving_build_attested": False,
+                "formal_provider_token_equivalence_claim_allowed": False,
+                "observed_api_usage_receipt_is_authoritative": True,
+                "natural_pilot_only": True,
+                "model_calls_performed": False,
+                "api_spend_performed": False,
+                "gpu_work_performed": False,
+                "manifest": str(materialization.manifest_path),
             },
             indent=2,
             ensure_ascii=False,

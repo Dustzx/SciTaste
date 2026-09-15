@@ -1,0 +1,50 @@
+schema_version: "1.0"
+tokenizer_config_id: glm53-flash-official-hf-20260915
+model: glm-5.3-flash
+model_family: zai-org/GLM-5.3-Flash
+source:
+  repository: zai-org/GLM-5.3-Flash
+  revision: eb9eb208eb0d988989d07a6a12d0fdeb5f52574a
+  resolved_on: 2026-09-15
+  source_url: https://huggingface.co/zai-org/GLM-5.3-Flash/tree/eb9eb208eb0d988989d07a6a12d0fdeb5f52574a
+local_snapshot:
+  path: /media/good/dxhismyson/weights/GLM-5.3-Flash-tokenizer
+  payload_bytes: 20298569
+  files:
+    - path: tokenizer.json
+      bytes: 20217442
+      sha256: 19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d
+    - path: tokenizer_config.json
+      bytes: 761
+      sha256: 98b1271574f41abf89427ae2dda030d94dc9478f0edc5a8bd240db213c6fd5fc
+    - path: chat_template.jinja
+      bytes: 10950
+      sha256: 0c4099f3382d6c92700dfb99725025360966fd73032f0ecf32377c0d9e6309c5
+    - path: config.json
+      bytes: 69416
+      sha256: bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f
+loading:
+  library: transformers
+  library_revision: 4.57.6
+  implementation: PreTrainedTokenizerFast
+  tokenizer_file: tokenizer.json
+  chat_template_file: chat_template.jinja
+  add_generation_prompt: true
+  tools: null
+  reasoning_effort: max
+  clear_thinking: false
+  add_special_tokens: false
+  trust_remote_code: false
+  load_verified: true
+  verified_on: 2026-09-15
+use:
+  selected_for: scitastebench-track-a-natural-pilot-input-accounting
+  exact_for_pinned_local_template: true
+  provider_serving_build_attested: false
+  formal_provider_token_equivalence_claim_allowed: false
+  note: >-
+    The official pinned tokenizer gives exact token IDs for the locally rendered
+    GLM-5.3-Flash chat template. The public API uses a rolling model alias and
+    does not attest its serving tokenizer build, so API usage receipts remain
+    authoritative for observed input tokens and this asset alone is not formal
+    serving-build equivalence evidence.
