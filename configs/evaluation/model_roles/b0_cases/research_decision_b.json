@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-long-context",
+  "source_group_id": "b0-dev-research-context",
+  "role": "research_agent",
+  "selection_scope_id": "agent-global",
+  "formal_or_heldout": false,
+  "objective": "Choose the claim supported by all three evidence records and cite their IDs.",
+  "payload": {
+    "evidence": [
+      {"id": "e1", "finding": "method-x exceeds baseline on development split"},
+      {"id": "e2", "finding": "method-x stays within the frozen budget"},
+      {"id": "e3", "finding": "heldout outcomes remain sealed"}
+    ],
+    "claims": ["x-is-development-promising", "x-is-formally-superior"]
+  },
+  "required_response_fields": ["selection", "evidence_ids", "limitation"],
+  "expected": {"selection": "x-is-development-promising", "evidence_ids": ["e1", "e2", "e3"]}
+}

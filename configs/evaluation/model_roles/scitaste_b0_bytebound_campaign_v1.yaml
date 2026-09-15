@@ -1,0 +1,55 @@
+schema_version: "1.0"
+campaign_id: scitaste-b0-bytebound-conformance-v1
+base_suite_ref: configs/evaluation/model_roles/scitaste_b0_model_role_conformance_v1.yaml
+base_suite_sha256: c66f92cad72d51a4e1f1d68f610cff5ee74ffbaf0153f681ee9407681ba29cd5
+formal_program_ref: configs/evaluation/programs/iclr2027_scitaste_complete_autoresearch_program_v3.yaml
+formal_program_sha256: b7e2b78f7ebe96117b6e270c0813fe1e97bb53ac54980630103719fc990ca908
+formal_partition_source_groups:
+  - E1-scitastebench-formal
+  - E2-external-objective-formal
+  - E3-mlr-bench-formal
+  - E4-exp-bench-formal
+  - scitastebench-formal-sources
+  - external-autoresearch-formal-sources
+  - scitastebench-private-heldout-sources
+  - external-private-heldout-sources
+source_group_overlap_allowed: false
+cases:
+  - {path: configs/evaluation/model_roles/b0_cases/research_decision_a.json, sha256: 10348998de3b755654c6364128a2e214059c0a891e047af261fbe1f8e41f0d97}
+  - {path: configs/evaluation/model_roles/b0_cases/research_decision_b.json, sha256: 995ed3c3c0659eec5f381af4f5c45d60ba326b6086758286759aefbc38c64831}
+  - {path: configs/evaluation/model_roles/b0_cases/code_repair_a.json, sha256: 0b9d8b9f17ef800aa58eb447d1dc5e52608253cb2a9caabd11eddcf140368d1e}
+  - {path: configs/evaluation/model_roles/b0_cases/code_repair_b.json, sha256: 21e784145b67a74cdacab0915c1f5da4a04d65c09c9458018ead4b7b8516c2d1}
+  - {path: configs/evaluation/model_roles/b0_cases/judge_blind_a.json, sha256: df1f4c0610c0c032222f40acda9ebdebc199690009646bdaab33aa7053a747eb}
+  - {path: configs/evaluation/model_roles/b0_cases/embedding_retrieval_a.json, sha256: f3dbae41235d02d1fea9a2ebf0fb0c3e402512858eb15d4ef1efaa4aa3bd0ccf}
+  - {path: configs/evaluation/model_roles/b0_cases/multimodal_task_a.json, sha256: a19d1d1aabe2fb1cd935d61f91cbb9277a981337dbe6d8b884b190766b7bf963}
+candidate_ids:
+  - research-deepseek-v4-flash
+  - research-zhipu-glm53-flash
+  - research-qwen35-4b-local
+  - research-qwen3vl-8b-local
+  - code-deepseek-v4-flash
+  - code-zhipu-glm53-flash
+  - code-qwen35-4b-local
+  - code-qwen3vl-8b-local
+  - judge-deepseek-v4-flash
+  - judge-zhipu-glm53-flash
+  - judge-qwen3vl-8b-local
+  - embedding-minilm-local
+  - training-qwen3vl-4b-local
+  - training-qwen3vl-8b-local
+  - training-internvl35-4b-local
+repetitions: 2
+api_backend_refs:
+  deepseek-v4-flash: configs/model_nodes/deepseek_v4flash.priced_20260913.example.yaml
+  zhipu-glm53-flash: configs/model_nodes/zhipu_glm53_flash.priced_20260908.example.yaml
+campaign_budget:
+  max_api_calls: 20
+  max_input_tokens_per_call: 8000
+  max_output_tokens_per_call: 2000
+  max_input_tokens: 160000
+  max_output_tokens: 40000
+  max_api_cost_usd: 1.0
+  max_local_gpu_hours: 8.0
+  max_local_cpu_hours: 2.0
+  max_disk_bytes: 2147483648
+execution_authority: false

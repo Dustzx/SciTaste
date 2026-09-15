@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-task-runtime",
+  "source_group_id": "b0-dev-synthetic-multimodal",
+  "role": "task_training",
+  "selection_scope_id": "multimodal-reasoning-task-family",
+  "formal_or_heldout": false,
+  "objective": "Answer the deterministic synthetic scene question; no external asset is needed.",
+  "payload": {
+    "scene": {"canvas": [8, 8], "objects": [{"shape": "red-square", "bbox": [1, 1, 3, 3]}, {"shape": "blue-circle", "center": [6, 6], "radius": 1}]},
+    "question": "Which object is nearest the upper-left corner?"
+  },
+  "required_response_fields": ["answer", "evidence"],
+  "expected": {"answer": "red-square"}
+}

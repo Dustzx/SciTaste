@@ -48,6 +48,13 @@ def _write_receipts(
                 update={
                     "conformance_task_bytes_bound": True,
                     "conformance_tasks_are_planning_labels_only": False,
+                    "conformance_case_input_sha256": {
+                        task_id: "6" * 64 for task_id in plan.exclusions.conformance_task_ids
+                    },
+                    "conformance_source_group_by_task": {
+                        task_id: "b0-synthetic-contract-cases"
+                        for task_id in plan.exclusions.conformance_task_ids
+                    },
                 }
             )
         }

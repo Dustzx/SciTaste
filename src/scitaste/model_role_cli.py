@@ -13,6 +13,11 @@ from scitaste.evaluation.model_role_conformance import (
     plan_model_role_conformance,
     save_model_role_document,
 )
+from scitaste.evaluation.model_role_conformance_campaign import (
+    inspect_bytebound_conformance_campaign,
+    load_bytebound_campaign_plan,
+    prepare_bytebound_conformance_campaign,
+)
 
 
 def register_model_role_cli(
@@ -56,6 +61,35 @@ def register_model_role_cli(
     _add_log_level_option(status)
     status.set_defaults(handler=_handle_status)
 
+    prepare_campaign = subcommands.add_parser(
+        "prepare-campaign",
+        help="Build a project-owned byte-bound B0 request pack without execution",
+    )
+    prepare_campaign.add_argument("--spec", type=Path, required=True)
+    prepare_campaign.add_argument("--project-id", required=True)
+    prepare_campaign.add_argument("--run-id", required=True)
+    prepare_campaign.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    prepare_campaign.add_argument("--repository-root", type=Path, default=Path("."))
+    _add_log_level_option(prepare_campaign)
+    prepare_campaign.set_defaults(handler=_handle_prepare_campaign)
+
+    campaign_status = subcommands.add_parser(
+        "campaign-status",
+        help="Compile existing actual receipts and report campaign readiness",
+    )
+    campaign_status.add_argument("--plan", type=Path, required=True)
+    _add_log_level_option(campaign_status)
+    campaign_status.set_defaults(handler=_handle_campaign_status)
+
+    campaign_request = subcommands.add_parser(
+        "campaign-request",
+        help="Print one exact request and its existing-runner command template",
+    )
+    campaign_request.add_argument("--plan", type=Path, required=True)
+    campaign_request.add_argument("--request-id", required=True)
+    _add_log_level_option(campaign_request)
+    campaign_request.set_defaults(handler=_handle_campaign_request)
+
 
 def _add_log_level_option(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
@@ -96,6 +130,38 @@ def _handle_status(args: argparse.Namespace) -> int:
         selection=selection,
     )
     print(status.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_prepare_campaign(args: argparse.Namespace) -> int:
+    plan, path = prepare_bytebound_conformance_campaign(
+        args.spec,
+        project_id=args.project_id,
+        run_id=args.run_id,
+        outputs_root=args.outputs_root,
+        repository_root=args.repository_root,
+    )
+    print(plan.model_dump_json(indent=2))
+    print(f"saved: {path}")
+    return 0
+
+
+def _handle_campaign_status(args: argparse.Namespace) -> int:
+    status = inspect_bytebound_conformance_campaign(args.plan)
+    print(status.model_dump_json(indent=2))
+    return 0 if status.readiness.value in {"ready", "complete"} else 1
+
+
+def _handle_campaign_request(args: argparse.Namespace) -> int:
+    plan = load_bytebound_campaign_plan(args.plan)
+    request = next(
+        (item for item in plan.requests if item.request_id == args.request_id),
+        None,
+    )
+    if request is None:
+        raise ValueError(f"unknown campaign request {args.request_id!r}")
+    print(request.model_dump_json(indent=2))
+    print(f"request_sha256: {request.request_sha256}")
     return 0
 
 

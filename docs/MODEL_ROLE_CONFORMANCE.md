@@ -20,6 +20,17 @@ frozen, so status reports `executable_for_conformance=false` and refuses any
 receipt until a byte-bound successor suite is created.
 Qwen3-VL-2B has no default or privileged role in this suite.
 
+The project-level successor is
+`configs/evaluation/model_roles/scitaste_b0_bytebound_campaign_v1.yaml`. It
+binds seven development-only case files byte-for-byte, declares their source
+groups disjoint from every E1--E4 formal or held-out source group, and expands
+the selected 4B/8B/API/embedding candidates into 46 per-case, per-repetition
+requests. Preparation writes `CAMPAIGN_PLAN.json`, `MODEL_ROLE_PLAN.json`,
+`CASES.json`, and one exact JSON request per dispatch beneath the owning project
+run. The plan accounts for 20 API requests, 26 local requests, at most 6 local
+GPU-hours, and 1.5 GiB of per-request evidence allowance. It performs no model
+load, provider call, download, or benchmark execution.
+
 ## Evidence flow
 
 1. `plan` verifies the current model inventory and role-contract hashes, expands
@@ -60,7 +71,31 @@ scitaste model-role status \
   --plan outputs/projects/<project>/model-roles/B0_PLAN.json \
   --receipt outputs/projects/<project>/model-roles/receipts/<run>.json \
   --evidence-root outputs/projects/<project>/model-roles
+
+scitaste model-role prepare-campaign \
+  --spec configs/evaluation/model_roles/scitaste_b0_bytebound_campaign_v1.yaml \
+  --project-id <project> \
+  --run-id <registered-run> \
+  --outputs-root outputs \
+  --repository-root .
+
+scitaste model-role campaign-status \
+  --plan outputs/projects/<project>/runs/<registered-run>/model_role_conformance/\
+scitaste-b0-bytebound-conformance-v1/CAMPAIGN_PLAN.json
+
+scitaste model-role campaign-request \
+  --plan <CAMPAIGN_PLAN.json> \
+  --request-id <request-id>
 ```
+
+Generative requests include a binding template and `next_command` for the
+existing durable `model-node runtime execute` CLI. The caller must still render
+the runtime config/profile-set files and pass the indicated `--allow-live` or
+`--allow-local` flag. The embedding request is deliberately `blocked` until its
+real local dispatcher emits `scitaste-conformance-execution-v1`; no synthetic
+or test receipt is substituted. `campaign-status` discovers only
+`receipts/<request-id>/RUN_RESULT.json`, validates those bytes through the
+normal compiler, and reports `ready`, `blocked`, or `complete`.
 
 An empty receipt set is valid for planning/status and reports all role/scope
 bindings missing;

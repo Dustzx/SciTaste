@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-tool-routing",
+  "source_group_id": "b0-dev-code-tools",
+  "role": "code_agent",
+  "selection_scope_id": "agent-global",
+  "formal_or_heldout": false,
+  "objective": "Choose the least costly tool sequence that can establish whether a JSON field exists.",
+  "payload": {"allowed_tools": ["file.read", "python.run"], "file": "fixture.json"},
+  "required_response_fields": ["tool_sequence", "reason"],
+  "allowed_tool_names": ["file.read", "python.run"],
+  "expected": {"first_tool": "file.read"}
+}

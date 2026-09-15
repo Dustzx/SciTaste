@@ -41,6 +41,8 @@ exclusions:
   formal_or_heldout_inputs_allowed: false
   conformance_task_bytes_bound: false
   conformance_tasks_are_planning_labels_only: true
+  conformance_case_input_sha256: {}
+  conformance_source_group_by_task: {}
 
 profiles:
   - profile_id: b0-research-agent

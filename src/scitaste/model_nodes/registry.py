@@ -10,6 +10,7 @@ def first_party_node_types() -> dict[str, ModelNodeRegistration]:
 
     from scitaste.discovery.semantic import discovery_node_types
     from scitaste.evaluation.task_patch_generation import benchmark_patch_node_types
+    from scitaste.model_nodes.role_conformance import role_conformance_node_types
     from scitaste.taste.semantic import taste_node_types
     from scitaste.writing.semantic import writing_node_types
 
@@ -18,6 +19,7 @@ def first_party_node_types() -> dict[str, ModelNodeRegistration]:
         taste_node_types(),
         benchmark_patch_node_types(),
         writing_node_types(),
+        role_conformance_node_types(),
     )
     combined: dict[str, ModelNodeRegistration] = {}
     for registry in registries:

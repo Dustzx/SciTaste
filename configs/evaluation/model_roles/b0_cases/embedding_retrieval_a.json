@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-retrieval-stability",
+  "source_group_id": "b0-dev-retrieval-corpus",
+  "role": "embedding",
+  "selection_scope_id": "general-retrieval-corpus",
+  "formal_or_heldout": false,
+  "objective": "Embed the query and documents and return cosine similarities in document order.",
+  "payload": {
+    "query": "hidden test labels must remain sealed",
+    "documents": ["do not inspect heldout labels", "increase plot font size", "seal the evaluation split"]
+  },
+  "required_response_fields": ["similarities", "ranking"],
+  "expected": {"top_document_indices": [0, 2]}
+}

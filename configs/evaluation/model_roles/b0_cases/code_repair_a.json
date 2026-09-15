@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-code-repair",
+  "source_group_id": "b0-dev-code-repair",
+  "role": "code_agent",
+  "selection_scope_id": "agent-global",
+  "formal_or_heldout": false,
+  "objective": "Return the minimal replacement expression that prevents division by zero.",
+  "payload": {"source": "def ratio(a, b): return a / b", "constraint": "return None when b is zero"},
+  "required_response_fields": ["replacement", "test_cases", "risk"],
+  "expected": {"replacement_contains": "if b"}
+}

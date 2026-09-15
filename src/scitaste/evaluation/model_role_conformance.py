@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 from collections import defaultdict
 from datetime import datetime
@@ -157,6 +158,8 @@ class TaskExclusionContract(BaseModel):
     formal_or_heldout_inputs_allowed: Literal[False] = False
     conformance_task_bytes_bound: bool
     conformance_tasks_are_planning_labels_only: bool
+    conformance_case_input_sha256: dict[str, str]
+    conformance_source_group_by_task: dict[str, str]
 
     @model_validator(mode="after")
     def partitions_are_disjoint(self) -> TaskExclusionContract:
@@ -164,6 +167,23 @@ class TaskExclusionContract(BaseModel):
             raise ValueError(
                 "conformance tasks must be either byte-bound or planning-only, never both"
             )
+        task_ids = set(self.conformance_task_ids)
+        if self.conformance_task_bytes_bound:
+            if set(self.conformance_case_input_sha256) != task_ids or set(
+                self.conformance_source_group_by_task
+            ) != task_ids:
+                raise ValueError("byte-bound conformance tasks require a hash and source group")
+            if any(
+                not isinstance(value, str) or not re.fullmatch(_SHA256, value)
+                for value in self.conformance_case_input_sha256.values()
+            ):
+                raise ValueError("conformance case input hashes must be SHA-256 values")
+            if not set(self.conformance_source_group_by_task.values()) <= set(
+                self.conformance_source_group_ids
+            ):
+                raise ValueError("conformance case source groups are outside the allowed partition")
+        elif self.conformance_case_input_sha256 or self.conformance_source_group_by_task:
+            raise ValueError("planning-only conformance tasks cannot carry byte bindings")
         groups = {
             "task": (
                 set(self.conformance_task_ids),
@@ -1035,7 +1055,11 @@ def _load_and_verify_receipts(
         if receipt.budget_sha256 != planned.budget.budget_sha256:
             raise ValueError("model-role receipt budget differs from its frozen candidate")
         _verify_exclusions(plan.exclusions, receipt)
-        _verify_receipt_evidence(receipt, evidence_root=evidence_root)
+        _verify_receipt_evidence(
+            receipt,
+            exclusions=plan.exclusions,
+            evidence_root=evidence_root,
+        )
         records.append((receipt, _file_sha256(source)))
     return records
 
@@ -1043,6 +1067,7 @@ def _load_and_verify_receipts(
 def _verify_receipt_evidence(
     receipt: ModelRoleConformanceRunResult,
     *,
+    exclusions: TaskExclusionContract,
     evidence_root: Path,
 ) -> None:
     parsed: dict[EvidenceKind, BaseModel] = {}
@@ -1082,6 +1107,11 @@ def _verify_receipt_evidence(
         raise ValueError("receipt task IDs differ from its case manifest")
     if set(receipt.source_group_ids) != {item.source_group_id for item in case_manifest.cases}:
         raise ValueError("receipt source-group IDs differ from its case manifest")
+    for case in case_manifest.cases:
+        if exclusions.conformance_case_input_sha256[case.task_id] != case.input_sha256:
+            raise ValueError("case manifest input bytes differ from the frozen task binding")
+        if exclusions.conformance_source_group_by_task[case.task_id] != case.source_group_id:
+            raise ValueError("case manifest source group differs from the frozen task binding")
     if case_results.case_manifest_sha256 != case_manifest.manifest_sha256:
         raise ValueError("case results differ from the case-manifest identity")
     if (

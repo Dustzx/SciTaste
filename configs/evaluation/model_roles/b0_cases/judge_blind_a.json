@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "task_id": "b0-conformance-blind-judgment",
+  "source_group_id": "b0-dev-blind-judge",
+  "role": "judge",
+  "selection_scope_id": "agent-global",
+  "formal_or_heldout": false,
+  "objective": "Rank condition-hidden packages by evidence validity before narrative quality.",
+  "payload": {
+    "packages": [
+      {"id": "p", "claim_linked": true, "failed_runs_retained": true, "score": 0.61},
+      {"id": "q", "claim_linked": false, "failed_runs_retained": false, "score": 0.83}
+    ]
+  },
+  "required_response_fields": ["winner", "criterion_scores", "confidence"],
+  "expected": {"winner": "p"}
+}
