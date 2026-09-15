@@ -26,6 +26,7 @@ from scitaste.evaluation.natural_taste_review import (
     prepare_taste_source_review_campaign,
     publish_taste_source_review_campaign_run,
 )
+from scitaste.evaluation.source_identity import canonical_f1000_source_group_id
 from scitaste.generative_ui import (
     GenerativeUIApplication,
     ProjectProgressQuery,
@@ -198,6 +199,10 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert "Hidden" not in candidates
     assert "10.12688" not in candidates
     assert "added the requested comparator" in candidates
+    candidate_rows = tuple(json.loads(line) for line in candidates.splitlines())
+    assert {item["source_group_id"] for item in candidate_rows} == {
+        canonical_f1000_source_group_id(item.base_doi) for item in receipt.selected_sources
+    }
 
     snapshot, published = publish_f1000_taste_population_run(
         runtime,
@@ -510,6 +515,40 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
         item.quick_intent_id == "plan-reviewed-taste-abstraction"
         for item in locked_catalog.intents
     )
+
+
+def test_f1000_acquisition_excludes_canonical_groups_across_receipts(
+    tmp_path: Path,
+) -> None:
+    excluded = tuple(
+        sorted(
+            (
+                canonical_f1000_source_group_id("10.12688/f1000research.101"),
+                canonical_f1000_source_group_id("10.12688/f1000research.201"),
+            )
+        )
+    )
+    payload = _plan().model_dump(mode="json", exclude_computed_fields=True)
+    payload.update(
+        schema_version="1.1",
+        acquisition_id="f1000-exclusion-test",
+        excluded_canonical_source_group_ids=excluded,
+    )
+    plan = F1000DomainAcquisitionPlan.model_validate(payload)
+
+    acquired = acquire_f1000_domain_sources(
+        plan,
+        output_dir=tmp_path / "excluded-acquisition",
+        allow_network_download=True,
+        transport=_RecordedF1000(),
+        acquired_at=datetime(2026, 9, 15, tzinfo=UTC),
+    )
+
+    selected = {
+        canonical_f1000_source_group_id(item.base_doi)
+        for item in acquired.receipt.selected_sources
+    }
+    assert selected.isdisjoint(excluded)
 
 
 def test_f1000_acquisition_requires_explicit_network_switch(tmp_path: Path) -> None:

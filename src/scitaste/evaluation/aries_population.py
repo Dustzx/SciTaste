@@ -28,6 +28,7 @@ from scitaste.evaluation.acquisition import (
     load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
 )
+from scitaste.evaluation.source_identity import canonical_openreview_source_group_id
 from scitaste.model_nodes.verification_policy import (
     ActionEffect,
     ActionReversibility,
@@ -307,7 +308,7 @@ def materialize_aries_taste_population(
                 candidate_id=_opaque_id(
                     "aries-candidate", receipt.receipt_sha256, doc_id, str(comment_id)
                 ),
-                source_group_id=_opaque_id("aries-group", receipt.receipt_sha256, doc_id),
+                source_group_id=canonical_openreview_source_group_id(doc_id),
                 paper_context=_clean_text(source["abstract"], maximum=_MAX_CONTEXT_CHARS),
                 review_comment=_clean_text(review["comment"], maximum=_MAX_CONTEXT_CHARS),
                 observed_edits=observed_edits,

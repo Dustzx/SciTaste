@@ -1,7 +1,9 @@
 # SciTasteBench v2 curation and local-model governance
 
-Status: **design and software contract only**. No expert label, benchmark result,
-checkpoint transfer, or GPU workload is authorized by this document.
+Status: **design and software contract only**. No human/expert label, benchmark
+result, checkpoint transfer, or GPU workload is authorized by this document.
+The active operational route is the explicitly nonhuman AI-panel amendment in
+`docs/research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md`.
 
 ## Scientific role
 
@@ -16,12 +18,24 @@ case and are never counted as independent samples.
 
 ## Natural case population
 
-The formal population contains at least 120 headline cases, at least three
-domains, and all six decision families: Idea, Experiment, Evidence, Writing,
-Review, and Visual. Each case is derived from a real, rights-compatible research
-decision such as an open review/rebuttal exchange, an experiment change recorded
-in a repository, or an explicitly licensed derived annotation. Cases from the
-same paper, repository, review thread, or trajectory share one `source_group_id`.
+The formal population contains at least 120 headline cases from at least 120
+canonical source groups, at least three domains, and all six decision families:
+Idea, Experiment, Evidence, Writing, Review, and Visual. Each headline case has
+one distinct source group; further decisions from the same work are secondary
+measurements whose total effective weight remains at most one. Each case is
+derived from a real, rights-compatible research decision such as an open
+review/rebuttal exchange, an experiment change recorded in a repository, or an
+explicitly licensed derived annotation. Cases from the same paper, repository,
+review thread, or trajectory share one `source_group_id`.
+
+Source-group identity is global rather than receipt- or campaign-local. F1000
+versions use the normalized base DOI; ARIES and compatible OpenReview sources use
+the exact forum identity. Both are domain-separated and hashed by
+`scitaste.evaluation.source_identity`, while private alias registries map old
+receipt-bound IDs without storing the raw DOI/forum. A formal acquisition must
+exclude canonical IDs already assigned to development or segmentation
+validation before source content is opened. Reissuing a receipt or changing a
+campaign ID cannot make a consumed work eligible again.
 
 The source bytes or permitted derived annotation are content-addressed and
 rehash-verified before compilation. The
@@ -37,33 +51,27 @@ consequence, boundary conditions, and provenance. The evaluated case binds the
 IDs and source groups of the matched precedents. A placebo binds different,
 non-overlapping precedents; it cannot be a paraphrase of the matched principle.
 
-## Human labels
+## AI-panel proxy labels under the active amendment
 
-Every case receives at least two conflict-cleared, pseudonymous human primary
-labels under one versioned, content-addressed rubric. Every annotation must name
-that exact rubric version. Model-produced labels are rejected by
-schema. Primary disagreement remains in `expert_distribution`. A tied vote
-requires exactly one additional human adjudicator; adjudication selects the
-reference action without erasing the original disagreement. An adjudicator is
-rejected when the primary vote is not tied.
+Every candidate is assessed against one versioned, content-addressed rubric by
+two conflict-screened AI reviewers with distinct reviewer, model, run, and raw-
+response identities. Exact agreement, or protocol-valid adjudication by a third
+identity-distinct AI reviewer after disagreement, makes the candidate eligible
+for deterministic admission. Admission also requires receipt, normalization,
+firewall, identity, split, provenance, and artifact-hash checks; a reviewer does
+not receive state-transition authority.
 
-The curation compiler verifies reviewer uniqueness per case, action identity,
-rubric and precedent-corpus hashes, source/Taste group disjointness, and the
-formal population floor before it emits an executable suite. Until these checks
-pass, no model can be run on the formal split.
+These labels support an internal AI-panel measurement instrument only. Every
+record and report must state `reviewer_kind=ai` and `not_human_review=true`.
+They cannot be described as human preference, expert agreement, inter-annotator
+agreement, or independent construct validation, and they do not authorize the
+stronger *Improving Autonomous Research* title. A later human study is a separate
+protocol and estimand; it must not reinterpret the AI-only runs after the fact.
 
-Reviewer work may be split across any number of content-bound slots as long as
-every case receives two judgments from distinct scientific identities and one
-separate privacy/release judgment. Slot allocation is not recruitment: an owner-
-approved ethics, consent, compensation, conflict, retention, and withdrawal
-record must bind the actual pseudonymous identities before contact.
-
-AI agents may pre-screen cases, surface likely disagreement, test reviewer
-instructions, and prioritize adjudication. Their outputs must state that they
-are not human review and are ineligible for benchmark admission. They cannot be
-silently counted toward the two primary labels or the privacy decision. If a
-later study wants an automated judge, a separately powered human--model
-validation sample and an explicitly secondary estimand are required.
+The curation compiler verifies reviewer identity separation per case, action
+identity, rubric and precedent-corpus hashes, canonical source/Taste group
+disjointness, and the formal population floor before it emits an executable
+suite. Until these checks pass, no model can be run on the formal split.
 
 Public-source attribution and de-identification are different release modes.
 Exact titles, coined methods, abstracts, affiliations, or URLs may identify a
@@ -120,8 +128,8 @@ commit, and owner-approved proposal hash exist.
 
 ## Analysis
 
-The primary Track A contrast is paired expert-aligned selection for Full SciTaste
-versus Base. Confirmatory component contrasts are Taste versus Base and Full
+The primary Track A contrast is paired AI-panel-proxy-aligned selection for Full
+SciTaste versus Base. Confirmatory component contrasts are Taste versus Base and Full
 versus Knowledge; placebo versus matched Taste tests whether benefit comes from
 additional fluent context rather than the precedent match. Secondary outcomes
 include wrong-level decision rate, confidence calibration, abstention/selective

@@ -29,6 +29,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+from scitaste.evaluation.source_identity import canonical_f1000_source_group_id
 from scitaste.model_nodes.verification_policy import (
     ActionEffect,
     ActionReversibility,
@@ -80,7 +81,7 @@ class F1000DomainAcquisitionPlan(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     acquisition_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     source_host: Literal["f1000research.com"] = "f1000research.com"
@@ -88,6 +89,11 @@ class F1000DomainAcquisitionPlan(BaseModel):
     rows_per_page: Literal[100] = 100
     minimum_latest_version: int = Field(default=2, ge=2, le=20)
     selection_salt: str = Field(min_length=16, max_length=200)
+    excluded_canonical_source_group_ids: tuple[str, ...] = Field(
+        default=(),
+        max_length=100_000,
+        exclude_if=lambda value: not value,
+    )
     per_search_response_max_bytes: int = Field(ge=16_384, le=4 * 1024 * 1024)
     per_article_xml_max_bytes: int = Field(ge=65_536, le=16 * 1024 * 1024)
     maximum_total_bytes: int = Field(gt=0, le=10_000_000_000)
@@ -110,6 +116,15 @@ class F1000DomainAcquisitionPlan(BaseModel):
         queries = [" ".join(item.subject_query.casefold().split()) for item in self.strata]
         if len(domain_ids) != len(set(domain_ids)) or len(queries) != len(set(queries)):
             raise ValueError("F1000 domain strata must have unique IDs and queries")
+        excluded = self.excluded_canonical_source_group_ids
+        if excluded != tuple(sorted(set(excluded))):
+            raise ValueError("F1000 excluded canonical source groups must be sorted and unique")
+        if any(not item.startswith("f1000-work-") for item in excluded):
+            raise ValueError("F1000 exclusions must use canonical work identities")
+        if self.schema_version == "1.0" and excluded:
+            raise ValueError("F1000 plan schema 1.0 cannot carry cross-receipt exclusions")
+        if self.schema_version == "1.1" and not excluded:
+            raise ValueError("F1000 plan schema 1.1 requires cross-receipt exclusions")
         search_requests = sum(item.expected_page_count for item in self.strata)
         # Every selected group binds the exact v1 reviewed source and latest revision.
         article_requests = 2 * sum(item.target_source_groups for item in self.strata)
@@ -742,9 +757,7 @@ def materialize_f1000_taste_population(
             _bound_file(source_root, source.latest_locator).read_bytes(),
             expected_doi=source.latest_doi,
         )
-        source_group_id = _opaque_id(
-            "f1000-group", receipt.receipt_sha256, source.base_doi
-        )
+        source_group_id = canonical_f1000_source_group_id(source.base_doi)
         group_candidates = _review_candidates(
             reviewed=reviewed,
             revised=revised,
@@ -1065,9 +1078,13 @@ def _select_disjoint_sources(
                 item[0],
             ),
         )
-        admitted = [item for item in ranked if item[0] not in used][
-            : stratum.target_source_groups
-        ]
+        admitted = [
+            item
+            for item in ranked
+            if item[0] not in used
+            and canonical_f1000_source_group_id(item[0])
+            not in plan.excluded_canonical_source_group_ids
+        ][: stratum.target_source_groups]
         if len(admitted) != stratum.target_source_groups:
             raise ValueError(f"F1000 domain {stratum.domain_id} lacks disjoint versioned sources")
         for base, (latest_doi, latest_version) in admitted:

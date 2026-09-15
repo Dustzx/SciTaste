@@ -51,6 +51,7 @@ from scitaste.evaluation import (
     save_taste_source_segmentation_sample_manifest,
     verify_taste_source_segmentation_sample_bindings,
 )
+from scitaste.evaluation.source_identity import canonical_openreview_source_group_id
 from scitaste.generative_ui.intent import WorkspaceIntentResolver
 from scitaste.generative_ui.workspace import ProjectProgressQuery, WorkspaceSurfaceFactory
 from scitaste.project import ProjectManifest, ProjectRuntime
@@ -248,6 +249,9 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
     assert report.verification.route == "direct_path"
     assert report.standalone_preflight_performed is False
     assert "example.org" not in json.dumps(candidate)
+    assert candidate["source_group_id"] == canonical_openreview_source_group_id(
+        "test-document"
+    )
 
     snapshot, _ = publish_aries_taste_population_run(
         runtime,
