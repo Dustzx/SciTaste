@@ -54,6 +54,7 @@ class TasteReferenceQualityBatchItem(BaseModel):
     ordinal: int = Field(gt=0, le=100)
     input_id: str = Field(pattern=_ID)
     source_group_id: str = Field(pattern=_ID)
+    precedent_projection_sha256: str = Field(pattern=_SHA256)
     source_projection_sha256: str = Field(pattern=_SHA256)
     screening_id: str = Field(pattern=_ID)
     invocation_id: str = Field(pattern=_ID)
@@ -208,16 +209,18 @@ def compile_taste_reference_quality_runtime_batch(
             abstraction_input = _load_abstraction_input(plan_file.parent, record.input_file.locator)
             if abstraction_input.source_projection_sha256 != record.source_projection_sha256:
                 raise ValueError("precedent projection differs from the pilot plan")
+            quality_projection = _quality_projection(abstraction_input.source_projection)
+            quality_projection_sha256 = hashlib.sha256(quality_projection.encode()).hexdigest()
             screening_id = f"track-a-quality-{record.input_id}"
             quality_input = ReferenceQualityInput(
                 screening_id=screening_id,
                 source_id=abstraction_input.source_id,
                 # The content visible to the quality model is exactly this projection.
-                source_content_sha256=abstraction_input.source_projection_sha256,
+                source_content_sha256=quality_projection_sha256,
                 decision_stage=abstraction_input.stage,
                 decision_role=abstraction_input.decision_role,
-                source_projection=abstraction_input.source_projection,
-                source_projection_sha256=abstraction_input.source_projection_sha256,
+                source_projection=quality_projection,
+                source_projection_sha256=quality_projection_sha256,
                 outcome_information_availability=(
                     abstraction_input.outcome_information_availability
                 ),
@@ -264,7 +267,8 @@ def compile_taste_reference_quality_runtime_batch(
                     ordinal=ordinal,
                     input_id=record.input_id,
                     source_group_id=record.source_group_id,
-                    source_projection_sha256=record.source_projection_sha256,
+                    precedent_projection_sha256=record.source_projection_sha256,
+                    source_projection_sha256=quality_projection_sha256,
                     screening_id=screening_id,
                     invocation_id=invocation_id,
                     runtime_config=TasteReferenceQualityFile(
@@ -309,6 +313,45 @@ def _load_abstraction_input(plan_root: Path, locator: str) -> TasteAbstractionIn
     if path.stat().st_size > _MAX_INPUT_BYTES:
         raise ValueError("Taste abstraction input exceeds the read ceiling")
     return TasteAbstractionInput.model_validate_json(path.read_bytes())
+
+
+def _quality_projection(source_projection: str) -> str:
+    """Remove abstraction-only role inflation from the quality instrument."""
+
+    payload = json.loads(source_projection)
+    fields = payload.get("fields")
+    if not isinstance(fields, dict):
+        raise ValueError("precedent projection lacks fields")
+    expected = {
+        "reviewed_abstract": ("problem_context", "evidence"),
+        "predecision_review_context": ("alternative", "evidence", "limitation"),
+        "verbatim_scientific_action": ("alternative", "scientific_action"),
+        "observed_natural_outcome": ("outcome",),
+    }
+    if set(fields) != set(expected):
+        raise ValueError("precedent projection fields differ from the quality instrument")
+    normalized: dict[str, object] = {}
+    for name, roles in expected.items():
+        record = fields[name]
+        if not isinstance(record, dict) or "value" not in record:
+            raise ValueError(f"precedent projection field {name!r} is malformed")
+        normalized[name] = {
+            "semantic_roles": list(roles),
+            "value": record["value"],
+        }
+    return json.dumps(
+        {
+            "schema_version": "1.0",
+            "outcome_information_availability": payload.get(
+                "outcome_information_availability"
+            ),
+            "fields": normalized,
+        },
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
 
 
 def _safe_locator(value: str) -> None:
