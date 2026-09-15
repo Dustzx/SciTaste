@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
+import scitaste.evaluation.taste_source_segmentation as segmentation_module
 import scitaste.evaluation.taste_source_segmentation_protocol as protocol_module
 from scitaste.evaluation import (
     AcquisitionEvidenceBinding,
@@ -595,23 +596,53 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         }
     )
     raw_segmentation.write_text(json.dumps(raw_segmentation_payload), encoding="utf-8")
-    segmentation = normalize_taste_source_decision_segmentation(
-        raw_segmentation_path=raw_segmentation,
-        campaign_paths=(campaign_root / "CAMPAIGN.json",),
-        campaign_aliases={"aries": campaign.campaign_id},
-        run_id="aries-decision-segmentation-v1",
-        screener_id="ai-segmenter-1",
-        invocation_id="ai-segmentation-invocation-1",
-        runtime_surface="test-agent",
-        model_identifier="unresolved-test-model",
-        model_revision=None,
-        exact_model_identity_bound=False,
-        rubric_path=segmentation_rubric,
-        sample_manifest_path=segmentation_sample,
-        runtime_identity_sha256=None,
-        completed_at=datetime(2026, 9, 14, 0, 7, tzinfo=UTC),
+    rubric_snapshot = segmentation_module.snapshot_taste_source_segmentation_rubric(
+        segmentation_rubric,
         locator_root=tmp_path,
     )
+    campaign_snapshot = segmentation_module.snapshot_taste_source_segmentation_campaign(
+        campaign_root / "CAMPAIGN.json",
+        locator_root=tmp_path,
+    )
+    sample_snapshot = load_taste_source_segmentation_sample_manifest(segmentation_sample)
+
+    def reject_late_input_read(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("authorized input was reopened after snapshot")
+
+    with monkeypatch.context() as snapshot_guard:
+        snapshot_guard.setattr(
+            segmentation_module,
+            "snapshot_taste_source_segmentation_rubric",
+            reject_late_input_read,
+        )
+        snapshot_guard.setattr(
+            segmentation_module,
+            "snapshot_taste_source_segmentation_campaign",
+            reject_late_input_read,
+        )
+        segmentation = normalize_taste_source_decision_segmentation(
+            raw_segmentation_path=raw_segmentation,
+            campaign_paths=(),
+            campaign_aliases={"aries": campaign.campaign_id},
+            run_id="aries-decision-segmentation-v1",
+            screener_id="ai-segmenter-1",
+            invocation_id="ai-segmentation-invocation-1",
+            runtime_surface="test-agent",
+            model_identifier="unresolved-test-model",
+            model_revision=None,
+            exact_model_identity_bound=False,
+            rubric_path=segmentation_rubric,
+            sample_manifest_path=segmentation_sample,
+            runtime_identity_sha256=None,
+            completed_at=datetime(2026, 9, 14, 0, 7, tzinfo=UTC),
+            locator_root=tmp_path,
+            prevalidated_rubric_snapshot=rubric_snapshot,
+            prevalidated_sample_inspection=sample_snapshot,
+            prevalidated_sample_manifest_locator=segmentation_sample.relative_to(
+                tmp_path
+            ).as_posix(),
+            prevalidated_campaign_snapshots=(campaign_snapshot,),
+        )
     assert segmentation.source_item_count == 1
     assert segmentation.proposed_atomic_decision_count == 1
     assert segmentation.multiple_segment_item_count == 0
@@ -726,21 +757,34 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         ),
         encoding="utf-8",
     )
-    resolution = normalize_taste_source_segmentation_resolution(
-        raw_resolution_path=raw_resolution,
-        agreement_path=segmentation_agreement_path,
-        run_id="aries-decision-segmentation-resolution-v1",
-        adjudicator_id="ai-adjudicator-1",
-        invocation_id="ai-adjudication-invocation-1",
-        runtime_surface="test-agent",
-        model_identifier="unresolved-test-model",
-        model_revision=None,
-        exact_model_identity_bound=False,
-        rubric_path=segmentation_rubric,
-        runtime_identity_sha256=None,
-        completed_at=datetime(2026, 9, 14, 0, 10, tzinfo=UTC),
-        locator_root=tmp_path,
-    )
+    with monkeypatch.context() as snapshot_guard:
+        snapshot_guard.setattr(
+            segmentation_module,
+            "snapshot_taste_source_segmentation_rubric",
+            reject_late_input_read,
+        )
+        snapshot_guard.setattr(
+            segmentation_module,
+            "snapshot_taste_source_segmentation_campaign",
+            reject_late_input_read,
+        )
+        resolution = normalize_taste_source_segmentation_resolution(
+            raw_resolution_path=raw_resolution,
+            agreement_path=segmentation_agreement_path,
+            run_id="aries-decision-segmentation-resolution-v1",
+            adjudicator_id="ai-adjudicator-1",
+            invocation_id="ai-adjudication-invocation-1",
+            runtime_surface="test-agent",
+            model_identifier="unresolved-test-model",
+            model_revision=None,
+            exact_model_identity_bound=False,
+            rubric_path=segmentation_rubric,
+            runtime_identity_sha256=None,
+            completed_at=datetime(2026, 9, 14, 0, 10, tzinfo=UTC),
+            locator_root=tmp_path,
+            prevalidated_rubric_snapshot=rubric_snapshot,
+            prevalidated_campaign_snapshots=(campaign_snapshot,),
+        )
     assert resolution.internal_pilot_resolution_complete is True
     assert resolution.internal_ai_screening_ready is False
     assert resolution.exact_agreement_item_count == 1
