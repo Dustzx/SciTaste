@@ -156,8 +156,8 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Exact base checkpoint required to separate Scientific Judge training from generic Qwen pairwise impact prediction.
-    access_state: download-authorized-pending
-    resource_locator: null
+    access_state: available-exact-b0-passed
+    resource_locator: configs/resources/gpu/checkpoints/qwen3_4b_instruct_2507_remote_v1.yaml
     exact_revision: cdbee75f17c01a7cc42f958dc650907174af0554
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false
@@ -171,8 +171,8 @@ candidates:
     experimental_role: external-neighbor-baseline
     evidence_anchor_ids: [ai-can-learn-scientific-taste]
     task_fit_rationale: Exact base policy required to isolate Scientific Thinker preference-alignment gains before ecological comparison with SciTaste.
-    access_state: download-authorized-pending
-    resource_locator: null
+    access_state: available-exact-b0-passed-with-2048-token-envelope
+    resource_locator: configs/resources/gpu/checkpoints/qwen3_4b_thinking_2507_remote_v1.yaml
     exact_revision: 768f209d9ea81521153ed38c47d515654e938aea
     selection_state: external-baseline-pending-execution
     availability_may_select_model: false

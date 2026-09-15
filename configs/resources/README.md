@@ -1,11 +1,11 @@
 # Resource catalog layout
 
-`compute_catalog_v11.yaml` is the current project-superordinate resource index.
+`compute_catalog_v12.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
 
 ```text
 configs/resources/
-├── compute_catalog_v11.yaml
+├── compute_catalog_v12.yaml
 ├── assets/
 │   └── model_asset_catalog_v1.yaml
 ├── api/
@@ -23,10 +23,12 @@ configs/resources/
 │       ├── qwen3_5_4b_local.yaml
 │       ├── qwen3_5_4b_remote.yaml
 │       ├── qwen3_5_9b_remote_v2.yaml
+│       ├── qwen3_4b_instruct_2507_remote_v1.yaml
+│       ├── qwen3_4b_thinking_2507_remote_v1.yaml
 │       ├── scijudge_4b_2605_remote_v1.yaml
 │       └── scithinker_4b_remote_v1.yaml
 ├── projects/
-│   └── scitaste_self_development_v11.yaml
+│   └── scitaste_self_development_v12.yaml
 └── observations/
     ├── *.yaml                 # historical API and remote-host observations
     ├── v2/                    # local v2 observations
@@ -73,6 +75,12 @@ and the fixed-revision 4B Scientific Judge and Thinker direct-neighbor
 checkpoints. Their static completeness and project attachment do not select a
 formal model; each remains behind its role-specific task-excluded execution
 gate.
+V12 adds the exact Qwen3-4B-Instruct-2507 and Qwen3-4B-Thinking-2507 bases for
+the two direct Scientific Taste neighbors. All four 4B checkpoints passed
+task-excluded load/final-channel B0; the Thinking base also retained its failed
+1024-token attempt and requires a 2048-token role envelope. These resources are
+narrow external controls, not SciTaste Native/Base arms or model-selection
+authority.
 
 Generation as Content projects both a project's attached resources and compatible
 catalog alternatives. A user-reviewed, model-authored resource directive may add

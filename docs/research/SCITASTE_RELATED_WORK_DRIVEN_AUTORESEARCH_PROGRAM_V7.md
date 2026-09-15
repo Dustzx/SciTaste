@@ -47,7 +47,7 @@ scientific agent.
 
 The no-run direct-neighbor study extension is
 [`iclr2027_scitaste_direct_neighbor_extension_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_direct_neighbor_extension_v1.yaml),
-SHA-256 `fdf51ec564d3bb0a6ea9160b4299cb2e04dbc5ff787b792b16711a7b00a31ba0`.
+SHA-256 `d12795a6f1b8ef8d7fd4129900b3541f7a372c39818cb191188f3e20d15c2879`.
 It reports 4B native-task reproduction, conditional 30B scale-by-training
 robustness, lifecycle transfer, SciTaste mechanisms, and downstream objective
 progress as separate estimands. Aggregating those heterogeneous tasks into one
@@ -106,15 +106,17 @@ scores cannot update the same formal policy split.
 
 ## SciTaste policy versus research workload training
 
-“Training-free” applies first to the current SciTaste method: the frozen
-research-agent weights are not updated. SciTaste instead updates grounded Taste
-memory, delayed outcome credit, routing statistics, and abstention state. It
-does **not** imply that every scientific experiment run by SciTaste is
-training-free.
+SciTaste is one system, not separate training and training-free products. In
+this program, **training-free** and **training-based** describe the scientific
+workload that SciTaste actually executes. The current SciTaste implementation
+keeps the research-agent backbone frozen while updating grounded Taste memory,
+delayed outcome credit, routing statistics, and abstention state. An optional
+neural learned-Taste component is a secondary mechanism study, not another
+product and not required for the headline claim.
 
 The workload contract is independently two-stratum and is frozen in
 [`iclr2027_scitaste_workload_paradigms_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_workload_paradigms_v1.yaml),
-SHA-256 `60fe5de9e3554e685c18d15d66d53d1648e96ab8b4969bfb29ff304a9913f13b`:
+SHA-256 `38bc5a0b972565cf42c266c56a2bf42a1ff6a22ba252cbce1b8495b1145b7ec3`:
 
 - **T0 training-free research** executes a complete project by changing
   analysis, code, prompts, retrieval, or algorithms while keeping task-model
@@ -135,7 +137,7 @@ required by the current title or primary causal claim.
 
 | Track | Question | Data/benchmark | Model and compute shape |
 |---|---|---|---|
-| E1 | Which Scientific Taste mechanisms improve decisions? | source-disjoint SciTasteBench D-layer natural decisions | training-free SciTaste policy; one frozen strong agent per contrast, two independent judges; no GPU required unless the local robustness stratum is run |
+| E1 | Which Scientific Taste mechanisms improve decisions? | source-disjoint SciTasteBench D-layer natural decisions | frozen-backbone, outcome-updated SciTaste policy; one frozen strong agent per contrast, two independent judges; no GPU required unless the local robustness stratum is run |
 | E2 | Does SciTaste improve objective training-based research progress? | MLRC-Bench primary, another scorer-owned route only after qualification | same scientific agent for Native and Native Base; benchmark task model on 8×3090; hidden scorer owns the endpoint |
 | E3 | Can SciTaste complete Idea to reviewed and revised paper better than admitted AutoResearch methods? | MLR-Bench plus a qualified T0 task | matched-model primary and native-best secondary reported separately; at least one complete training-free and one training-based research workload, with actual task-dependent API/GPU work and paper-review loop |
 | E4 | Where does the executable research chain fail? | EXP-Bench | smallest Native/Base diagnostic pair spanning T0/T1 where qualified and covering hypothesis through conclusion |
@@ -188,14 +190,11 @@ generation, GPU job, or benchmark run occurred. This changes feasibility, not
 selection; the checkpoint still needs source-disjoint role conformance and
 cannot replace the frontier matched-model stratum.
 
-The two released 4B direct-neighbor checkpoints are now fixed-revision,
-full-tree hashed, and attached to the self-development project resource set.
-One task-excluded B0 run per checkpoint loaded successfully on separate RTX
-3090s under Python 3.12: Scientific Judge returned its required answer schema in
-15.49 seconds at 8,223,046,144 peak allocated bytes, and Scientific Thinker
-returned its required title/abstract schema in 25.87 seconds at 8,251,090,944
-bytes. Both receipts record zero formal dataset rows. These observations prove
-only load/generation compatibility; they do not establish impact accuracy,
-ideation quality, lifecycle transfer, or AutoResearch improvement. The exact
-4B Qwen bases are being acquired next so any N1/N2 difference can be attributed
-to the neighbor's Taste training rather than an unmatched backbone.
+The two released 4B direct-neighbor checkpoints and their exact Qwen3 bases are
+now fixed-revision, full-tree hashed, and attached to the self-development
+project resource set. All four completed task-excluded load/final-channel B0 on
+remote RTX 3090s under Python 3.12 and read zero formal dataset rows. The Qwen3
+Thinking base retained its 1024-token truncation and completed only with the
+role-specific 2048-token envelope. These observations prove only
+load/generation compatibility; they do not establish impact accuracy, ideation
+quality, lifecycle transfer, or AutoResearch improvement.

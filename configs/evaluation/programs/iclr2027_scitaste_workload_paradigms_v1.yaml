@@ -6,11 +6,16 @@ base_program:
   sha256: 5c27721ab923516129de8b6ea9c40ddc20a82fab668190b2df2d6980a0ebec41
 
 concept_partition:
+  unified_system_identity:
+    product_id: scitaste
+    product_count: 1
+    workload_paradigm_is_not_a_product_variant: true
   scitaste_policy_adaptation:
-    primary_method: parameter-training-free-lifecycle-taste-policy
+    primary_method: frozen-backbone-outcome-updated-lifecycle-taste-policy
     agent_model_gradient_updates: forbidden
-    allowed_updates: [source-grounded-taste-memory, delayed-outcome-credit, routing-statistics, calibrated-abstention]
-    optional_learned_taste_extension: non-headline-future-or-secondary-study
+    controller_state_updates: [source-grounded-taste-memory, delayed-outcome-credit, routing-statistics, calibrated-abstention]
+    neural_weight_training_required: false
+    optional_learned_taste_extension: secondary-mechanism-study-not-a-product-fork
   research_workload_execution:
     required_paradigms: [training-free-research, training-based-research]
     meaning: whether the scientific experiment designed and executed by SciTaste updates a task-model parameter
@@ -52,7 +57,7 @@ scitastebench_layers:
 
 causal_comparison:
   systems_per_task: [scitaste-native, native-base]
-  scitaste_native_difference: training-free-lifecycle-taste-policy-only
+  scitaste_native_difference: frozen-backbone-outcome-updated-lifecycle-taste-policy-only
   fixed_within_pair:
     - exact-research-agent-model-and-serving-window
     - task-inputs-and-hidden-scorer
@@ -66,7 +71,10 @@ minimum_title_relevant_execution:
   training_free_B1: one-complete-source-disjoint-T0-Native-Base-pair
   training_based_B1: one-complete-source-disjoint-T1-Native-Base-pair
   current_training_based_candidate: MLRC-Perception-LocPointTransformer
-  current_training_free_candidate: null
+  current_training_free_candidate: NewtonBench-interactive-scientific-law-discovery
+  current_training_free_qualification:
+    locator: docs/research/data/newtonbench_t0_source_qualification_v1.yaml
+    status: source-qualified-runtime-implemented-formal-not-yet-authorized
   training_free_candidate_gate:
     - objective-executable-endpoint
     - no-task-model-gradient-update
@@ -77,7 +85,7 @@ minimum_title_relevant_execution:
 
 reporting:
   primary_questions:
-    - does-training-free-lifecycle-Taste-improve-training-free-research
+    - does-outcome-updated-lifecycle-Taste-improve-training-free-research
     - does-the-same-policy-improve-training-based-research
     - which-Taste-mechanisms-and-failures-differ-between-workload-paradigms
   learned-versus-training-free-scitaste_claim_required: false
@@ -88,6 +96,9 @@ reporting:
 execution_state:
   policy_definition_frozen: true
   scitastebench_D_available_for-development: true
+  scitastebench_T0_primary_candidate_selected: true
   scitastebench_T0_formal_task_selected: false
+  scitastebench_T0_provider_neutral_runtime_implemented: true
+  scitastebench_T0_scripted_environment_integration_passed: true
   scitastebench_T1_formal_task_selected: true
   both_workload_paradigms_executed: false

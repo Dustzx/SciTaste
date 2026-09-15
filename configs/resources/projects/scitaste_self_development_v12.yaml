@@ -1,0 +1,110 @@
+schema_version: "1.0"
+binding_set_id: scitaste-self-development-resources-v12
+project_id: scitaste-self-development
+catalog_id: scitaste-shared-compute-v12
+catalog_semantic_sha256: 701caf3e649091b2a7d86711895ed68e85c630dffcd49d06d488a18ad815787d
+bindings:
+  - binding_id: primary-api-deepseek-v4
+    resource_id: deepseek-v4-flash
+    expected_kind: api_model
+    role: primary-api-candidate
+    priority: 1
+    status: pending
+    purpose: Current official DeepSeek V4 Flash candidate; selection requires a separately approved task-excluded conformance window.
+    required_for: [api-causal-pilot-candidate, api-system-comparison-candidate]
+  - binding_id: robustness-api-zhipu
+    resource_id: zhipu-glm53-flash
+    expected_kind: api_model
+    role: robustness-api-candidate
+    priority: 1
+    status: verified
+    purpose: Authenticated GLM-5.3-Flash availability is verified; formal experiment selection remains separate.
+    required_for: [generation-as-content-planner, cross-provider-robustness-candidate, multimodal-system-pilot-candidate]
+  - binding_id: historical-api-bailian
+    resource_id: bailian-qwen38-max
+    expected_kind: api_model
+    role: historical-api
+    priority: 1
+    status: blocked
+    purpose: Preserve historical Qwen3.8-Max provenance; arrearage remains the last verified service state.
+    required_for: [historical-replay]
+  - binding_id: development-gpu-local
+    resource_id: gpu-host-local-3090
+    expected_kind: gpu_host
+    role: development-gpu
+    priority: 1
+    status: verified
+    purpose: One local RTX 3090 and the Python 3.12 local-generation stack are available for bounded development.
+    required_for: [local-model-preflight, reference-quality-calibration]
+  - binding_id: scaleout-gpu-remote
+    resource_id: gpu-host-3090-2
+    expected_kind: gpu_host
+    role: scaleout-gpu
+    priority: 1
+    status: verified
+    purpose: Eight remote RTX 3090 cards are verified; availability does not determine the ICLR experiment backbone.
+    required_for: [selected-gpu-pilot, powered-gpu-formal, direct-neighbor-b0]
+  - binding_id: verified-local-qwen3vl2b
+    resource_id: qwen3-vl-2b-local-47f9c0e0
+    expected_kind: model_checkpoint
+    role: verified-checkpoint
+    priority: 1
+    status: verified
+    purpose: Verified only for bounded Reference Quality calibration, not the headline backbone.
+    required_for: [asset-inventory, reference-quality-calibration]
+  - binding_id: discovered-local-qwen35-4b
+    resource_id: qwen3-5-4b-local-b4e05070
+    expected_kind: model_checkpoint
+    role: replicated-checkpoint
+    priority: 1
+    status: verified
+    purpose: Local replica retained as inventory; it has no main-experiment role.
+    required_for: [asset-inventory]
+  - binding_id: discovered-remote-qwen35-4b
+    resource_id: qwen3-5-4b-remote-b4e05070
+    expected_kind: model_checkpoint
+    role: replicated-checkpoint
+    priority: 2
+    status: verified
+    purpose: Remote replica retained as inventory; it has no main-experiment role.
+    required_for: [asset-inventory]
+  - binding_id: robustness-remote-qwen35-9b
+    resource_id: qwen3-5-9b-remote-eb331598
+    expected_kind: model_checkpoint
+    role: robustness-checkpoint-candidate
+    priority: 1
+    status: verified
+    purpose: Open 9B checkpoint retained only for a post-primary cross-model robustness stratum.
+    required_for: [cross-model-robustness-candidate]
+  - binding_id: direct-neighbor-scijudge-4b
+    resource_id: scijudge-4b-2605-remote-da748ee3
+    expected_kind: model_checkpoint
+    role: direct-neighbor-impact-baseline
+    priority: 1
+    status: verified
+    purpose: Direct learned-Taste impact baseline; it is not peer review or a lifecycle policy.
+    required_for: [direct-neighbor-b0, direct-neighbor-N1]
+  - binding_id: direct-neighbor-scithinker-4b
+    resource_id: scithinker-4b-remote-e6544721
+    expected_kind: model_checkpoint
+    role: direct-neighbor-ideation-baseline
+    priority: 1
+    status: verified
+    purpose: Direct learned-Taste ideation baseline; it does not execute a complete research trajectory.
+    required_for: [direct-neighbor-b0, direct-neighbor-N2]
+  - binding_id: direct-neighbor-impact-qwen-base
+    resource_id: qwen3-4b-instruct-2507-remote-c573dd87
+    expected_kind: model_checkpoint
+    role: direct-neighbor-impact-base
+    priority: 1
+    status: verified
+    purpose: Exact architecture-and-scale base for isolating Scientific Judge training on its narrow task.
+    required_for: [direct-neighbor-b0, direct-neighbor-N1]
+  - binding_id: direct-neighbor-ideation-qwen-base
+    resource_id: qwen3-4b-thinking-2507-remote-ef0d4f69
+    expected_kind: model_checkpoint
+    role: direct-neighbor-ideation-base
+    priority: 1
+    status: verified
+    purpose: Exact base policy for isolating Scientific Thinker training; its thinking channel requires a task-specific output envelope.
+    required_for: [direct-neighbor-b0, direct-neighbor-N2]

@@ -1,0 +1,23 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: qwen3-4b-thinking-2507-remote-ef0d4f69
+  model_id: Qwen/Qwen3-4B-Thinking-2507
+  model_revision: 768f209d9ea81521153ed38c47d515654e938aea
+  local_path: /media/sdb/wwh/models/Qwen3-4B-Thinking-2507
+  storage_scope: gpu_host
+  storage_gpu_resource_id: gpu-host-3090-2
+  checkpoint_sha256: ef0d4f6937a665aef45c7b366e687495db835cff70cb8202500df41a14a6a570
+  checkpoint_bytes: 8060920921
+  format: Hugging Face indexed safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids: [gpu-host-3090-2]
+  evidence_ref: configs/resources/observations/v10/qwen3_4b_thinking_2507_remote_20260916_v1.yaml
+  evidence_sha256: 683c58dc1fe950b7efe07b2aa8568b0d23a11b4a3af07c9e477e77d08277ea9d
+  observed_at: 2026-09-16T05:17:15+08:00
+  availability: verified
+  availability_reason: >-
+    All 13 regular files, three indexed weight shards, tokenizer assets, and
+    required JSON files are present at the fixed revision and full-tree hashed.
+    A separate task-excluded B0 load and final-channel generation passed at the
+    role-specific 2048-token envelope after a retained 1024-token truncation.

@@ -1,0 +1,23 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: qwen3-4b-instruct-2507-remote-c573dd87
+  model_id: Qwen/Qwen3-4B-Instruct-2507
+  model_revision: cdbee75f17c01a7cc42f958dc650907174af0554
+  local_path: /media/sdb/wwh/models/Qwen3-4B-Instruct-2507
+  storage_scope: gpu_host
+  storage_gpu_resource_id: gpu-host-3090-2
+  checkpoint_sha256: c573dd87197b6283e480c3f5f6b8eefc59d61a3012afba878f4902a321bb4743
+  checkpoint_bytes: 8060917568
+  format: Hugging Face indexed safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids: [gpu-host-3090-2]
+  evidence_ref: configs/resources/observations/v10/qwen3_4b_instruct_2507_remote_20260916_v1.yaml
+  evidence_sha256: 03cef1a8482f3f4bbc1914d6d77fa480596582b3d53b8775e9f9eb601ad5d0f6
+  observed_at: 2026-09-16T05:17:15+08:00
+  availability: verified
+  availability_reason: >-
+    All 13 regular files, three indexed weight shards, tokenizer assets, and
+    required JSON files are present at the fixed revision and full-tree hashed.
+    A separate task-excluded B0 load and final-channel generation passed; its
+    receipt is bound by direct_taste_neighbor_b0_receipts_v2.yaml.

@@ -6,7 +6,7 @@ experiment proposal, approval, result, and paper evidence.
 
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v11.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v12.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
   `configs/resources/gpu/`; v1 through v4 remain immutable, readable history.
@@ -45,8 +45,10 @@ turning a weak password hash or bearer key into a tracked artifact.
 | checkpoint | `qwen3-5-4b-local-b4e05070` | content-verified local Qwen3.5-4B asset; not selected for an experiment |
 | checkpoint | `qwen3-5-4b-remote-b4e05070` | host-scoped replica of the same Qwen3.5-4B bytes; not selected for an experiment |
 | checkpoint | `qwen3-5-9b-remote-eb331598` | fixed-revision, full-tree-hashed open 9B robustness candidate; not formally selected |
-| checkpoint | `scijudge-4b-2605-remote-da748ee3` | fixed-revision direct-neighbor impact-preference baseline; task-excluded B0 pending |
-| checkpoint | `scithinker-4b-remote-e6544721` | fixed-revision direct-neighbor follow-up ideation baseline; task-excluded B0 pending |
+| checkpoint | `scijudge-4b-2605-remote-da748ee3` | fixed-revision direct-neighbor impact-preference baseline; task-excluded B0 passed |
+| checkpoint | `scithinker-4b-remote-e6544721` | fixed-revision direct-neighbor follow-up ideation baseline; task-excluded B0 passed |
+| checkpoint | `qwen3-4b-instruct-2507-remote-c573dd87` | exact Scientific Judge base; task-excluded B0 passed |
+| checkpoint | `qwen3-4b-thinking-2507-remote-ef0d4f69` | exact Scientific Thinker base; B0 passed at 2048 tokens after the retained 1024-token truncation |
 
 The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 `10.7.33.15`, port 22, user `ubuntu`, password binding
@@ -54,8 +56,8 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development_v11.yaml` explicitly binds
-all eleven current resources to the self-development project. The
+`configs/resources/projects/scitaste_self_development_v12.yaml` explicitly binds
+all thirteen current project resources. The
 two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
 select the paper backbone. Qwen3.5-9B is only a cross-model robustness
 candidate, while Scientific Judge and Thinker retain their narrow external
@@ -89,7 +91,10 @@ Each passed one task-excluded load/schema-generation B0 on a separate remote
 RTX 3090. The receipts live with the self-development project, record zero
 formal rows read, and do not authorize a formal evaluation. Their exact Qwen3
 4B bases are separate required controls; the released 30B pairs remain in the
-scientific candidate universe despite not being downloaded.
+scientific candidate universe despite not being downloaded. Both exact 4B
+bases are now also fixed-revision, full-tree hashed, project-bound, and B0
+qualified. The Thinking base reached its final channel only with a 2048-token
+envelope, so output budgets remain role-specific rather than globally fixed.
 
 ## Current observations
 

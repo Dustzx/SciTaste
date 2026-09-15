@@ -5,10 +5,22 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Implemented the first real T0 interactive-research runtime around the exact
+  NewtonBench source: real environment interventions, isolated code analysis,
+  hidden objective scoring, bounded provider-neutral agent decisions,
+  immutable terminal receipts, and task-level Native/Base effects. Every Taste
+  turn now carries a single-variable policy-weight contract in an audit envelope
+  hidden from the research model. A scripted CPU integration completed the
+  environment/code/submit/score chain; formal model execution remains unstarted.
+- Completed, full-tree hashed, and project-bound the exact Qwen3 4B bases for
+  Scientific Judge and Thinker in resource catalog v12. Four-checkpoint B0 now
+  passes after final-channel separation; the retained Thinking-base failure at
+  1024 tokens and success at 2048 make output envelopes explicitly role-specific.
 - Separated SciTaste policy adaptation from the research workloads it executes.
-  The primary lifecycle Taste policy remains parameter-training-free, while the
-  formal task program now requires both a complete T0 training-free research
-  Native/Base pair and a complete T1 training-based research Native/Base pair.
+  SciTaste remains one system with a frozen research-model backbone and an
+  outcome-updated lifecycle controller; T0 training-free and T1 training-based
+  describe the research workloads it runs, not separate SciTaste products.
+  Neural Taste training remains an optional secondary mechanism study.
   Direct Scientific Judge/Thinker training remains an external mechanism
   reproduction, not a SciTaste mode.
 - Registered the fixed-revision 4B Scientific Judge and Thinker checkpoints in

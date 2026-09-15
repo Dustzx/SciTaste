@@ -1,0 +1,177 @@
+schema_version: "1.0"
+qualification_id: newtonbench-t0-source-qualification-v1
+project_id: scitaste-self-development
+qualified_at: 2026-09-16T04:44:26+08:00
+purpose: >-
+  Determine whether NewtonBench can supply SciTasteBench's first complete
+  training-free research workload. This record distinguishes source
+  qualification from formal task authorization.
+
+source:
+  benchmark_id: NewtonBench
+  paper_title: "NewtonBench: Benchmarking Generalizable Scientific Law Discovery in LLM Agents"
+  paper_url: https://arxiv.org/abs/2510.07172
+  venue: ICLR 2026
+  official_repository: https://github.com/HKUST-KnowComp/NewtonBench
+  repository_commit: 912a4ba5f4356ddd06acc16e44460ca30be4abc2
+  repository_tree_git_sha1: 88b68ea14e1ee6bc17a237642ab9eccde52faa48
+  checkout: outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout
+  receipt: outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/RECEIPT.json
+  license: MIT
+  license_sha256: 47158d3a1eb6cbebe82fab657c11d4959c453f4d803b103a132b4627b63719f0
+  source_complete: true
+
+observed_task_surface:
+  physics_domains: 12
+  counterfactual_laws: 108
+  interactive_tasks: 324
+  equation_difficulties: [easy, medium, hard]
+  system_complexities: [vanilla_equation, simple_system, complex_system]
+  experiment_turn_limit: 10
+  upstream_repetitions_per_configuration: 4
+  agent_actions: [run_experiment, submit_final_law]
+  official_metrics:
+    - {name: symbolic_accuracy, direction: higher, implementation: llm-equivalence-judge}
+    - {name: rmsle, direction: lower, implementation: hidden-numerical-test-points}
+
+training_free_fit:
+  task_model_parameter_updates: false
+  actual_experiment_execution: true
+  active_experiment_design: true
+  hypothesis_testing: true
+  hidden_objective_available: true
+  action_space_allows_taste_to_matter: true
+  rationale: >-
+    An agent must choose informative interventions, balance exploration against
+    exploitation, infer a hidden law, and stop with a falsifiable executable
+    hypothesis. GPU or API inference may be used, but no task-model weights are
+    trained, so the workload is T0 rather than T1.
+
+scitaste_comparison:
+  systems: [scitaste-native, native-base]
+  fixed_within_pair:
+    - exact-research-agent-model-and-serving-window
+    - task-and-counterfactual-law
+    - experiment-and-turn-budgets
+    - code-tool-availability
+    - objective-scorer-and-judge
+  treatment: frozen-backbone-outcome-updated-lifecycle-taste-policy
+  primary_setting: code-assisted-active-discovery
+  scientific_reason: >-
+    NewtonBench reports that code assistance can cause a premature transition
+    from exploration to exploitation. That failure mode directly tests whether
+    SciTaste improves experiment selection and stopping decisions rather than
+    merely producing more fluent text.
+
+formal_design_boundary:
+  source_qualified: true
+  primary_t0_candidate_selected: true
+  formal_task_population_frozen: false
+  execution_authorized: false
+  exact_sample_size_frozen: false
+  sample_size_rule: >-
+    Run one development-only matched Native/Base variance pilot, then freeze the
+    smallest domain-stratified population supported by a paired power analysis;
+    do not copy the upstream full factorial merely for experiment count.
+  primary_endpoint_candidate: paired-symbolic-accuracy-difference
+  supporting_endpoints:
+    - paired-rmsle-difference
+    - experiments-to-correct-law
+    - premature-finalization-rate
+    - invalid-action-and-execution-failure-rate
+    - api-tokens-wall-time-and-cost
+  reporting_rule: >-
+    Report task-level paired effects and domain-stratified uncertainty. Never
+    pool NewtonBench scores with T1 training outcomes or SciJudgeBench scores.
+
+runtime_implementation:
+  state: implemented-and-development-integrated
+  provider_neutral_loop:
+    locator: src/scitaste/evaluation/interactive_research.py
+    sha256: 896bef08f7756209b95323ef1998b0d4457fa1690379aef51ebe34b891ac4b1d
+    capabilities:
+      - exclusive-experiment-code-or-submit-actions
+      - fixed-turn-experiment-code-token-and-cost-envelopes
+      - immutable-turn-evidence-and-terminal-failure-receipts
+      - failure-retaining-task-level-paired-effects
+  causal_taste_bridge:
+    locator: src/scitaste/evaluation/interactive_taste.py
+    sha256: 6de03d2e5888881da1be8f6cc23fadf42c471102bcc6ebb488856480c76310d6
+    treatment: same-frozen-backbone-outcome-updated-policy-at-weight-one-versus-zero
+    condition_side_channel_prevented: true
+    audit_envelope_hidden_from_research_agent: true
+  benchmark_toolbox:
+    locator: src/scitaste/evaluation/newtonbench_runtime.py
+    sha256: cb80da8f9148ba4806128731bede4a4371dc6476c8e8b258d0f7c2ca089760f1
+    hidden_law_and_numerical_test_points_agent_visible: false
+    upstream_provider_path_disabled: true
+  code_interpreter:
+    locator: src/scitaste/evaluation/sandboxed_code.py
+    sha256: 268b245827cb9936c91e6f9a44f60be86c9645a057a1ee0a5e2dff9cccd6d84b
+    network_access: false
+    project_worktree_access: false
+    limits: [wall-time, cpu-time, memory, process-count, file-output, captured-output]
+  preparation_entrypoint:
+    locator: scripts/prepare_newtonbench_interactive.py
+    sha256: 737959c2cae5fd54142133151c0260cfe4eefc22e144b940b155ae2127e7446d
+  execution_entrypoint:
+    locator: scripts/run_newtonbench_interactive.py
+    sha256: 9aa5b91f58b93cca78b03d05029b8aae2b2d9ec82618ef3f7a0c6321966e4993
+
+development_integration:
+  executed: true
+  formal_evidence: false
+  receipt: outputs/projects/scitaste-self-development/evaluations/newtonbench-t0-runtime-development-v1/INTEGRATION_RECEIPT.json
+  receipt_file_sha256: 502febbfdde5e34dd2058ddd099fac0c874d1d275fbe78f439eed3b642e7722a
+  receipt_sha256: acc5a87cb191c0ca8c55877ff5bb347d7979055559f17d5033dbccccdd05e5aa
+  api_calls: 0
+  gpu_jobs: 0
+  task: newtonbench-m0-gravity-easy-vanilla-equation-v0-seed-7
+  actual_environment_experiments: 1
+  actual_sandboxed_code_calls: 1
+  terminal_submission_scored: true
+  symbolic_accuracy: 1.0
+  rmsle: 0.0
+  interpretation: >-
+    A scripted research agent exercised the real environment, isolated code
+    tool, hidden evaluator, and self-hashed terminal receipt. This establishes
+    adapter integration only; the script was given the correct law and cannot
+    establish research or Taste effectiveness.
+
+remaining_before_model_development_pair:
+  - Materialize a source-identified, current-Idea-bound family policy eligible for the formal Native-effect intervention.
+  - Register development and held-out NewtonBench task identities before either matched arm runs.
+  - Pin one exact research-agent model/provider window for both arms and a distinct fixed symbolic judge.
+  - Freeze the task-specific agent prompt after a task-disjoint schema and tool-use check.
+  - Freeze a development-only paired variance pilot; do not inspect formal held-out outcomes.
+
+remaining_before_formal_execution:
+  - Freeze the domain-stratified population using the preregistered paired power rule.
+  - Bind exact task, toolbox, research-agent, judge, code-runner, policy, Idea, and resource hashes in one protocol.
+  - Obtain explicit formal execution authorization after disclosing API/GPU/time/output requirements.
+
+known_validity_limits:
+  - >-
+    All released tasks are public, so they are not claimed to be secret model-
+    pretraining holdouts. Matched within-model treatment effects remain useful,
+    while absolute capability claims require this contamination caveat.
+  - >-
+    The upstream symbolic metric uses an LLM judge. Formal use requires an exact
+    judge identity and a blinded adjudication policy; RMSLE is retained as an
+    independently executable supporting endpoint.
+  - >-
+    The upstream API adapter only exposes OpenAI/OpenRouter mappings. SciTaste
+    must not modify the pinned checkout and must supply its own Zhipu, DeepSeek,
+    or local-model boundary.
+  - >-
+    A NewtonBench task is a bounded scientific-discovery trajectory, not by
+    itself a complete conference paper. SciTaste must still produce an evidence
+    report, receive review, revise the conclusion, and separately demonstrate
+    full Idea-to-paper behavior in the system-level evaluation.
+
+disposition: primary-t0-candidate-runtime-implemented-formal-not-yet-authorized
+claim_boundary: >-
+  This record proves exact source acquisition and scientific fit for the T0
+  role. It does not prove SciTaste effectiveness, formal split isolation,
+  adapter correctness, provider fitness, statistical power, or any benchmark
+  result.
