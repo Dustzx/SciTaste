@@ -4231,8 +4231,8 @@ not human or expert judgments.
 
 ### ADR-132: Scientific Taste is family-conditioned, not one pooled preference
 
-Status: accepted and implemented at the artifact/controller boundary; authentic
-episode populations and formal effects remain open.
+Status: accepted and implemented through project-owned refresh; a sufficiently
+supported scientific episode population and formal effects remain open.
 
 A single lifecycle preference table can combine incompatible judgments. Choosing
 a worthwhile question, selecting a diagnostic experiment, allocating a final
@@ -4265,3 +4265,17 @@ model and raw-response provenance. It can support retrieval and AI-evaluated
 experiments, but it never sets `human_verified` or permits a human-validity claim.
 The original human tier remains available. This preserves truthful evidence while
 allowing the self-development workflow to proceed without waiting for human labor.
+
+The project refresh path makes the continual loop operational without silently
+scanning every file under `outputs/`. A self-hashed corpus manifest explicitly
+binds project-owned admitted bytes to runtime-bound family assignments under the
+current Idea. Formal-heldout data, non-project files, symlink traversal, stale
+Idea records, incomplete assignment coverage, and later byte drift fail closed.
+The separate refresh transaction atomically publishes canonical corpus and config
+copies, the family-conditioned policy, a readiness report spanning all seven
+families, and a receipt. Readiness distinguishes family observation, outcome-
+eligible training, minimum support, and behaviorally actionable adaptive heads.
+Even a ready head receives no application authority from this compiler, and the
+report always requires a separate formal effect evaluation. AI reviews satisfy
+the configured operational gate but retain `not_human_review=true` and cannot
+support a human-validity claim.

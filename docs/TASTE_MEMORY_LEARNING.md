@@ -218,13 +218,44 @@ Unobserved families abstain rather than borrowing another head. Native H4 uses
 only the exact `adaptive-allocation` head, while its reproduction report binds
 the complete parent policy, assignment population, and admitted episodes.
 
+Project operation does not require an operator to reconstruct those command-line
+lists for every refresh. First seal an explicit project-owned corpus, then
+materialize an atomic refresh bundle:
+
+```bash
+.venv/bin/scitaste taste seal-project-policy-corpus \
+  --project-id <project-id> --corpus-id <corpus-id> \
+  --episode outputs/projects/<project-id>/taste/episodes/episode-001/ADMITTED.json \
+  --assignment outputs/projects/<project-id>/taste/episodes/episode-001/FAMILY.json \
+  --expected-revision <project-revision> \
+  --output outputs/projects/<project-id>/taste/policy/corpora/<corpus-id>.json
+
+.venv/bin/scitaste taste refresh-project-policy \
+  --manifest outputs/projects/<project-id>/taste/policy/corpora/<corpus-id>.json \
+  --config lifecycle-policy.yaml --refresh-id <refresh-id> --policy-id <policy-id> \
+  --expected-revision <project-revision> \
+  --output-directory outputs/projects/<project-id>/taste/policy/refreshes/<refresh-id>
+```
+
+The corpus accepts cross-model AI attribution and runtime-bound AI family review
+as the completed operational review gate requested by the project owner. It
+still records `reviewer_kind=ai` and `not_human_review=true`. The readiness
+artifact distinguishes observed families, eligible training episodes, feature
+support, and behaviorally actionable heads. It can authorize neither application
+nor a scientific-effect claim. The first self-project refresh correctly retained
+one execution-outcome episode for provenance but selected zero training episodes,
+because execution-only credit is excluded from the scientific policy by default.
+
 ## Current evidence boundary
 
 The implementation proves that unreviewed self-reflections cannot enter the
 production retriever and that decision or outcome drift, producer-review conflict,
 missing adjudication, temporal inconsistency, and replay over an admitted record
-fail closed. No natural project reflection has yet completed the runtime-bound AI
-panel, and no longitudinal effectiveness result exists. The ICLR claim still
-requires held-out H1/H2/H3 experiments and disclosed independent AI review; this
-mechanism makes future continual-learning evidence admissible rather than
-supplying that evidence itself.
+fail closed. One natural self-development decision has completed cross-model
+attribution and outcome-blind family review, admission, project-corpus sealing,
+and policy refresh. It is development-only process evidence: its execution-only
+outcome is intentionally ineligible for scientific policy learning, so no
+longitudinal effectiveness result exists. The ICLR claim still requires held-out
+H1/H2/H3/H4 experiments and disclosed independent AI review; this mechanism makes
+future continual-learning evidence admissible rather than supplying that evidence
+itself.

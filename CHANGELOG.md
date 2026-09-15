@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added project-level continual Taste refresh. An explicit corpus manifest now
+  binds every project-owned admission to its runtime-bound, outcome-blind AI
+  decision-family assignment and rejects stale Idea revisions, formal-heldout
+  episodes, non-project paths, symlinks, byte drift, or incomplete family
+  coverage. A separate atomic refresh writes the canonical corpus, estimator
+  config, family-conditioned policy, seven-family readiness report, and receipt.
+  Policy application remains unauthorized until an actionable head has enough
+  support, and formal effectiveness always remains a separate experiment.
 - Added first-class prospective natural-decision capture. A project can now
   persist an exact pre-decision state, multi-alternative decision, and immediate
   executor outcome only after its sampling plan was frozen and source run was

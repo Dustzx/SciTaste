@@ -426,6 +426,12 @@ from scitaste.taste.memory import (
     save_taste_memory_admission_report,
     taste_case_sha256,
 )
+from scitaste.taste.project_policy import (
+    load_project_taste_policy_corpus,
+    materialize_project_taste_policy_refresh,
+    save_project_taste_policy_corpus,
+    seal_project_taste_policy_corpus,
+)
 from scitaste.taste.reference_mining import (
     compile_reference_mining_report,
     load_reference_mining_run,
@@ -1654,6 +1660,44 @@ def build_parser() -> argparse.ArgumentParser:
     process_compile.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(process_compile)
     process_compile.set_defaults(handler=_handle_taste_compile_prospective_episode)
+    project_policy_corpus = taste_commands.add_parser(
+        "seal-project-policy-corpus",
+        help="Seal one explicit project-owned population of AI-reviewed Taste episodes",
+    )
+    project_policy_corpus.add_argument("--project-id", required=True)
+    project_policy_corpus.add_argument("--corpus-id", required=True)
+    project_policy_corpus.add_argument(
+        "--episode",
+        type=Path,
+        action="append",
+        required=True,
+        help="project-owned admitted episode JSON; repeat for the complete population",
+    )
+    project_policy_corpus.add_argument(
+        "--assignment",
+        type=Path,
+        action="append",
+        required=True,
+        help="runtime-bound AI family assignment JSON; repeat for every episode",
+    )
+    project_policy_corpus.add_argument("--expected-revision", type=int, required=True)
+    project_policy_corpus.add_argument("--output", type=Path, required=True)
+    project_policy_corpus.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_policy_corpus)
+    project_policy_corpus.set_defaults(handler=_handle_taste_seal_project_policy_corpus)
+    project_policy_refresh = taste_commands.add_parser(
+        "refresh-project-policy",
+        help="Refresh a project Taste policy and materialize its conservative readiness gate",
+    )
+    project_policy_refresh.add_argument("--manifest", type=Path, required=True)
+    project_policy_refresh.add_argument("--config", type=Path, required=True)
+    project_policy_refresh.add_argument("--refresh-id", required=True)
+    project_policy_refresh.add_argument("--policy-id", required=True)
+    project_policy_refresh.add_argument("--expected-revision", type=int, required=True)
+    project_policy_refresh.add_argument("--output-directory", type=Path, required=True)
+    project_policy_refresh.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_policy_refresh)
+    project_policy_refresh.set_defaults(handler=_handle_taste_refresh_project_policy)
     family_policy_fit = taste_commands.add_parser(
         "fit-family-policy",
         help="Fit isolated scientific decision-family Taste heads without model execution",
@@ -6341,6 +6385,98 @@ def _handle_taste_assign_decision_family_panel(args: argparse.Namespace) -> int:
                 "review_count": len(assignment.reviews),
                 "reviewer_kind": assignment.reviewer_kind,
                 "not_human_review": assignment.not_human_review,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_seal_project_policy_corpus(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    manifest = seal_project_taste_policy_corpus(
+        runtime,
+        project_id=args.project_id,
+        corpus_id=args.corpus_id,
+        episode_paths=tuple(args.episode),
+        assignment_paths=tuple(args.assignment),
+        expected_project_revision=args.expected_revision,
+    )
+    output = save_project_taste_policy_corpus(manifest, args.output)
+    family_counts = {
+        family.value: sum(item.decision_family is family for item in manifest.episodes)
+        for family in ScientificTasteDecisionFamily
+    }
+    print(
+        json.dumps(
+            {
+                "status": "project-taste-policy-corpus-sealed",
+                "output": str(output),
+                "project_id": manifest.project_id,
+                "corpus_id": manifest.corpus_id,
+                "corpus_manifest_sha256": manifest.corpus_manifest_sha256,
+                "source_episode_count": len(manifest.episodes),
+                "decision_family_counts": family_counts,
+                "reviewer_kind": manifest.reviewer_kind,
+                "not_human_review": manifest.not_human_review,
+                "policy_refresh_authorized": manifest.policy_refresh_authorized,
+                "no_model_calls_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_refresh_project_policy(args: argparse.Namespace) -> int:
+    manifest = load_project_taste_policy_corpus(args.manifest)
+    config_raw = _bounded_regular_input(args.config, label="lifecycle Taste config")
+    config_payload = yaml.safe_load(config_raw.decode("utf-8"))
+    if not isinstance(config_payload, dict):
+        raise ValueError("lifecycle Taste config must be a JSON or YAML object")
+    config = LifecycleTastePolicyConfig.model_validate(config_payload)
+    receipt = materialize_project_taste_policy_refresh(
+        ProjectRuntime(args.outputs_root),
+        manifest,
+        config,
+        refresh_id=args.refresh_id,
+        policy_id=args.policy_id,
+        expected_project_revision=args.expected_revision,
+        output_directory=args.output_directory,
+    )
+    readiness_path = args.output_directory / "READINESS.json"
+    readiness = json.loads(
+        _bounded_regular_input(readiness_path, label="project Taste policy readiness")
+    )
+    print(
+        json.dumps(
+            {
+                "status": "project-taste-policy-refreshed",
+                "output_directory": str(args.output_directory),
+                "refresh_id": receipt.refresh_id,
+                "refresh_sha256": receipt.refresh_sha256,
+                "policy_sha256": receipt.policy_sha256,
+                "readiness_sha256": receipt.readiness_sha256,
+                "source_episode_count": readiness["source_episode_count"],
+                "training_episode_count": readiness["training_episode_count"],
+                "observed_family_count": readiness["observed_family_count"],
+                "support_sufficient_family_count": readiness[
+                    "support_sufficient_family_count"
+                ],
+                "adaptive_head_ready_family_count": readiness[
+                    "adaptive_head_ready_family_count"
+                ],
+                "policy_application_ready": receipt.policy_application_ready,
+                "policy_application_authorized": receipt.policy_application_authorized,
+                "formal_effect_claim_ready": receipt.formal_effect_claim_ready,
+                "reason_codes": readiness["reason_codes"],
+                "reviewer_kind": readiness["reviewer_kind"],
+                "not_human_review": readiness["not_human_review"],
+                "no_model_calls_performed": receipt.no_model_calls_performed,
+                "no_api_calls_performed": receipt.no_api_calls_performed,
+                "no_gpu_work_performed": receipt.no_gpu_work_performed,
             },
             indent=2,
             ensure_ascii=False,
