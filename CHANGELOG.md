@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a no-call Track-A H1/H2 AI blind-preference adapter. It projects the
+  existing public condition-hidden study into two provider-distinct primary
+  request packs with the exact study-bound decision context, validates raw JSON
+  against model/request execution receipts,
+  self-hashes every normalized row, locks both panels without opening private
+  condition evidence, and emits a third-model request only for disputed blocks.
+  Every artifact declares `reviewer_kind=ai`, `not_human_review=true`, and no
+  human validity, identity, qualification, or consent claim.
 - Recorded prospective segmentation v7 as consumed after its second provider
   contact rejected two unknown fields whose values were both `null`. This is a
   strict adapter-contract failure, not evidence about model quality or Taste

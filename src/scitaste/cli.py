@@ -97,6 +97,7 @@ from scitaste.evaluation import (
     bind_objective_measurement_set,
     build_source_projection_plan,
     build_structured_metadata_audit_plan_bundle,
+    compile_ai_preference_request_pack,
     compile_evaluation_campaign_activation,
     compile_evaluation_cell_plan,
     compile_h4_formal_preparation_bundle,
@@ -184,6 +185,7 @@ from scitaste.evaluation import (
     load_task_selection_manifest,
     load_taste_corpus_curation_package,
     load_taste_corpus_pair_manifest,
+    lock_ai_preference_primary_reviews,
     lock_human_reviewer_submissions,
     materialize_aaar_quality_calibration_plan,
     materialize_aaar_quality_projections,
@@ -2187,6 +2189,56 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(taste_corpus_curation)
     taste_corpus_curation.set_defaults(handler=_handle_evaluation_taste_corpus_curation)
+    ai_preference_pack = evaluation_commands.add_parser(
+        "ai-preference-pack-prepare",
+        help="Compile two identity-distinct AI-only requests from a public H1/H2 blind pack",
+    )
+    ai_preference_pack.add_argument(
+        "--study",
+        type=Path,
+        required=True,
+        help="public study.json or its human-study-preparation output directory",
+    )
+    ai_preference_pack.add_argument("--protocol", type=Path, required=True)
+    ai_preference_pack.add_argument("--evidence-root", type=Path, default=Path("."))
+    ai_preference_pack.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(ai_preference_pack)
+    ai_preference_pack.set_defaults(handler=_handle_evaluation_ai_preference_pack)
+    ai_preference_lock = evaluation_commands.add_parser(
+        "ai-preference-primary-lock",
+        help="Lock two raw AI preference responses and compile disputes for a third AI",
+    )
+    ai_preference_lock.add_argument(
+        "--pack",
+        type=Path,
+        required=True,
+        help="AI request PACK.json or its output directory",
+    )
+    ai_preference_lock.add_argument(
+        "--raw-response",
+        type=Path,
+        action="append",
+        required=True,
+        help="exact primary provider response JSON; provide exactly twice",
+    )
+    ai_preference_lock.add_argument(
+        "--execution-receipt",
+        type=Path,
+        action="append",
+        required=True,
+        help="receipt binding request, model identity, and raw bytes; provide exactly twice",
+    )
+    ai_preference_lock.add_argument("--evidence-root", type=Path, default=Path("."))
+    ai_preference_lock.add_argument("--output", type=Path, required=True)
+    ai_preference_lock.add_argument("--report", type=Path, required=True)
+    ai_preference_lock.add_argument(
+        "--adjudicator-output",
+        type=Path,
+        required=True,
+        help="created only when the locked primary reviews contain a dispute",
+    )
+    _add_log_level_option(ai_preference_lock)
+    ai_preference_lock.set_defaults(handler=_handle_evaluation_ai_preference_lock)
     human_study_prepare = evaluation_commands.add_parser(
         "human-study-prepare",
         help="Compile timestamped benchmark recordings into a condition-hidden H1/H2 package",
@@ -7526,6 +7578,75 @@ def _handle_evaluation_taste_corpus_curation(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_ready and not report.ready_to_materialize:
         return 1
+    return 0
+
+
+def _handle_evaluation_ai_preference_pack(args: argparse.Namespace) -> int:
+    pack = compile_ai_preference_request_pack(
+        evidence_root=args.evidence_root,
+        study_path_or_dir=args.study,
+        protocol_path=args.protocol,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "pack_id": pack.pack_id,
+                "pack_sha256": pack.pack_sha256,
+                "study_sha256": pack.study_sha256,
+                "protocol_sha256": pack.protocol_sha256,
+                "comparison_count": pack.comparison_count,
+                "primary_requests": [
+                    item.model_dump(mode="json") for item in pack.primary_requests
+                ],
+                "reviewer_kind": "ai",
+                "not_human_review": True,
+                "human_validity_claim_allowed": False,
+                "model_calls_performed": False,
+                "pack": str(args.output / "PACK.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_ai_preference_lock(args: argparse.Namespace) -> int:
+    if len(args.raw_response) != 2 or len(args.execution_receipt) != 2:
+        raise ValueError("--raw-response and --execution-receipt must each be provided twice")
+    review_set, report = lock_ai_preference_primary_reviews(
+        evidence_root=args.evidence_root,
+        request_pack_path_or_dir=args.pack,
+        raw_response_paths=tuple(args.raw_response),
+        execution_receipt_paths=tuple(args.execution_receipt),
+        output_path=args.output,
+        report_path=args.report,
+        adjudicator_output_dir=args.adjudicator_output,
+    )
+    print(
+        json.dumps(
+            {
+                "review_set_sha256": review_set.review_set_sha256,
+                "normalized_row_count": len(review_set.normalized_rows),
+                "normalized_row_sha256s": [item.row_sha256 for item in review_set.normalized_rows],
+                "dispute_count": len(review_set.disputes),
+                "adjudicator_pack": (
+                    None
+                    if report.adjudicator_pack is None
+                    else report.adjudicator_pack.model_dump(mode="json")
+                ),
+                "reviewer_kind": "ai",
+                "not_human_review": True,
+                "human_validity_claim_allowed": False,
+                "private_condition_evidence_read": False,
+                "additional_model_calls_performed": False,
+                "report": str(args.report),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

@@ -4337,3 +4337,41 @@ non-null fields, malformed structures, and all semantic constraints still fail
 closed. The flag defaults to false and is omitted from serialized historical
 protocols, preserving their artifact hashes. No new reserve run is scheduled
 before the deadline-critical Track-A H1/H2 pilot.
+
+### ADR-135: Track-A preference review has an explicit AI-only evidence lane
+
+Status: accepted and implemented through primary lock and disputed-only routing;
+live calls, adjudicator import, private-key opening, and effect estimation remain
+separate actions.
+
+The H1/H2 public blind package is reusable without converting a model judgment
+into human evidence. `ai-preference-pack-prepare` accepts either its public
+`study.json` or the preparation output directory plus an explicit AI protocol.
+The protocol binds two primary assignment identities to different providers and
+provider/model/revision hashes, plus a third distinct adjudicator. It also binds
+the public benchmark suite whose file and semantic hashes must match the study's
+treatment commitment, so each request includes the exact decision context, task,
+and stage. Compilation reads only that suite, the public manifest, and reviewer-
+visible output bytes. The API has no blind-key or generation-ledger parameter,
+rejects paths containing private study components, and grants no model-call or
+experiment authority.
+Each model identity is the SHA-256 of canonical JSON over exactly `provider`,
+`model`, and `model_revision`, preventing a label-only identity substitution.
+
+Each primary request contains only that model's X/Y assignments and no output
+from the other primary. `ai-preference-primary-lock` requires two exact raw JSON
+files and two execution receipts binding request bytes, provider/model identity,
+provider request ID, timestamps, status, and raw-response bytes. Deterministic
+normalization maps inverse X/Y presentations to selected output hashes and
+self-hashes every row before the primary set locks. Agreement ends the block;
+preference or assessability disagreement alone creates a third-model pack. That
+pack contains only disputed public outputs and excludes both primary decisions
+and rationales.
+
+This lane consistently serializes `reviewer_kind=ai`,
+`not_human_review=true`, and `human_validity_claim_allowed=false`; human identity,
+qualification, and consent flags are false. It can replace an unavailable human
+operational gate for the self-development study, but it cannot support a human
+preference or external-expert validity claim. Private condition opening and AI
+effect analysis require a later adapter that consumes the locked AI schema
+without renaming it as a human review set.
