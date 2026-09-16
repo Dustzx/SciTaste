@@ -147,6 +147,13 @@ class SciTasteBenchRunner:
                 raise BackendProtocolError(
                     f"backend selected unknown action {response.selected_action_id!r}"
                 )
+            selected_utility = case.action_utilities.get(response.selected_action_id)
+            optimal_utility = max(case.action_utilities.values()) if case.action_utilities else None
+            regret = (
+                optimal_utility - selected_utility
+                if optimal_utility is not None and selected_utility is not None
+                else None
+            )
             results.append(
                 BenchmarkResult(
                     case_id=case.case_id,
@@ -160,6 +167,10 @@ class SciTasteBenchRunner:
                     wrong_level=response.selected_action_id in case.wrong_level_action_ids,
                     confidence=response.confidence,
                     expert_agreement=case.expert_distribution[response.selected_action_id],
+                    selected_utility=selected_utility,
+                    optimal_utility=optimal_utility,
+                    budgeted_decision_regret=regret,
+                    abstained=response.selected_action_id in case.abstention_action_ids,
                     rationale=response.rationale,
                     backend=response.backend,
                     model=response.model,
@@ -258,8 +269,11 @@ def _metrics(results: list[BenchmarkResult]) -> BenchmarkMetrics:
             brier_score=0,
             expected_calibration_error=0,
             wrong_level_decision_rate=0,
+            mean_budgeted_decision_regret=None,
+            abstention_rate=0,
         )
     count = len(results)
+    utility_results = [result for result in results if result.budgeted_decision_regret is not None]
     return BenchmarkMetrics(
         count=count,
         pairwise_accuracy=_round(sum(result.correct for result in results) / count),
@@ -270,6 +284,15 @@ def _metrics(results: list[BenchmarkResult]) -> BenchmarkMetrics:
         ),
         expected_calibration_error=_round(_ece(results)),
         wrong_level_decision_rate=_round(sum(result.wrong_level for result in results) / count),
+        mean_budgeted_decision_regret=(
+            _round(
+                sum(result.budgeted_decision_regret for result in utility_results)  # type: ignore[arg-type]
+                / len(utility_results)
+            )
+            if utility_results
+            else None
+        ),
+        abstention_rate=_round(sum(result.abstained for result in results) / count),
     )
 
 
@@ -326,6 +349,15 @@ def _compare(
         base_results[case_id].correct and not augmented_results[case_id].correct
         for case_id in shared
     )
+    regret_reduction = None
+    if (
+        base.headline.mean_budgeted_decision_regret is not None
+        and augmented.headline.mean_budgeted_decision_regret is not None
+    ):
+        regret_reduction = _round(
+            base.headline.mean_budgeted_decision_regret
+            - augmented.headline.mean_budgeted_decision_regret
+        )
     return ConditionComparison(
         condition=augmented.condition,
         eligible_case_count=len(shared),
@@ -337,6 +369,10 @@ def _compare(
         ),
         wrong_level_rate_delta=_round(
             augmented.headline.wrong_level_decision_rate - base.headline.wrong_level_decision_rate
+        ),
+        budgeted_decision_regret_reduction=regret_reduction,
+        abstention_rate_delta=_round(
+            augmented.headline.abstention_rate - base.headline.abstention_rate
         ),
         paired_improvements=improvements,
         paired_regressions=regressions,
@@ -362,12 +398,20 @@ def _compare_registered(
         runner_metric_role=contrast.runner_metric_role,
         confirmatory_endpoint_complete=(contrast.runner_metric_role.value == "primary"),
         confirmatory_result=(
-            comparison.accuracy_delta if contrast.runner_metric_role.value == "primary" else None
+            comparison.accuracy_delta
+            if contrast.runner_metric_role.value == "primary"
+            and contrast.runner_metric == "pairwise_accuracy"
+            else comparison.budgeted_decision_regret_reduction
+            if contrast.runner_metric_role.value == "primary"
+            and contrast.runner_metric == "budgeted_decision_regret"
+            else None
         ),
         eligible_case_count=comparison.eligible_case_count,
         accuracy_delta=comparison.accuracy_delta,
         expert_agreement_delta=comparison.expert_agreement_delta,
         wrong_level_rate_delta=comparison.wrong_level_rate_delta,
+        budgeted_decision_regret_reduction=(comparison.budgeted_decision_regret_reduction),
+        abstention_rate_delta=comparison.abstention_rate_delta,
         paired_improvements=comparison.paired_improvements,
         paired_regressions=comparison.paired_regressions,
         paired_unchanged=comparison.paired_unchanged,

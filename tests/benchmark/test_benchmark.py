@@ -10,7 +10,9 @@ from scitaste.backends.base import PreferenceResponse
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.benchmark import (
     BenchmarkCondition,
+    BenchmarkDecisionContextFamily,
     BenchmarkEvidenceTier,
+    BenchmarkLabelAuthority,
     BenchmarkSuite,
     ContrastDifference,
     ContrastPrimaryEndpoint,
@@ -135,6 +137,52 @@ def test_suite_covers_six_tasks_and_isolates_condition_context() -> None:
     assert case.knowledge_context not in taste.decision_context
     assert case.critic_feedback in critics.decision_context
     assert case.controller_context not in critics.decision_context
+
+
+def test_runner_reports_budgeted_regret_without_changing_legacy_suite_hash() -> None:
+    original = load_benchmark_suite(SUITE_PATH)
+    source = original.cases[0]
+    preferred = source.preferred_action_id
+    alternative = next(
+        action.action_id for action in source.candidate_actions if action.action_id != preferred
+    )
+    case = source.model_validate(
+        {
+            **source.model_dump(mode="json"),
+            "decision_context_family": (
+                BenchmarkDecisionContextFamily.PROBLEM_AND_IDEA_VALUE.value
+            ),
+            "label_authority": BenchmarkLabelAuthority.AI_PANEL_PROXY.value,
+            "action_utilities": {preferred: 1.0, alternative: 0.0},
+            "utility_contract_sha256": "a" * 64,
+            "abstention_action_ids": [alternative],
+            "scripted_selections": {
+                BenchmarkCondition.BASE.value: alternative,
+                BenchmarkCondition.FULL_SCITASTE.value: preferred,
+            },
+        }
+    )
+    suite = original.model_copy(
+        update={
+            "conditions": [BenchmarkCondition.BASE, BenchmarkCondition.FULL_SCITASTE],
+            "cases": [case],
+        }
+    )
+    report = SciTasteBenchRunner(
+        ScriptedPreferenceBackend(scripted_selections(suite)),
+        seed=7,
+    ).evaluate(suite)
+
+    assert original.sha256 == V1_SEMANTIC_SHA256
+    assert suite.sha256 != original.sha256  # The case subset changed, not the additive v4 fields.
+    assert report.conditions[BenchmarkCondition.BASE].headline.mean_budgeted_decision_regret == 1.0
+    assert (
+        report.conditions[BenchmarkCondition.FULL_SCITASTE].headline.mean_budgeted_decision_regret
+        == 0.0
+    )
+    comparison = report.comparisons_to_base[BenchmarkCondition.FULL_SCITASTE]
+    assert comparison.budgeted_decision_regret_reduction == 1.0
+    assert comparison.abstention_rate_delta == -1.0
 
 
 def test_mechanism_arms_are_source_bound_token_matched_and_blinded() -> None:

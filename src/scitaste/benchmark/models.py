@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from enum import StrEnum
 from typing import Literal
 
@@ -11,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.backends.base import PreferenceRequest, Usage
 from scitaste.schema.actions import ResearchAction
+from scitaste.taste.decision_families import ScientificTasteDecisionFamily
 from scitaste.taste.intrinsic import TasteTask
 
 
@@ -50,6 +52,8 @@ class ContrastDifference(StrEnum):
 class ContrastPrimaryEndpoint(StrEnum):
     EXPERT_LABEL_AGREEMENT = "expert_label_agreement"
     BLINDED_EXPERT_PREFERENCE = "blinded_expert_preference"
+    AI_PANEL_PREFERENCE = "ai_panel_preference"
+    BUDGETED_DECISION_REGRET = "budgeted_decision_regret"
 
 
 class RunnerMetricRole(StrEnum):
@@ -237,7 +241,7 @@ class RegisteredBenchmarkContrast(BaseModel):
     comparator: BenchmarkCondition
     only_permitted_difference: ContrastDifference
     primary_endpoint: ContrastPrimaryEndpoint = ContrastPrimaryEndpoint.EXPERT_LABEL_AGREEMENT
-    runner_metric: Literal["pairwise_accuracy"] = "pairwise_accuracy"
+    runner_metric: Literal["pairwise_accuracy", "budgeted_decision_regret"] = "pairwise_accuracy"
     runner_metric_role: RunnerMetricRole = RunnerMetricRole.PRIMARY
 
     @model_validator(mode="after")
@@ -251,6 +255,24 @@ class BenchmarkEvidenceTier(StrEnum):
     SYNTHETIC_ACCEPTANCE = "synthetic_acceptance"
     NATURAL_PILOT = "natural_pilot"
     FORMAL = "formal"
+
+
+class BenchmarkDecisionContextFamily(StrEnum):
+    """Where in the research process a decision occurs, not what judgment it uses."""
+
+    PROBLEM_AND_IDEA_VALUE = "problem-and-idea-value"
+    HYPOTHESIS_AND_FALSIFIABILITY = "hypothesis-and-falsifiability"
+    EXPERIMENT_DESIGN_AND_CONFOUND_CONTROL = "experiment-design-and-confound-control"
+    EVIDENCE_INTERPRETATION_AND_CONTRADICTION = "evidence-interpretation-and-contradiction"
+    RESOURCE_ALLOCATION_PIVOT_CONTINUE_OR_STOP = "resource-allocation-pivot-continue-or-stop"
+    CLAIM_CALIBRATION_AND_REVIEW_CLOSURE = "claim-calibration-and-review-closure"
+
+
+class BenchmarkLabelAuthority(StrEnum):
+    SYNTHETIC = "synthetic"
+    HUMAN_EXPERT = "human-expert"
+    AI_PANEL_PROXY = "ai-panel-proxy"
+    OBJECTIVE_OUTCOME = "objective-outcome"
 
 
 class CandidateOrder(StrEnum):
@@ -271,6 +293,8 @@ class BenchmarkCase(BaseModel):
 
     case_id: str
     task: TasteTask
+    decision_context_family: BenchmarkDecisionContextFamily | None = None
+    taste_judgment_family: ScientificTasteDecisionFamily | None = None
     stage: str
     domain: str
     venue: str
@@ -281,6 +305,10 @@ class BenchmarkCase(BaseModel):
     preferred_action_id: str
     wrong_level_action_ids: list[str] = Field(default_factory=list)
     expert_distribution: dict[str, float]
+    label_authority: BenchmarkLabelAuthority = BenchmarkLabelAuthority.SYNTHETIC
+    action_utilities: dict[str, float] = Field(default_factory=dict)
+    utility_contract_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    abstention_action_ids: tuple[str, ...] = ()
     transfer_axes: set[TransferAxis] = Field(default_factory=set)
     style_group: str | None = None
     paraphrase_group: str | None = None
@@ -326,6 +354,25 @@ class BenchmarkCase(BaseModel):
             raise ValueError("expert_distribution must sum to one")
         if any(selection not in candidate_set for selection in self.scripted_selections.values()):
             raise ValueError("scripted selections must be candidates")
+        if self.action_utilities:
+            if set(self.action_utilities) != candidate_set:
+                raise ValueError("action_utilities must cover exactly the candidate actions")
+            if self.utility_contract_sha256 is None:
+                raise ValueError("action utilities require a utility contract hash")
+            if any(
+                not math.isfinite(value) or value < -10.0 or value > 10.0
+                for value in self.action_utilities.values()
+            ):
+                raise ValueError("action utilities must be finite and lie in [-10, 10]")
+            best = max(self.action_utilities.values())
+            if self.action_utilities[self.preferred_action_id] != best:
+                raise ValueError("preferred action must maximize registered utility")
+        elif self.utility_contract_sha256 is not None:
+            raise ValueError("utility contract hash requires action utilities")
+        if not set(self.abstention_action_ids).issubset(candidate_set):
+            raise ValueError("abstention_action_ids must be candidate actions")
+        if len(self.abstention_action_ids) != len(set(self.abstention_action_ids)):
+            raise ValueError("abstention_action_ids must be unique")
         if self.self_referential and self.headline_eligible:
             raise ValueError("self-referential cases cannot be headline eligible")
         provenance_groups = (
@@ -447,7 +494,7 @@ class BenchmarkSuite(BaseModel):
                 BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
                 BenchmarkCondition.MISMATCHED_TASTE,
             }
-            if self.version == "3.0"
+            if self.version in {"3.0", "4.0"}
             else {BenchmarkCondition.BASE, BenchmarkCondition.FULL_SCITASTE}
         )
         if not required.issubset(self.conditions):
@@ -463,13 +510,29 @@ class BenchmarkSuite(BaseModel):
                 raise ValueError("formal SciTasteBench requires at least 120 headline cases")
             if len({case.domain for case in headline}) < 3:
                 raise ValueError("formal SciTasteBench requires at least three domains")
-            if {case.task for case in headline} != set(TasteTask):
-                raise ValueError("formal SciTasteBench must cover every taste decision family")
-            if self.version != "3.0" and BenchmarkCondition.TASTE_PLACEBO not in self.conditions:
+            if self.version == "4.0":
+                if {case.decision_context_family for case in headline} != set(
+                    BenchmarkDecisionContextFamily
+                ):
+                    raise ValueError(
+                        "formal SciTasteBench v4 must cover every decision-context family"
+                    )
+                if {case.taste_judgment_family for case in headline} != set(
+                    ScientificTasteDecisionFamily
+                ):
+                    raise ValueError(
+                        "formal SciTasteBench v4 must cover every Taste judgment family"
+                    )
+            elif {case.task for case in headline} != set(TasteTask):
+                raise ValueError("formal SciTasteBench must cover every legacy task family")
+            if (
+                self.version not in {"3.0", "4.0"}
+                and BenchmarkCondition.TASTE_PLACEBO not in self.conditions
+            ):
                 raise ValueError("formal SciTasteBench requires a mismatched-Taste placebo")
             if self.annotation_manifest_sha256 is None:
                 raise ValueError("formal SciTasteBench requires an annotation hash")
-            if self.version != "3.0":
+            if self.version not in {"3.0", "4.0"}:
                 if self.precedent_corpus_sha256 is None:
                     raise ValueError("formal SciTasteBench v2 requires a precedent hash")
                 if not self.precedent_source_group_ids or len(
@@ -489,7 +552,13 @@ class BenchmarkSuite(BaseModel):
                 or case.primary_label_count is None
                 or case.annotation_manifest_sha256 != self.annotation_manifest_sha256
                 or case.prompt_version
-                != ("scitastebench-v3" if self.version == "3.0" else "scitastebench-v2")
+                != (
+                    "scitastebench-v4"
+                    if self.version == "4.0"
+                    else "scitastebench-v3"
+                    if self.version == "3.0"
+                    else "scitastebench-v2"
+                )
                 or case.self_referential
                 or case.scripted_selections
                 for case in headline
@@ -498,7 +567,7 @@ class BenchmarkSuite(BaseModel):
                     "formal SciTasteBench cases require natural-source, human-label, placebo, "
                     "and versioned protocol bindings"
                 )
-            if self.version != "3.0" and any(
+            if self.version not in {"3.0", "4.0"} and any(
                 not case.placebo_taste_principle
                 or not case.knowledge_evidence_ids
                 or not case.taste_precedent_ids
@@ -508,7 +577,7 @@ class BenchmarkSuite(BaseModel):
                 for case in headline
             ):
                 raise ValueError("formal SciTasteBench v2 requires legacy context bindings")
-            if self.version == "3.0":
+            if self.version in {"3.0", "4.0"}:
                 mechanism_conditions = {
                     BenchmarkCondition.RAW_SOURCE_RAG,
                     BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
@@ -536,23 +605,44 @@ class BenchmarkSuite(BaseModel):
                 }
                 if not expected_contrasts.issubset(observed_contrasts):
                     raise ValueError("formal SciTasteBench v3 requires registered H1/H2 contrasts")
+                expected_endpoint = (
+                    ContrastPrimaryEndpoint.BUDGETED_DECISION_REGRET
+                    if self.version == "4.0"
+                    else ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE
+                )
+                expected_metric = (
+                    "budgeted_decision_regret" if self.version == "4.0" else "pairwise_accuracy"
+                )
+                expected_role = (
+                    RunnerMetricRole.PRIMARY
+                    if self.version == "4.0"
+                    else RunnerMetricRole.DIAGNOSTIC
+                )
                 if any(
-                    item.primary_endpoint is not ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE
-                    or item.runner_metric_role is not RunnerMetricRole.DIAGNOSTIC
+                    item.primary_endpoint is not expected_endpoint
+                    or item.runner_metric != expected_metric
+                    or item.runner_metric_role is not expected_role
                     for item in self.registered_contrasts
                     if (item.treatment, item.comparator, item.only_permitted_difference)
                     in expected_contrasts
                 ):
                     raise ValueError("formal H1/H2 contrasts require blinded preference endpoints")
                 if any(
-                    case.mechanism_context is None or case.prompt_version != "scitastebench-v3"
+                    case.mechanism_context is None
+                    or case.prompt_version
+                    != ("scitastebench-v4" if self.version == "4.0" else "scitastebench-v3")
                     for case in headline
                 ):
                     raise ValueError(
                         "formal SciTasteBench v3 cases require qualified mechanism contexts"
                     )
+                expected_curation = (
+                    "grounded-dual-ai-reviewed"
+                    if self.version == "4.0"
+                    else "grounded-dual-human-verified"
+                )
                 if any(
-                    context.curation_tier != "grounded-dual-human-verified"
+                    context.curation_tier != expected_curation
                     for case in headline
                     for context in (
                         case.mechanism_context.raw_source_rag,
@@ -561,7 +651,18 @@ class BenchmarkSuite(BaseModel):
                     )
                 ):
                     raise ValueError(
-                        "formal SciTasteBench v3 requires grounded dual-human Taste curation"
+                        "formal SciTasteBench v4 requires grounded dual-AI Taste curation"
+                        if self.version == "4.0"
+                        else "formal SciTasteBench v3 requires grounded dual-human Taste curation"
+                    )
+                if self.version == "4.0" and any(
+                    case.label_authority is not BenchmarkLabelAuthority.AI_PANEL_PROXY
+                    or not case.action_utilities
+                    or case.utility_contract_sha256 is None
+                    for case in headline
+                ):
+                    raise ValueError(
+                        "formal SciTasteBench v4 requires AI-panel labels and hidden utilities"
                     )
         return self
 
@@ -576,6 +677,17 @@ class BenchmarkSuite(BaseModel):
             payload.pop("registered_contrasts", None)
             for case in payload["cases"]:
                 case.pop("mechanism_context", None)
+        if self.version in {"1.0", "2.0", "3.0"}:
+            for case in payload["cases"]:
+                for field in (
+                    "decision_context_family",
+                    "taste_judgment_family",
+                    "label_authority",
+                    "action_utilities",
+                    "utility_contract_sha256",
+                    "abstention_action_ids",
+                ):
+                    case.pop(field, None)
         if self.version == "1.0":
             for field in (
                 "evidence_tier",
@@ -620,6 +732,10 @@ class BenchmarkResult(BaseModel):
     wrong_level: bool
     confidence: float
     expert_agreement: float
+    selected_utility: float | None = Field(default=None, allow_inf_nan=False)
+    optimal_utility: float | None = Field(default=None, allow_inf_nan=False)
+    budgeted_decision_regret: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    abstained: bool = False
     rationale: str
     backend: str
     model: str
@@ -638,6 +754,8 @@ class BenchmarkMetrics(BaseModel):
     brier_score: float = Field(ge=0, le=1)
     expected_calibration_error: float = Field(ge=0, le=1)
     wrong_level_decision_rate: float = Field(ge=0, le=1)
+    mean_budgeted_decision_regret: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    abstention_rate: float = Field(default=0.0, ge=0, le=1)
 
 
 class ConditionReport(BaseModel):
@@ -661,6 +779,8 @@ class ConditionComparison(BaseModel):
     accuracy_delta: float
     expert_agreement_delta: float
     wrong_level_rate_delta: float
+    budgeted_decision_regret_reduction: float | None = Field(default=None, allow_inf_nan=False)
+    abstention_rate_delta: float = Field(default=0.0, ge=-1, le=1)
     paired_improvements: int
     paired_regressions: int
     paired_unchanged: int
@@ -675,7 +795,7 @@ class RegisteredContrastReport(BaseModel):
     comparator: BenchmarkCondition
     only_permitted_difference: ContrastDifference
     primary_endpoint: ContrastPrimaryEndpoint
-    runner_metric: Literal["pairwise_accuracy"] = "pairwise_accuracy"
+    runner_metric: Literal["pairwise_accuracy", "budgeted_decision_regret"] = "pairwise_accuracy"
     runner_metric_role: RunnerMetricRole
     confirmatory_endpoint_complete: bool
     confirmatory_result: float | None = None
@@ -683,6 +803,8 @@ class RegisteredContrastReport(BaseModel):
     accuracy_delta: float
     expert_agreement_delta: float
     wrong_level_rate_delta: float
+    budgeted_decision_regret_reduction: float | None = Field(default=None, allow_inf_nan=False)
+    abstention_rate_delta: float = Field(default=0.0, ge=-1, le=1)
     paired_improvements: int
     paired_regressions: int
     paired_unchanged: int

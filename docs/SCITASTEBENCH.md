@@ -113,6 +113,14 @@ preference cannot be relabelled as objective scientific progress, and a loaded
 Taste policy cannot receive causal credit unless it changes an eligible action
 that is carried through execution to a hidden outcome.
 
+Suite schema `4.0` adds the D-layer execution fields without changing legacy
+suite hashes: six decision-context families, the orthogonal seven-family Taste
+judgment label, explicit AI-panel label authority, a content-bound hidden
+utility for every candidate action, and optional abstention actions. The runner
+reports mean budgeted decision regret and paired regret reduction; a v4 formal
+suite fails closed unless all contexts and judgments are covered and its
+mechanism contexts use dual-AI-reviewed curation.
+
 ## Headline eligibility
 
 Every case declares whether it may enter headline metrics. Self-referential cases

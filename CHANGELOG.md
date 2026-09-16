@@ -12,6 +12,9 @@
   36-case natural development release before formal power analysis.
 - Kept AI review explicitly nonhuman and retained the existing 24-target pilot
   as incomplete-family development evidence.
+- Added backward-compatible SciTasteBench v4 fields and runner metrics for
+  decision context, Taste judgment, AI-panel authority, hidden action utility,
+  abstention, and paired budgeted-regret reduction.
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning.
