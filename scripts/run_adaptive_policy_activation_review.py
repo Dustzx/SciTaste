@@ -167,7 +167,10 @@ def execute(args: argparse.Namespace):
                 candidate,
                 evidence_root=run_root,
                 current_idea_revision=idea,
-                seed=panel_index - 1,
+                # Both primary reviewers must see the exact same frozen packet.
+                # Reviewer diversity comes from the independently configured
+                # models, not from changing the evidence projection.
+                seed=0,
                 evidence_projection_mode="interactive-trajectory-compact-v1",
             )
             config = build_ai_taste_attribution_runtime_config(

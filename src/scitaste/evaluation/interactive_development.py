@@ -391,14 +391,27 @@ class DevelopmentTasteGuidanceProvider:
         if decision.selected_action.type.value != preferred_action_type:
             raise ValueError("development bootstrap policy did not select its intended action")
         selected = decision.selected_action
+        instruction = (
+            "Stop experimentation and submit the strongest currently supported hypothesis."
+            if selected.type.value == "STOP"
+            else selected.description
+        )
+        target_turn = self.protocol.episode_target_turn
+        if (
+            self.protocol.episode_sampling_rule == "preassigned-action-stratum-v1"
+            and self.protocol.episode_target_action != "STOP"
+            and target_turn is not None
+            and context.turn <= target_turn
+        ):
+            instruction = (
+                f"{instruction} This prospective development cohort requires the locked "
+                f"{self.protocol.episode_target_action} allocation at turn {target_turn} to "
+                "be executed before submission; do not submit a hypothesis on this turn."
+            )
         guidance = InteractiveGuidance(
             action_id=selected.action_id,
             action_type=selected.type.value,
-            instruction=(
-                "Stop experimentation and submit the strongest currently supported hypothesis."
-                if selected.type.value == "STOP"
-                else selected.description
-            ),
+            instruction=instruction,
             decision_sha256=content_sha256(selected),
         )
         lock_path = self.lock_root / f"turn-{context.turn:03d}" / "LOCK.json"
@@ -434,6 +447,26 @@ class DevelopmentTasteGuidanceProvider:
         """Approve only a structured, evidence-covered request to stop early."""
 
         self._validate_submission_adjudication_context(context, initial_guidance)
+        target_turn = self.protocol.episode_target_turn
+        if (
+            self.protocol.episode_sampling_rule == "preassigned-action-stratum-v1"
+            and self.protocol.episode_target_action != "STOP"
+            and target_turn is not None
+            and context.turn <= target_turn
+        ):
+            return InteractiveGuidanceEnvelope.create(
+                guidance=initial_guidance.guidance,
+                audit={
+                    **initial_guidance.audit,
+                    "submission_adjudication": {
+                        "approved": False,
+                        "reason": "prospective-target-action-not-yet-executed",
+                        "target_action": self.protocol.episode_target_action,
+                        "target_turn": target_turn,
+                    },
+                    "agent_decision_sha256": decision.decision_sha256,
+                },
+            )
         gate = _development_submission_stop_gate(context, decision.proposal)
         if not gate["approved"]:
             return initial_guidance

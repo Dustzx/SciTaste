@@ -2113,14 +2113,19 @@ def _replace_activation_state(
     *,
     tasks: tuple[AdaptivePolicyActivationTaskState, ...] | None = None,
     terminal_evidence: tuple[AdaptivePolicyActivationTaskEvidence, ...] | None = None,
+    review_evidence: tuple[AdaptivePolicyActivationReviewResult, ...] | None = None,
     **updates: object,
 ) -> AdaptivePolicyActivationCampaignState:
     payload = state.model_dump(
-        mode="python", exclude={"state_sha256", "tasks", "terminal_evidence"}
+        mode="python",
+        exclude={"state_sha256", "tasks", "terminal_evidence", "review_evidence"},
     )
     payload["tasks"] = state.tasks if tasks is None else tasks
     payload["terminal_evidence"] = (
         state.terminal_evidence if terminal_evidence is None else terminal_evidence
+    )
+    payload["review_evidence"] = (
+        state.review_evidence if review_evidence is None else review_evidence
     )
     payload.update(updates)
     unsigned = AdaptivePolicyActivationCampaignState.model_construct(
