@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,9 @@ import yaml
 from pydantic import ValidationError
 
 from scitaste.evaluation.adaptive_policy_activation import (
+    AdaptivePolicyActivationInspection,
     AdaptivePolicyActivationManifest,
+    approve_adaptive_policy_activation,
     compile_adaptive_policy_activation_no_run_plan,
     initialize_adaptive_policy_activation_state,
     inspect_adaptive_policy_activation,
@@ -66,3 +69,32 @@ def test_activation_rejects_resource_arithmetic_drift() -> None:
 
     with pytest.raises(ValidationError, match="API-call ceiling arithmetic differs"):
         AdaptivePolicyActivationManifest.model_validate(payload)
+
+
+def test_activation_approval_requires_both_exact_confirmation_hashes() -> None:
+    manifest, digest = load_adaptive_policy_activation_manifest(MANIFEST)
+    inspection = AdaptivePolicyActivationInspection(
+        campaign_id=manifest.campaign_id,
+        manifest_file_sha256=digest,
+        manifest_fingerprint=manifest.fingerprint,
+        exact_bindings_ready=True,
+        predecessor_state_matches=True,
+        program_and_limits_match=True,
+        task_population_and_source_groups_match=True,
+        checkout_matches_and_is_clean=True,
+        resource_arithmetic_closed=True,
+        sampling_rule_closed=True,
+        ready_for_owner_approval=True,
+        blocker_codes=(),
+    )
+    plan = compile_adaptive_policy_activation_no_run_plan(manifest, inspection)
+
+    with pytest.raises(ValueError, match="manifest confirmation hash mismatch"):
+        approve_adaptive_policy_activation(
+            manifest,
+            plan,
+            confirm_manifest_file_sha256="0" * 64,
+            confirm_plan_sha256=plan.plan_sha256,
+            approved_by="test-owner",
+            approved_at=datetime.now(UTC),
+        )

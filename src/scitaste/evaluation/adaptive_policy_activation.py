@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import tempfile
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
@@ -32,7 +33,12 @@ from scitaste.taste.decision_families import (
 )
 from scitaste.taste.project_policy import ProjectTastePolicyReadiness
 
-_CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+_CONFIG = ConfigDict(
+    extra="forbid",
+    frozen=True,
+    str_strip_whitespace=True,
+    populate_by_name=True,
+)
 _SHA256 = r"^[0-9a-f]{64}$"
 _COMMIT = r"^[0-9a-f]{40}$"
 _MAX_MANIFEST_BYTES = 2 * 1_048_576
@@ -316,6 +322,24 @@ class AdaptivePolicyActivationNoRunPlan(BaseModel):
     formal_effect_claim_authorized: Literal[False] = False
     plan_sha256: str = Field(pattern=_SHA256)
 
+    @model_validator(mode="after")
+    def plan_is_closed(self) -> AdaptivePolicyActivationNoRunPlan:
+        validate_entry_id(self.campaign_id, field_name="activation plan campaign_id")
+        validate_project_id(self.project_id)
+        populations = (
+            self.ordered_task_ids,
+            self.ordered_run_ids,
+            self.ordered_source_group_ids,
+        )
+        if not populations[0] or len({len(items) for items in populations}) != 1:
+            raise ValueError("activation plan populations differ")
+        if any(len(items) != len(set(items)) for items in populations):
+            raise ValueError("activation plan populations must be unique")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"plan_sha256"}))
+        if self.plan_sha256 != expected:
+            raise ValueError("activation plan hash mismatch")
+        return self
+
     @classmethod
     def create(
         cls,
@@ -430,6 +454,68 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
         )
 
 
+class AdaptivePolicyActivationApproval(BaseModel):
+    """Exact owner authority for the disclosed cohort, never for formal claims."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    campaign_id: str
+    project_id: str
+    manifest_file_sha256: str = Field(pattern=_SHA256)
+    manifest_fingerprint: str = Field(pattern=_SHA256)
+    plan_sha256: str = Field(pattern=_SHA256)
+    resource_ceiling: ActivationResourceCeiling
+    approved_by: str = Field(min_length=1, max_length=200)
+    approved_at: datetime
+    authorizes_api_calls: Literal[True] = True
+    authorizes_local_review_gpu_work: Literal[True] = True
+    authorizes_benchmark_execution: Literal[True] = True
+    authorizes_task_gpu_work: Literal[False] = False
+    authorizes_downloads: Literal[False] = False
+    authorizes_task_replacement: Literal[False] = False
+    authorizes_formal_effect_claim: Literal[False] = False
+    approval_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def approval_is_closed(self) -> AdaptivePolicyActivationApproval:
+        validate_entry_id(self.campaign_id, field_name="activation approval campaign_id")
+        validate_project_id(self.project_id)
+        if self.approved_at.utcoffset() is None:
+            raise ValueError("activation approval time must include a timezone")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"approval_sha256"}))
+        if self.approval_sha256 != expected:
+            raise ValueError("activation approval hash mismatch")
+        return self
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        manifest: AdaptivePolicyActivationManifest,
+        plan: AdaptivePolicyActivationNoRunPlan,
+        approved_by: str,
+        approved_at: datetime,
+    ) -> AdaptivePolicyActivationApproval:
+        payload = {
+            "campaign_id": manifest.campaign_id,
+            "project_id": manifest.project_id,
+            "manifest_file_sha256": plan.manifest_file_sha256,
+            "manifest_fingerprint": manifest.fingerprint,
+            "plan_sha256": plan.plan_sha256,
+            "resource_ceiling": manifest.resource_ceiling,
+            "approved_by": approved_by,
+            "approved_at": approved_at,
+        }
+        unsigned = cls.model_construct(approval_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            approval_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"approval_sha256"})
+            ),
+        )
+
+
 def load_adaptive_policy_activation_manifest(
     path: str | Path,
 ) -> tuple[AdaptivePolicyActivationManifest, str]:
@@ -530,6 +616,49 @@ def initialize_adaptive_policy_activation_state(
     plan: AdaptivePolicyActivationNoRunPlan,
 ) -> AdaptivePolicyActivationCampaignState:
     return AdaptivePolicyActivationCampaignState.create(plan)
+
+
+def approve_adaptive_policy_activation(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    *,
+    confirm_manifest_file_sha256: str,
+    confirm_plan_sha256: str,
+    approved_by: str,
+    approved_at: datetime,
+) -> AdaptivePolicyActivationApproval:
+    if not plan.ready_for_owner_approval:
+        raise ValueError("adaptive activation plan is not ready for owner approval")
+    if (
+        plan.campaign_id != manifest.campaign_id
+        or plan.project_id != manifest.project_id
+        or plan.manifest_fingerprint != manifest.fingerprint
+    ):
+        raise ValueError("adaptive activation plan belongs to another manifest")
+    if confirm_manifest_file_sha256 != plan.manifest_file_sha256:
+        raise ValueError("adaptive activation manifest confirmation hash mismatch")
+    if confirm_plan_sha256 != plan.plan_sha256:
+        raise ValueError("adaptive activation plan confirmation hash mismatch")
+    if plan.resource_ceiling != manifest.resource_ceiling:
+        raise ValueError("adaptive activation plan resource ceiling changed")
+    return AdaptivePolicyActivationApproval.create(
+        manifest=manifest,
+        plan=plan,
+        approved_by=approved_by,
+        approved_at=approved_at,
+    )
+
+
+def load_adaptive_policy_activation_no_run_plan(
+    path: str | Path,
+) -> AdaptivePolicyActivationNoRunPlan:
+    return AdaptivePolicyActivationNoRunPlan.model_validate_json(_bounded_json(path), strict=True)
+
+
+def load_adaptive_policy_activation_approval(
+    path: str | Path,
+) -> AdaptivePolicyActivationApproval:
+    return AdaptivePolicyActivationApproval.model_validate_json(_bounded_json(path), strict=True)
 
 
 def save_adaptive_policy_activation_artifact(
@@ -750,6 +879,16 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _bounded_json(path: str | Path) -> bytes:
+    source = Path(path)
+    if source.is_symlink() or not source.is_file():
+        raise ValueError("adaptive activation artifact must be a regular file")
+    raw = source.read_bytes()
+    if not 1 <= len(raw) <= _MAX_MANIFEST_BYTES:
+        raise ValueError("adaptive activation artifact exceeds its byte ceiling")
+    return raw
+
+
 def _git(root: Path, *args: str) -> str:
     completed = subprocess.run(
         ("git", "-C", str(root), *args),
@@ -762,13 +901,17 @@ def _git(root: Path, *args: str) -> str:
 
 
 __all__ = [
+    "AdaptivePolicyActivationApproval",
     "AdaptivePolicyActivationCampaignState",
     "AdaptivePolicyActivationInspection",
     "AdaptivePolicyActivationManifest",
     "AdaptivePolicyActivationNoRunPlan",
+    "approve_adaptive_policy_activation",
     "compile_adaptive_policy_activation_no_run_plan",
     "initialize_adaptive_policy_activation_state",
     "inspect_adaptive_policy_activation",
+    "load_adaptive_policy_activation_approval",
     "load_adaptive_policy_activation_manifest",
+    "load_adaptive_policy_activation_no_run_plan",
     "save_adaptive_policy_activation_artifact",
 ]
