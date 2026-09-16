@@ -1,0 +1,21 @@
+schema_version: "1.0"
+screen_id: scitastebench-four-layer-development-screen-glm-v1
+project_id: scitaste-self-development
+intake_manifest:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/MANIFEST.json
+  sha256: 0ffcb0e5031e7548920b27898c197c659aca8e1b282a5b829989ea3bd9aa324e
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+profile:
+  locator: configs/model_nodes/profile_zhipu_glm53_scitastebench_screen_v1.yaml
+  sha256: f715258682ca0bc2316f2d0eac08dd194fd147260e3575a6d8d9b17536f713d2
+backend_config:
+  locator: configs/model_nodes/zhipu_glm53_flash.scitastebench_live_20260916.yaml
+  sha256: ebb7f2495a04578a788f3bbb879d904ce8a5018b590285a5453bb30525dfc7c3
+admitted_prior_track_a_role: unused
+batch_size: 8
+seed: 4027
+automatic_retry_permitted: false
+target_outcomes_visible: false
+formal_split_access_authorized: false

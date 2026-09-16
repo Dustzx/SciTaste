@@ -1,0 +1,21 @@
+schema_version: "1.0"
+screen_id: scitastebench-four-layer-development-screen-v1
+project_id: scitaste-self-development
+intake_manifest:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/MANIFEST.json
+  sha256: 0ffcb0e5031e7548920b27898c197c659aca8e1b282a5b829989ea3bd9aa324e
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+profile:
+  locator: configs/model_nodes/profile_bailian_qwen38max_scitastebench_screen_v1.yaml
+  sha256: e81d8a846e15b84dbe05a8d568aba87cd12961fe9566806285a98f6b038f5e34
+backend_config:
+  locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+  sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+admitted_prior_track_a_role: unused
+batch_size: 8
+seed: 2027
+automatic_retry_permitted: false
+target_outcomes_visible: false
+formal_split_access_authorized: false

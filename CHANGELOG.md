@@ -26,6 +26,18 @@
   both no-update and shuffled controls, and behavior-mediated Taste shifts the
   objective progress--budget frontier. Null signatures contract the claim
   instead of being hidden by an aggregate score.
+- Added and executed resumable outcome-blind development screening over the 101
+  unused natural source groups. Qwen3.8-Max and GLM-5.3-Flash each received
+  thirteen fixed, zero-retry batches with separate identities and no outcome
+  vault access. Exact requests, raw responses, terminal receipts, token use,
+  latency, and bounded cost are retained locally.
+- Replaced generative copying of long source hashes with a deterministic,
+  all-batch identity normalizer. It admits only a unique candidate-ID bijection,
+  strips a single allowlisted envelope field, normalizes irrelevant fields on
+  explicitly excluded items, changes no semantic label, and preserves the raw
+  rejected receipts. The resulting cross-model disagreement reveals a real
+  construct gap between experiment design and resource allocation; allocation
+  remains blocked rather than relabelling cases to meet a quota.
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning.

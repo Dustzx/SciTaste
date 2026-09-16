@@ -43,6 +43,26 @@ as a target or precedent, spans computing (62), ecology (39), and public health
 screening capacity, not 36 accepted cases: source aliases, family coverage,
 utility construction, AI-panel labels, and the target/precedent allocation still
 have to close before a development suite exists.
+
+The first two outcome-blind caseability screens have now executed over all 101
+unused groups. Qwen3.8-Max proposed 84 eligible cases using 132,812 tokens and
+USD 2.096904; GLM-5.3-Flash proposed 77 using 135,621 tokens and a conservative
+USD 1.648568 liability ceiling. Both calls used thirteen fixed zero-retry
+batches. Long identifier copying caused four raw batches per model to fail the
+strict receipt even though all semantic objects validated. A model-independent
+normalizer therefore binds identity by the unique candidate-ID position for
+*all* batches, retains every raw receipt, changes no semantic field, and records
+five Qwen identity corrections plus three removed GLM envelope fields and
+eleven nullifications of fields that GLM attached to explicitly ineligible
+items.
+
+This is still screening rather than benchmark admission. Among the 71 cases
+both models considered eligible, they agreed on the decision-context family for
+only 40. Resource-allocation coverage is the limiting construct: Qwen proposed
+four such cases, GLM proposed one, and none agree. Hypothesis coverage is also
+thin. A third model must adjudicate only disputed or scarce-family candidates;
+the project must not hand-relabel experiment-design cases merely to satisfy the
+six-per-family quota.
 The candidates are not benchmark items or gold outcomes. A source enters a
 formal population only after the applicable domain, quality, privacy,
 decision-family, grounded-abstraction, attribution, and decision-episode

@@ -339,6 +339,11 @@ from scitaste.evaluation.review_authority import (
 from scitaste.evaluation.scitastebench_development_intake import (
     materialize_scitastebench_development_intake,
 )
+from scitaste.evaluation.scitastebench_development_screening import (
+    execute_scitastebench_development_screen,
+    normalize_scitastebench_development_screen,
+    prepare_scitastebench_development_screen,
+)
 from scitaste.evaluation.taste_abstraction_batch import (
     compile_taste_abstraction_runtime_batch,
 )
@@ -2403,6 +2408,38 @@ def build_parser() -> argparse.ArgumentParser:
     development_intake.add_argument("--output", type=Path, required=True)
     _add_log_level_option(development_intake)
     development_intake.set_defaults(handler=_handle_evaluation_scitastebench_v4_intake)
+    development_screen_prepare = evaluation_commands.add_parser(
+        "scitastebench-v4-development-screen-prepare",
+        help="Freeze outcome-blind natural-case screening batches without model calls",
+    )
+    development_screen_prepare.add_argument("--config", type=Path, required=True)
+    development_screen_prepare.add_argument("--locator-root", type=Path, default=Path("."))
+    development_screen_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(development_screen_prepare)
+    development_screen_prepare.set_defaults(
+        handler=_handle_evaluation_scitastebench_v4_screen_prepare
+    )
+    development_screen_execute = evaluation_commands.add_parser(
+        "scitastebench-v4-development-screen-execute",
+        help="Execute each frozen natural-case screening batch at most once",
+    )
+    development_screen_execute.add_argument("--directory", type=Path, required=True)
+    development_screen_execute.add_argument("--locator-root", type=Path, default=Path("."))
+    development_screen_execute.add_argument("--allow-live", action="store_true")
+    _add_log_level_option(development_screen_execute)
+    development_screen_execute.set_defaults(
+        handler=_handle_evaluation_scitastebench_v4_screen_execute
+    )
+    development_screen_normalize = evaluation_commands.add_parser(
+        "scitastebench-v4-development-screen-normalize",
+        help="Bind every screened semantic decision to deterministic positional identities",
+    )
+    development_screen_normalize.add_argument("--directory", type=Path, required=True)
+    development_screen_normalize.add_argument("--locator-root", type=Path, default=Path("."))
+    _add_log_level_option(development_screen_normalize)
+    development_screen_normalize.set_defaults(
+        handler=_handle_evaluation_scitastebench_v4_screen_normalize
+    )
     abstraction_review_prepare = evaluation_commands.add_parser(
         "ai-abstraction-review-prepare",
         help="Bridge accepted grounded abstractions into two AI-only review requests",
@@ -8571,6 +8608,52 @@ def _handle_evaluation_scitastebench_v4_intake(args: argparse.Namespace) -> int:
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_scitastebench_v4_screen_prepare(args: argparse.Namespace) -> int:
+    plan = prepare_scitastebench_development_screen(
+        config_path=args.config,
+        locator_root=args.locator_root,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "development-screen-prepared",
+                "screen_id": plan.screen_id,
+                "plan_sha256": plan.plan_sha256,
+                "provider": plan.provider,
+                "model": plan.model,
+                "candidate_count": plan.candidate_count,
+                "batch_count": len(plan.batches),
+                "outcome_fields_exposed": plan.outcome_fields_exposed,
+                "model_calls_performed": plan.model_calls_performed,
+                "output": str(args.output / "PLAN.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_scitastebench_v4_screen_execute(args: argparse.Namespace) -> int:
+    summary = execute_scitastebench_development_screen(
+        screen_dir=args.directory,
+        locator_root=args.locator_root,
+        allow_live=args.allow_live,
+    )
+    print(summary.model_dump_json(indent=2))
+    return 0 if summary.complete and summary.ready_for_allocation else 1
+
+
+def _handle_evaluation_scitastebench_v4_screen_normalize(args: argparse.Namespace) -> int:
+    manifest = normalize_scitastebench_development_screen(
+        screen_dir=args.directory,
+        locator_root=args.locator_root,
+    )
+    print(manifest.model_dump_json(indent=2))
     return 0
 
 

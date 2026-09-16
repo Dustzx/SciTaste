@@ -1,0 +1,27 @@
+provider: zhipu-direct
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.3-flash
+api_key_env: ZAI_API_KEY
+live_enabled: true
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 8192
+pricing_confirmed: true
+pricing:
+  currency: USD
+  input_usd_per_million_tokens: 8.0
+  cached_input_usd_per_million_tokens: 2.0
+  output_usd_per_million_tokens: 28.0
+  captured_at: 2026-09-16T20:40:00+08:00
+  source: >-
+    Conservative USD liability ceiling: the numeric values of the current
+    official GLM-5.2 Beijing CNY price row are treated as USD without favorable
+    FX conversion because the public price table does not yet list GLM-5.3-Flash.
+    This is a spend ceiling, not a claim about the provider's invoiced rate.
+    https://bigmodel.cn/pricing
+unpriced_engineering_probe: false
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled
+  reasoning_effort: low
