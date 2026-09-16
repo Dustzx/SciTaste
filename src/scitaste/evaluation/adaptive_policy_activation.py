@@ -389,7 +389,7 @@ class AdaptivePolicyActivationTaskState(BaseModel):
 
 
 class AdaptivePolicyActivationCampaignState(BaseModel):
-    """Restart-safe identity before approval; external execution updates it later."""
+    """Hash-chained campaign state; authorization still performs no external work."""
 
     model_config = _CONFIG
 
@@ -397,8 +397,8 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
     campaign_id: str
     project_id: str
     plan_sha256: str = Field(pattern=_SHA256)
-    sequence: Literal[0] = 0
-    status: Literal["awaiting-owner-approval"] = "awaiting-owner-approval"
+    sequence: Literal[0, 1] = 0
+    status: Literal["awaiting-owner-approval", "ready"] = "awaiting-owner-approval"
     tasks: tuple[AdaptivePolicyActivationTaskState, ...]
     next_task_id: str
     completed_trajectory_count: Literal[0] = 0
@@ -409,15 +409,34 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
     consumed_local_review_gpu_hours: Literal[0.0] = 0.0
     policy_refresh_status: Literal["pending"] = "pending"
     target_domain_state_probe_status: Literal["pending"] = "pending"
-    execution_authorized: Literal[False] = False
+    approval_sha256: str | None = Field(default=None, pattern=_SHA256)
+    execution_authorized: bool = False
     formal_effect_claim_authorized: Literal[False] = False
     state_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
     def state_is_closed(self) -> AdaptivePolicyActivationCampaignState:
-        if not self.tasks or self.next_task_id != self.tasks[0].task_id:
-            raise ValueError("activation initial state must point to its first frozen task")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"state_sha256"}))
+        if not self.tasks:
+            raise ValueError("activation state requires its frozen task population")
+        task_ids = tuple(item.task_id for item in self.tasks)
+        if len(task_ids) != len(set(task_ids)) or self.next_task_id not in task_ids:
+            raise ValueError("activation next task must identify one unique frozen task")
+        if self.status == "awaiting-owner-approval":
+            if (
+                self.sequence != 0
+                or self.next_task_id != self.tasks[0].task_id
+                or self.approval_sha256 is not None
+                or self.execution_authorized
+            ):
+                raise ValueError("activation initial state cannot carry execution authority")
+        elif self.sequence < 1 or self.approval_sha256 is None or not self.execution_authorized:
+            raise ValueError("active campaign state requires exact owner approval authority")
+        excluded = {"state_sha256"}
+        # Preserve the hash of the already materialized pre-authorization v1.0
+        # state, which predates the optional approval binding.
+        if "approval_sha256" not in self.model_fields_set:
+            excluded.add("approval_sha256")
+        expected = content_sha256(self.model_dump(mode="json", exclude=excluded))
         if self.state_sha256 != expected:
             raise ValueError("activation campaign state hash mismatch")
         return self
@@ -447,6 +466,30 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             "tasks": tasks,
             "next_task_id": tasks[0].task_id,
         }
+        unsigned = cls.model_construct(state_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            state_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"state_sha256", "approval_sha256"})
+            ),
+        )
+
+    @classmethod
+    def authorize(
+        cls,
+        state: AdaptivePolicyActivationCampaignState,
+        approval: AdaptivePolicyActivationApproval,
+    ) -> AdaptivePolicyActivationCampaignState:
+        payload = state.model_dump(mode="python", exclude={"state_sha256", "tasks"})
+        payload.update(
+            {
+                "tasks": state.tasks,
+                "sequence": 1,
+                "status": "ready",
+                "approval_sha256": approval.approval_sha256,
+                "execution_authorized": True,
+            }
+        )
         unsigned = cls.model_construct(state_sha256="0" * 64, **payload)
         return cls(
             **payload,
@@ -649,6 +692,46 @@ def approve_adaptive_policy_activation(
     )
 
 
+def authorize_adaptive_policy_activation(
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+) -> AdaptivePolicyActivationCampaignState:
+    """Bind exact approval to the initial state without launching any work."""
+
+    if state.status != "awaiting-owner-approval" or state.sequence != 0:
+        raise ValueError("adaptive activation authorization requires the initial state")
+    if (
+        state.campaign_id != plan.campaign_id
+        or state.project_id != plan.project_id
+        or state.plan_sha256 != plan.plan_sha256
+    ):
+        raise ValueError("adaptive activation state belongs to another plan")
+    if (
+        approval.campaign_id != plan.campaign_id
+        or approval.project_id != plan.project_id
+        or approval.plan_sha256 != plan.plan_sha256
+        or approval.manifest_file_sha256 != plan.manifest_file_sha256
+        or approval.manifest_fingerprint != plan.manifest_fingerprint
+        or approval.resource_ceiling != plan.resource_ceiling
+    ):
+        raise ValueError("adaptive activation approval belongs to another plan")
+    expected_population = tuple(
+        zip(
+            plan.ordered_task_ids,
+            plan.ordered_run_ids,
+            plan.ordered_source_group_ids,
+            strict=True,
+        )
+    )
+    observed_population = tuple(
+        (item.task_id, item.run_id, item.source_group_id) for item in state.tasks
+    )
+    if observed_population != expected_population:
+        raise ValueError("adaptive activation state task population differs from its plan")
+    return AdaptivePolicyActivationCampaignState.authorize(state, approval)
+
+
 def load_adaptive_policy_activation_no_run_plan(
     path: str | Path,
 ) -> AdaptivePolicyActivationNoRunPlan:
@@ -659,6 +742,14 @@ def load_adaptive_policy_activation_approval(
     path: str | Path,
 ) -> AdaptivePolicyActivationApproval:
     return AdaptivePolicyActivationApproval.model_validate_json(_bounded_json(path), strict=True)
+
+
+def load_adaptive_policy_activation_state(
+    path: str | Path,
+) -> AdaptivePolicyActivationCampaignState:
+    return AdaptivePolicyActivationCampaignState.model_validate_json(
+        _bounded_json(path), strict=True
+    )
 
 
 def save_adaptive_policy_activation_artifact(

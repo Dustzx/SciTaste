@@ -14,7 +14,10 @@ semantic versioning.
   after retained feedback is selected independently of score or credit, then
   projected to action-local scientific credit when a successor update exists.
   A hash-bound initial campaign state provides restart-safe task order while
-  retaining zero execution authority before owner approval.
+  retaining zero execution authority before owner approval. Exact approval can
+  now be bound into a separate sequence-1 `ready` state without loading a model
+  or launching a task; mismatched plans, approvals, populations, or resource
+  ceilings fail closed, and formal-effect authority remains false.
 - Closed the missing causal-treatment gate in E2. Schema 1.1 now binds the
   exact family-conditioned policy, readiness report, adaptive-allocation head,
   source-group exclusions, and outcome-blind H4 state-probe evidence before a

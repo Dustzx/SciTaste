@@ -285,11 +285,14 @@ from scitaste.evaluation import (
 )
 from scitaste.evaluation.adaptive_policy_activation import (
     approve_adaptive_policy_activation,
+    authorize_adaptive_policy_activation,
     compile_adaptive_policy_activation_no_run_plan,
     initialize_adaptive_policy_activation_state,
     inspect_adaptive_policy_activation,
+    load_adaptive_policy_activation_approval,
     load_adaptive_policy_activation_manifest,
     load_adaptive_policy_activation_no_run_plan,
+    load_adaptive_policy_activation_state,
     save_adaptive_policy_activation_artifact,
 )
 from scitaste.evaluation.decision_episode_integrity import (
@@ -4048,6 +4051,18 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(adaptive_activation_approve)
     adaptive_activation_approve.set_defaults(
         handler=_handle_evaluation_adaptive_policy_activation_approve
+    )
+    adaptive_activation_authorize = evaluation_commands.add_parser(
+        "adaptive-policy-activation-authorize",
+        help="Bind exact owner approval to initial state without launching external work",
+    )
+    adaptive_activation_authorize.add_argument("--plan", type=Path, required=True)
+    adaptive_activation_authorize.add_argument("--approval", type=Path, required=True)
+    adaptive_activation_authorize.add_argument("--state", type=Path, required=True)
+    adaptive_activation_authorize.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(adaptive_activation_authorize)
+    adaptive_activation_authorize.set_defaults(
+        handler=_handle_evaluation_adaptive_policy_activation_authorize
     )
     direct_agent_run = evaluation_commands.add_parser(
         "direct-agent-run",
@@ -11176,6 +11191,33 @@ def _handle_evaluation_adaptive_policy_activation_approve(
                 "status": "adaptive-policy-activation-approved",
                 "output": str(output),
                 **approval.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_adaptive_policy_activation_authorize(
+    args: argparse.Namespace,
+) -> int:
+    plan = load_adaptive_policy_activation_no_run_plan(args.plan)
+    approval = load_adaptive_policy_activation_approval(args.approval)
+    state = load_adaptive_policy_activation_state(args.state)
+    authorized = authorize_adaptive_policy_activation(plan, approval, state)
+    output = save_adaptive_policy_activation_artifact(authorized, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "adaptive-policy-activation-ready",
+                "output": str(output),
+                "state_sha256": authorized.state_sha256,
+                "sequence": authorized.sequence,
+                "next_task_id": authorized.next_task_id,
+                "execution_authorized": authorized.execution_authorized,
+                "formal_effect_claim_authorized": (authorized.formal_effect_claim_authorized),
+                "external_execution_performed": False,
             },
             indent=2,
             ensure_ascii=False,

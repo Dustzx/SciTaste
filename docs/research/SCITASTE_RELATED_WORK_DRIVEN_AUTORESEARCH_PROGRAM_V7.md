@@ -251,6 +251,10 @@ That state remains `awaiting-owner-approval` with all nine attempt counts at
 zero. Interactive protocol v1.1 makes the sampling promise executable: one
 earliest actually executed non-STOP decision after retained feedback per task,
 selected without terminal score or credit direction and never replaced by STOP.
+The approval artifact and sequence-1 `ready` state are separate, hash-bound
+objects. Producing either still performs no API, GPU, model, or benchmark work;
+only the exact plan population and resource ceiling can receive authority, and
+formal-effect authority remains false.
 
 The remote fixed-revision `Qwen/Qwen3.5-9B` candidate is now statically complete:
 16 files, four indexed shards, 15,664,539,861 bytes, aggregate checkpoint digest

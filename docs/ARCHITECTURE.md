@@ -4769,3 +4769,11 @@ program and limits, model configs, and resource arithmetic. The initial state is
 restart-safe but explicitly lacks API, benchmark, GPU, policy-refresh, formal
 claim, or E2 execution authority. Approval and execution remain separate state
 transitions so a no-run readiness result cannot launch work.
+
+`adaptive-policy-activation-approve` emits a separate hash-bound owner record;
+it does not mutate state or contact a backend. The subsequent
+`adaptive-policy-activation-authorize` transition accepts only that exact
+approval, plan, initial state, frozen task population, and resource ceiling,
+then emits sequence 1 in `ready` status. This transition still performs no
+external work and never grants formal-effect authority. Consequently an
+approval can neither authorize a drifted cohort nor be mistaken for a result.
