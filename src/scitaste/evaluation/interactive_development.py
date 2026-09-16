@@ -770,6 +770,7 @@ def refine_interactive_development_candidate(
     if not outcome_evidence_ids:
         raise ValueError("interactive candidate has no terminal receipt evidence")
     observation_sha256 = record.observation_sha256 or "none"
+    is_submission = model_action == "submit_hypothesis"
     successor_summary = (
         "The action submitted the terminal hypothesis."
         if successor is None
@@ -788,6 +789,55 @@ def refine_interactive_development_candidate(
     )
     outcome_id = f"interactive-local-scientific-progress-{turn:03d}"
     credit_id = f"interactive-local-credit-{turn:03d}"
+    state_summary = (
+        f"Prospectively adjudicated turn {turn}; the controller approved STOP from the "
+        "structured evidence-state and coverage gate before the research agent submission "
+        "was scored."
+        if is_submission
+        else (
+            f"Prospectively locked turn {turn}; the research agent complied with "
+            f"{action_type} via {model_action}, and the resulting observation was retained."
+        )
+    )
+    why_preferred = (
+        "The effective STOP lock preceded scorer access, preserved the remaining experiment "
+        "budget, and permitted only the already-proposed hypothesis to be evaluated."
+        if is_submission
+        else (
+            f"The locked action was executed rather than merely narrated. Its immediate "
+            f"observation hash is {observation_sha256}. {successor_summary}"
+        )
+    )
+    outcome_summary = (
+        "The evidence-backed STOP request was prospectively approved; the submitted hypothesis "
+        f"then received the retained objective result. {terminal_summary}"
+        if is_submission
+        else (
+            f"Compliant {model_action} produced observation {observation_sha256}. "
+            f"{successor_summary} {terminal_summary}"
+        )
+    )
+    credit_confounder_ids = (
+        ("research-agent", "objective-scorer")
+        if is_submission
+        else ("research-agent", "later-trajectory-decisions")
+    )
+    credit_rationale = (
+        "Proposed benefit is limited to approving a supported stop before scoring and avoiding "
+        "additional experiments whose declared marginal information value passed the frozen "
+        "gate. It does not attribute hypothesis discovery or scorer correctness to the controller."
+        if is_submission
+        else (
+            "Proposed benefit is limited to producing the retained observation and enabling the "
+            "documented successor update. It does not assign the shared terminal score to this "
+            "turn or claim that later decisions were caused by the controller alone."
+        )
+    )
+    applicability_primary = (
+        "interactive work with a prospectively approved evidence-backed stop request"
+        if is_submission
+        else "interactive work with an executable action and retained observation"
+    )
     payload = {
         name: getattr(candidate, name)
         for name in type(candidate).model_fields
@@ -795,27 +845,22 @@ def refine_interactive_development_candidate(
     }
     payload.update(
         {
-            "candidate_id": f"{candidate.candidate_id}-scientific-credit-v2",
-            "attribution_producer_id": "interactive-scientific-credit-v2",
-            "state_summary": (
-                f"Prospectively locked turn {turn}; the research agent complied with "
-                f"{action_type} via {model_action}, and the resulting observation was retained."
-            ),
-            "why_preferred": (
-                f"The locked action was executed rather than merely narrated. Its immediate "
-                f"observation hash is {observation_sha256}. {successor_summary}"
-            ),
+            "candidate_id": f"{candidate.candidate_id}-scientific-credit-v3",
+            "attribution_producer_id": "interactive-scientific-credit-v3",
+            "state_summary": state_summary,
+            "why_preferred": why_preferred,
             "outcomes": (
                 TasteEpisodeOutcome(
                     outcome_id=outcome_id,
                     family=(
                         TasteOutcomeFamily.DESIGN if turn == 1 else TasteOutcomeFamily.ADAPTATION
                     ),
-                    summary=(
-                        f"Compliant {model_action} produced observation {observation_sha256}. "
-                        f"{successor_summary} {terminal_summary}"
+                    summary=outcome_summary,
+                    horizon=(
+                        "stop adjudication, objective scoring, and conserved experiment budget"
+                        if is_submission
+                        else ("immediate observation, successor belief update, and terminal score")
                     ),
-                    horizon="immediate observation, successor belief update, and terminal score",
                     polarity=local_polarity,
                     evidence_ids=outcome_evidence_ids,
                 ),
@@ -828,52 +873,100 @@ def refine_interactive_development_candidate(
                     ),
                     direction=TasteCreditDirection.BENEFICIAL,
                     outcome_ids=(outcome_id,),
-                    confounder_ids=("research-agent", "later-trajectory-decisions"),
-                    rationale=(
-                        "Proposed benefit is limited to producing the retained observation and "
-                        "enabling the documented successor update. It does not assign the shared "
-                        "terminal score to this turn or claim that later decisions were caused "
-                        "by the controller alone."
-                    ),
+                    confounder_ids=credit_confounder_ids,
+                    rationale=credit_rationale,
                     confidence=0.5,
                 ),
             ),
             "applicability_conditions": (
-                "interactive scientific work with an executable action and retained observation",
+                applicability_primary,
                 "the research agent complies with the prospectively locked high-level action",
-                "a successor belief update is visible before terminal scoring",
+                (
+                    "objective scoring occurs only after the effective STOP lock"
+                    if is_submission
+                    else "a successor belief update is visible before terminal scoring"
+                ),
             ),
             "failure_conditions": (
-                "the successor update is unsupported by the immediate observation",
-                "the same update would follow under a cheaper or more informative alternative",
+                (
+                    "the submitted hypothesis fails the retained objective scorer"
+                    if is_submission
+                    else "the successor update is unsupported by the immediate observation"
+                ),
+                (
+                    "another experiment has material expected information value under the "
+                    "same evidence"
+                    if is_submission
+                    else (
+                        "the same update would follow under a cheaper or more informative "
+                        "alternative"
+                    )
+                ),
                 "the research agent does not comply with the locked high-level action",
             ),
             "counterfactual_probe": (
-                "Under the same predecision state and remaining budget, would another available "
-                "action have produced evidence supporting a stronger successor update?"
+                (
+                    "Under the same evidence state and remaining budget, would another experiment "
+                    "improve objective correctness enough to justify its cost?"
+                )
+                if is_submission
+                else (
+                    "Under the same predecision state and remaining budget, would another "
+                    "available action have produced evidence supporting a stronger successor "
+                    "update?"
+                )
             ),
             "confounders": (
                 TasteEpisodeConfounder(
                     confounder_id="research-agent",
                     description=(
-                        "The research model chose concrete parameters and interpreted the "
-                        "observation after receiving high-level Taste guidance."
+                        (
+                            "The research model discovered and wrote the submitted hypothesis; the "
+                            "controller only adjudicated whether to stop."
+                        )
+                        if is_submission
+                        else (
+                            "The research model chose concrete parameters and interpreted the "
+                            "observation after receiving high-level Taste guidance."
+                        )
                     ),
                     resolution="controlled",
                 ),
                 TasteEpisodeConfounder(
-                    confounder_id="later-trajectory-decisions",
-                    description=(
-                        "Later decisions determine the terminal score, which is retained only as "
-                        "context and is not assigned wholesale to this turn."
+                    confounder_id=(
+                        "objective-scorer" if is_submission else "later-trajectory-decisions"
                     ),
-                    resolution="partially-controlled",
+                    description=(
+                        (
+                            "The hidden objective scorer, not the controller, determines whether "
+                            "the submitted scientific law is correct."
+                        )
+                        if is_submission
+                        else (
+                            "Later decisions determine the terminal score, which is retained only "
+                            "as context and is not assigned wholesale to this turn."
+                        )
+                    ),
+                    resolution=("controlled" if is_submission else "partially-controlled"),
                 ),
             ),
             "missing_evidence_questions": (
-                "Do the retained observation and successor rationale support beneficial "
-                "local credit?",
-                "Would an available alternative have yielded stronger information at equal cost?",
+                (
+                    "Did the evidence-state and coverage gate justify STOP before scorer access?"
+                    if is_submission
+                    else (
+                        "Do the retained observation and successor rationale support beneficial "
+                        "local credit?"
+                    )
+                ),
+                (
+                    "Would another experiment have changed the objectively correct submission?"
+                    if is_submission
+                    else (
+                        "Would an available alternative have yielded stronger information at "
+                        "equal cost?"
+                    )
+                ),
             ),
         }
     )
