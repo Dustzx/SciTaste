@@ -94,6 +94,7 @@ def execute(args: argparse.Namespace):
 
     project_runtime = ProjectRuntime(outputs_root)
     project_root = project_runtime.projects_root / permit.project_id
+    run_root = project_root / "runs" / permit.run_id
     candidate_path = _bound_path(workspace, permit.candidate.locator)
     candidate = TasteEpisodeCandidate.model_validate_json(candidate_path.read_bytes(), strict=True)
     review_root = (
@@ -153,7 +154,7 @@ def execute(args: argparse.Namespace):
             material = build_ai_taste_attribution_review_material(
                 project_runtime,
                 candidate,
-                evidence_root=project_root,
+                evidence_root=run_root,
                 current_idea_revision=idea,
                 seed=panel_index - 1,
             )
@@ -188,7 +189,7 @@ def execute(args: argparse.Namespace):
                 reviewer_id=f"activation-{model_slug}-attribution",
                 role=TasteAttributionReviewRole.PRIMARY,
                 panel_contract=contract,
-                evidence_root=project_root,
+                evidence_root=run_root,
                 output_directory=output_dir.relative_to(project_root).as_posix(),
             )
             attribution_reviews.append(review)
@@ -197,7 +198,7 @@ def execute(args: argparse.Namespace):
         admission_report = inspect_taste_episode_admission(
             candidate,
             tuple(attribution_reviews),
-            evidence_root=project_root,
+            evidence_root=run_root,
             current_idea_revision=idea,
             ai_review_contract=contract,
             expected_ai_review_contract_sha256=authority_sha256,
@@ -209,7 +210,7 @@ def execute(args: argparse.Namespace):
                 candidate,
                 tuple(attribution_reviews),
                 admission_id=f"activation-{permit.ordinal:02d}-{candidate.candidate_id}",
-                evidence_root=project_root,
+                evidence_root=run_root,
                 current_idea_revision=idea,
                 ai_review_contract=contract,
                 expected_ai_review_contract_sha256=authority_sha256,
