@@ -1,0 +1,181 @@
+schema_version: "1.0"
+protocol_id: iclr2027-scitastebench-four-layer-v1
+project_id: scitaste-self-development
+target_venue: ICLR 2027
+paper_role: method-evaluation-instrument-not-a-standalone-benchmark-claim
+central_question: >-
+  Under matched information, model, tool, and resource budgets, does explicit
+  Scientific Taste turn grounded precedent and delayed outcomes into better
+  scientific decisions and objectively better autonomous-research progress?
+
+causal_chain:
+  - source-quality
+  - grounded-precedent-abstraction
+  - context-sensitive-decision
+  - reviewed-delayed-credit-update
+  - objective-research-progress
+  - reviewed-and-revised-research-package
+
+layers:
+  - layer_id: SA
+    name: source-and-abstraction
+    unit: source-group-grounded-decision-precedent
+    question: Does grounded decision structure add value beyond the same raw source bytes?
+    confirmatory_contrasts:
+      - quality-grounded-source-vs-prestige-only-source
+      - same-source-abstracted-taste-vs-token-matched-raw-source-rag
+    primary_endpoint: abstraction-value-gain
+    title_authority: mechanism-only
+  - layer_id: D
+    name: heldout-scientific-decision
+    unit: source-group-disjoint-outcome-blind-action-choice
+    question: Does applicable Taste reduce decision regret on unseen scientific states?
+    confirmatory_contrasts:
+      - decision-grounded-selection-vs-lexical-selection-from-the-same-pool
+      - matched-taste-vs-quality-and-token-matched-mismatched-taste
+      - decision-grounded-taste-vs-base
+    primary_endpoint: budgeted-decision-regret
+    title_authority: mechanism-only
+  - layer_id: L
+    name: lifecycle-learning
+    unit: source-group-bounded-trajectory-with-delayed-outcome
+    question: Does reviewed delayed credit improve later source-disjoint decisions?
+    confirmatory_contrasts:
+      - outcome-updated-policy-vs-no-update-policy
+      - outcome-updated-policy-vs-shuffled-credit-policy
+    diagnostic_contrasts:
+      - success-only-policy
+      - failure-only-policy
+    primary_endpoint: delayed-credit-learning-gain
+    title_authority: mechanism-only
+  - layer_id: P
+    name: complete-research-project
+    unit: idea-to-reviewed-and-revised-paper-trajectory
+    question: Does the behavior-changing Taste policy improve objective research progress?
+    confirmatory_contrasts:
+      - scitaste-native-vs-native-base
+    required_workloads:
+      - T0-training-free-research
+      - T1-training-based-research
+    external_objective_routes:
+      - newtonbench-training-free-development
+      - mlrc-bench-training-based-primary
+    package_quality_routes:
+      - mlr-bench-stagewise-and-end-to-end
+      - exp-bench-experiment-integrity
+    primary_endpoint: objective-research-progress-per-budget
+    title_authority: objective-heldout-result
+
+decision_context_families:
+  - problem-and-idea-value
+  - hypothesis-and-falsifiability
+  - experiment-design-and-confound-control
+  - evidence-interpretation-and-contradiction
+  - resource-allocation-pivot-continue-or-stop
+  - claim-calibration-and-review-closure
+
+taste_judgment_ontology:
+  version: scientific-taste-decision-families-v1
+  sha256: 834f70d9e745f582023685702772239a873feb184dc715f99904d7f52f44fe83
+  orthogonal_to_decision_context: true
+  families:
+    - scientific-value
+    - epistemic-discrimination
+    - empirical-diagnosticity
+    - adaptive-allocation
+    - inferential-discipline
+    - transfer-and-correction
+    - scientific-communication
+  reporting_rule: stratify-by-context-and-judgment-without-pooling-either-axis
+
+headline_metrics:
+  - metric_id: abstraction-value-gain
+    estimand: matched-abstracted-taste-minus-same-source-raw-rag
+    aggregation: paired-by-heldout-case-clustered-by-source-group
+  - metric_id: transfer-specificity-gap
+    estimand: matched-taste-minus-quality-token-matched-mismatched-taste
+    aggregation: paired-by-heldout-case-clustered-by-source-group
+  - metric_id: budgeted-decision-regret
+    estimand: optimal-action-utility-minus-selected-action-utility
+    required_utility_components: [scientific-outcome, information-gain, resource-cost, invalid-claim-risk]
+    aggregation: paired-by-heldout-case-clustered-by-source-group
+  - metric_id: delayed-credit-learning-gain
+    estimand: outcome-updated-minus-no-update-with-shuffled-credit-negative-control
+    aggregation: source-group-blocked-heldout-trajectory
+  - metric_id: objective-research-progress-per-budget
+    estimand: hidden-objective-gain-under-matched-token-time-api-and-compute-budgets
+    aggregation: task-seed-paired-with-task-clustered-uncertainty
+
+reliability_endpoints:
+  - invalid-or-fabricated-result-rate
+  - evidence-critical-review-concern-closure-rate
+  - unsupported-claim-rate
+  - calibrated-abstention-and-selective-risk
+  - resources-before-first-valid-signal
+
+causal_attribution:
+  required_mediation_path:
+    - taste-policy-enabled
+    - selected-action-changed
+    - executed-experiment-or-analysis-changed
+    - hidden-objective-changed
+  zero_behavior_change_rule: >-
+    A score difference cannot be attributed to Scientific Taste when the
+    registered Taste intervention produced no eligible action change.
+  failures_and_abstentions_retained: true
+  aggregate_score_across_layers: forbidden
+
+development_release:
+  release_id: scitastebench-four-layer-development-v1
+  evidence_role: pipeline-and-variance-development-not-formal-effectiveness
+  case_count: 36
+  cases_per_decision_context_family: 6
+  minimum_domain_count: 3
+  one_headline_case_per_source_group: true
+  reviewer_kind: ai
+  independent_primary_reviews_per_case: 2
+  disagreement_only_adjudicator: true
+  not_human_review: true
+  human_validity_claim_allowed: false
+  source_and_target_group_disjoint: true
+  target_outcomes_hidden_until_lock: true
+  title_claim_allowed: false
+
+formal_release:
+  minimum_case_floor_before_power_revision: 120
+  minimum_domain_count: 3
+  all_decision_context_families_required: true
+  all_taste_judgment_families_required: true
+  final_size_selected_by_source-disjoint-development-power-analysis: true
+  hidden_split_opened_after_protocol_and-model-freeze: true
+  self_development_cases_headline_eligible: false
+  ai_panel_is_proxy_not_expert: true
+  objective_P_layer_required_for_strong_title: true
+
+fairness_and_leakage:
+  fixed_within_contrast:
+    - model-and-serving-revision
+    - visible-source-bytes-and-context-token-budget
+    - candidate-action-set-and-order-counterbalance
+    - tools-repair-policy-and-resource-budget
+    - target-source-and-split
+  source_group_split_disjoint: true
+  generator_judge_identity_separation: true
+  labels_outcomes_and-attribution_never-model-visible: true
+  declared-and-reversed-order-are-repeated-measures: true
+  self_iteration_is-case-study-only: true
+
+current_inventory:
+  original_candidate_count: 273
+  original_source_group_count: 81
+  validation_reserve_candidate_count: 84
+  validation_reserve_source_group_count: 47
+  formally_admitted_case_count: 0
+  synthetic_v1_is_publication_evidence: false
+  current_24_target_pilot_covers_all_six_families: false
+
+execution_authority:
+  protocol_freeze_authorizes_model_calls: false
+  protocol_freeze_authorizes_api_spend: false
+  protocol_freeze_authorizes_gpu_work: false
+  protocol_freeze_authorizes_formal_split_access: false

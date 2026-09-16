@@ -11,6 +11,17 @@ Taste. It tests whether grounded decision experience improves scientific choices
 external suites such as MLRC-Bench separately test whether those choices produce
 objective research progress. Neither role can substitute for the other.
 
+The current ICLR design authority is the
+[`four-layer protocol`](research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md). It
+connects source and abstraction evidence (SA), held-out decisions (D), delayed
+credit learning (L), and complete externally scored projects (P). The layers
+retain separate endpoints rather than producing an opaque aggregate benchmark
+score. The first development release is 36 natural cases across six scientific
+decision-context families and all seven orthogonal Taste judgment families; the
+existing 24-target Track-A pilot covers only four legacy context families and
+therefore remains consumed development evidence rather than being silently
+promoted.
+
 The original natural construction pool contains 273 candidate review-to-revision
 episodes from 81 source groups: 196 ARIES candidates from 42 groups and 77 F1000
 candidates from 39 groups. Together they expose three observed domain or
@@ -93,6 +104,14 @@ Ranking correlation is explicitly unavailable because the v1 backend returns
 one selection from a pair rather than a complete ranking. Research-yield and
 matched-budget outcome measures belong to Phase 9 and are also marked
 unavailable instead of being inferred from preference judgments.
+
+For the current four-layer protocol these legacy metrics are diagnostic. The
+five registered paper endpoints are abstraction value gain, transfer
+specificity gap, budgeted decision regret, delayed-credit learning gain, and
+objective research progress per matched budget. In particular, an AI-panel
+preference cannot be relabelled as objective scientific progress, and a loaded
+Taste policy cannot receive causal credit unless it changes an eligible action
+that is carried through execution to a hidden outcome.
 
 ## Headline eligibility
 

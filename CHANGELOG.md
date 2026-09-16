@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-16 — SciTasteBench four-layer causal contract
+
+- Froze SA--D--L--P as the ICLR evaluation chain from grounded precedent to
+  externally scored complete research projects.
+- Registered five separate headline endpoints, including budgeted decision
+  regret and behavior-mediated objective progress, without an aggregate score.
+- Replaced Visual in the headline context population with resource allocation
+  and pivot/continue/stop decisions, kept those six lifecycle contexts distinct
+  from the existing seven-family Taste judgment ontology, and specified a
+  36-case natural development release before formal power analysis.
+- Kept AI review explicitly nonhuman and retained the existing 24-target pilot
+  as incomplete-family development evidence.
+
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning.
 

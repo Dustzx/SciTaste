@@ -196,7 +196,14 @@ adjudication, and materializes a pair only if the production retriever passes al
 parity and contamination checks. This is protocol and product readiness, not a
 claim that the v11 task-specific sources or reviews have been collected.
 
-## Track A: decision-level scientific taste
+## Track A: four-layer Scientific Taste evidence
+
+The current design is frozen in
+[`SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md`](research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md).
+SciTasteBench no longer denotes only a flat decision suite. SA tests source and
+abstraction, D tests held-out decisions, L tests reviewed delayed credit, and P
+bridges to complete externally scored projects. SA--L are mechanism evidence;
+P owns objective title authority. Their endpoints are never pooled.
 
 SciTasteBench v2 must use held-out, source-disjoint cases derived from real
 research decisions rather than only authored synthetic prompts. It must cover
@@ -213,14 +220,28 @@ The design floor is 120 independently scored cases spanning at least three
 scientific/ML domains, with the final sample size set by a pilot-based power
 analysis before the formal split is opened. Cases derived from the same source
 paper, repository, or trajectory remain in one split to prevent leakage.
-Every formal case receives at least two independent expert labels; disagreement
-is retained and adjudicated rather than replaced by model consensus.
+Under the active deadline route, every development and formal case receives two
+identity-distinct AI-panel labels and disagreement-only third-model
+adjudication. These are explicitly nonhuman proxy labels. The historical human
+estimand remains a possible later validation study, but absence of human
+staffing does not block the active route and AI output is never described as
+expert agreement.
 
-Primary mechanism metric: expert-aligned action selection under the fixed action
-set. Secondary metrics: calibration, selective accuracy/abstention, wrong-level
-decision rate, evidence localization, and budget-weighted decision utility.
+The D-layer primary metric is budgeted decision regret under the fixed action
+set. The complete confirmatory set is abstraction value gain, transfer
+specificity gap, budgeted decision regret, delayed-credit learning gain, and
+objective research progress per matched budget. Calibration, selective
+accuracy/abstention, wrong-level decision rate, evidence localization, and
+AI-panel preference are diagnostics.
 Random or label-frequency policies and shuffled/mismatched Taste retrieval form
 negative controls so that gains cannot be attributed merely to extra context.
+
+Before the formal split, a 36-case natural development release covers six cases
+in each of six decision-context families, all seven orthogonal Scientific Taste
+judgment families, and at least three domains. It exists to
+run the complete SA--D--L path and estimate variance; it is not formal
+effectiveness evidence. The current 24-target pilot covers only four legacy
+families and cannot be promoted to this release.
 
 The executable curation contract is now implemented. It keeps preferred actions
 out of natural case records, admits only conflict-cleared human labels, preserves
