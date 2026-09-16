@@ -135,6 +135,18 @@ def execute(args: argparse.Namespace):
             judge_seed=task.judge_seed,
             taste_prompt_version="interactive-development-taste-v1",
             taste_seed=task.taste_seed,
+            episode_sampling_rule=(
+                "preassigned-action-stratum-v1"
+                if manifest.schema_version == "1.1"
+                else "earliest-executed-nonterminal-after-observation"
+            ),
+            episode_target_action=task.episode_target_action,
+            episode_target_turn=task.episode_target_turn,
+            candidate_credit_projection=(
+                "allocation-local-v5"
+                if manifest.schema_version == "1.1"
+                else "action-local-scientific-v4"
+            ),
             python_executable=sys.executable,
             bubblewrap_executable=shutil.which("bwrap") or "/usr/bin/bwrap",
             code_timeout_seconds=8,

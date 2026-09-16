@@ -1,0 +1,32 @@
+schema_version: "1.0"
+curation_id: adaptive-allocation-action-diverse-v2
+project_id: scitaste-self-development
+purpose: >-
+  Construct a source-unique, action-diverse development corpus from already
+  prospectively locked NewtonBench decisions. This corpus may define a fixed
+  Taste intervention but cannot establish its effectiveness.
+selection_timing: retrospective-development-only
+source_decisions_prospectively_locked: true
+selection_uses_terminal_metric_or_credit: false
+one_episode_per_source_group: true
+formal_evidence: false
+effect_claim_authorized: false
+selection_algorithm: balanced-action-feasible-hash-v1
+selection_salt: scitaste-adaptive-allocation-action-diverse-v2
+quotas:
+  - action_type: PROBE
+    count: 4
+  - action_type: ANALYZE
+    count: 4
+sources:
+  - run_id: 2026-09-16__zhipu-glm53__newton-coulomb-activation-v1__seed-101
+  - run_id: 2026-09-16__zhipu-glm53__newton-magnetic-activation-v1__seed-103
+  - run_id: 2026-09-16__zhipu-glm53__newton-snell-activation-v1__seed-107
+  - run_id: 2026-09-16__zhipu-glm53__newton-radioactive-activation-v1__seed-109
+  - run_id: 2026-09-16__zhipu-glm53__newton-underdamped-activation-v1__seed-113
+  - run_id: 2026-09-16__zhipu-glm53__newton-malus-activation-v1__seed-127
+  - run_id: 2026-09-16__zhipu-glm53__newton-sound-activation-v1__seed-131
+  - run_id: 2026-09-16__zhipu-glm53__newton-hooke-activation-v1__seed-137
+  - run_id: 2026-09-16__zhipu-glm53__newton-be-distribution-activation-v1__seed-139
+projection_stage: taste_episodes_action_diverse_v2
+credit_projection: action-local-scientific-v4

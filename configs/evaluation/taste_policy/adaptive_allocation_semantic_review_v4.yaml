@@ -1,0 +1,60 @@
+schema_version: "1.0"
+review_campaign_id: adaptive-allocation-semantic-review-v4
+project_id: scitaste-self-development
+purpose: >-
+  Continue the bounded adaptive-allocation semantic diagnosis after retaining
+  the v3 transport truncation, using a long-output DeepSeek envelope and a
+  previously unattempted EXPERIMENT candidate. This retrospective campaign
+  cannot activate a policy or support an effect claim.
+formal_evidence: false
+human_review_claimed: false
+effect_claim_authorized: false
+curation_plan:
+  locator: outputs/projects/scitaste-self-development/evaluations/taste-policy-development/adaptive-allocation-semantic-v3/CURATION_PLAN.json
+  sha256: 12eca09487ecd0bce94b55bef1edcd5cf1aea5f92c8d617f04af13b3fa2cc4e7
+  artifact_sha256: 135f9650816518ef53020a02d0909e200888ad0171b5852d2552611182419e10
+curation_receipt:
+  locator: outputs/projects/scitaste-self-development/evaluations/taste-policy-development/adaptive-allocation-semantic-v3/CURATION_RECEIPT.json
+  sha256: 29dbc7f9462e889f756cf18e76d9b9e80032b75b7472f58b967d7a2231117795
+  artifact_sha256: 1051146e53b086f0ff81b2f966447c69422cf5506695e943b62696979f54f72b
+profile_set:
+  locator: configs/model_nodes/runtime_profiles.taste_attribution_strong_closed_v4.yaml
+  sha256: 8b0bedcda3fe3303ad92be032e05a7d9e9f88a07b9cc5aac9958730f20cb2260
+reviewers:
+  - reviewer_id: deepseek-v41flash
+    profile_id: deepseek-v41flash-taste-review-v3
+    provider: deepseek
+    model: deepseek-flash
+    backend:
+      locator: configs/model_nodes/deepseek_v41flash.taste_review_long_live_20260916.yaml
+      sha256: 4117ffa7e712377215ca2c051a1b166f183c7cb61317fdc0cea7098ac2a00eb9
+  - reviewer_id: bailian-qwen38max
+    profile_id: bailian-qwen38max-taste-review
+    provider: bailian
+    model: qwen3.8-max
+    backend:
+      locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+      sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+review_contract:
+  locator: configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml
+  sha256: 131e7885893710dff0271a690444e081c43b297915f770e4bf1e5e3f65030fa2
+review_authority_package:
+  locator: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
+  sha256: 02d5c550522d2c830cbc9476bdc8ae903de60047af403fab8ddebc428884a2d7
+candidate_count: 7
+attribution_seed: 0
+evidence_projection_mode: interactive-trajectory-compact-v1
+maximum_generations_per_candidate: 4
+maximum_provider_retries: 0
+maximum_total_generations: 8
+maximum_total_tokens: 500000
+maximum_cost_usd: 25.0
+output_stage: taste_reviews_allocation_semantic_v4
+stop_rules:
+  - Review ordinal 6 EXPERIMENT before ordinal 1 STOP.
+  - Stop if the EXPERIMENT panel rejects or disagrees on adaptive allocation.
+  - Preserve the v3 truncation as a separate failed attempt; do not replace it.
+  - Retain every attempted generation and never replace a rejected candidate.
+  - Use the identical review packet and sampling seed for both attribution reviewers.
+  - Do not adjudicate reviewer disagreement inside this development campaign.
+  - Do not activate a policy or make an effect claim from retrospective qualification.

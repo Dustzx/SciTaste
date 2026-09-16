@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-16 — Prospective adaptive-allocation activation v2
+
+- Separated T0/T1 research workloads from A0/A1 Taste-controller adaptation;
+  SciTaste does not require a trained 7B--9B LLM as its core controller.
+- Added prospectively assigned EXPERIMENT, REFINE, and first-approved-STOP
+  strata with allocation-local credit and no retrospective turn harvesting.
+- Added fresh NewtonBench task identities and a versioned source-registry
+  extension path for the activation cohort.
+- Replaced generic small-model policy admission with an identity-distinct
+  DeepSeek-V4.1-Flash/Qwen3.8-Max live panel and separate review API usage
+  accounting.
+- Preserved the earlier transport truncation and retrospective semantic
+  diagnostics as development evidence rather than silently retrying or treating
+  them as policy/effect evidence.
+
 ## 2026-09-16 — SciTasteBench four-layer causal contract
 
 - Froze SA--D--L--P as the ICLR evaluation chain from grounded precedent to

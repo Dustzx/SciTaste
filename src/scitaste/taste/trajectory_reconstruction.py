@@ -959,6 +959,7 @@ def compile_prospective_taste_episode_v2(
     current_idea_revision: ProjectIdeaRevisionBinding,
     expected_project_revision: int,
     output: str | Path,
+    historical_source_projection: bool = False,
 ) -> TasteEpisodeCandidate:
     """Compile attribution against a two-phase decision/outcome foundation."""
 
@@ -1005,9 +1006,19 @@ def compile_prospective_taste_episode_v2(
 
     snapshot = runtime.open(plan.source_project_id)
     if snapshot.revision != expected_project_revision:
-        raise ValueError(
-            f"stale project revision {expected_project_revision}; current is {snapshot.revision}"
-        )
+        if not historical_source_projection:
+            raise ValueError(
+                f"stale project revision {expected_project_revision}; current is "
+                f"{snapshot.revision}"
+            )
+        if (
+            expected_project_revision != plan.observed_project_revision
+            or lock.observed_project_revision != plan.observed_project_revision
+            or lock.observed_project_snapshot_sha256
+            != plan.observed_project_snapshot_sha256
+            or plan.source_run_id not in {item.run_id for item in snapshot.manifest.runs}
+        ):
+            raise ValueError("historical projection source identity differs from its frozen plan")
     run_root = runtime.projects_root / plan.source_project_id / "runs" / plan.source_run_id
     locked_decision = _load_and_verify_locked_predecision(run_root, lock)
     decision = projection.completed_decision

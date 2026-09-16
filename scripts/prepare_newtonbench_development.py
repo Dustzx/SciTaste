@@ -171,8 +171,20 @@ def prepare(args: argparse.Namespace) -> tuple[InteractiveTasteDevelopmentProtoc
             if module.__file__ is not None
         }
     )
+    sampling_rule = getattr(
+        args,
+        "episode_sampling_rule",
+        "earliest-executed-nonterminal-after-observation",
+    )
+    target_action = getattr(args, "episode_target_action", None)
+    target_turn = getattr(args, "episode_target_turn", None)
+    credit_projection = getattr(
+        args,
+        "candidate_credit_projection",
+        "action-local-scientific-v4",
+    )
     protocol = InteractiveTasteDevelopmentProtocol.create(
-        schema_version="1.1",
+        schema_version="1.2" if sampling_rule == "preassigned-action-stratum-v1" else "1.1",
         protocol_id=args.protocol_id,
         project_id=args.project_id,
         benchmark_id="newtonbench",
@@ -210,9 +222,11 @@ def prepare(args: argparse.Namespace) -> tuple[InteractiveTasteDevelopmentProtoc
         ),
         idea_scientific_contract_sha256=idea_scientific_contract_sha256(idea),
         idea_revision_binding_sha256=idea.binding_sha256,
-        episode_sampling_rule="earliest-executed-nonterminal-after-observation",
+        episode_sampling_rule=sampling_rule,
         maximum_episode_candidates=1,
-        candidate_credit_projection="action-local-scientific-v4",
+        candidate_credit_projection=credit_projection,
+        episode_target_action=target_action,
+        episode_target_turn=target_turn,
     )
     protocol_path = stage_root / "PROTOCOL.json"
     save_interactive_taste_development_protocol(protocol, protocol_path)
@@ -260,6 +274,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--judge-seed", type=int, default=0)
     parser.add_argument("--taste-prompt-version", default="interactive-development-taste-v1")
     parser.add_argument("--taste-seed", type=int, default=0)
+    parser.add_argument(
+        "--episode-sampling-rule",
+        choices=(
+            "earliest-executed-nonterminal-after-observation",
+            "preassigned-action-stratum-v1",
+        ),
+        default="earliest-executed-nonterminal-after-observation",
+    )
+    parser.add_argument(
+        "--episode-target-action",
+        choices=("EXPERIMENT", "REFINE", "STOP"),
+    )
+    parser.add_argument("--episode-target-turn", type=int)
+    parser.add_argument(
+        "--candidate-credit-projection",
+        choices=("action-local-scientific-v4", "allocation-local-v5"),
+        default="action-local-scientific-v4",
+    )
     parser.add_argument("--python-executable", default="/usr/bin/python3.12")
     parser.add_argument("--bubblewrap-executable", default="/usr/bin/bwrap")
     parser.add_argument("--code-timeout-seconds", type=int, default=8)

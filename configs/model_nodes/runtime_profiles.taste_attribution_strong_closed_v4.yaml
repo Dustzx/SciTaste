@@ -1,0 +1,14 @@
+# Identity-distinct strong closed-model panel with a long-output DeepSeek
+# envelope for reasoning-heavy structured scientific review. The trajectory
+# producer remains excluded, and this panel does not represent human review.
+schema_version: "1.0"
+profile_set_id: taste-attribution-strong-closed-v4
+profile_set_version: 4.0.0
+live_enabled: true
+profiles:
+  - path: profile_deepseek_v41flash_taste_review_v3.yaml
+    sha256: 20c8d6b3ce74059b592f5c2a0d719b3dd51e7d60664a32dffd49db24ba9d67ef
+    profile_sha256: d52e237fabfd06b7b50e47e05caf8abaae0635bad266498702433753f658d583
+  - path: profile_bailian_qwen38max_taste_review_v1.yaml
+    sha256: a89a76ee0460ca16ddf9e8b5bcec4983a3d278003cf0ced3e30e13aa72f2a3e9
+    profile_sha256: f33dbb8574d4228ab6df1c34161db65e49526ae43776dea878cd6691ae89ae36

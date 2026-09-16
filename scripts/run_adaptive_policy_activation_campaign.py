@@ -44,17 +44,18 @@ from scitaste.evaluation.adaptive_policy_e2_handoff import (
 
 
 def execute(args: argparse.Namespace) -> dict[str, object]:
-    if not args.allow_live or not args.allow_local:
-        raise ValueError(
-            "campaign execution requires both --allow-live and --allow-local; "
-            "approval alone never launches API or GPU work"
-        )
     if args.max_actions is not None and args.max_actions < 1:
         raise ValueError("--max-actions must be positive")
 
     workspace = args.workspace_root.resolve(strict=True)
     outputs_root = args.outputs_root.resolve(strict=True)
     manifest, _ = load_adaptive_policy_activation_manifest(args.manifest)
+    review_mode = manifest.review_and_admission.attribution_primary_models[0].execution_mode
+    if not args.allow_live or (review_mode == "local" and not args.allow_local):
+        required = "--allow-live and --allow-local" if review_mode == "local" else "--allow-live"
+        raise ValueError(
+            f"campaign execution requires {required}; approval alone never launches work"
+        )
     plan = load_adaptive_policy_activation_no_run_plan(args.plan)
     approval = load_adaptive_policy_activation_approval(args.approval)
     initial = load_adaptive_policy_activation_state(args.state)
@@ -163,7 +164,8 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
                         state_output=state_output,
                         workspace_root=workspace,
                         outputs_root=outputs_root,
-                        allow_local=True,
+                        allow_local=review_mode == "local",
+                        allow_live=review_mode == "live",
                     )
                 )
             state = journal.adopt_runner_state(state_output)
@@ -228,6 +230,12 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
         "consumed_api_tokens": state.consumed_api_tokens,
         "consumed_local_review_generations": state.consumed_local_review_generations,
         "consumed_local_review_gpu_hours": state.consumed_local_review_gpu_hours,
+        "consumed_live_review_generations": state.consumed_live_review_generations,
+        "consumed_live_review_tokens": (
+            state.consumed_live_review_input_tokens
+            + state.consumed_live_review_output_tokens
+        ),
+        "consumed_live_review_cost_usd": state.consumed_live_review_cost_usd,
         "journal_root": journal_root.relative_to(workspace).as_posix(),
         "e2_handoff": handoff,
         "formal_effect_claim_established": False,

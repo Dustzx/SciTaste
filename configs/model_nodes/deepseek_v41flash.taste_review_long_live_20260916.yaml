@@ -1,0 +1,22 @@
+provider: deepseek
+base_url: https://api.deepseek.com
+model: deepseek-flash
+api_key_env: DEEPSEEK_API_KEY
+live_enabled: true
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 32768
+pricing_confirmed: true
+pricing:
+  currency: USD
+  input_usd_per_million_tokens: 0.30
+  cached_input_usd_per_million_tokens: 0.006
+  output_usd_per_million_tokens: 1.20
+  captured_at: 2026-09-16T00:00:00+08:00
+  source: https://api-docs.deepseek.com/quick_start/pricing
+unpriced_engineering_probe: false
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled
+  reasoning_effort: high

@@ -1,0 +1,249 @@
+schema_version: "1.1"
+campaign_id: adaptive-allocation-activation-v2
+project_id: scitaste-self-development
+purpose: >-
+  Prospectively activate the adaptive-allocation Taste head from fresh,
+  action-stratified NewtonBench development trajectories, independently
+  reviewed by two strong closed models before any E2 Native/Base effect run.
+formal_evidence: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_benchmark_execution: false
+
+predecessor:
+  policy_id: scitaste-self-development-policy-v6
+  family_policy:
+    locator: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-refresh-v6/POLICY.json
+    sha256: 76691023a6f54c50b90e543209d2128268c2d1ad128018786cea8570eb514444
+  readiness:
+    locator: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-refresh-v6/READINESS.json
+    sha256: a7f3dac361cf6d7055077f6b7ea2dca3c828b66d808942b6751a3c873d4b42ec
+  decision_family: adaptive-allocation
+  training_episode_count: 0
+  training_source_group_count: 0
+  maximum_feature_support: 0.0
+  minimum_feature_support: 3.0
+
+frozen_execution:
+  program:
+    locator: configs/evaluation/programs/newtonbench_taste_development_v9.yaml
+    sha256: e874d9122f487a906e22321765f53706d7fc634b4b8dc71554d21c42b2b1ea75
+  limits:
+    locator: configs/evaluation/newtonbench/development_limits_v1.json
+    sha256: c506b04d3e39810ba65494e00d12f31f2b18679fdb861c51f9907c6bde46cccb
+  source_identity_registry:
+    locator: outputs/projects/scitaste-self-development/evaluations/source-identities/scitastebench-source-identities-v4/REGISTRY.json
+    sha256: 2f63e4398f5b25b4633b987ea41f54fe2fb03dfe9b9b1ca173f031034595e175
+    registry_sha256: 29b27b44a21e306181d0162ffa1a8553239a1b37beffe16c150c3be362f57e6a
+  checkout:
+    locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout
+    repository_commit: 912a4ba5f4356ddd06acc16e44460ca30be4abc2
+  agent_and_symbolic_judge:
+    provider_id: zhipu-direct
+    model_id: glm-5.3-flash
+    backend:
+      locator: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v5.yaml
+      sha256: 246a49ea12aedca85a4b6d3fe998eafb250eda681b136d768e3bf24d62e0ce3a
+    maximum_calls_per_task: 9
+    maximum_total_tokens_per_task: 120000
+    maximum_output_tokens_per_call: 32768
+    provider_retries: 0
+  tasks:
+    - task_id: coulomb-easy-v1-seed-3101
+      locator: configs/evaluation/newtonbench/development_task_coulomb_v2.json
+      sha256: 9acbb932583c22bf502de65f7cf35fc58a55e1eb5112bf0832a5c8d638366ce2
+      source_group_id: benchmark-task-5e96583e33d39cd680ea4761dd301bfe52b1a1b9e58797893b519160a9d8bcf1
+      run_id: 2026-09-16__zhipu-glm53__newton-coulomb-activation-v2__seed-4101
+      protocol_id: newton-coulomb-activation-v2
+      agent_seed: 4101
+      judge_seed: 5101
+      taste_seed: 6101
+      episode_target_action: EXPERIMENT
+      episode_target_turn: 3
+    - task_id: snell-hard-v0-seed-3107
+      locator: configs/evaluation/newtonbench/development_task_snell_v2.json
+      sha256: daf7bd14615249974feab3661c8df5e8830a6b2bbe11dde0100edbee1d99339a
+      source_group_id: benchmark-task-75fb8936f1e8314c683f8c69dd39dd9f40792d65169b3c415e723bc51cb0dda4
+      run_id: 2026-09-16__zhipu-glm53__newton-snell-activation-v2__seed-4107
+      protocol_id: newton-snell-activation-v2
+      agent_seed: 4107
+      judge_seed: 5107
+      taste_seed: 6107
+      episode_target_action: EXPERIMENT
+      episode_target_turn: 3
+    - task_id: sound-easy-v0-seed-3131
+      locator: configs/evaluation/newtonbench/development_task_sound_v2.json
+      sha256: 5fa26865307245020a2a13ee3dfffb41236b26a162db85685f105ae264dccce0
+      source_group_id: benchmark-task-d652c4f3992ee1055c03b6aac3bcc69880435d3d5d33869625e261cfd40aec7a
+      run_id: 2026-09-16__zhipu-glm53__newton-sound-activation-v2__seed-4131
+      protocol_id: newton-sound-activation-v2
+      agent_seed: 4131
+      judge_seed: 5131
+      taste_seed: 6131
+      episode_target_action: EXPERIMENT
+      episode_target_turn: 3
+    - task_id: magnetic-medium-v2-seed-3103
+      locator: configs/evaluation/newtonbench/development_task_magnetic_v2.json
+      sha256: 1edf6db15dcd8ba56726285d2711ae8b8a9a8adc2e7342fac44a2064b42ef13d
+      source_group_id: benchmark-task-d76dda60d9fbe2b60a62e5a924349b0b88057c367558f257b786fdd8a0210131
+      run_id: 2026-09-16__zhipu-glm53__newton-magnetic-activation-v2__seed-4103
+      protocol_id: newton-magnetic-activation-v2
+      agent_seed: 4103
+      judge_seed: 5103
+      taste_seed: 6103
+      episode_target_action: REFINE
+      episode_target_turn: 4
+    - task_id: radioactive-easy-v2-seed-3109
+      locator: configs/evaluation/newtonbench/development_task_radioactive_v2.json
+      sha256: 4e024e52ca5aadc8aea909d7c646671313926bd31e01e99fa02c7de9c280b4ea
+      source_group_id: benchmark-task-1745f0205245c779b057f2833808f3a2490fea07b93bbcc22f363346198d5bc3
+      run_id: 2026-09-16__zhipu-glm53__newton-radioactive-activation-v2__seed-4109
+      protocol_id: newton-radioactive-activation-v2
+      agent_seed: 4109
+      judge_seed: 5109
+      taste_seed: 6109
+      episode_target_action: REFINE
+      episode_target_turn: 4
+    - task_id: hooke-medium-v1-seed-3137
+      locator: configs/evaluation/newtonbench/development_task_hooke_v2.json
+      sha256: 0819a147db99ca8e061b13901aabf520e3896ba8359fa784486e782f88343f4f
+      source_group_id: benchmark-task-9910726527be7633b66dddeb160b34d2c2b2a4585307a6796010a670acdf5a83
+      run_id: 2026-09-16__zhipu-glm53__newton-hooke-activation-v2__seed-4137
+      protocol_id: newton-hooke-activation-v2
+      agent_seed: 4137
+      judge_seed: 5137
+      taste_seed: 6137
+      episode_target_action: REFINE
+      episode_target_turn: 4
+    - task_id: underdamped-medium-v0-seed-3113
+      locator: configs/evaluation/newtonbench/development_task_underdamped_v2.json
+      sha256: 309c109bbe22a3689a4f4cfe6b36c2b0aab82189be8def63cf03d756445b6a73
+      source_group_id: benchmark-task-bc038775ff06545c90cfc8ba6520a84493703f2d474173214f8bd5eca1dadc2c
+      run_id: 2026-09-16__zhipu-glm53__newton-underdamped-activation-v2__seed-4113
+      protocol_id: newton-underdamped-activation-v2
+      agent_seed: 4113
+      judge_seed: 5113
+      taste_seed: 6113
+      episode_target_action: STOP
+    - task_id: malus-hard-v1-seed-3127
+      locator: configs/evaluation/newtonbench/development_task_malus_v2.json
+      sha256: 4852f2ce9f323918793d4ff90ebf99cb0547ea5cd5336e8137e3725520b8f0f3
+      source_group_id: benchmark-task-579b462605d0caffeafe3d2943a47d5e2935de9373cef8798f10dbbf4a4f65e1
+      run_id: 2026-09-16__zhipu-glm53__newton-malus-activation-v2__seed-4127
+      protocol_id: newton-malus-activation-v2
+      agent_seed: 4127
+      judge_seed: 5127
+      taste_seed: 6127
+      episode_target_action: STOP
+    - task_id: be-distribution-hard-v2-seed-3139
+      locator: configs/evaluation/newtonbench/development_task_be_distribution_v2.json
+      sha256: 0f95ad30092da03abb7a91195afd8b44df2d7b63299e796c114b5757269a4bd8
+      source_group_id: benchmark-task-57f2f251395eb002ee55df6270ff3550ac3946fd7d2e46305befa20eedb6dca1
+      run_id: 2026-09-16__zhipu-glm53__newton-be-distribution-activation-v2__seed-4139
+      protocol_id: newton-be-distribution-activation-v2
+      agent_seed: 4139
+      judge_seed: 5139
+      taste_seed: 6139
+      episode_target_action: STOP
+
+episode_sampling:
+  unit: one-candidate-per-benchmark-task-source-group
+  rule: preassigned-action-stratum-at-fixed-turn-or-first-approved-stop
+  rule_frozen_before_execution: true
+  terminal_stop_is_not_substituted_when_no-candidate-qualifies: true
+  failures_and_zero-score-trajectories_retained: true
+  no_selection_by_terminal_score_or-credit-direction: true
+
+review_and_admission:
+  attribution_primary_models:
+    - model_id: DeepSeek-V4.1-Flash
+      runtime_model_id: deepseek-flash
+      execution_mode: live
+      backend:
+        locator: configs/model_nodes/deepseek_v41flash.taste_review_long_live_20260916.yaml
+        sha256: 4117ffa7e712377215ca2c051a1b166f183c7cb61317fdc0cea7098ac2a00eb9
+      profile_set:
+        locator: configs/model_nodes/runtime_profiles.taste_attribution_strong_closed_v4.yaml
+        sha256: 8b0bedcda3fe3303ad92be032e05a7d9e9f88a07b9cc5aac9958730f20cb2260
+      profile_id: deepseek-v41flash-taste-review-v3
+    - model_id: Qwen3.8-Max
+      runtime_model_id: qwen3.8-max
+      execution_mode: live
+      backend:
+        locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+        sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+      profile_set:
+        locator: configs/model_nodes/runtime_profiles.taste_attribution_strong_closed_v4.yaml
+        sha256: 8b0bedcda3fe3303ad92be032e05a7d9e9f88a07b9cc5aac9958730f20cb2260
+      profile_id: bailian-qwen38max-taste-review
+  family_primary_models: [DeepSeek-V4.1-Flash, Qwen3.8-Max]
+  review_contract:
+    locator: configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml
+    sha256: 131e7885893710dff0271a690444e081c43b297915f770e4bf1e5e3f65030fa2
+  review_authority_package:
+    locator: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
+    sha256: 02d5c550522d2c830cbc9476bdc8ae903de60047af403fab8ddebc428884a2d7
+  required_family: adaptive-allocation
+  family_assignment_outcome_blind: true
+  non_adaptive_assignments_retained_but_excluded_from_adaptive_head: true
+  no_manual_family_override: true
+  maximum_review_generations_per_qualifying_task: 4
+  maximum_retries_per_generation: 0
+
+policy_refresh:
+  successor_policy_id: scitaste-self-development-policy-v7
+  update_mode: outcome-updated
+  minimum_feature_support: 3.0
+  allow_cross_domain: true
+  rationale_for_cross_domain: >-
+    H4 tests whether prospectively assigned state-conditioned allocation learned
+    on source-disjoint NewtonBench development trajectories transfers to MLRC;
+    target-domain behavior must still pass the frozen outcome-blind state probe.
+  require_schema_version: "1.5"
+  require_ai_review_only: true
+  require_at_least_two_supported_action_types: true
+  lowering_support_threshold_for_activation_forbidden: true
+
+activation_gate:
+  target_e2_manifest_id: mlrc-perception-native-pair-e2-v5
+  target_e2_manifest:
+    locator: configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v5.yaml
+    sha256: d7c9b2c70766d0ce415db20b7ff6cd67e3a02d07c2700d4742ee501cf38a462f
+  target_domain: mlrc-bench
+  target_venue: ICLR 2027
+  state_probe_seed: 2301
+  state_probe_maximum_failed_experiments: 2
+  state_probe_maximum_experiments: 5
+  state_probe_research_direction: >-
+    Improve a frozen MLRC Perception benchmark task under identical
+    candidate-action and resource constraints.
+  required:
+    - adaptive-family-support-sufficient
+    - adaptive-head-h4-eligible
+    - evaluation-source-groups-disjoint
+    - outcome-blind-state-probe-treatment-active
+    - outcome-blind-state-probe-feedback-sensitive
+  formal_effect_claim_established: false
+
+resource_ceiling:
+  trajectory_count: 9
+  api_calls: 81
+  api_total_tokens: 1080000
+  api_provider_retries: 0
+  local_review_generations: 0
+  local_review_gpu_hours: 0.0
+  live_review_generations: 36
+  live_review_total_tokens: 1200000
+  live_review_cost_usd: 50.0
+  task_gpu_hours: 0.0
+  maximum_new_disk_bytes: 2147483648
+  downloads_required: false
+
+stop_rules:
+  - Complete all nine frozen task attempts before reviewing any candidate.
+  - Retain zero-candidate, failed, and zero-score trajectories without replacement.
+  - Select only the action stratum assigned before execution; never harvest another turn.
+  - Stop the affected generation on provider drift, malformed output, or any retry request.
+  - Do not admit an episode without two independent runtime-bound attribution reviews.
+  - Do not route an episode into adaptive-allocation without two outcome-blind family reviews.
+  - Do not launch E2 until the successor head passes the target-domain state probe.

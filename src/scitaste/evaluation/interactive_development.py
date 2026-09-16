@@ -80,7 +80,7 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     protocol_id: str
     project_id: str
     benchmark_id: str
@@ -117,12 +117,16 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
     episode_sampling_rule: Literal[
         "all-compliant-turns",
         "earliest-executed-nonterminal-after-observation",
+        "preassigned-action-stratum-v1",
     ] = "all-compliant-turns"
     maximum_episode_candidates: int = Field(default=20, ge=1, le=20)
     candidate_credit_projection: Literal[
         "shared-terminal-v1",
         "action-local-scientific-v4",
+        "allocation-local-v5",
     ] = "shared-terminal-v1"
+    episode_target_action: Literal["EXPERIMENT", "REFINE", "STOP"] | None = None
+    episode_target_turn: int | None = Field(default=None, ge=2, le=20)
     protocol_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -151,17 +155,41 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
             "episode_sampling_rule",
             "maximum_episode_candidates",
             "candidate_credit_projection",
+            "episode_target_action",
+            "episode_target_turn",
         }
         if self.schema_version == "1.0":
             excluded.update(sampling_fields - self.model_fields_set)
+        elif self.schema_version == "1.1":
+            if (
+                self.episode_sampling_rule
+                != "earliest-executed-nonterminal-after-observation"
+                or self.maximum_episode_candidates != 1
+                or self.candidate_credit_projection != "action-local-scientific-v4"
+                or self.episode_target_action is not None
+                or self.episode_target_turn is not None
+            ):
+                raise ValueError(
+                    "interactive development v1.1 requires one outcome-independent "
+                    "post-observation action-local candidate"
+                )
         elif (
-            self.episode_sampling_rule != "earliest-executed-nonterminal-after-observation"
+            self.episode_sampling_rule != "preassigned-action-stratum-v1"
             or self.maximum_episode_candidates != 1
-            or self.candidate_credit_projection != "action-local-scientific-v4"
+            or self.candidate_credit_projection != "allocation-local-v5"
+            or self.episode_target_action is None
+            or (
+                self.episode_target_action == "STOP"
+                and self.episode_target_turn is not None
+            )
+            or (
+                self.episode_target_action != "STOP"
+                and self.episode_target_turn is None
+            )
         ):
             raise ValueError(
-                "interactive development v1.1 requires one outcome-independent "
-                "post-observation action-local candidate"
+                "interactive development v1.2 requires one prospectively assigned "
+                "allocation-local action stratum"
             )
         expected = content_sha256(self.model_dump(mode="json", exclude=excluded))
         if self.protocol_sha256 != expected:
@@ -193,6 +221,8 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
                     "episode_sampling_rule",
                     "maximum_episode_candidates",
                     "candidate_credit_projection",
+                    "episode_target_action",
+                    "episode_target_turn",
                 }
                 - values.keys()
             )
@@ -521,6 +551,13 @@ def finalize_interactive_development_episodes(
     lock_paths: tuple[str | Path, ...],
     receipt_path: str | Path,
     output_root: str | Path,
+    curated_turn: int | None = None,
+    historical_source_projection: bool = False,
+    curated_credit_projection: Literal[
+        "action-local-scientific-v4",
+        "allocation-local-v5",
+    ]
+    | None = None,
 ) -> InteractiveDevelopmentEpisodeBatch:
     """Join delayed run evidence without granting review or policy authority."""
 
@@ -561,7 +598,16 @@ def finalize_interactive_development_episodes(
         "terminal_error": receipt.terminal_error,
         "receipt_sha256": receipt.receipt_sha256,
     }
-    selected_lock_paths = _selected_development_lock_paths(protocol, receipt, lock_paths)
+    if curated_turn is None:
+        selected_lock_paths = _selected_development_lock_paths(protocol, receipt, lock_paths)
+    else:
+        if not historical_source_projection:
+            raise ValueError("curated turn requires an explicit historical source projection")
+        if not 1 <= curated_turn <= len(receipt.turns):
+            raise ValueError("curated turn is absent from the terminal receipt")
+        selected_lock_paths = (lock_paths[curated_turn - 1],)
+    if curated_credit_projection is not None and curated_turn is None:
+        raise ValueError("curated credit projection requires an explicit curated turn")
     items: list[InteractiveDevelopmentEpisodeItem] = []
     for lock_path in selected_lock_paths:
         lock_source = Path(lock_path).expanduser().resolve()
@@ -726,17 +772,28 @@ def finalize_interactive_development_episodes(
             current_idea_revision=current_idea_revision,
             expected_project_revision=expected_project_revision,
             output=candidate_path,
+            historical_source_projection=historical_source_projection,
         )
-        if (
-            protocol.candidate_credit_projection == "action-local-scientific-v4"
-            and _candidate_has_observed_successor(receipt, turn)
+        credit_projection = curated_credit_projection or protocol.candidate_credit_projection
+        record = receipt.turns[turn - 1]
+        action_local_evidence_available = (
+            _candidate_has_observed_successor(receipt, turn)
+            or record.decision.proposal.action == "submit_hypothesis"
+        )
+        if credit_projection in {"action-local-scientific-v4", "allocation-local-v5"} and (
+            action_local_evidence_available
         ):
-            candidate = refine_interactive_development_candidate(
-                candidate,
-                receipt,
-                turn=turn,
+            refinement = (
+                refine_interactive_allocation_candidate
+                if credit_projection == "allocation-local-v5"
+                else refine_interactive_development_candidate
             )
-            candidate_path = turn_root / "SCIENTIFIC_CREDIT_CANDIDATE.json"
+            candidate = refinement(candidate, receipt, turn=turn)
+            candidate_path = turn_root / (
+                "ALLOCATION_CREDIT_CANDIDATE.json"
+                if credit_projection == "allocation-local-v5"
+                else "SCIENTIFIC_CREDIT_CANDIDATE.json"
+            )
             _write_new_json(candidate_path, candidate.model_dump_json(indent=2) + "\n")
         items.append(
             InteractiveDevelopmentEpisodeItem(
@@ -755,7 +812,11 @@ def finalize_interactive_development_episodes(
             )
         )
     batch = InteractiveDevelopmentEpisodeBatch.create(
-        batch_id=f"{sampling_plan.source_run_id}-episodes-v1",
+        batch_id=(
+            f"{sampling_plan.source_run_id}-episodes-v1"
+            if curated_turn is None
+            else f"{sampling_plan.source_run_id}-curated-turn-{curated_turn:03d}-v1"
+        ),
         project_id=protocol.project_id,
         run_id=sampling_plan.source_run_id,
         task_id=protocol.task_id,
@@ -778,6 +839,43 @@ def _selected_development_lock_paths(
 
     if protocol.episode_sampling_rule == "all-compliant-turns":
         return lock_paths[: protocol.maximum_episode_candidates]
+    if protocol.episode_sampling_rule == "preassigned-action-stratum-v1":
+        target_action = protocol.episode_target_action
+        target_turn = protocol.episode_target_turn
+        if target_action is None:
+            raise ValueError("preassigned development sampling lacks an action stratum")
+        for index, record in enumerate(receipt.turns):
+            if record.turn != index + 1:
+                raise ValueError("interactive development receipt turns are not contiguous")
+            prior_observation_exists = any(
+                prior.observation is not None for prior in receipt.turns[:index]
+            )
+            if not prior_observation_exists:
+                continue
+            if target_action == "STOP":
+                action_matches = record.guidance.guidance.action_type == "STOP"
+            else:
+                action_matches = (
+                    record.turn == target_turn
+                    and record.guidance.guidance.action_type == target_action
+                )
+            if not action_matches or not guidance_action_complied(
+                record.guidance.guidance.action_type,
+                record.decision.proposal.action,
+            ):
+                continue
+            local_evidence_available = (
+                record.decision.proposal.action == "submit_hypothesis"
+                or (
+                    record.observation is not None
+                    and index + 1 < len(receipt.turns)
+                )
+            )
+            if local_evidence_available:
+                return (lock_paths[index],)
+            if target_action != "STOP" and record.turn == target_turn:
+                return ()
+        return ()
     for index, record in enumerate(receipt.turns):
         if record.turn != index + 1:
             raise ValueError("interactive development receipt turns are not contiguous")
@@ -1079,6 +1177,88 @@ def refine_interactive_development_candidate(
                         "equal cost?"
                     )
                 ),
+            ),
+        }
+    )
+    return TasteEpisodeCandidate.create(**payload)
+
+
+def refine_interactive_allocation_candidate(
+    candidate: TasteEpisodeCandidate,
+    receipt: InteractiveResearchRunReceipt,
+    *,
+    turn: int,
+    outcome_evidence: TasteEpisodeEvidence | None = None,
+) -> TasteEpisodeCandidate:
+    """Project the same locked action as a budget-allocation decision.
+
+    The v4 projection asks whether the executed scientific action earned local
+    credit.  This v5 projection makes the controller's orthogonal decision
+    explicit: which fixed meta-action should receive the next bounded unit of
+    research effort given the observed trajectory state.  It changes no lock,
+    action, observation, outcome, or credit orientation.
+    """
+
+    refined = refine_interactive_development_candidate(
+        candidate,
+        receipt,
+        turn=turn,
+        outcome_evidence=outcome_evidence,
+    )
+    selected = next(
+        item for item in refined.alternatives if item.action_id == refined.selected_action_id
+    )
+    context = refined.decision_context
+    if context is None:
+        raise ValueError("allocation-local projection requires a decision-state context")
+    context_summary = ", ".join(
+        f"{name}={value}"
+        for name, value in context.model_dump(mode="json").items()
+    )
+    payload = {
+        name: getattr(refined, name)
+        for name in type(refined).model_fields
+        if name != "candidate_sha256"
+    }
+    payload.update(
+        {
+            "candidate_id": f"{candidate.candidate_id}-allocation-credit-v5",
+            "attribution_producer_id": "interactive-allocation-credit-v5",
+            "state_summary": (
+                f"Before outcome access at prospectively locked turn {turn}, the controller "
+                f"had to allocate the next bounded research step from a fixed meta-action "
+                f"menu under trajectory state {context_summary}."
+            ),
+            "decision_principle": (
+                "Allocate the next experiment, analysis step, refinement, or stop decision "
+                "from observed trajectory state and remaining budget; the selected action's "
+                "scientific content is downstream of this allocation judgment."
+            ),
+            "why_preferred": (
+                f"The prospectively locked controller allocated the next unit of effort to "
+                f"{selected.action_type} rather than the other fixed feasible actions. "
+                f"The retained local evidence chain is: {refined.why_preferred}"
+            ),
+            "applicability_conditions": (
+                "a controller must allocate remaining experiments, calls, or time among a "
+                "fixed feasible research-action menu",
+                f"the predecision trajectory state matches {context_summary}",
+                *refined.applicability_conditions,
+            ),
+            "failure_conditions": (
+                "the decision under review is scientific content selection rather than "
+                "allocation of the next bounded research step",
+                *refined.failure_conditions,
+            ),
+            "counterfactual_probe": (
+                f"Under the identical predecision state ({context_summary}) and budget, "
+                f"would allocating the next unit to another fixed meta-action have produced "
+                f"a better evidence update or a better-supported stop?"
+            ),
+            "missing_evidence_questions": (
+                "Did the retained successor update justify allocating this unit of research "
+                "effort to the selected meta-action?",
+                *refined.missing_evidence_questions,
             ),
         }
     )

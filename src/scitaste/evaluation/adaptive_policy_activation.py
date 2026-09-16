@@ -15,6 +15,7 @@ import json
 import os
 import subprocess
 import tempfile
+from collections import Counter
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal
@@ -76,6 +77,34 @@ _MAX_MANIFEST_BYTES = 2 * 1_048_576
 _MAX_BOUND_FILE_BYTES = 64 * 1_048_576
 
 
+def _remove_live_review_resource_fields(payload: dict[str, object]) -> None:
+    for name in (
+        "live_review_generations",
+        "live_review_total_tokens",
+        "live_review_cost_usd",
+    ):
+        payload.pop(name, None)
+
+
+def _remove_live_review_permit_fields(payload: dict[str, object]) -> None:
+    for name in (
+        "maximum_live_generations",
+        "maximum_live_total_tokens",
+        "maximum_live_cost_usd",
+    ):
+        payload.pop(name, None)
+
+
+def _remove_live_review_result_fields(payload: dict[str, object]) -> None:
+    for name in (
+        "live_generation_count",
+        "live_input_tokens",
+        "live_output_tokens",
+        "live_cost_usd",
+    ):
+        payload.pop(name, None)
+
+
 class ActivationFileBinding(BaseModel):
     model_config = _CONFIG
 
@@ -128,6 +157,8 @@ class ActivationTaskSpec(BaseModel):
     agent_seed: int = Field(ge=0)
     judge_seed: int = Field(ge=0)
     taste_seed: int = Field(ge=0)
+    episode_target_action: Literal["EXPERIMENT", "REFINE", "STOP"] | None = None
+    episode_target_turn: int | None = Field(default=None, ge=2, le=20)
 
     @model_validator(mode="after")
     def identity_is_safe(self) -> ActivationTaskSpec:
@@ -139,6 +170,13 @@ class ActivationTaskSpec(BaseModel):
             (self.protocol_id, "activation protocol_id"),
         ):
             validate_entry_id(value, field_name=label)
+        if self.episode_target_action == "STOP":
+            if self.episode_target_turn is not None:
+                raise ValueError("activation STOP stratum must select its first approved stop")
+        elif self.episode_target_action is not None and self.episode_target_turn is None:
+            raise ValueError("activation nonterminal stratum requires a frozen target turn")
+        elif self.episode_target_action is None and self.episode_target_turn is not None:
+            raise ValueError("activation target turn lacks an action stratum")
         return self
 
 
@@ -170,7 +208,10 @@ class ActivationEpisodeSampling(BaseModel):
     model_config = _CONFIG
 
     unit: Literal["one-candidate-per-benchmark-task-source-group"]
-    rule: Literal["earliest-executed-nonterminal-decision-after-one-retained-observation"]
+    rule: Literal[
+        "earliest-executed-nonterminal-decision-after-one-retained-observation",
+        "preassigned-action-stratum-at-fixed-turn-or-first-approved-stop",
+    ]
     rule_frozen_before_execution: Literal[True]
     terminal_stop_is_not_substituted_when_no_candidate_qualifies: Literal[True] = Field(
         alias="terminal_stop_is_not_substituted_when_no-candidate-qualifies"
@@ -191,6 +232,7 @@ class ActivationReviewModel(BaseModel):
     backend: ActivationFileBinding
     profile_set: ActivationFileBinding
     profile_id: str
+    execution_mode: Literal["local", "live"] = "local"
 
 
 class ActivationReviewAndAdmission(BaseModel):
@@ -244,8 +286,11 @@ class ActivationResourceCeiling(BaseModel):
     api_calls: int = Field(ge=1)
     api_total_tokens: int = Field(ge=1)
     api_provider_retries: Literal[0]
-    local_review_generations: int = Field(ge=1)
-    local_review_gpu_hours: float = Field(gt=0, allow_inf_nan=False)
+    local_review_generations: int = Field(ge=0)
+    local_review_gpu_hours: float = Field(ge=0, allow_inf_nan=False)
+    live_review_generations: int = Field(default=0, ge=0)
+    live_review_total_tokens: int = Field(default=0, ge=0)
+    live_review_cost_usd: float = Field(default=0.0, ge=0, allow_inf_nan=False)
     task_gpu_hours: Literal[0.0]
     maximum_new_disk_bytes: int = Field(ge=1)
     downloads_required: Literal[False]
@@ -256,7 +301,7 @@ class AdaptivePolicyActivationManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     campaign_id: str
     project_id: str
     purpose: str
@@ -295,6 +340,8 @@ class AdaptivePolicyActivationManifest(BaseModel):
             raise ValueError("activation attribution models must be distinct")
         if set(model_ids) != set(self.review_and_admission.family_primary_models):
             raise ValueError("activation attribution and family primary populations differ")
+        if self.review_and_admission.maximum_review_generations_per_qualifying_task != 4:
+            raise ValueError("activation review chain requires exactly four generations")
         ceiling = self.resource_ceiling
         execution = self.frozen_execution.agent_and_symbolic_judge
         if ceiling.trajectory_count != len(tasks):
@@ -303,22 +350,88 @@ class AdaptivePolicyActivationManifest(BaseModel):
             raise ValueError("activation API-call ceiling arithmetic differs")
         if ceiling.api_total_tokens != len(tasks) * execution.maximum_total_tokens_per_task:
             raise ValueError("activation token ceiling arithmetic differs")
-        if ceiling.local_review_generations != (
+        review_generations = (
             len(tasks) * self.review_and_admission.maximum_review_generations_per_qualifying_task
+        )
+        execution_modes = {
+            item.execution_mode
+            for item in self.review_and_admission.attribution_primary_models
+        }
+        if len(execution_modes) != 1:
+            raise ValueError("activation review panel cannot mix local and live execution")
+        review_mode = next(iter(execution_modes))
+        if self.schema_version == "1.0" and review_mode != "local":
+            raise ValueError("activation v1.0 supports only local review")
+        if review_mode == "local":
+            if (
+                ceiling.local_review_generations != review_generations
+                or ceiling.local_review_gpu_hours <= 0
+                or ceiling.live_review_generations != 0
+                or ceiling.live_review_total_tokens != 0
+                or ceiling.live_review_cost_usd != 0
+            ):
+                raise ValueError("activation local-review ceiling arithmetic differs")
+        elif (
+            ceiling.local_review_generations != 0
+            or ceiling.local_review_gpu_hours != 0
+            or ceiling.live_review_generations != review_generations
+            or ceiling.live_review_total_tokens <= 0
+            or ceiling.live_review_cost_usd <= 0
         ):
-            raise ValueError("activation review-generation ceiling arithmetic differs")
+            raise ValueError("activation live-review ceiling arithmetic differs")
         if self.policy_refresh.minimum_feature_support != (
             self.predecessor.minimum_feature_support
         ):
             raise ValueError("activation cannot lower the predecessor support threshold")
         if self.policy_refresh.successor_policy_id == self.predecessor.policy_id:
             raise ValueError("activation successor policy must have a new identity")
+        target_actions = tuple(item.episode_target_action for item in tasks)
+        if self.schema_version == "1.0":
+            if any(item is not None for item in target_actions) or self.episode_sampling.rule != (
+                "earliest-executed-nonterminal-decision-after-one-retained-observation"
+            ):
+                raise ValueError("activation v1.0 cannot carry action-stratum assignments")
+        elif (
+            self.episode_sampling.rule
+            != "preassigned-action-stratum-at-fixed-turn-or-first-approved-stop"
+            or any(item is None for item in target_actions)
+            or len(set(target_actions)) < 2
+            or any(
+                count < int(self.predecessor.minimum_feature_support)
+                for count in Counter(target_actions).values()
+            )
+            or any(
+                (item.episode_target_action == "EXPERIMENT" and item.episode_target_turn != 3)
+                or (
+                    item.episode_target_action == "REFINE"
+                    and (item.episode_target_turn is None or item.episode_target_turn < 4)
+                )
+                for item in tasks
+            )
+        ):
+            raise ValueError(
+                "activation v1.1 requires prospectively frozen, multi-action strata "
+                "with support-threshold coverage"
+            )
         return self
 
     @computed_field
     @property
     def fingerprint(self) -> str:
-        return content_sha256(self.model_dump(mode="json", exclude={"fingerprint"}))
+        payload = self.model_dump(mode="json", exclude={"fingerprint"})
+        if self.schema_version == "1.0":
+            for task in payload["frozen_execution"]["tasks"]:
+                task.pop("episode_target_action", None)
+                task.pop("episode_target_turn", None)
+            for model in payload["review_and_admission"]["attribution_primary_models"]:
+                model.pop("execution_mode", None)
+            for name in (
+                "live_review_generations",
+                "live_review_total_tokens",
+                "live_review_cost_usd",
+            ):
+                payload["resource_ceiling"].pop(name, None)
+        return content_sha256(payload)
 
 
 class AdaptivePolicyActivationInspection(BaseModel):
@@ -351,7 +464,7 @@ class AdaptivePolicyActivationInspection(BaseModel):
 class AdaptivePolicyActivationNoRunPlan(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     campaign_id: str
     project_id: str
     manifest_file_sha256: str = Field(pattern=_SHA256)
@@ -385,7 +498,10 @@ class AdaptivePolicyActivationNoRunPlan(BaseModel):
             raise ValueError("activation plan populations differ")
         if any(len(items) != len(set(items)) for items in populations):
             raise ValueError("activation plan populations must be unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"plan_sha256"}))
+        hash_payload = self.model_dump(mode="json", exclude={"plan_sha256"})
+        if self.schema_version == "1.0":
+            _remove_live_review_resource_fields(hash_payload["resource_ceiling"])
+        expected = content_sha256(hash_payload)
         if self.plan_sha256 != expected:
             raise ValueError("activation plan hash mismatch")
         return self
@@ -397,6 +513,7 @@ class AdaptivePolicyActivationNoRunPlan(BaseModel):
         inspection: AdaptivePolicyActivationInspection,
     ) -> AdaptivePolicyActivationNoRunPlan:
         payload = {
+            "schema_version": manifest.schema_version,
             "campaign_id": manifest.campaign_id,
             "project_id": manifest.project_id,
             "manifest_file_sha256": inspection.manifest_file_sha256,
@@ -415,9 +532,12 @@ class AdaptivePolicyActivationNoRunPlan(BaseModel):
             "ready_for_owner_approval": inspection.ready_for_owner_approval,
         }
         unsigned = cls.model_construct(plan_sha256="0" * 64, **payload)
+        hash_payload = unsigned.model_dump(mode="json", exclude={"plan_sha256"})
+        if manifest.schema_version == "1.0":
+            _remove_live_review_resource_fields(hash_payload["resource_ceiling"])
         return cls(
             **payload,
-            plan_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"plan_sha256"})),
+            plan_sha256=content_sha256(hash_payload),
         )
 
 
@@ -464,7 +584,7 @@ class AdaptivePolicyActivationReviewPermit(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     campaign_id: str
     project_id: str
     plan_sha256: str = Field(pattern=_SHA256)
@@ -479,12 +599,15 @@ class AdaptivePolicyActivationReviewPermit(BaseModel):
     candidate_sha256: str = Field(pattern=_SHA256)
     candidate: ActivationFileBinding
     reviewer_model_ids: tuple[str, str]
-    maximum_local_generations: Literal[4] = 4
-    maximum_local_gpu_hours: float = Field(gt=0, allow_inf_nan=False)
+    maximum_local_generations: int = Field(default=4, ge=0, le=4)
+    maximum_local_gpu_hours: float = Field(ge=0, allow_inf_nan=False)
+    maximum_live_generations: int = Field(default=0, ge=0, le=4)
+    maximum_live_total_tokens: int = Field(default=0, ge=0)
+    maximum_live_cost_usd: float = Field(default=0.0, ge=0, allow_inf_nan=False)
     maximum_new_disk_bytes: int = Field(ge=1)
     maximum_retries_per_generation: Literal[0] = 0
-    local_execution_authorized: Literal[True] = True
-    api_execution_authorized: Literal[False] = False
+    local_execution_authorized: bool = True
+    api_execution_authorized: bool = False
     task_replacement_authorized: Literal[False] = False
     formal_effect_claim_authorized: Literal[False] = False
     permit_sha256: str = Field(pattern=_SHA256)
@@ -493,7 +616,29 @@ class AdaptivePolicyActivationReviewPermit(BaseModel):
     def permit_is_closed(self) -> AdaptivePolicyActivationReviewPermit:
         if len(set(self.reviewer_model_ids)) != 2:
             raise ValueError("activation review permit requires two distinct models")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"permit_sha256"}))
+        if self.local_execution_authorized == self.api_execution_authorized:
+            raise ValueError("activation review permit requires exactly one execution mode")
+        if self.local_execution_authorized and (
+            self.maximum_local_generations != 4
+            or self.maximum_local_gpu_hours <= 0
+            or self.maximum_live_generations != 0
+            or self.maximum_live_total_tokens != 0
+            or self.maximum_live_cost_usd != 0
+        ):
+            raise ValueError("activation local review permit has live-resource authority")
+        if self.api_execution_authorized and (
+            self.schema_version != "1.1"
+            or self.maximum_local_generations != 0
+            or self.maximum_local_gpu_hours != 0
+            or self.maximum_live_generations != 4
+            or self.maximum_live_total_tokens <= 0
+            or self.maximum_live_cost_usd <= 0
+        ):
+            raise ValueError("activation live review permit has invalid resource authority")
+        hash_payload = self.model_dump(mode="json", exclude={"permit_sha256"})
+        if self.schema_version == "1.0":
+            _remove_live_review_permit_fields(hash_payload)
+        expected = content_sha256(hash_payload)
         if self.permit_sha256 != expected:
             raise ValueError("activation review permit hash mismatch")
         return self
@@ -503,11 +648,12 @@ class AdaptivePolicyActivationReviewPermit(BaseModel):
         payload = {"schema_version": "1.0", **values}
         payload.pop("permit_sha256", None)
         unsigned = cls.model_construct(permit_sha256="0" * 64, **payload)
+        hash_payload = unsigned.model_dump(mode="json", exclude={"permit_sha256"})
+        if payload["schema_version"] == "1.0":
+            _remove_live_review_permit_fields(hash_payload)
         return cls(
             **payload,
-            permit_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"permit_sha256"})
-            ),
+            permit_sha256=content_sha256(hash_payload),
         )
 
 
@@ -516,7 +662,7 @@ class AdaptivePolicyActivationReviewResult(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     permit_sha256: str = Field(pattern=_SHA256)
     task_id: str
     run_id: str
@@ -527,8 +673,12 @@ class AdaptivePolicyActivationReviewResult(BaseModel):
         "family-panel-unresolved",
         "runtime-failure",
     ]
-    local_generation_count: int = Field(ge=1, le=4)
+    local_generation_count: int = Field(ge=0, le=4)
     local_gpu_hours: float = Field(ge=0, allow_inf_nan=False)
+    live_generation_count: int = Field(default=0, ge=0, le=4)
+    live_input_tokens: int = Field(default=0, ge=0)
+    live_output_tokens: int = Field(default=0, ge=0)
+    live_cost_usd: float = Field(default=0.0, ge=0, allow_inf_nan=False)
     new_disk_bytes: int = Field(ge=0)
     attribution_reviews: tuple[ActivationFileBinding, ...] = Field(max_length=2)
     admission: ActivationFileBinding | None = None
@@ -542,12 +692,19 @@ class AdaptivePolicyActivationReviewResult(BaseModel):
 
     @model_validator(mode="after")
     def result_is_closed(self) -> AdaptivePolicyActivationReviewResult:
+        generation_count = self.local_generation_count + self.live_generation_count
+        if generation_count < 1 or (
+            self.local_generation_count > 0 and self.live_generation_count > 0
+        ):
+            raise ValueError("activation review result requires one nonempty execution mode")
+        if self.schema_version == "1.0" and self.live_generation_count != 0:
+            raise ValueError("activation v1.0 review result cannot contain live usage")
         accepted_review_count = len(self.attribution_reviews) + len(self.family_reviews)
-        if accepted_review_count > self.local_generation_count:
-            raise ValueError("activation accepted reviews exceed local generations")
+        if accepted_review_count > generation_count:
+            raise ValueError("activation accepted reviews exceed generations")
         if (
             self.status != "runtime-failure"
-            and accepted_review_count != self.local_generation_count
+            and accepted_review_count != generation_count
         ):
             raise ValueError("activation review result generation count differs")
         complete = self.status == "policy-eligible"
@@ -565,7 +722,10 @@ class AdaptivePolicyActivationReviewResult(BaseModel):
             raise ValueError("activation family assignment lacks its family")
         if (self.status == "runtime-failure") != (self.failure_reason is not None):
             raise ValueError("activation runtime failure reason differs from status")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"result_sha256"}))
+        hash_payload = self.model_dump(mode="json", exclude={"result_sha256"})
+        if self.schema_version == "1.0":
+            _remove_live_review_result_fields(hash_payload)
+        expected = content_sha256(hash_payload)
         if self.result_sha256 != expected:
             raise ValueError("activation review result hash mismatch")
         return self
@@ -575,11 +735,12 @@ class AdaptivePolicyActivationReviewResult(BaseModel):
         payload = {"schema_version": "1.0", **values}
         payload.pop("result_sha256", None)
         unsigned = cls.model_construct(result_sha256="0" * 64, **payload)
+        hash_payload = unsigned.model_dump(mode="json", exclude={"result_sha256"})
+        if payload["schema_version"] == "1.0":
+            _remove_live_review_result_fields(hash_payload)
         return cls(
             **payload,
-            result_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"result_sha256"})
-            ),
+            result_sha256=content_sha256(hash_payload),
         )
 
 
@@ -657,7 +818,7 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     campaign_id: str
     project_id: str
     plan_sha256: str = Field(pattern=_SHA256)
@@ -680,6 +841,10 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
     consumed_api_tokens: int = Field(default=0, ge=0)
     consumed_local_review_generations: int = Field(default=0, ge=0)
     consumed_local_review_gpu_hours: float = Field(default=0.0, ge=0, allow_inf_nan=False)
+    consumed_live_review_generations: int = Field(default=0, ge=0)
+    consumed_live_review_input_tokens: int = Field(default=0, ge=0)
+    consumed_live_review_output_tokens: int = Field(default=0, ge=0)
+    consumed_live_review_cost_usd: float = Field(default=0.0, ge=0, allow_inf_nan=False)
     consumed_new_disk_bytes: int = Field(default=0, ge=0)
     policy_refresh_status: Literal["pending", "ready", "insufficient-support"] = "pending"
     target_domain_state_probe_status: Literal[
@@ -772,6 +937,24 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             > 1e-9
         ):
             raise ValueError("activation review GPU hours differ from review evidence")
+        if self.consumed_live_review_generations != sum(
+            item.live_generation_count for item in self.review_evidence
+        ):
+            raise ValueError("activation live review generation count differs")
+        if self.consumed_live_review_input_tokens != sum(
+            item.live_input_tokens for item in self.review_evidence
+        ) or self.consumed_live_review_output_tokens != sum(
+            item.live_output_tokens for item in self.review_evidence
+        ):
+            raise ValueError("activation live review token usage differs")
+        if (
+            abs(
+                self.consumed_live_review_cost_usd
+                - sum(item.live_cost_usd for item in self.review_evidence)
+            )
+            > 1e-9
+        ):
+            raise ValueError("activation live review cost differs")
         if self.status == "review-complete" and any(
             item.status in {"review-pending", "review-running"} for item in self.tasks
         ):
@@ -800,6 +983,10 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             "review_evidence",
             "finalization",
             "consumed_new_disk_bytes",
+            "consumed_live_review_generations",
+            "consumed_live_review_input_tokens",
+            "consumed_live_review_output_tokens",
+            "consumed_live_review_cost_usd",
         ):
             if field_name not in self.model_fields_set:
                 excluded.add(field_name)
@@ -827,6 +1014,7 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             )
         )
         payload = {
+            "schema_version": plan.schema_version,
             "campaign_id": plan.campaign_id,
             "project_id": plan.project_id,
             "plan_sha256": plan.plan_sha256,
@@ -841,6 +1029,15 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             "review_evidence": (),
             "finalization": None,
         }
+        if plan.schema_version == "1.1":
+            payload.update(
+                {
+                    "consumed_live_review_generations": 0,
+                    "consumed_live_review_input_tokens": 0,
+                    "consumed_live_review_output_tokens": 0,
+                    "consumed_live_review_cost_usd": 0.0,
+                }
+            )
         unsigned = cls.model_construct(state_sha256="0" * 64, **payload)
         return cls(
             **payload,
@@ -875,7 +1072,7 @@ class AdaptivePolicyActivationApproval(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     campaign_id: str
     project_id: str
     manifest_file_sha256: str = Field(pattern=_SHA256)
@@ -899,7 +1096,10 @@ class AdaptivePolicyActivationApproval(BaseModel):
         validate_project_id(self.project_id)
         if self.approved_at.utcoffset() is None:
             raise ValueError("activation approval time must include a timezone")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"approval_sha256"}))
+        hash_payload = self.model_dump(mode="json", exclude={"approval_sha256"})
+        if self.schema_version == "1.0":
+            _remove_live_review_resource_fields(hash_payload["resource_ceiling"])
+        expected = content_sha256(hash_payload)
         if self.approval_sha256 != expected:
             raise ValueError("activation approval hash mismatch")
         return self
@@ -914,6 +1114,7 @@ class AdaptivePolicyActivationApproval(BaseModel):
         approved_at: datetime,
     ) -> AdaptivePolicyActivationApproval:
         payload = {
+            "schema_version": manifest.schema_version,
             "campaign_id": manifest.campaign_id,
             "project_id": manifest.project_id,
             "manifest_file_sha256": plan.manifest_file_sha256,
@@ -924,11 +1125,12 @@ class AdaptivePolicyActivationApproval(BaseModel):
             "approved_at": approved_at,
         }
         unsigned = cls.model_construct(approval_sha256="0" * 64, **payload)
+        hash_payload = unsigned.model_dump(mode="json", exclude={"approval_sha256"})
+        if manifest.schema_version == "1.0":
+            _remove_live_review_resource_fields(hash_payload["resource_ceiling"])
         return cls(
             **payload,
-            approval_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"approval_sha256"})
-            ),
+            approval_sha256=content_sha256(hash_payload),
         )
 
 
@@ -1049,12 +1251,23 @@ def inspect_adaptive_policy_activation(
     if not resource_arithmetic_closed:
         blockers.append("activation-resource-arithmetic-mismatch")
 
+    expected_sampling_rule = (
+        "earliest-executed-nonterminal-decision-after-one-retained-observation"
+        if manifest.schema_version == "1.0"
+        else "preassigned-action-stratum-at-fixed-turn-or-first-approved-stop"
+    )
     sampling_rule_closed = bool(
-        manifest.episode_sampling.rule
-        == "earliest-executed-nonterminal-decision-after-one-retained-observation"
+        manifest.episode_sampling.rule == expected_sampling_rule
         and manifest.episode_sampling.rule_frozen_before_execution
         and manifest.episode_sampling.no_selection_by_terminal_score_or_credit_direction
         and manifest.episode_sampling.terminal_stop_is_not_substituted_when_no_candidate_qualifies
+        and (
+            manifest.schema_version == "1.0"
+            or all(
+                item.episode_target_action is not None
+                for item in manifest.frozen_execution.tasks
+            )
+        )
     )
     if not sampling_rule_closed:
         blockers.append("activation-sampling-rule-open")
@@ -1382,17 +1595,50 @@ def issue_adaptive_policy_activation_review(
     )
     review = manifest.review_and_admission
     ceiling = manifest.resource_ceiling
-    if (
-        state.consumed_local_review_generations
-        + review.maximum_review_generations_per_qualifying_task
-        > ceiling.local_review_generations
-    ):
-        raise ValueError("activation remaining generation ceiling cannot fit review task")
-    remaining_gpu_hours = ceiling.local_review_gpu_hours - state.consumed_local_review_gpu_hours
+    review_mode = review.attribution_primary_models[0].execution_mode
     remaining_disk = ceiling.maximum_new_disk_bytes - state.consumed_new_disk_bytes
-    if remaining_gpu_hours <= 0 or remaining_disk <= 0:
-        raise ValueError("activation remaining local resource ceiling cannot fit review task")
+    if review_mode == "local":
+        if (
+            state.consumed_local_review_generations
+            + review.maximum_review_generations_per_qualifying_task
+            > ceiling.local_review_generations
+        ):
+            raise ValueError("activation remaining local generation ceiling cannot fit review")
+        remaining_gpu_hours = (
+            ceiling.local_review_gpu_hours - state.consumed_local_review_gpu_hours
+        )
+        remaining_live_tokens = 0
+        remaining_live_cost = 0.0
+        if remaining_gpu_hours <= 0:
+            raise ValueError("activation remaining local GPU ceiling cannot fit review")
+    else:
+        if (
+            state.consumed_live_review_generations
+            + review.maximum_review_generations_per_qualifying_task
+            > ceiling.live_review_generations
+        ):
+            raise ValueError("activation remaining live generation ceiling cannot fit review")
+        remaining_gpu_hours = 0.0
+        campaign_remaining_live_tokens = ceiling.live_review_total_tokens - (
+            state.consumed_live_review_input_tokens
+            + state.consumed_live_review_output_tokens
+        )
+        campaign_remaining_live_cost = (
+            ceiling.live_review_cost_usd - state.consumed_live_review_cost_usd
+        )
+        per_task_live_tokens = ceiling.live_review_total_tokens // len(state.tasks)
+        per_task_live_cost = ceiling.live_review_cost_usd / len(state.tasks)
+        remaining_live_tokens = min(
+            campaign_remaining_live_tokens,
+            per_task_live_tokens,
+        )
+        remaining_live_cost = min(campaign_remaining_live_cost, per_task_live_cost)
+        if remaining_live_tokens <= 0 or remaining_live_cost <= 0:
+            raise ValueError("activation remaining live API ceiling cannot fit review")
+    if remaining_disk <= 0:
+        raise ValueError("activation remaining disk ceiling cannot fit review")
     permit = AdaptivePolicyActivationReviewPermit.create(
+        schema_version=manifest.schema_version,
         campaign_id=state.campaign_id,
         project_id=state.project_id,
         plan_sha256=state.plan_sha256,
@@ -1409,10 +1655,23 @@ def issue_adaptive_policy_activation_review(
         reviewer_model_ids=tuple(
             item.runtime_model_id for item in review.attribution_primary_models
         ),
-        maximum_local_generations=review.maximum_review_generations_per_qualifying_task,
+        maximum_local_generations=(
+            review.maximum_review_generations_per_qualifying_task
+            if review_mode == "local"
+            else 0
+        ),
         maximum_local_gpu_hours=remaining_gpu_hours,
+        maximum_live_generations=(
+            review.maximum_review_generations_per_qualifying_task
+            if review_mode == "live"
+            else 0
+        ),
+        maximum_live_total_tokens=remaining_live_tokens,
+        maximum_live_cost_usd=remaining_live_cost,
         maximum_new_disk_bytes=remaining_disk,
         maximum_retries_per_generation=review.maximum_retries_per_generation,
+        local_execution_authorized=review_mode == "local",
+        api_execution_authorized=review_mode == "live",
     )
     tasks = list(state.tasks)
     tasks[index] = task_state.model_copy(update={"status": "review-running"})
@@ -1488,6 +1747,10 @@ def complete_adaptive_policy_activation_review(
     if (
         result.local_generation_count > permit.maximum_local_generations
         or result.local_gpu_hours > permit.maximum_local_gpu_hours
+        or result.live_generation_count > permit.maximum_live_generations
+        or result.live_input_tokens + result.live_output_tokens
+        > permit.maximum_live_total_tokens
+        or result.live_cost_usd > permit.maximum_live_cost_usd
         or result.new_disk_bytes > permit.maximum_new_disk_bytes
     ):
         raise ValueError("activation review result exceeded its task ceiling")
@@ -1497,6 +1760,15 @@ def complete_adaptive_policy_activation_review(
         > ceiling.local_review_generations
         or state.consumed_local_review_gpu_hours + result.local_gpu_hours
         > ceiling.local_review_gpu_hours
+        or state.consumed_live_review_generations + result.live_generation_count
+        > ceiling.live_review_generations
+        or state.consumed_live_review_input_tokens
+        + state.consumed_live_review_output_tokens
+        + result.live_input_tokens
+        + result.live_output_tokens
+        > ceiling.live_review_total_tokens
+        or state.consumed_live_review_cost_usd + result.live_cost_usd
+        > ceiling.live_review_cost_usd
         or state.consumed_new_disk_bytes + result.new_disk_bytes > ceiling.maximum_new_disk_bytes
     ):
         raise ValueError("activation review result exceeded its campaign ceiling")
@@ -1529,6 +1801,18 @@ def complete_adaptive_policy_activation_review(
         ),
         consumed_local_review_gpu_hours=(
             state.consumed_local_review_gpu_hours + result.local_gpu_hours
+        ),
+        consumed_live_review_generations=(
+            state.consumed_live_review_generations + result.live_generation_count
+        ),
+        consumed_live_review_input_tokens=(
+            state.consumed_live_review_input_tokens + result.live_input_tokens
+        ),
+        consumed_live_review_output_tokens=(
+            state.consumed_live_review_output_tokens + result.live_output_tokens
+        ),
+        consumed_live_review_cost_usd=(
+            state.consumed_live_review_cost_usd + result.live_cost_usd
         ),
         consumed_new_disk_bytes=state.consumed_new_disk_bytes + result.new_disk_bytes,
     )
@@ -1651,7 +1935,7 @@ def validate_adaptive_policy_activation_review_authority(
     *,
     workspace_root: str | Path,
 ) -> None:
-    """Validate one local-review permit and its immutable candidate bytes."""
+    """Validate one bounded review permit and its immutable candidate bytes."""
 
     _validate_activation_authority(manifest, plan, approval, state)
     if state.status != "reviewing" or state.active_review_permit_sha256 != permit.permit_sha256:
@@ -1677,10 +1961,19 @@ def validate_adaptive_policy_activation_review_authority(
     expected_models = tuple(
         item.runtime_model_id for item in manifest.review_and_admission.attribution_primary_models
     )
+    review_mode = manifest.review_and_admission.attribution_primary_models[0].execution_mode
+    expected_generations = (
+        manifest.review_and_admission.maximum_review_generations_per_qualifying_task
+    )
     if (
         permit.reviewer_model_ids != expected_models
+        or permit.schema_version != manifest.schema_version
         or permit.maximum_local_generations
-        != manifest.review_and_admission.maximum_review_generations_per_qualifying_task
+        != (expected_generations if review_mode == "local" else 0)
+        or permit.maximum_live_generations
+        != (expected_generations if review_mode == "live" else 0)
+        or permit.local_execution_authorized != (review_mode == "local")
+        or permit.api_execution_authorized != (review_mode == "live")
         or permit.maximum_retries_per_generation != 0
     ):
         raise ValueError("activation review permit differs from the frozen panel")
@@ -1803,6 +2096,13 @@ def _validate_activation_authority(
         or state.consumed_api_tokens > ceiling.api_total_tokens
         or state.consumed_local_review_generations > ceiling.local_review_generations
         or state.consumed_local_review_gpu_hours > ceiling.local_review_gpu_hours
+        or state.consumed_live_review_generations > ceiling.live_review_generations
+        or (
+            state.consumed_live_review_input_tokens
+            + state.consumed_live_review_output_tokens
+            > ceiling.live_review_total_tokens
+        )
+        or state.consumed_live_review_cost_usd > ceiling.live_review_cost_usd
         or state.consumed_new_disk_bytes > ceiling.maximum_new_disk_bytes
     ):
         raise ValueError("adaptive activation state already exceeds its resource ceiling")
@@ -1966,6 +2266,20 @@ def _validate_activation_review_result(
     workspace_root: str | Path,
 ) -> None:
     root = Path(workspace_root).resolve(strict=True)
+    if permit.local_execution_authorized and (
+        result.local_generation_count < 1
+        or result.live_generation_count != 0
+        or result.live_input_tokens != 0
+        or result.live_output_tokens != 0
+        or result.live_cost_usd != 0
+    ):
+        raise ValueError("activation local review result contains live usage")
+    if permit.api_execution_authorized and (
+        result.live_generation_count < 1
+        or result.local_generation_count != 0
+        or result.local_gpu_hours != 0
+    ):
+        raise ValueError("activation live review result contains local usage")
     attribution = tuple(
         _load_bound_json_model(root, item, AITasteEpisodeAttributionReview)
         for item in result.attribution_reviews
@@ -2205,24 +2519,39 @@ def _review_runtime_and_authority_match(
                 return False
             profiles = load_model_node_profile_set(profile_path)
             profile = profiles.profiles.get(item.profile_id)
-            if (
-                backend.get("provider") != "local-transformers"
-                or backend.get("model_id") != item.model_id
-                or backend.get("max_retries") != review.maximum_retries_per_generation
-                or backend.get("execution_enabled") is not True
-                or backend.get("require_cuda") is not True
+            common_invalid = (
+                backend.get("max_retries") != review.maximum_retries_per_generation
                 or profile is None
-                or profile.provider != "local-transformers"
                 or profile.model != item.runtime_model_id
-                or profile.model.split("@", maxsplit=1)[0] != item.model_id
-                or not profile.local_execution_permitted
-                or profile.live_execution_permitted
                 or not {
                     "taste-episode-attribution-review",
                     "scientific-decision-family-review",
                 }.issubset(profile.allowed_node_names)
-                or profile.generation.max_output_tokens > int(backend.get("max_new_tokens", 0))
-            ):
+            )
+            if item.execution_mode == "local":
+                mode_invalid = (
+                    backend.get("provider") != "local-transformers"
+                    or backend.get("model_id") != item.model_id
+                    or backend.get("execution_enabled") is not True
+                    or backend.get("require_cuda") is not True
+                    or profile.provider != "local-transformers"
+                    or profile.model.split("@", maxsplit=1)[0] != item.model_id
+                    or not profile.local_execution_permitted
+                    or profile.live_execution_permitted
+                    or profile.generation.max_output_tokens
+                    > int(backend.get("max_new_tokens", 0))
+                )
+            else:
+                mode_invalid = (
+                    backend.get("provider") != profile.provider
+                    or backend.get("model") != item.runtime_model_id
+                    or backend.get("live_enabled") is not True
+                    or not profile.live_execution_permitted
+                    or profile.local_execution_permitted
+                    or profile.generation.max_output_tokens
+                    > int(backend.get("max_output_tokens", 0))
+                )
+            if common_invalid or mode_invalid:
                 return False
     except (KeyError, OSError, TypeError, ValueError, yaml.YAMLError):
         return False
@@ -2238,8 +2567,28 @@ def _resource_arithmetic_closed(manifest: AdaptivePolicyActivationManifest) -> b
         ceiling.trajectory_count == len(tasks)
         and ceiling.api_calls == len(tasks) * model.maximum_calls_per_task
         and ceiling.api_total_tokens == len(tasks) * model.maximum_total_tokens_per_task
-        and ceiling.local_review_generations
-        == len(tasks) * review.maximum_review_generations_per_qualifying_task
+        and (
+            (
+                next(
+                    iter({item.execution_mode for item in review.attribution_primary_models})
+                )
+                == "local"
+                and ceiling.local_review_generations
+                == len(tasks) * review.maximum_review_generations_per_qualifying_task
+                and ceiling.live_review_generations == 0
+            )
+            or (
+                next(
+                    iter({item.execution_mode for item in review.attribution_primary_models})
+                )
+                == "live"
+                and ceiling.local_review_generations == 0
+                and ceiling.live_review_generations
+                == len(tasks) * review.maximum_review_generations_per_qualifying_task
+                and ceiling.live_review_total_tokens > 0
+                and ceiling.live_review_cost_usd > 0
+            )
+        )
         and ceiling.api_provider_retries == model.provider_retries == 0
         and review.maximum_retries_per_generation == 0
         and ceiling.task_gpu_hours == 0

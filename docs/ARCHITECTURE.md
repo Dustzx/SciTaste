@@ -4850,3 +4850,30 @@ hashes that predecessor basis. The successor then binds policy v7, readiness,
 the contract, and the report. Inspection verifies this chain and behavioral
 activation. Compilation performs no API, model, GPU, benchmark, or hidden-score
 work, and keeps development execution behind a new owner hash approval.
+
+### ADR-149: research workload training is not SciTaste-controller training
+
+Status: accepted and implemented in the activation-v2 boundary.
+
+SciTaste remains one meta-research system. `T0 training-free` means that a
+research workload does not update the weights of the task model being studied;
+`T1 training-based` means that the experiment may train or fine-tune that task
+model. Neither label selects the language model that plans the research, and T1
+does not require a 7B--9B model to replace SciTaste's controller. Strong hosted
+models may operate the research, review, and synthesis nodes in either workload,
+while open models may be experimental subjects, baselines, or robustness bounds.
+
+Controller adaptation is a separate axis. `A0` uses the frozen intrinsic or
+rule-based Taste controller; `A1` fits a bounded decision policy from admitted
+episodes. A1 learns a decision head over evidence and resource state, not a new
+general-purpose autoresearch LLM. Specialized 7B/8B research agents reported by
+related work are comparison systems, not a dependency or default SciTaste
+backbone.
+
+Activation v2 consequently freezes fresh NewtonBench task identities and assigns
+each source group to EXPERIMENT, REFINE, or the first prospectively approved STOP
+before execution. It projects the same immutable decisions as allocation-local
+episodes, retains missing strata without replacement, and uses two
+identity-distinct strong hosted reviewers. Review API calls, tokens, and cost are
+separate from trajectory usage and local GPU accounting. The retrospective v2/v3
+curations remain protocol-development evidence and cannot activate the policy.

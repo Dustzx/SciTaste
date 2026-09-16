@@ -27,6 +27,9 @@ from scitaste.evaluation.adaptive_policy_activation import (
 )
 from scitaste.evaluation.evidence_review import load_evidence_review_package
 from scitaste.model_nodes.facade import ModelNodeFacade, ModelNodeFacadeRequest
+from scitaste.model_nodes.openai_compatible import (
+    load_structured_openai_compatible_config,
+)
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.registry import first_party_node_types
 from scitaste.model_nodes.runtime import ModelNodeRuntime, RuntimeOutcome
@@ -59,9 +62,6 @@ def execute(args: argparse.Namespace):
     for output in (args.result_output, args.state_output):
         if output.exists() or output.is_symlink():
             raise FileExistsError(output)
-    if not args.allow_local:
-        raise ValueError("activation review execution requires explicit --allow-local")
-
     workspace = args.workspace_root.resolve(strict=True)
     outputs_root = args.outputs_root.resolve(strict=True)
     manifest, manifest_file_sha256 = load_adaptive_policy_activation_manifest(args.manifest)
@@ -69,6 +69,11 @@ def execute(args: argparse.Namespace):
     approval = load_adaptive_policy_activation_approval(args.approval)
     state = load_adaptive_policy_activation_state(args.state)
     permit = load_adaptive_policy_activation_review_permit(args.permit)
+    review_mode = manifest.review_and_admission.attribution_primary_models[0].execution_mode
+    if review_mode == "local" and not args.allow_local:
+        raise ValueError("activation local review requires explicit --allow-local")
+    if review_mode == "live" and not args.allow_live:
+        raise ValueError("activation live review requires explicit --allow-live")
     inspection = inspect_adaptive_policy_activation(
         manifest,
         manifest_file_sha256=manifest_file_sha256,
@@ -131,6 +136,9 @@ def execute(args: argparse.Namespace):
 
     attempted = 0
     local_seconds = 0.0
+    live_input_tokens = 0
+    live_output_tokens = 0
+    live_cost_usd = 0.0
     attribution_reviews = []
     attribution_bindings: list[ActivationFileBinding] = []
     family_reviews = []
@@ -147,7 +155,10 @@ def execute(args: argparse.Namespace):
             manifest.review_and_admission.attribution_primary_models, start=1
         ):
             model_slug = _slug(model.model_id)
-            invocation_id = f"activation-{permit.ordinal:02d}-attribution-{model_slug}"
+            campaign_code = hashlib.sha256(manifest.campaign_id.encode()).hexdigest()[:10]
+            invocation_id = (
+                f"activation-{campaign_code}-{permit.ordinal:02d}-attribution-{model_slug}"
+            )
             output_dir = review_root / "attribution" / model_slug
             config_path = review_root / "runtime_configs" / f"attribution-{model_slug}.json"
             profile, backend = _review_runtime_inputs(workspace, model)
@@ -173,9 +184,22 @@ def execute(args: argparse.Namespace):
                 invocation_id,
                 config,
                 profile,
+                review_mode=review_mode,
             )
             local_seconds += monotonic() - started
+            if review_mode == "live":
+                live_input_tokens += facade_result.receipt.telemetry.input_tokens
+                live_output_tokens += facade_result.receipt.telemetry.output_tokens
+                live_cost_usd += float(facade_result.receipt.telemetry.cost_usd or 0.0)
             if facade_result.receipt.outcome is not RuntimeOutcome.ACCEPTED:
+                if (
+                    review_mode == "live"
+                    and facade_result.receipt.telemetry.input_tokens == 0
+                    and facade_result.receipt.telemetry.output_tokens == 0
+                ):
+                    live_input_tokens = permit.maximum_live_total_tokens
+                    live_output_tokens = 0
+                    live_cost_usd = permit.maximum_live_cost_usd
                 raise RuntimeError(
                     f"attribution generation {panel_index} ended "
                     f"{facade_result.receipt.outcome.value}"
@@ -225,7 +249,9 @@ def execute(args: argparse.Namespace):
                 manifest.review_and_admission.attribution_primary_models, start=1
             ):
                 model_slug = _slug(model.model_id)
-                invocation_id = f"activation-{permit.ordinal:02d}-family-{model_slug}"
+                invocation_id = (
+                    f"activation-{campaign_code}-{permit.ordinal:02d}-family-{model_slug}"
+                )
                 output_dir = review_root / "family" / model_slug
                 config_path = review_root / "runtime_configs" / f"family-{model_slug}.json"
                 profile, backend = _review_runtime_inputs(workspace, model)
@@ -248,9 +274,22 @@ def execute(args: argparse.Namespace):
                     invocation_id,
                     config,
                     profile,
+                    review_mode=review_mode,
                 )
                 local_seconds += monotonic() - started
+                if review_mode == "live":
+                    live_input_tokens += facade_result.receipt.telemetry.input_tokens
+                    live_output_tokens += facade_result.receipt.telemetry.output_tokens
+                    live_cost_usd += float(facade_result.receipt.telemetry.cost_usd or 0.0)
                 if facade_result.receipt.outcome is not RuntimeOutcome.ACCEPTED:
+                    if (
+                        review_mode == "live"
+                        and facade_result.receipt.telemetry.input_tokens == 0
+                        and facade_result.receipt.telemetry.output_tokens == 0
+                    ):
+                        live_input_tokens = permit.maximum_live_total_tokens
+                        live_output_tokens = 0
+                        live_cost_usd = permit.maximum_live_cost_usd
                     raise RuntimeError(
                         f"family generation {panel_index} ended "
                         f"{facade_result.receipt.outcome.value}"
@@ -288,16 +327,21 @@ def execute(args: argparse.Namespace):
 
     if attempted == 0:
         raise RuntimeError("activation review produced no local generation attempt")
-    local_gpu_hours = local_seconds / 3600.0
+    local_gpu_hours = local_seconds / 3600.0 if review_mode == "local" else 0.0
     new_disk_bytes = max(0, _tree_bytes(review_root) - initial_review_bytes)
     result = AdaptivePolicyActivationReviewResult.create(
+        schema_version=manifest.schema_version,
         permit_sha256=permit.permit_sha256,
         task_id=permit.task_id,
         run_id=permit.run_id,
         candidate_sha256=permit.candidate_sha256,
         status=terminal_status,
-        local_generation_count=attempted,
+        local_generation_count=attempted if review_mode == "local" else 0,
         local_gpu_hours=local_gpu_hours,
+        live_generation_count=attempted if review_mode == "live" else 0,
+        live_input_tokens=live_input_tokens,
+        live_output_tokens=live_output_tokens,
+        live_cost_usd=live_cost_usd,
         new_disk_bytes=new_disk_bytes,
         attribution_reviews=tuple(attribution_bindings),
         admission=admission_binding,
@@ -326,11 +370,24 @@ def _review_runtime_inputs(workspace: Path, model):
         profile = profile_set.profiles[model.profile_id]
     except KeyError as exc:
         raise ValueError(f"unknown activation review profile {model.profile_id!r}") from exc
-    backend = load_local_transformers_config(_bound_path(workspace, model.backend.locator))
+    backend_path = _bound_path(workspace, model.backend.locator)
+    backend = (
+        load_local_transformers_config(backend_path)
+        if model.execution_mode == "local"
+        else load_structured_openai_compatible_config(backend_path)
+    )
     return profile, backend
 
 
-def _execute_runtime_config(runtime, run_id, invocation_id, config, profile):
+def _execute_runtime_config(
+    runtime,
+    run_id,
+    invocation_id,
+    config,
+    profile,
+    *,
+    review_mode,
+):
     request = ModelNodeFacadeRequest(
         project_id=config.state_projection.project_id,
         run_id=run_id,
@@ -350,7 +407,8 @@ def _execute_runtime_config(runtime, run_id, invocation_id, config, profile):
     return facade.execute(
         request,
         backend=config.build_backend(invocation_id),
-        allow_local=True,
+        allow_local=review_mode == "local",
+        allow_live=review_mode == "live",
     )
 
 
@@ -404,6 +462,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--workspace-root", type=Path, default=Path("."))
     parser.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     parser.add_argument("--allow-local", action="store_true")
+    parser.add_argument("--allow-live", action="store_true")
     return parser
 
 

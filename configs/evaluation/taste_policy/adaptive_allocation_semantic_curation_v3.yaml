@@ -1,0 +1,33 @@
+schema_version: "1.0"
+curation_id: adaptive-allocation-semantic-v3
+project_id: scitaste-self-development
+purpose: >-
+  Qualify whether prospectively locked next-step and stop decisions are
+  consistently recognized as adaptive allocation when their orthogonal
+  budget-allocation semantics are represented explicitly. This retrospective
+  development set is diagnostic and cannot activate E2.
+selection_timing: retrospective-development-only
+source_decisions_prospectively_locked: true
+selection_uses_terminal_metric_or_credit: false
+one_episode_per_source_group: true
+formal_evidence: false
+effect_claim_authorized: false
+selection_algorithm: balanced-action-feasible-hash-v1
+selection_salt: scitaste-adaptive-allocation-semantic-v3
+quotas:
+  - action_type: EXPERIMENT
+    count: 3
+  - action_type: STOP
+    count: 4
+sources:
+  - run_id: 2026-09-16__zhipu-glm53__newton-coulomb-activation-v1__seed-101
+  - run_id: 2026-09-16__zhipu-glm53__newton-magnetic-activation-v1__seed-103
+  - run_id: 2026-09-16__zhipu-glm53__newton-snell-activation-v1__seed-107
+  - run_id: 2026-09-16__zhipu-glm53__newton-radioactive-activation-v1__seed-109
+  - run_id: 2026-09-16__zhipu-glm53__newton-underdamped-activation-v1__seed-113
+  - run_id: 2026-09-16__zhipu-glm53__newton-malus-activation-v1__seed-127
+  - run_id: 2026-09-16__zhipu-glm53__newton-sound-activation-v1__seed-131
+  - run_id: 2026-09-16__zhipu-glm53__newton-hooke-activation-v1__seed-137
+  - run_id: 2026-09-16__zhipu-glm53__newton-be-distribution-activation-v1__seed-139
+projection_stage: taste_episodes_allocation_semantic_v3
+credit_projection: allocation-local-v5

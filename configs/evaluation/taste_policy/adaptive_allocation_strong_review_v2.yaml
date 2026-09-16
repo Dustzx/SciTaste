@@ -1,0 +1,56 @@
+schema_version: "1.0"
+review_campaign_id: adaptive-allocation-strong-review-v2
+project_id: scitaste-self-development
+purpose: >-
+  Independently review the outcome-blind action-diverse development corpus with
+  two strong closed models that are identity-distinct from its GLM-5.3-Flash
+  trajectory producer.
+formal_evidence: false
+human_review_claimed: false
+effect_claim_authorized: false
+curation_plan:
+  locator: outputs/projects/scitaste-self-development/evaluations/taste-policy-development/adaptive-allocation-action-diverse-v2/CURATION_PLAN.json
+  sha256: 189a20af4d42182e3e81a086bbace08b5076193fc1a65b41076f980205c8e664
+  artifact_sha256: ffb6c303fed1cadf4fe9531ccb290f5680dfdfc257b1d10221e6b77a08c17432
+curation_receipt:
+  locator: outputs/projects/scitaste-self-development/evaluations/taste-policy-development/adaptive-allocation-action-diverse-v2/CURATION_RECEIPT.json
+  sha256: 113e4aaa1061b2728a79b52e71598b6453b09ef7525155bd1bb15f9e03c07755
+  artifact_sha256: bf03f35f2fd55d14f00fe8aaf788d3e5169bfd886fa10a386170f7c5511d18cc
+profile_set:
+  locator: configs/model_nodes/runtime_profiles.taste_attribution_strong_closed_v3.yaml
+  sha256: 5a09ef227257166b77faf4a7994d2b1b239dd331c97fc6eaad8d5b57990aed71
+reviewers:
+  - reviewer_id: deepseek-v41flash
+    profile_id: deepseek-v41flash-taste-review-v2
+    provider: deepseek
+    model: deepseek-flash
+    backend:
+      locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260916.yaml
+      sha256: bb9067bc14f25c362841f00658d8d496eb637cadcbf7d8671247778bb0f5d27f
+  - reviewer_id: bailian-qwen38max
+    profile_id: bailian-qwen38max-taste-review
+    provider: bailian
+    model: qwen3.8-max
+    backend:
+      locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+      sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+review_contract:
+  locator: configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml
+  sha256: 131e7885893710dff0271a690444e081c43b297915f770e4bf1e5e3f65030fa2
+review_authority_package:
+  locator: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
+  sha256: 02d5c550522d2c830cbc9476bdc8ae903de60047af403fab8ddebc428884a2d7
+candidate_count: 8
+attribution_seed: 0
+evidence_projection_mode: interactive-trajectory-compact-v1
+maximum_generations_per_candidate: 4
+maximum_provider_retries: 0
+maximum_total_generations: 32
+maximum_total_tokens: 1000000
+maximum_cost_usd: 50.0
+output_stage: taste_reviews_action_diverse_v2
+stop_rules:
+  - Retain every attempted generation and never replace a rejected candidate.
+  - Use the identical review packet and sampling seed for both attribution reviewers.
+  - Do not adjudicate reviewer disagreement inside this development campaign.
+  - Do not treat AI review, admission, family assignment, or policy fitting as an effect result.

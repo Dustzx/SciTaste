@@ -1,0 +1,14 @@
+# Identity-distinct strong closed-model development panel. The GLM-5.3-Flash
+# trajectory producer is excluded from review. This remains AI, not human,
+# authority and cannot by itself establish an effectiveness claim.
+schema_version: "1.0"
+profile_set_id: taste-attribution-strong-closed-v3
+profile_set_version: 3.0.0
+live_enabled: true
+profiles:
+  - path: profile_deepseek_v41flash_taste_review_v2.yaml
+    sha256: 6aa92b87039a98474c8681a36eef796ec97382394de1d682c5cf6565adc49b00
+    profile_sha256: 481670eecd43e1d49b44cd7ae1908e0b50792d00d5ededb976c365b91f87af5b
+  - path: profile_bailian_qwen38max_taste_review_v1.yaml
+    sha256: a89a76ee0460ca16ddf9e8b5bcec4983a3d278003cf0ced3e30e13aa72f2a3e9
+    profile_sha256: f33dbb8574d4228ab6df1c34161db65e49526ae43776dea878cd6691ae89ae36
