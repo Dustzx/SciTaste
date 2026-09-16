@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed the missing causal-treatment gate in E2. Schema 1.1 now binds the
+  exact family-conditioned policy, readiness report, adaptive-allocation head,
+  source-group exclusions, and outcome-blind H4 state-probe evidence before a
+  Native/Base development pair can execute. E2 v5 truthfully reports policy v6
+  as identity-closed but behaviorally inactive instead of treating a weight-one
+  arm as learned Taste. A fixed nine-task NewtonBench activation cohort and its
+  81-call/1,080,000-token API plus eight-GPU-hour local-review ceilings are
+  frozen but not authorized or executed; the support threshold remains 3.
 - Closed the E2 execution/admission identity boundary before launch. The v7/v3
   plan is retained as a zero-execution failure because its campaign command and
   result-admission command named different evaluation IDs. Program v8 and E2 v4

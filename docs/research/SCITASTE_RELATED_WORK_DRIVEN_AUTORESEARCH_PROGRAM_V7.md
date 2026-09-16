@@ -1,13 +1,13 @@
-# SciTaste related-work-driven AutoResearch program v7 to v8 handoff
+# SciTaste related-work-driven AutoResearch program v7 to v9 handoff
 
-Status: **v8 is the current project authority; one-shot B0 role selection complete;
-controller at development execution; no formal E1--E4 result yet**.
+Status: **v9 is the current project authority; one-shot B0 role selection complete;
+E2 v5 blocks an inactive Taste treatment; no formal E1--E4 result yet**.
 
 The machine-readable authority is
-[`iclr2027_scitaste_capability_driven_autoresearch_program_v8.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v8.yaml).
+[`iclr2027_scitaste_capability_driven_autoresearch_program_v9.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v9.yaml).
 The self-development project binds an immutable copy of that program and the
 v2 resource inventory under run
-`scitaste-iclr2027-capability-driven-autoresearch-program-v8`. Planning does not
+`scitaste-iclr2027-capability-driven-autoresearch-program-v9`. Planning does not
 itself authorize a benchmark, GPU, download, or provider call.
 
 ## Selection order
@@ -137,8 +137,8 @@ decorative T0/T1 × A0/A1 full grid.
 
 The direct Scientific Judge/Thinker training comparison is a third, external
 mechanism-reproduction question; it is not one of these SciTaste workload
-strata. A learned-weight SciTaste policy may be studied later, but it is not
-required by the current title or primary causal claim.
+strata. The current H4 claim explicitly requires a learned, state-conditioned
+`adaptive-allocation` policy; a declarative weight-one arm is not a treatment.
 
 ## Main evidence program
 
@@ -149,11 +149,12 @@ required by the current title or primary causal claim.
 | E3 | Can SciTaste complete Idea to reviewed and revised paper better than admitted AutoResearch methods? | MLR-Bench plus a qualified T0 task | matched-model primary and native-best secondary reported separately; at least one complete training-free and one training-based research workload, with actual task-dependent API/GPU work and paper-review loop |
 | E4 | Where does the executable research chain fail? | EXP-Bench | smallest Native/Base diagnostic pair spanning T0/T1 where qualified and covering hypothesis through conclusion |
 
-B0 exercises roles and the complete interface graph only on excluded development
-content. B1 runs the smallest complete formal trajectories needed to cover the
-four questions. B2 expands only contrasts whose B1 variance, failure rate, and
-clustered power require it; no decorative model × system × task × seed grid is
-permitted.
+The one-shot B0 exercises roles and the complete interface graph only on excluded
+development content. It is complete and will not be repeated. The later E2
+development pair is a real two-arm trajectory, not another B0. Formal execution
+runs the smallest complete trajectories needed to cover the four questions and
+expands only contrasts whose variance, failure rate, and clustered power require
+it; no decorative model × system × task × seed grid is permitted.
 
 ## Current evidence and next execution
 
@@ -189,32 +190,58 @@ therefore retained as a zero-execution failed plan. V8 replayed the same
 content-hashed evidence against E2 v4 and again reached
 `development-execution` without launching a benchmark cell.
 
+E2 v4 nevertheless omitted the causal-treatment dependency. Policy v6's
+`adaptive-allocation` head has one source episode but zero training episodes,
+zero training source groups, zero feature support, and no behaviorally active
+state probe. An ON/OFF launch could therefore produce identical controller
+behavior. E2 v5 binds the exact policy and readiness bytes and fails closed on
+that condition; v4 remains historical no-run planning evidence. V8 is therefore
+failed and superseded without external execution. V9 has replayed the exact
+acquisition, quarantine, split, role-selection, Idea-lock, and experiment-plan
+artifacts through sequence 7 and is now the project-owned controller at
+`development-execution`. Its development plan binds activation v1 rather than
+mislabeling an inactive ON/OFF pair as a completed treatment.
+
 The immediate critical path is therefore:
 
-1. approve and execute the exact two-arm E2 development block disclosed by v4;
-2. carry that trajectory through paper, review, return,
+1. approve and execute the fixed nine-task adaptive-allocation development cohort;
+2. refit policy v7 without lowering support 3 and pass the frozen MLRC-domain
+   active-plus-feedback-sensitive state probe;
+3. execute the single two-arm E2 development pair disclosed by v5;
+4. carry that trajectory through paper, review, return,
    revision, and final disposition;
-3. before its paper-review phase, qualify a second generator-disjoint reviewer
+5. before its paper-review phase, qualify a second generator-disjoint reviewer
    and a distinct adjudicator without reopening the execution-role selection;
-4. after the development trajectory validates the loop, request separate B1
+6. after the development trajectory validates the loop, request separate formal
    authority for the 16-GPU-hour paired hidden-objective experiment;
-5. run the smallest complete E1/E3/E4 block and scale only effects that need
+7. run the smallest complete E1/E3/E4 block and scale only effects that need
    power.
 
 The current no-run E2 handoff is
-[`mlrc_perception_native_pair_e2_v4.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v4.yaml),
-SHA-256 `03dccd1adcf803c804f28b8b67abc97f3a9c6335f10a037780649d6341514c9e`.
-Its eleven static scientific and execution boundaries pass, including exact
-bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
-and the related-work candidate catalog. V4 additionally binds the actual B0
+[`mlrc_perception_native_pair_e2_v5.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v5.yaml),
+SHA-256 `d7c9b2c70766d0ce415db20b7ff6cd67e3a02d07c2700d4742ee501cf38a462f`.
+It retains exact bindings to accepted Idea revision
+`outcome-calibrated-scientific-taste-policy-v2` and the related-work candidate
+catalog. V5 additionally binds the actual B0
 selection file and verifies Qwen3.8-Max for both agent roles plus independent
 GLM-5.3-Flash judging. It closes campaign-to-admission identity and freezes, per
 block, eight Qwen3.8-Max calls, 16,000 input and 8,192 output tokens per call,
 193,536 total tokens, USD 1, and zero retries. The broader pool still includes unconfigured GPT and
 Gemini candidates alongside current GLM, DeepSeek, Qwen API, and open 9B
 candidates, so local inventory cannot silently define the experiment. It is
-deliberately not launchable while exact owner approval, the development-only
-two-arm/full-loop receipt, and actual GPU baseline remain open.
+deliberately not launchable while the adaptive head is inactive, its target-domain
+state probe is absent, owner approval is absent, and the actual GPU baseline
+remains open.
+
+The prerequisite activation manifest is
+[`adaptive_allocation_activation_v1.yaml`](../../configs/evaluation/taste_policy/adaptive_allocation_activation_v1.yaml),
+SHA-256 `40bb18ef099c01a811e0dd3e7176f4889e77fc362e67321b7523826f7c7555ab`.
+It freezes nine previously unused NewtonBench modules before observing outcomes,
+uses one post-feedback nonterminal decision per source group, retains failures,
+and forbids score- or credit-directed selection. Its hard ceiling is 81
+GLM-5.3-Flash calls / 1,080,000 tokens, plus at most 36 local Qwen3-VL-4B/8B
+review generations and eight aggregate review GPU-hours. It requires no task GPU
+and no download. These resources are disclosed, not authorized or consumed.
 
 The remote fixed-revision `Qwen/Qwen3.5-9B` candidate is now statically complete:
 16 files, four indexed shards, 15,664,539,861 bytes, aggregate checkpoint digest

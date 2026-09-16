@@ -4716,3 +4716,32 @@ freezes Qwen3.8-Max at eight calls, 16,000 input and 8,192 output tokens per cal
 193,536 total tokens, USD 1, and zero retries. These bounds plus static readiness
 do not authorize provider, GPU, benchmark, or hidden-score execution; the exact
 manifest hash and execution authority remain separate owner decisions.
+
+### ADR-146: E2 requires a behaviorally active Taste treatment
+
+Status: accepted and implemented at the no-run boundary in E2 v5; policy
+activation and all external execution remain pending.
+
+A lifecycle-policy weight of one does not establish a treatment. The E2 ON arm
+may execute only when its manifest content-binds a family-conditioned policy,
+the corresponding project readiness report, the `adaptive-allocation` head,
+and source groups disjoint from the evaluation task. The inspector recomputes
+policy/readiness/Idea coherence and refuses an untrained, insufficient-support,
+domain-ineligible, or non-H4-eligible head. Historical schema-1.0 manifests stay
+loadable, but cannot receive execution readiness without this intervention.
+
+Static policy eligibility is also insufficient. A frozen, outcome-blind H4
+state-probe contract must target the evaluation domain and bind the exact
+adaptive head. Its report must show both a nonzero ON/OFF action change and
+different supported preferences across feedback states. This proves only that
+the manipulation exists; the later paired hidden endpoint remains the sole
+authority for an effectiveness claim.
+
+Policy v6 closes its identity but has zero adaptive-allocation training episodes,
+zero training source groups, and zero feature support, so E2 v5 correctly blocks.
+The activation-v1 development cohort freezes nine unused NewtonBench modules,
+one outcome-independent candidate-selection rule per task, cross-model local AI
+review, a support threshold of three, and cross-domain transfer followed by the
+MLRC-domain state probe. It is policy-training data, not another B0 or paper
+effect experiment, and cannot lower the support threshold to manufacture an
+active treatment.
