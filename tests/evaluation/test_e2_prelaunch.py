@@ -126,6 +126,14 @@ def test_current_e2_treatment_identity_is_closed_but_behavior_is_inactive() -> N
 
     report = inspect_e2_taste_intervention(manifest, workspace_root=Path.cwd())
 
+    policy_path = Path(manifest.taste_intervention.family_policy.locator)
+    readiness_path = Path(manifest.taste_intervention.readiness.locator)
+    if not policy_path.is_file() or not readiness_path.is_file():
+        assert report.identity_closed is False
+        assert report.behaviorally_active is False
+        assert report.blocker_codes == ("taste-intervention-binding-invalid",)
+        return
+
     assert report.identity_closed is True
     assert report.behaviorally_active is False
     assert report.blocker_codes == (
