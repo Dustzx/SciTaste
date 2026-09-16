@@ -1279,14 +1279,18 @@ def complete_adaptive_policy_activation_task(
     if (
         receipt.project_id != state.project_id
         or receipt.run_id != permit.run_id
-        or receipt.task_id != permit.task_id
         or receipt.condition_id != "development-foundation"
     ):
         raise ValueError("adaptive activation receipt differs from its task permit")
     if (
         batch.project_id != state.project_id
         or batch.run_id != permit.run_id
-        or batch.task_id != permit.task_id
+        # The campaign task_id is a stable cohort alias (for example
+        # ``coulomb-easy-v1``), while the bound NewtonBench task document owns a
+        # longer runtime task_id.  The exact task document is hash-bound during
+        # inspection and preparation; terminal evidence must agree with itself
+        # rather than pretending the two identifier namespaces are identical.
+        or batch.task_id != receipt.task_id
         or batch.source_group_id != permit.source_group_id
         or batch.receipt_sha256 != receipt.receipt_sha256
         or len(batch.items) > 1

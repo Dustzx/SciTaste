@@ -45,6 +45,11 @@
   before transport at zero tokens and zero cost because the required local
   credential is absent; that operational failure is retained rather than
   relabelled as a model result or silently retried.
+- Fixed the adaptive-policy campaign's first real trajectory handoff after it
+  exposed two legitimate task-ID namespaces: the stable cohort alias and the
+  exact runtime task-document ID. The terminal receipt and episode batch now
+  agree on the hash-bound runtime identity while campaign state retains its
+  alias; the completed trajectory was adopted without another provider call.
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning.
