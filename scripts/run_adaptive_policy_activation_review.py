@@ -108,7 +108,11 @@ def execute(args: argparse.Namespace):
         raise FileExistsError(
             f"activation review evidence already exists and cannot be rerun: {review_root}"
         )
-    initial_project_bytes = _tree_bytes(project_root)
+    # The candidate and trajectory were already charged by the task permit.
+    # Review accounting owns only the fresh, candidate-scoped evidence tree;
+    # scanning the whole long-lived project would both double-count prior runs
+    # and make unrelated historical reference symlinks block local review.
+    initial_review_bytes = 0
     contract_path = _bound_path(workspace, manifest.review_and_admission.review_contract.locator)
     authority_path = _bound_path(
         workspace, manifest.review_and_admission.review_authority_package.locator
@@ -283,7 +287,7 @@ def execute(args: argparse.Namespace):
     if attempted == 0:
         raise RuntimeError("activation review produced no local generation attempt")
     local_gpu_hours = local_seconds / 3600.0
-    new_disk_bytes = max(0, _tree_bytes(project_root) - initial_project_bytes)
+    new_disk_bytes = max(0, _tree_bytes(review_root) - initial_review_bytes)
     result = AdaptivePolicyActivationReviewResult.create(
         permit_sha256=permit.permit_sha256,
         task_id=permit.task_id,
