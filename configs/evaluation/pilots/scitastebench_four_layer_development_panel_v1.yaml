@@ -1,0 +1,40 @@
+schema_version: "1.0"
+panel_id: scitastebench-four-layer-development-panel-v1
+project_id: scitaste-self-development
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+primary_a:
+  role: primary-a
+  plan:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-v1/PLAN.json
+    sha256: c9e2bff32007b4e090cea3e87c4459bfebb5d9f6d50f9460b7b06c3cc7abddd3
+  normalization:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-v1/normalization/NORMALIZATION.json
+    sha256: 4016fbe9c66cd09f0d4bb9fbef323a380b0fa65355a2691fdf5d0e4f851aeb7b
+  decisions:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-v1/normalization/NORMALIZED_DECISIONS.jsonl
+    sha256: 1498f88ca06c66712f4e09f90f3e0ac80a6f1478e5df1dfaf9fb960611cd0ce6
+primary_b:
+  role: primary-b
+  plan:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-glm-v1/PLAN.json
+    sha256: 0822df224e7420a13a14c8e788f6f6e8d0c1e2fea4edcb2f527773b6f31e41a4
+  normalization:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-glm-v1/normalization/NORMALIZATION.json
+    sha256: 8bc248cd23b0e50cb317f1ef18130ecb50a16bdac113a1024ab398848310bd22
+  decisions:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-glm-v1/normalization/NORMALIZED_DECISIONS.jsonl
+    sha256: cff5294ce53e935e8c4f04b7373995d3c584bc94f1b4f3ad720e9cada13af789
+profile:
+  locator: configs/model_nodes/profile_deepseek_v41flash_scitastebench_adjudicator_v1.yaml
+  sha256: 000078d99a0a8232c516efba34c124efe2d5b9f5abf6cdc7e313fb375e024797
+backend_config:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260916.yaml
+  sha256: bb9067bc14f25c362841f00658d8d496eb637cadcbf7d8671247778bb0f5d27f
+batch_size: 8
+seed: 6027
+disagreement_only: true
+automatic_retry_permitted: false
+target_outcomes_visible: false
+formal_split_access_authorized: false

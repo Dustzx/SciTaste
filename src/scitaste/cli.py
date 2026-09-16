@@ -339,6 +339,10 @@ from scitaste.evaluation.review_authority import (
 from scitaste.evaluation.scitastebench_development_intake import (
     materialize_scitastebench_development_intake,
 )
+from scitaste.evaluation.scitastebench_development_panel import (
+    execute_scitastebench_development_panel,
+    prepare_scitastebench_development_panel,
+)
 from scitaste.evaluation.scitastebench_development_screening import (
     execute_scitastebench_development_screen,
     normalize_scitastebench_development_screen,
@@ -2439,6 +2443,28 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(development_screen_normalize)
     development_screen_normalize.set_defaults(
         handler=_handle_evaluation_scitastebench_v4_screen_normalize
+    )
+    development_panel_prepare = evaluation_commands.add_parser(
+        "scitastebench-v4-development-panel-prepare",
+        help="Freeze third-model adjudication of case-screening disagreements",
+    )
+    development_panel_prepare.add_argument("--config", type=Path, required=True)
+    development_panel_prepare.add_argument("--locator-root", type=Path, default=Path("."))
+    development_panel_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(development_panel_prepare)
+    development_panel_prepare.set_defaults(
+        handler=_handle_evaluation_scitastebench_v4_panel_prepare
+    )
+    development_panel_execute = evaluation_commands.add_parser(
+        "scitastebench-v4-development-panel-execute",
+        help="Execute every frozen third-model adjudication batch at most once",
+    )
+    development_panel_execute.add_argument("--directory", type=Path, required=True)
+    development_panel_execute.add_argument("--locator-root", type=Path, default=Path("."))
+    development_panel_execute.add_argument("--allow-live", action="store_true")
+    _add_log_level_option(development_panel_execute)
+    development_panel_execute.set_defaults(
+        handler=_handle_evaluation_scitastebench_v4_panel_execute
     )
     abstraction_review_prepare = evaluation_commands.add_parser(
         "ai-abstraction-review-prepare",
@@ -8655,6 +8681,45 @@ def _handle_evaluation_scitastebench_v4_screen_normalize(args: argparse.Namespac
     )
     print(manifest.model_dump_json(indent=2))
     return 0
+
+
+def _handle_evaluation_scitastebench_v4_panel_prepare(args: argparse.Namespace) -> int:
+    plan = prepare_scitastebench_development_panel(
+        config_path=args.config,
+        locator_root=args.locator_root,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "development-panel-prepared",
+                "panel_id": plan.panel_id,
+                "plan_sha256": plan.plan_sha256,
+                "adjudicator_provider": plan.adjudicator_provider,
+                "adjudicator_model": plan.adjudicator_model,
+                "agreed_eligible_count": plan.agreed_eligible_count,
+                "agreed_ineligible_count": plan.agreed_ineligible_count,
+                "disputed_count": plan.disputed_count,
+                "batch_count": len(plan.batches),
+                "outcome_fields_exposed": plan.outcome_fields_exposed,
+                "model_calls_performed": plan.model_calls_performed,
+                "output": str(args.output / "PLAN.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_scitastebench_v4_panel_execute(args: argparse.Namespace) -> int:
+    summary = execute_scitastebench_development_panel(
+        panel_dir=args.directory,
+        locator_root=args.locator_root,
+        allow_live=args.allow_live,
+    )
+    print(summary.model_dump_json(indent=2))
+    return 0 if summary.complete and summary.ready_for_allocation else 1
 
 
 def _handle_evaluation_ai_abstraction_review_prepare(args: argparse.Namespace) -> int:

@@ -38,6 +38,13 @@
   rejected receipts. The resulting cross-model disagreement reveals a real
   construct gap between experiment design and resource allocation; allocation
   remains blocked rather than relabelling cases to meet a quota.
+- Added a disagreement-only third-model panel that bypasses exact primary
+  agreements, uses ordinal response positions, retains both primary judgments
+  and the adjudicator resolution, and prevents target outcomes or the formal
+  split from entering the request. The first DeepSeek-V4.1-Flash launch stopped
+  before transport at zero tokens and zero cost because the required local
+  credential is absent; that operational failure is retained rather than
+  relabelled as a model result or silently retried.
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning.

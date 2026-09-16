@@ -63,6 +63,18 @@ four such cases, GLM proposed one, and none agree. Hypothesis coverage is also
 thin. A third model must adjudicate only disputed or scarce-family candidates;
 the project must not hand-relabel experiment-design cases merely to satisfy the
 six-per-family quota.
+
+The disagreement-only panel is now executable and frozen: 21 cases with exact
+context-and-judgment agreement and 11 jointly excluded cases bypass further
+model judgment, while 69 disputes map to nine fixed DeepSeek-V4.1-Flash
+batches. The request uses ordinal positions rather than generative source-ID
+copying, retains both primary proposals, and still withholds target outcomes.
+The first local launch stopped before transport with zero tokens and zero cost
+because `DEEPSEEK_API_KEY` is not bound in the project environment. Its failed
+receipt is retained locally; it is not a model result, and the batch will not be
+silently retried. A newly versioned panel run may start only after the declared
+third-model credential is available.
+
 The candidates are not benchmark items or gold outcomes. A source enters a
 formal population only after the applicable domain, quality, privacy,
 decision-family, grounded-abstraction, attribution, and decision-episode
