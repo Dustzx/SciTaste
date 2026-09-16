@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a resume-safe Track-A abstraction campaign runner. It replaces the
+  manual per-invocation loop with one batch command, executes only missing
+  frozen model-node identities behind `--allow-live`, never retries terminal
+  accepted/rejected/failed/planned evidence, retains exact token/cost totals,
+  and automatically prepares the independent AI-review bridge after a closed
+  nonempty batch. Its default mode cannot create a provider call or a
+  replacement sample, although it may materialize the deterministic local
+  review bridge for an already closed batch.
 - Added the approval-to-E2 activation operator. One command now journals every
   one-use task and review permit plus every hash-chained state, resumes completed
   task evidence without another provider call, recovers sealed state outputs

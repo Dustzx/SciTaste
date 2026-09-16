@@ -343,6 +343,9 @@ from scitaste.evaluation.taste_mechanism_suite import (
     inspect_track_a_pilot_suite,
     materialize_track_a_pilot_suite,
 )
+from scitaste.evaluation.track_a_abstraction_campaign import (
+    run_track_a_abstraction_campaign,
+)
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
@@ -2492,6 +2495,27 @@ def build_parser() -> argparse.ArgumentParser:
     track_a_abstraction_prepare.add_argument("--output", type=Path, required=True)
     _add_log_level_option(track_a_abstraction_prepare)
     track_a_abstraction_prepare.set_defaults(handler=_handle_evaluation_track_a_abstraction_prepare)
+    track_a_abstraction_campaign = evaluation_commands.add_parser(
+        "track-a-abstraction-campaign-run",
+        help=(
+            "Resume one frozen abstraction batch without retrying terminal entries, "
+            "then prepare its AI-review handoff"
+        ),
+    )
+    track_a_abstraction_campaign.add_argument("--batch", type=Path, required=True)
+    track_a_abstraction_campaign.add_argument("--protocol", type=Path, required=True)
+    track_a_abstraction_campaign.add_argument("--review-output", type=Path, required=True)
+    track_a_abstraction_campaign.add_argument("--locator-root", type=Path, default=Path("."))
+    track_a_abstraction_campaign.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    track_a_abstraction_campaign.add_argument(
+        "--allow-live",
+        action="store_true",
+        help="execute only missing frozen model-node invocations; never retry terminal entries",
+    )
+    _add_log_level_option(track_a_abstraction_campaign)
+    track_a_abstraction_campaign.set_defaults(
+        handler=_handle_evaluation_track_a_abstraction_campaign
+    )
     track_a_suite_materialize = evaluation_commands.add_parser(
         "track-a-suite-materialize",
         help="Freeze available Track-A targets into no-call three-arm requests",
@@ -8670,6 +8694,19 @@ def _handle_evaluation_track_a_abstraction_prepare(args: argparse.Namespace) -> 
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_track_a_abstraction_campaign(args: argparse.Namespace) -> int:
+    status = run_track_a_abstraction_campaign(
+        locator_root=args.locator_root,
+        outputs_root=args.outputs_root,
+        batch_path=args.batch,
+        review_protocol_path=args.protocol,
+        review_output_dir=args.review_output,
+        allow_live=args.allow_live,
+    )
+    print(status.model_dump_json(indent=2))
     return 0
 
 

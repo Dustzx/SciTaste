@@ -1316,6 +1316,10 @@ from scitaste.evaluation.taste_source_segmentation_protocol import (
     prepare_taste_source_segmentation_request_pack,
     segmentation_campaign_token,
 )
+from scitaste.evaluation.track_a_abstraction_campaign import (
+    TrackAAbstractionCampaignStatus,
+    run_track_a_abstraction_campaign,
+)
 from scitaste.evaluation.track_a_decision_execution import (
     TrackAAIPreferenceBridgeReport,
     TrackADecisionBackendConfig,
@@ -2094,6 +2098,7 @@ __all__ = [
     "TasteStudyCondition",
     "TitleAuthorityFinding",
     "TrackAAIPreferenceBridgeReport",
+    "TrackAAbstractionCampaignStatus",
     "TrackADecisionBackendConfig",
     "TrackADecisionBatch",
     "TrackADecisionCall",
@@ -2428,6 +2433,7 @@ __all__ = [
     "route_program_stage_action",
     "run_live_direct_agent",
     "run_taste_source_segmentation_calibration",
+    "run_track_a_abstraction_campaign",
     "save_acquired_task_cohort_report",
     "save_acquisition_gate_report",
     "save_adaptive_policy_activation_artifact",

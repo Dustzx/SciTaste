@@ -621,6 +621,33 @@ def test_failed_schema_response_still_advances_known_usage_and_archive_hash(
         ModelNodeRuntime(project).status(project_id=PROJECT_ID, run_id=RUN_ID)
 
 
+def test_find_entry_distinguishes_missing_from_verified_terminal_entry(tmp_path: Path) -> None:
+    project, revision = _project(tmp_path)
+    runtime = ModelNodeRuntime(project)
+    assert (
+        runtime.find_entry(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            invocation_id="campaign-item",
+        )
+        is None
+    )
+
+    receipt = runtime.execute(
+        backend=_backend("campaign-item"),
+        **_values(invocation_id="campaign-item", revision=revision),
+    )
+    entry = runtime.find_entry(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        invocation_id="campaign-item",
+    )
+
+    assert entry is not None
+    assert entry.entry_sha256 == receipt.entry_sha256
+    assert entry.outcome is RuntimeOutcome.ACCEPTED
+
+
 def test_failed_attempt_redacts_environment_secret_from_archived_diagnostic(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

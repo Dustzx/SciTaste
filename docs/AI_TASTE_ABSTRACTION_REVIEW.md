@@ -57,6 +57,29 @@ scitaste evaluation ai-abstraction-review-prepare \
   --output outputs/projects/<project>/runs/<run>/taste_abstraction-review/<review>
 ```
 
+For a newly frozen batch, the campaign runner removes the manual one-command-
+per-item loop:
+
+```bash
+scitaste evaluation track-a-abstraction-campaign-run \
+  --batch <BATCH.json> \
+  --protocol configs/evaluation/pilots/scitastebench_track_a_ai_abstraction_review_v1.yaml \
+  --review-output <new-review-directory> \
+  --locator-root . --outputs-root outputs
+```
+
+Without `--allow-live` this performs no provider call. An incomplete batch is
+reported without writing a review output; a closed nonempty batch may perform
+the deterministic local review-bridge materialization. With `--allow-live`, it
+executes only invocation IDs that have no ledger entry, using the batch-bound
+config and profile. A
+terminal accepted, rejected, failed, not-applicable, or planned entry is never
+called again. After all items are consumed, the same command prepares the
+review bridge when at least one abstraction is runtime-accepted; an empty
+consumed batch is frozen rather than filled with a replacement sample. Provider
+call count is reported as an upper bound because crash recovery can publish an
+already recorded response without another call.
+
 The command performs no model, API, GPU, human-contact, or experiment action.
 The provider or agent that produces each response must consume the exact request
 under `review-pack/requests/` and return the required structured JSON. Provider

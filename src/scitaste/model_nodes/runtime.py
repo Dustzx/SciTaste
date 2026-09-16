@@ -515,6 +515,26 @@ class ModelNodeRuntime:
     ) -> RuntimeLedgerEntry:
         """Read one entry only after validating the complete chained ledger."""
 
+        entry = self.find_entry(
+            project_id=project_id,
+            run_id=run_id,
+            invocation_id=invocation_id,
+        )
+        if entry is None:
+            raise ModelNodeRuntimeError(
+                f"model-node invocation is not a unique committed entry: {invocation_id!r}"
+            )
+        return entry
+
+    def find_entry(
+        self,
+        *,
+        project_id: str,
+        run_id: str,
+        invocation_id: str,
+    ) -> RuntimeLedgerEntry | None:
+        """Return one verified entry or ``None`` without hiding ledger corruption."""
+
         validate_entry_id(invocation_id, field_name="invocation_id")
         stage, _ = self._validate_project_run(
             project_id,
@@ -524,11 +544,11 @@ class ModelNodeRuntime:
         )
         entries = self._load_ledger(stage, project_id=project_id, run_id=run_id)
         matches = [item for item in entries if item.intent.invocation_id == invocation_id]
-        if len(matches) != 1:
+        if len(matches) > 1:
             raise ModelNodeRuntimeError(
                 f"model-node invocation is not a unique committed entry: {invocation_id!r}"
             )
-        return matches[0]
+        return matches[0] if matches else None
 
     def totals_through_entry(
         self,
