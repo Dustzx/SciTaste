@@ -67,9 +67,7 @@ def test_campaign_closes_a_zero_candidate_cohort_without_review_generation() -> 
     manifest, plan, approval, state = _authorized_campaign()
 
     for _ in manifest.frozen_execution.tasks:
-        permit, running = issue_adaptive_policy_activation_task(
-            manifest, plan, approval, state
-        )
+        permit, running = issue_adaptive_policy_activation_task(manifest, plan, approval, state)
         receipt = InteractiveResearchRunReceipt.create(
             project_id=manifest.project_id,
             run_id=permit.run_id,
@@ -113,26 +111,19 @@ def test_campaign_closes_a_zero_candidate_cohort_without_review_generation() -> 
         is AdaptivePolicyActivationAction.CLOSE_EMPTY_REVIEW
     )
 
-    closed = close_adaptive_policy_activation_empty_review(
-        manifest, plan, approval, state
-    )
+    closed = close_adaptive_policy_activation_empty_review(manifest, plan, approval, state)
 
     assert closed.status == "review-complete"
     assert closed.review_evidence == ()
     assert closed.consumed_local_review_generations == 0
-    assert (
-        next_adaptive_policy_activation_action(closed)
-        is AdaptivePolicyActivationAction.FINALIZE
-    )
+    assert next_adaptive_policy_activation_action(closed) is AdaptivePolicyActivationAction.FINALIZE
 
 
 def test_campaign_journal_recovers_a_sealed_pending_runner_state(tmp_path: Path) -> None:
     manifest, plan, approval, state = _authorized_campaign()
     journal = AdaptivePolicyActivationJournal(tmp_path / "journal")
     journal.bootstrap(state)
-    permit, running = issue_adaptive_policy_activation_task(
-        manifest, plan, approval, state
-    )
+    permit, running = issue_adaptive_policy_activation_task(manifest, plan, approval, state)
     journal.save_task_permit(permit)
     pending = journal.state_output_path(running.sequence, running.status)
     save_adaptive_policy_activation_artifact(running, pending)

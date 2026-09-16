@@ -36,9 +36,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
         "manifest_id": successor.manifest_id,
         "manifest_path": str(path),
         "manifest_sha256": receipt.successor_manifest_sha256,
-        "ready_for_development_static_handoff": (
-            inspection.ready_for_development_static_handoff
-        ),
+        "ready_for_development_static_handoff": (inspection.ready_for_development_static_handoff),
         "taste_intervention_behaviorally_active": (
             inspection.taste_intervention_behaviorally_active
         ),

@@ -228,9 +228,7 @@ def materialize_adaptive_policy_e2_successor(
             policy_id=finalization.successor_policy_id,
             decision_family=ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION,
             target_domain=predecessor_intervention.target_domain,
-            evaluation_source_group_ids=(
-                predecessor_intervention.evaluation_source_group_ids
-            ),
+            evaluation_source_group_ids=(predecessor_intervention.evaluation_source_group_ids),
             source_group_disjoint_from_evaluation=True,
             behaviorally_active_required=True,
             formal_effect_claim_ready=False,
@@ -302,9 +300,7 @@ def materialize_adaptive_policy_e2_successor(
             readiness=intervention.readiness,
             state_probe_contract=intervention.state_probe_contract,
             state_probe_report=intervention.state_probe_report,
-            ready_for_development_static_handoff=(
-                inspection.ready_for_development_static_handoff
-            ),
+            ready_for_development_static_handoff=(inspection.ready_for_development_static_handoff),
             taste_intervention_behaviorally_active=(
                 inspection.taste_intervention_behaviorally_active
             ),
@@ -324,11 +320,7 @@ def load_adaptive_policy_e2_handoff_receipt(
     path: str | Path,
 ) -> AdaptivePolicyE2HandoffReceipt:
     source = Path(path)
-    if (
-        source.is_symlink()
-        or not source.is_file()
-        or source.stat().st_size > 2 * 1_048_576
-    ):
+    if source.is_symlink() or not source.is_file() or source.stat().st_size > 2 * 1_048_576:
         raise ValueError("adaptive E2 handoff receipt must be a bounded regular file")
     return AdaptivePolicyE2HandoffReceipt.model_validate_json(source.read_bytes(), strict=True)
 
