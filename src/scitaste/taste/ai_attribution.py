@@ -171,7 +171,55 @@ class AITasteAttributionReviewInput(BaseModel):
 class AITasteAttributionReviewProposal(BaseModel):
     """Untrusted scientific-credit judgment returned by one model."""
 
-    model_config = _CONFIG
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {"verdict": {"const": "accept"}},
+                        "required": ["verdict"],
+                    },
+                    "then": {
+                        "properties": {
+                            "preferred_action_id": {"type": "string", "minLength": 1},
+                            "supported_credit_ids": {"minItems": 1},
+                            "decision_trace_supported": {"const": True},
+                            "outcome_trace_supported": {"const": True},
+                            "alternatives_supported": {"const": True},
+                            "credit_assignment_supported": {"const": True},
+                            "transfer_scope_supported": {"const": True},
+                            "reversal_probe_supported": {"const": True},
+                        }
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"verdict": {"const": "reject"}},
+                        "required": ["verdict"],
+                    },
+                    "then": {
+                        "anyOf": [
+                            {
+                                "properties": {name: {"const": False}},
+                                "required": [name],
+                            }
+                            for name in (
+                                "decision_trace_supported",
+                                "outcome_trace_supported",
+                                "alternatives_supported",
+                                "credit_assignment_supported",
+                                "transfer_scope_supported",
+                                "reversal_probe_supported",
+                            )
+                        ]
+                    },
+                },
+            ]
+        },
+    )
 
     review_packet_sha256: str = Field(pattern=_SHA256)
     verdict: TasteAttributionReviewVerdict
@@ -180,7 +228,13 @@ class AITasteAttributionReviewProposal(BaseModel):
     # requires a concrete preference and credit assignment for acceptance.
     # Defaults made these fields disappear from ``required`` even though an
     # accepted response cannot be valid without them.
-    preferred_action_id: str | None = Field(max_length=300)
+    preferred_action_id: str | None = Field(
+        max_length=300,
+        description=(
+            "Legacy field name for the action receiving the reviewed credit: beneficial "
+            "credit favors it and harmful credit disfavors it."
+        ),
+    )
     supported_credit_ids: tuple[str, ...] = Field(max_length=100)
     decision_trace_supported: bool
     outcome_trace_supported: bool
@@ -235,8 +289,11 @@ class AITasteAttributionReviewNode(
         "condition, paper claim, author intent, prestige, another review, or information outside "
         "the packet. Accept only when every rubric dimension is supported; otherwise reject and "
         "mark at least one unsupported dimension. A successful outcome does not by itself prove "
-        "good judgment. Select only an available action and only supplied credit IDs. This is AI "
-        "review, not human or expert validation, and it cannot execute actions or update policy."
+        "good judgment. The preferred_action_id field names the action receiving the proposed "
+        "credit: beneficial credit favors it, while harmful credit disfavors it; it is not an "
+        "unconditional positive label. Select only an available action and only supplied credit "
+        "IDs. This is AI review, not human or expert validation, and it cannot execute actions or "
+        "update policy."
     )
     input_model = AITasteAttributionReviewInput
     output_model = AITasteAttributionReviewProposal

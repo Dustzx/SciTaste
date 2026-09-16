@@ -1,4 +1,4 @@
-# Lifecycle Scientific Taste policy: formalization v1
+# Lifecycle Scientific Taste policy: v1 formalization with signed-v2 amendment
 
 Status: **paper-facing specification of the implemented estimator; no empirical
 effect claimed**.
@@ -6,8 +6,9 @@ effect claimed**.
 This document closes the mathematical gap between the current SciTaste paper
 and the implementation in
 [`episode_learning.py`](../../src/scitaste/taste/episode_learning.py). It defines
-the exact v1 learning object, update rule, inference rule, abstention gate, causal
-comparisons, and known limitations. A paper may cite these equations only for a
+the replayable v1 learning object plus the implemented signed-v2 update rule,
+inference rule, abstention gate, causal comparisons, and known limitations. A
+paper may cite these equations only for a
 run whose policy configuration and source episodes are content-bound to this
 implementation.
 
@@ -46,6 +47,12 @@ paper-quality score, a relevance retriever, a reward equal to executor success,
 or a claim that later outcomes were caused by an earlier choice without
 attribution review.
 
+The persisted field name `preferred_action_id` is retained for artifact
+compatibility, but v2 interprets it as the action receiving the admitted causal
+credit. Let \(z_i=+1\) for beneficial credit and \(z_i=-1\) for harmful credit.
+Thus \(a_i^*\) is preferred only when \(z_i=+1\); when \(z_i=-1\), it is the
+reviewed negative target. Admissions with both signs are undefined and rejected.
+
 ## 2. Partition and source-group admissibility
 
 Only episodes in the configured development or calibration partitions may fit a
@@ -72,7 +79,7 @@ round, or trajectory cannot create more than one effective training unit.
 
 ## 3. Pairwise observations
 
-For each episode, the supported preferred action \(a_i^*\) is compared with
+For each episode, the supported credited action \(a_i^*\) is compared with
 every recorded alternative \(b\in A_i\setminus\{a_i^*\}\). Its weight is split
 equally across competitors:
 
@@ -92,15 +99,21 @@ The implemented feature map \(\phi(e_i,a)\) contains:
 For feature \(f\), weighted wins and losses are
 
 \[
-W_f=\sum_i\sum_{b\ne a_i^*}
-w_{ib}\,\mathbb{1}
-\left[f\in\phi(e_i,a_i^*)\setminus\phi(e_i,b)\right],
+W_f=\sum_i\sum_{b\ne a_i^*}w_{ib}\left(
+\mathbb{1}[z_i=+1]\mathbb{1}
+\left[f\in\phi(e_i,a_i^*)\setminus\phi(e_i,b)\right]
++\mathbb{1}[z_i=-1]\mathbb{1}
+\left[f\in\phi(e_i,b)\setminus\phi(e_i,a_i^*)\right]
+\right),
 \]
 
 \[
-L_f=\sum_i\sum_{b\ne a_i^*}
-w_{ib}\,\mathbb{1}
-\left[f\in\phi(e_i,b)\setminus\phi(e_i,a_i^*)\right].
+L_f=\sum_i\sum_{b\ne a_i^*}w_{ib}\left(
+\mathbb{1}[z_i=+1]\mathbb{1}
+\left[f\in\phi(e_i,b)\setminus\phi(e_i,a_i^*)\right]
++\mathbb{1}[z_i=-1]\mathbb{1}
+\left[f\in\phi(e_i,a_i^*)\setminus\phi(e_i,b)\right]
+\right).
 \]
 
 Features shared by both actions contribute neither a win nor a loss. One
@@ -142,9 +155,10 @@ v_f=\frac{\operatorname{Var}(\theta_f)}
 {\mu_f^2(1-\mu_f)^2}.
 \]
 
-The v1 estimator is intentionally transparent and training-free with respect to
-base-model weights. What is learned is the content-addressed posterior table,
-not a new language model.
+Both estimator versions are transparent and training-free with respect to
+base-model weights. V1 remains hash-replayable for historical artifacts; new
+fits emit `signed-factorized-beta-pairwise-v2`. What is learned is the
+content-addressed posterior table, not a new language model.
 
 ## 5. Action score and conservative uncertainty
 

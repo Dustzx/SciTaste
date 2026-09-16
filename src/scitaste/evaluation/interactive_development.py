@@ -51,6 +51,7 @@ from scitaste.taste.episodes import (
     TasteEpisodeCandidate,
     TasteEpisodeConfounder,
     TasteEpisodeDecisionContext,
+    TasteEpisodeEvidence,
     TasteEpisodeEvidenceRole,
     TasteEpisodeOutcome,
     TasteOutcomeFamily,
@@ -728,6 +729,7 @@ def refine_interactive_development_candidate(
     receipt: InteractiveResearchRunReceipt,
     *,
     turn: int,
+    outcome_evidence: TasteEpisodeEvidence | None = None,
 ) -> TasteEpisodeCandidate:
     """Replace shared terminal credit with evidence-bound local scientific credit.
 
@@ -762,9 +764,21 @@ def refine_interactive_development_candidate(
     if model_action != "submit_hypothesis" and successor is None:
         raise ValueError("nonterminal scientific action has no observed successor update")
 
+    review_evidence = candidate.evidence
+    if outcome_evidence is not None:
+        if outcome_evidence.role is not TasteEpisodeEvidenceRole.OUTCOME:
+            raise ValueError("scientific credit outcome projection must have outcome role")
+        review_evidence = (
+            *(
+                item
+                for item in candidate.evidence
+                if item.role is not TasteEpisodeEvidenceRole.OUTCOME
+            ),
+            outcome_evidence,
+        )
     outcome_evidence_ids = tuple(
         item.evidence_id
-        for item in candidate.evidence
+        for item in review_evidence
         if item.role is TasteEpisodeEvidenceRole.OUTCOME
     )
     if not outcome_evidence_ids:
@@ -780,12 +794,9 @@ def refine_interactive_development_candidate(
         )
     )
     terminal_summary = _outcome_summary(receipt)
-    local_polarity = (
-        TasteOutcomePolarity.SUPPORTS
-        if receipt.status == "completed"
-        and receipt.objective_score is not None
-        and receipt.objective_score.primary_value > 0
-        else TasteOutcomePolarity.MIXED
+    local_polarity, credit_direction = _scientific_credit_orientation(
+        receipt,
+        is_submission=is_submission,
     )
     outcome_id = f"interactive-local-scientific-progress-{turn:03d}"
     credit_id = f"interactive-local-credit-{turn:03d}"
@@ -822,10 +833,26 @@ def refine_interactive_development_candidate(
         if is_submission
         else ("research-agent", "later-trajectory-decisions")
     )
+    successful_submission = (
+        is_submission
+        and receipt.status == "completed"
+        and receipt.objective_score is not None
+        and receipt.objective_score.primary_value > 0
+    )
     credit_rationale = (
-        "Proposed benefit is limited to approving a supported stop before scoring and avoiding "
-        "additional experiments whose declared marginal information value passed the frozen "
-        "gate. It does not attribute hypothesis discovery or scorer correctness to the controller."
+        (
+            "Proposed benefit is limited to approving a supported stop before scoring and "
+            "avoiding additional experiments whose declared marginal information value passed "
+            "the frozen gate. It does not attribute hypothesis discovery or scorer correctness "
+            "to the controller."
+            if successful_submission
+            else (
+                "Proposed harm is limited to approving STOP before the retained objective scorer "
+                "rejected the submitted hypothesis. It does not attribute hypothesis formation "
+                "or scorer behavior to the controller, and it remains a reviewable attribution "
+                "rather than established causal blame."
+            )
+        )
         if is_submission
         else (
             "Proposed benefit is limited to producing the retained observation and enabling the "
@@ -845,8 +872,9 @@ def refine_interactive_development_candidate(
     }
     payload.update(
         {
-            "candidate_id": f"{candidate.candidate_id}-scientific-credit-v3",
-            "attribution_producer_id": "interactive-scientific-credit-v3",
+            "candidate_id": f"{candidate.candidate_id}-scientific-credit-v4",
+            "attribution_producer_id": "interactive-scientific-credit-v4",
+            "evidence": review_evidence,
             "state_summary": state_summary,
             "why_preferred": why_preferred,
             "outcomes": (
@@ -871,7 +899,7 @@ def refine_interactive_development_candidate(
                     family=(
                         TasteOutcomeFamily.DESIGN if turn == 1 else TasteOutcomeFamily.ADAPTATION
                     ),
-                    direction=TasteCreditDirection.BENEFICIAL,
+                    direction=credit_direction,
                     outcome_ids=(outcome_id,),
                     confounder_ids=credit_confounder_ids,
                     rationale=credit_rationale,
@@ -889,7 +917,11 @@ def refine_interactive_development_candidate(
             ),
             "failure_conditions": (
                 (
-                    "the submitted hypothesis fails the retained objective scorer"
+                    (
+                        "the submitted hypothesis fails the retained objective scorer"
+                        if successful_submission
+                        else "the submitted hypothesis passes the retained objective scorer"
+                    )
                     if is_submission
                     else "the successor update is unsupported by the immediate observation"
                 ),
@@ -971,6 +1003,30 @@ def refine_interactive_development_candidate(
         }
     )
     return TasteEpisodeCandidate.create(**payload)
+
+
+def _scientific_credit_orientation(
+    receipt: InteractiveResearchRunReceipt,
+    *,
+    is_submission: bool,
+) -> tuple[TasteOutcomePolarity, TasteCreditDirection]:
+    """Keep terminal STOP credit signed while limiting nonterminal credit locally."""
+
+    objective_supported = (
+        receipt.status == "completed"
+        and receipt.objective_score is not None
+        and receipt.objective_score.primary_value > 0
+    )
+    if is_submission:
+        return (
+            (TasteOutcomePolarity.SUPPORTS, TasteCreditDirection.BENEFICIAL)
+            if objective_supported
+            else (TasteOutcomePolarity.CHALLENGES, TasteCreditDirection.HARMFUL)
+        )
+    return (
+        TasteOutcomePolarity.SUPPORTS if objective_supported else TasteOutcomePolarity.MIXED,
+        TasteCreditDirection.BENEFICIAL,
+    )
 
 
 def save_interactive_taste_development_protocol(

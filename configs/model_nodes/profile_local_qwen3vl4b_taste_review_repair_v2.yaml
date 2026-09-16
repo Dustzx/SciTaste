@@ -1,0 +1,34 @@
+schema_version: "1.0"
+profile_id: local-qwen3vl4b-taste-review-repair-v2
+profile_version: 2.0.0
+provider: local-transformers
+model: Qwen3-VL-4B-Instruct@hf-manifest-f6be4a0d2276
+allowed_node_names:
+  - scientific-decision-family-review
+  - taste-episode-attribution-review
+live_execution_permitted: false
+local_execution_permitted: true
+unrestricted_code_generation: false
+generation:
+  schema_version: "1.0"
+  max_request_bytes: 1048576
+  max_output_tokens: 2048
+  context_window_tokens: 32768
+  structured_json: true
+  deterministic_seed_supported: true
+admission:
+  schema_version: "1.0"
+  max_request_bytes: 1000000
+  max_input_tokens: 30720
+  max_output_tokens: 2048
+  max_total_tokens: 32768
+  max_latency_ms: 900000
+  max_response_cost_usd: 0.0
+  allowed_tool_names: []
+  max_tool_call_proposals: 0
+cumulative_project:
+  schema_version: "1.0"
+  max_invocations: 1000
+  max_total_tokens: 20000000
+  max_api_cost_usd: 200.0
+  unknown_cost_blocks_acceptance: true

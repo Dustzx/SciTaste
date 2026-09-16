@@ -206,6 +206,39 @@ def test_submission_is_scored_only_after_controller_adjudicates_stop() -> None:
     assert toolbox.score_calls == 1
 
 
+def test_terminal_scientific_credit_preserves_success_and_failure_sign() -> None:
+    success = SimpleNamespace(
+        status="completed",
+        objective_score=SimpleNamespace(primary_value=1.0),
+    )
+    failure = SimpleNamespace(
+        status="completed",
+        objective_score=SimpleNamespace(primary_value=0.0),
+    )
+
+    assert interactive_development_module._scientific_credit_orientation(
+        success,
+        is_submission=True,
+    ) == (
+        interactive_development_module.TasteOutcomePolarity.SUPPORTS,
+        interactive_development_module.TasteCreditDirection.BENEFICIAL,
+    )
+    assert interactive_development_module._scientific_credit_orientation(
+        failure,
+        is_submission=True,
+    ) == (
+        interactive_development_module.TasteOutcomePolarity.CHALLENGES,
+        interactive_development_module.TasteCreditDirection.HARMFUL,
+    )
+    assert interactive_development_module._scientific_credit_orientation(
+        failure,
+        is_submission=False,
+    ) == (
+        interactive_development_module.TasteOutcomePolarity.MIXED,
+        interactive_development_module.TasteCreditDirection.BENEFICIAL,
+    )
+
+
 def _stop_gate_context() -> InteractiveResearchContext:
     history = tuple(
         {

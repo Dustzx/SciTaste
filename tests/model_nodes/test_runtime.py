@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -605,10 +606,45 @@ def test_failed_schema_response_still_advances_known_usage_and_archive_hash(
     assert failed.totals.total_tokens == 26
     assert failed.totals.cost_usd == pytest.approx(0.02)
     assert failed.attempt_locator is not None
+    failure_path = next((_stage(project) / "attempts").glob("*/failure.json"))
+    failure = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert failure["schema_version"] == "1.1"
+    assert failure["exception_class"] == "RuntimeError"
+    assert failure["exception_message"] == "simulated deterministic post-response failure"
+    assert failure["exception_message_sha256"] == hashlib.sha256(
+        failure["exception_message"].encode("utf-8")
+    ).hexdigest()
     archived_recording = next((_stage(project) / "attempts").glob("*/recording.jsonl"))
     archived_recording.write_text("tampered\n", encoding="utf-8")
     with pytest.raises(ModelNodeRuntimeError, match="archived recording evidence drift"):
         ModelNodeRuntime(project).status(project_id=PROJECT_ID, run_id=RUN_ID)
+
+
+def test_failed_attempt_redacts_environment_secret_from_archived_diagnostic(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project, revision = _project(tmp_path)
+    secret = "credential-that-must-not-be-archived"
+    monkeypatch.setenv("SCITASTE_RUNTIME_TEST_API_KEY", secret)
+
+    class FailingBackend:
+        name = "scripted"
+        model = "scripted-v1"
+
+        def complete(self, _request):
+            raise RuntimeError(f"provider rejected api_key={secret}")
+
+    failed = ModelNodeRuntime(project).execute(
+        backend=FailingBackend(),
+        **_values(invocation_id="redacted-failure", revision=revision),
+    )
+    failure_path = next((_stage(project) / "attempts").glob("*/failure.json"))
+    evidence = failure_path.read_text(encoding="utf-8")
+
+    assert failed.outcome is RuntimeOutcome.FAILED
+    assert secret not in evidence
+    assert "<redacted>" in evidence
 
 
 def test_exact_replay_miss_is_failed_without_fallback_or_resource_effect(tmp_path: Path) -> None:

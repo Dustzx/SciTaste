@@ -463,7 +463,14 @@ class AdmittedTasteEpisode(BaseModel):
         max_length=3,
     )
     decisive_review_ids: tuple[str, ...] = Field(min_length=2, max_length=3)
-    preferred_action_id: str = Field(min_length=1, max_length=300)
+    preferred_action_id: str = Field(
+        min_length=1,
+        max_length=300,
+        description=(
+            "Legacy field name for the action receiving admitted signed credit; harmful "
+            "credit makes this action a negative training target."
+        ),
+    )
     supported_credit_ids: tuple[str, ...] = Field(min_length=1, max_length=100)
     attribution_confidence: float = Field(gt=0.0, le=1.0)
     training_weight: float = Field(gt=0.0, le=1.0)
@@ -1062,7 +1069,10 @@ class LifecycleTastePolicyModel(BaseModel):
     trained_domain_tags: tuple[str, ...]
     trained_venue_tags: tuple[str, ...]
     feature_posteriors: tuple[LifecycleTasteFeaturePosterior, ...]
-    estimator: Literal["factorized-beta-pairwise-v1"] = "factorized-beta-pairwise-v1"
+    estimator: Literal[
+        "factorized-beta-pairwise-v1",
+        "signed-factorized-beta-pairwise-v2",
+    ] = "signed-factorized-beta-pairwise-v2"
     policy_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -1461,12 +1471,20 @@ def fit_lifecycle_taste_policy(
         episode_weight = episode.training_weight / group_counts[group_key]
         effective_weight += episode_weight
         weight = episode_weight / len(competitors)
-        preferred_features = set(_episode_action_features(episode, preferred))
+        attributed_features = set(_episode_action_features(episode, preferred))
+        direction = _policy_credit_direction(episode, config)
+        if direction is None:
+            raise ValueError("lifecycle Taste training episode has no attributable credit")
         for competitor in competitors:
             competitor_features = set(_episode_action_features(episode, competitor))
-            for feature, _ in preferred_features - competitor_features:
+            winning_features, losing_features = (
+                (attributed_features, competitor_features)
+                if direction is TasteCreditDirection.BENEFICIAL
+                else (competitor_features, attributed_features)
+            )
+            for feature, _ in winning_features - losing_features:
                 observations[feature][0] += weight
-            for feature, _ in competitor_features - preferred_features:
+            for feature, _ in losing_features - winning_features:
                 observations[feature][1] += weight
             comparisons += 1
     kinds = {
@@ -1536,7 +1554,7 @@ def fit_lifecycle_taste_policy(
             sorted({tag.casefold() for item in selected for tag in item.candidate.venue_tags})
         ),
         feature_posteriors=posteriors,
-        estimator="factorized-beta-pairwise-v1",
+        estimator="signed-factorized-beta-pairwise-v2",
     )
 
 
@@ -1709,11 +1727,31 @@ def _has_eligible_policy_credit(
     episode: AdmittedTasteEpisode,
     config: LifecycleTastePolicyConfig,
 ) -> bool:
+    return _policy_credit_direction(episode, config) is not None
+
+
+def _policy_credit_direction(
+    episode: AdmittedTasteEpisode,
+    config: LifecycleTastePolicyConfig,
+) -> TasteCreditDirection | None:
+    """Return one auditable sign for the action receiving admitted credit.
+
+    ``preferred_action_id`` identifies the action to which the reviewed credit
+    applies. Beneficial credit makes that action the pairwise winner; harmful
+    credit makes it the loser. Mixing those directions in one admission would
+    make the training label undefined, so the estimator fails closed.
+    """
+
     credit_by_id = {item.credit_id: item for item in episode.candidate.credit_assignments}
-    return any(
-        credit_by_id[credit_id].family in config.eligible_outcome_families
+    directions = {
+        credit_by_id[credit_id].direction
         for credit_id in episode.supported_credit_ids
-    )
+        if credit_by_id[credit_id].family in config.eligible_outcome_families
+        and credit_by_id[credit_id].direction is not TasteCreditDirection.NOT_ATTRIBUTABLE
+    }
+    if len(directions) > 1:
+        raise ValueError("lifecycle Taste admission mixes beneficial and harmful credit")
+    return next(iter(directions), None)
 
 
 def _unambiguous_outcome(

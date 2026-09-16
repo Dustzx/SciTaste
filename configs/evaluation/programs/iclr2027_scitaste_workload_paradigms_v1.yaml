@@ -127,6 +127,40 @@ execution_state:
   scitastebench_T0_scripted_environment_integration_passed: true
   scitastebench_T1_formal_task_selected: true
   first_T0_development_trajectory_completed: true
-  first_T0_attribution_episode_admitted: false
+  first_T0_attribution_episode_admitted: true
+  first_T0_admission_id: newton-gravity-v7-stop-scientific-credit-v3
+  first_T0_admission_sha256: 064c4dcb74bb2b9c93adacdbf444d656e34e5ed330286e858f4db0b16a78d602
+  first_T0_admission_source_group_id: >-
+    benchmark-task-9d4abfb0f88be3ff57701792a6eed26b20475a44281121e7c553d803f14e4cb9
+  first_T0_admission_formal_result: false
+  first_T0_decision_family_assigned: true
+  first_T0_decision_family: scientific-value
+  first_T0_decision_family_assignment_sha256: >-
+    90fe7bdecea187c75562ec3acba9fb5d60bf64f4beb05267f3af860e08eb41eb
+  second_source_disjoint_T0_development_trajectory_completed: true
+  second_T0_attribution_episode_admitted: true
+  second_T0_admission_id: newton-fourier-v8-stop-harmful-credit-v4
+  second_T0_admission_sha256: >-
+    9b4b09984e39c0b7267730b6c10e428b7a1336eb16c3141579adfc16aad7e6c2
+  second_T0_admission_source_group_id: >-
+    benchmark-task-7e4500eb11e0158ed415bbd03fe5f040f2b21584a33f3fce2aa9cc14a334bfad
+  second_T0_admission_credit_direction: harmful
+  second_T0_admission_formal_result: false
+  second_T0_decision_family: scientific-value
+  second_T0_decision_family_assignment_sha256: >-
+    b177705e01f7472aa6a103e4e5c80a18bb9ef5e2f8f2dc115d8bd3264ef7a1e3
+  current_A0_corpus_id: scitaste-self-development-ai-reviewed-v4
+  current_A0_corpus_manifest_sha256: >-
+    a01a408130f3d13b96c86b8f314672612a010a170cdb0b467f0d40105e8b7658
+  current_A0_corpus_source_group_count: 4
+  current_A0_policy_id: scitaste-self-development-policy-v6
+  current_A0_policy_sha256: >-
+    c1c2e155f3570bbceff8cac38505ce3c64c665c769dfa3471267a4d59b535c53
+  current_A0_policy_estimator: signed-factorized-beta-pairwise-v2
+  current_A0_policy_training_episode_count: 3
+  current_A0_scientific_value_maximum_feature_support: 1.0
+  current_A0_stop_posterior_wins: 0.5
+  current_A0_stop_posterior_losses: 0.5
+  current_A0_policy_application_ready: false
   formal_result_count: 0
   both_workload_paradigms_executed: false

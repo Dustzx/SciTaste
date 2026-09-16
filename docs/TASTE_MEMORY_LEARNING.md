@@ -153,6 +153,12 @@ ledger entries. Raw responses must differ, both calls must be real live/local
 generation rather than replay or scripted fixtures, and a disagreement still
 requires a third independent adjudicator.
 
+`preferred_action_id` is a legacy wire name. It identifies the action receiving
+the reviewed causal credit, not an always-positive label: beneficial credit
+favors the action and harmful credit disfavors it. A panel that supports mixed
+beneficial and harmful credit in one admission cannot produce a policy-training
+label and fails closed.
+
 When a second live-provider credential is unavailable, the pinned local
 Qwen3-VL-2B checkpoint may be used as one operational AI panel member. Select
 `local-qwen3vl2b-taste-review`, pass
@@ -254,13 +260,13 @@ because execution-only credit is excluded from the scientific policy by default.
 The implementation proves that unreviewed self-reflections cannot enter the
 production retriever and that decision or outcome drift, producer-review conflict,
 missing adjudication, temporal inconsistency, and replay over an admitted record
-fail closed. Two natural self-development decisions have completed cross-model
-attribution, outcome-blind family review, admission, project-corpus sealing, and
-policy refresh. They remain development-only process evidence: the first one's
-execution-only outcome is intentionally ineligible for scientific policy
-learning, while the second adaptation episode is training-eligible but below the
-precommitted support threshold. The project policy therefore still abstains and
-no longitudinal effectiveness result exists. The ICLR claim still requires
-held-out H1/H2/H3/H4 experiments and disclosed independent AI review; this
-mechanism makes future continual-learning evidence admissible rather than
+fail closed. Corpus v4 contains two historical self-project episodes plus
+source-disjoint NewtonBench Gravity and Fourier decisions. The latter provide one
+beneficial and one harmful STOP label from identical-packet cross-model panels.
+Policy v6 preserves those signs: STOP has 0.5 win and 0.5 loss rather than two
+false wins. Three episodes are training-eligible, but maximum feature support is
+only 1.0 versus the precommitted threshold 3, so the project policy still
+abstains and no longitudinal effectiveness result exists. The ICLR claim still
+requires held-out H1/H2/H3/H4 experiments and disclosed independent AI review;
+this mechanism makes future continual-learning evidence admissible rather than
 supplying that evidence itself.

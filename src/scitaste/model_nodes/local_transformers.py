@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from typing import Protocol
 
+import fastjsonschema
+
 from scitaste.backends.base import Usage
 from scitaste.backends.local_transformers import (
     LocalGeneration,
@@ -87,6 +89,12 @@ class StructuredLocalTransformersBackend:
             )
 
         messages = structured_model_messages(request)
+        try:
+            validate_output = fastjsonschema.compile(request.output_schema)
+        except fastjsonschema.JsonSchemaDefinitionException as exc:
+            raise StructuredBackendDisabledError(
+                f"model-node output schema cannot be compiled: {_bounded_error(exc)}"
+            ) from exc
         attempts: list[dict[str, object]] = []
         total_input_tokens = 0
         total_output_tokens = 0
@@ -103,9 +111,16 @@ class StructuredLocalTransformersBackend:
             total_input_tokens += generated.input_tokens
             total_output_tokens += generated.output_tokens
             parse_error: str | None = None
+            schema_error: str | None = None
+            json_object_parsed = False
             try:
                 output_payload = _parse_json_object(generated.text)
-                accepted_attempt = attempt_index
+                json_object_parsed = True
+                try:
+                    validate_output(output_payload)
+                    accepted_attempt = attempt_index
+                except fastjsonschema.JsonSchemaException as exc:
+                    schema_error = _bounded_error(exc)
             except StructuredProviderResponseError as exc:
                 parse_error = str(exc)
             attempts.append(
@@ -114,8 +129,10 @@ class StructuredLocalTransformersBackend:
                     "text": generated.text,
                     "input_tokens": generated.input_tokens,
                     "output_tokens": generated.output_tokens,
-                    "json_object_parsed": accepted_attempt == attempt_index,
+                    "json_object_parsed": json_object_parsed,
+                    "schema_valid": accepted_attempt == attempt_index,
                     "parse_error": parse_error,
+                    "schema_error": schema_error,
                 }
             )
             if accepted_attempt is not None:
@@ -124,7 +141,13 @@ class StructuredLocalTransformersBackend:
                 messages = [
                     *messages,
                     {"role": "assistant", "content": generated.text},
-                    {"role": "user", "content": _LOCAL_JSON_REPAIR_REMINDER},
+                    {
+                        "role": "user",
+                        "content": _repair_reminder(
+                            parse_error=parse_error,
+                            schema_error=schema_error,
+                        ),
+                    },
                 ]
 
         raw_response = json.dumps(
@@ -159,10 +182,19 @@ class StructuredLocalTransformersBackend:
         )
 
 
-_LOCAL_JSON_REPAIR_REMINDER = (
-    "The previous response was not one valid JSON object. Return only one JSON object that "
-    "validates against the output_schema already supplied. Do not add Markdown or commentary."
-)
+def _repair_reminder(*, parse_error: str | None, schema_error: str | None) -> str:
+    failure = schema_error or parse_error or "the response did not satisfy the output contract"
+    return (
+        "The previous response was rejected by the deterministic structured-output validator: "
+        f"{failure}. Return only one JSON object that validates against the output_schema already "
+        "supplied. Include every required field, preserve exact identifiers from the input, and "
+        "do not add Markdown or commentary."
+    )
+
+
+def _bounded_error(exc: BaseException, *, limit: int = 1_000) -> str:
+    rendered = " ".join(str(exc).split())
+    return rendered if len(rendered) <= limit else rendered[: limit - 1] + "…"
 
 
 __all__ = [

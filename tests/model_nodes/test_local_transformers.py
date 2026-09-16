@@ -69,7 +69,12 @@ def _request() -> StructuredModelRequest:
         policy_fingerprint=policy.fingerprint,
         system_instruction="Return one grounded quality proposal.",
         input_payload={"input": {"source_id": "source-one"}},
-        output_schema={"type": "object"},
+        output_schema={
+            "type": "object",
+            "required": ["verdict"],
+            "properties": {"verdict": {"type": "string"}},
+            "additionalProperties": False,
+        },
         seed=17,
         prompt_version="reference-quality-v1",
     )
@@ -109,7 +114,23 @@ def test_local_structured_backend_retains_every_bounded_repair_attempt() -> None
         "not-json",
         '{"verdict":"qualify"}',
     ]
-    assert "not one valid JSON object" in runtime.calls[1]["messages"][-1]["content"]
+    assert "deterministic structured-output validator" in (
+        runtime.calls[1]["messages"][-1]["content"]
+    )
+
+
+def test_local_structured_backend_repairs_parseable_schema_violation() -> None:
+    runtime = StubStructuredRuntime(['{"decision":"accept"}', '{"verdict":"accept"}'])
+
+    response = StructuredLocalTransformersBackend(_config(), runtime=runtime).complete(_request())
+    evidence = json.loads(response.raw_response)
+
+    assert response.output_payload == {"verdict": "accept"}
+    assert evidence["accepted_attempt"] == 1
+    assert evidence["attempts"][0]["json_object_parsed"] is True
+    assert evidence["attempts"][0]["schema_valid"] is False
+    assert "verdict" in evidence["attempts"][0]["schema_error"]
+    assert "Include every required field" in runtime.calls[1]["messages"][-1]["content"]
 
 
 def test_local_structured_backend_turns_invalid_generation_into_durable_rejection() -> None:

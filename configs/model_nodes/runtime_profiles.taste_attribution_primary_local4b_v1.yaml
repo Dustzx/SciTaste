@@ -1,0 +1,8 @@
+schema_version: "1.0"
+profile_set_id: taste-attribution-primary-local4b-v1
+profile_set_version: 1.0.0
+live_enabled: false
+profiles:
+  - path: profile_local_qwen3vl4b_taste_review_v1.yaml
+    sha256: 107d8895741d0ee1df73b27221e98ee96fce13eefc64eacd83ab0fe5babb242a
+    profile_sha256: 8562ed1eaa63ca2a624bfe97deb659b9846f070a88d0c6e6407c632171b54e76

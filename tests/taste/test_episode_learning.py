@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
+import fastjsonschema
 import pytest
 
 from scitaste.backends.base import Usage
@@ -570,6 +571,31 @@ def test_ai_attribution_schema_requires_acceptance_credit_fields() -> None:
     assert "supported_credit_ids" in schema["required"]
 
 
+def test_ai_attribution_schema_exposes_cross_field_verdict_contract() -> None:
+    validate = fastjsonschema.compile(AITasteAttributionReviewProposal.model_json_schema())
+    payload = {
+        "review_packet_sha256": "a" * 64,
+        "verdict": "accept",
+        "preferred_action_id": "action-one",
+        "supported_credit_ids": ["credit-one"],
+        "decision_trace_supported": True,
+        "outcome_trace_supported": True,
+        "alternatives_supported": True,
+        "credit_assignment_supported": True,
+        "transfer_scope_supported": True,
+        "reversal_probe_supported": True,
+        "attribution_confidence": 0.5,
+        "rationale": "Every review dimension is supported.",
+    }
+
+    validate(payload)
+    with pytest.raises(fastjsonschema.JsonSchemaException):
+        validate({**payload, "transfer_scope_supported": False})
+    with pytest.raises(fastjsonschema.JsonSchemaException):
+        validate({**payload, "verdict": "reject"})
+    validate({**payload, "verdict": "reject", "transfer_scope_supported": False})
+
+
 def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path) -> None:
     candidate = _candidate(tmp_path, 1)
     outputs = tmp_path / "outputs"
@@ -868,6 +894,41 @@ def test_outcome_updated_policy_learns_preference_and_no_update_abstains(
     assert no_update.training_episode_count == 0
     assert control.abstained is True
     assert control.reason_codes == ("no-update-control",)
+
+
+def test_outcome_updated_policy_aggregates_signed_credit_for_same_action(
+    tmp_path: Path,
+) -> None:
+    episodes = (
+        _admitted(
+            tmp_path,
+            1,
+            preferred="probe-boundary",
+            polarity=TasteOutcomePolarity.SUPPORTS,
+        ),
+        _admitted(
+            tmp_path,
+            2,
+            preferred="probe-boundary",
+            polarity=TasteOutcomePolarity.CHALLENGES,
+        ),
+    )
+    policy = fit_lifecycle_taste_policy(
+        episodes,
+        LifecycleTastePolicyConfig(
+            policy_id="signed-credit-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+        ),
+    )
+    posteriors = {item.feature: item for item in policy.feature_posteriors}
+
+    assert policy.estimator == "signed-factorized-beta-pairwise-v2"
+    assert posteriors["action::probe"].wins == pytest.approx(0.9)
+    assert posteriors["action::probe"].losses == pytest.approx(0.9)
+    assert posteriors["action::probe"].support == pytest.approx(1.8)
+    assert posteriors["action::advance"].wins == pytest.approx(0.9)
+    assert posteriors["action::advance"].losses == pytest.approx(0.9)
 
 
 def test_shuffled_credit_control_preserves_action_marginal_and_records_assignment(

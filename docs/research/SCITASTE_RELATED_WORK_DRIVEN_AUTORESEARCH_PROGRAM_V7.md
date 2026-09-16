@@ -116,7 +116,7 @@ product and not required for the headline claim.
 
 The workload contract is independently two-stratum and is frozen in
 [`iclr2027_scitaste_workload_paradigms_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_workload_paradigms_v1.yaml),
-SHA-256 `5deb8d1eac593a0022f15caab56c2ec2e43c3c099e53660523d8ee6479ff6e42`:
+SHA-256 `8db7b68b339a10b7a82b9c1e1a30512baf7f850f23cadb14fed4855cee79f935`:
 
 - **T0 training-free research** executes a complete project by changing
   analysis, code, prompts, retrieval, or algorithms while keeping task-model
@@ -163,6 +163,20 @@ executor passed 2/2; local MiniLM retrieval passed 2/2. Qwen3.8-Max produced one
 correct and one incorrect blind judgment, so it failed the frozen reliability
 threshold and is not selected as the paper's reviewer panel. This failure is
 retained rather than hidden or repaired by lowering the gate.
+
+Two source-disjoint T0 development trajectories now exercise signed lifecycle
+learning. NewtonBench Gravity v7 accepted an evidence-backed STOP before scorer
+access and received `symbolic_accuracy=1.0`. Fourier v8 used 21 experiments over
+five turns and produced a numerically close law, but the frozen exact-symbolic
+endpoint returned `symbolic_accuracy=0.0`; its terminal STOP therefore carries
+harmful credit. For each trajectory, Qwen3-VL-4B and Qwen3-VL-8B received the
+same compact, hash-bound packet and independently admitted the causal-credit
+claim; separate outcome-blind panels assigned `scientific-value`. These are A0
+development learning units, not Native/Base treatment effects or formal rows.
+Corpus v4 seals four source groups and policy v6 trains on three eligible
+episodes with `signed-factorized-beta-pairwise-v2`. The shared STOP feature now
+has 0.5 win and 0.5 loss rather than two false wins. Its support 1.0 remains
+below the frozen threshold 3, so the policy correctly abstains.
 
 The immediate critical path is therefore:
 

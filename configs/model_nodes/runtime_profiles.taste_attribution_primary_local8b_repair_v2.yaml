@@ -1,0 +1,8 @@
+schema_version: "1.0"
+profile_set_id: taste-attribution-primary-local8b-repair-v2
+profile_set_version: 2.0.0
+live_enabled: false
+profiles:
+  - path: profile_local_qwen3vl8b_taste_review_repair_v2.yaml
+    sha256: eb20916ef2f2339f681cdd8d7db7ae5adfb2c45cd22a54678b5523aa3540044a
+    profile_sha256: 68bb4c44c06c2612c46589ad5c7058ec9c3738a1c35e9c2a3bc140ff5fb16368

@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import stat
 import tempfile
 import time
@@ -865,7 +866,7 @@ class ModelNodeRuntime:
                 cost_effect_usd=0.0,
                 entry_sha256=_ZERO_HASH,
             )
-        except Exception:
+        except Exception as exc:
             recorded_response = (
                 None
                 if intent.backend_mode is RuntimeBackendMode.REPLAY
@@ -879,7 +880,12 @@ class ModelNodeRuntime:
                 and intent.backend_mode is RuntimeBackendMode.LIVE
                 and backend_may_have_started
             )
-            archived = self._archive_one_pending(stage, pending_dir, unknown_cost=unknown_cost)
+            archived = self._archive_one_pending(
+                stage,
+                pending_dir,
+                unknown_cost=unknown_cost,
+                exception=exc,
+            )
             entry = RuntimeLedgerEntry.create(
                 index=len(entries),
                 completed_at=datetime.now(UTC),
@@ -1453,6 +1459,7 @@ class ModelNodeRuntime:
         *,
         unknown_cost: bool,
         preserve_recording: bool = False,
+        exception: Exception | None = None,
     ) -> str:
         pending_root = _runtime_directory(stage, "pending")
         if pending_root is None:
@@ -1478,6 +1485,7 @@ class ModelNodeRuntime:
             if recording is not None and recording.is_file() and not recording.is_symlink():
                 recording_sha256 = _sha256_file(recording)
                 os.replace(recording, target / "recording.jsonl")
+        exception_message = _sanitized_exception_message(exception)
         failure = _ArchivedAttempt.create(
             attempt_id=attempt_id,
             archived_at=datetime.now(UTC),
@@ -1486,6 +1494,13 @@ class ModelNodeRuntime:
             backend_may_have_started=(target / "backend-started").is_file(),
             unknown_cost=unknown_cost,
             recording_sha256=recording_sha256,
+            exception_class=(None if exception is None else type(exception).__name__),
+            exception_message=exception_message,
+            exception_message_sha256=(
+                None
+                if exception_message is None
+                else hashlib.sha256(exception_message.encode("utf-8")).hexdigest()
+            ),
             failure_sha256=_ZERO_HASH,
         )
         _write_model_exclusive(target / "failure.json", failure, owned_root=stage)
@@ -1616,7 +1631,7 @@ class ModelNodeRuntime:
 
 
 class _ArchivedAttempt(RuntimeModel):
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     attempt_id: str
     archived_at: datetime
     invocation_id: str
@@ -1624,6 +1639,12 @@ class _ArchivedAttempt(RuntimeModel):
     backend_may_have_started: bool
     unknown_cost: bool
     recording_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    exception_class: str | None = Field(default=None, min_length=1, max_length=300)
+    exception_message: str | None = Field(default=None, min_length=1, max_length=2_000)
+    exception_message_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
     failure_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @classmethod
@@ -1642,10 +1663,56 @@ class _ArchivedAttempt(RuntimeModel):
 
     @model_validator(mode="after")
     def hash_matches(self) -> _ArchivedAttempt:
-        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"failure_sha256"}))
+        if (self.exception_message is None) != (self.exception_message_sha256 is None):
+            raise ValueError("archived exception message identity is incomplete")
+        if self.exception_message is not None and self.exception_message_sha256 != hashlib.sha256(
+            self.exception_message.encode("utf-8")
+        ).hexdigest():
+            raise ValueError("archived exception message hash differs")
+        payload = self.model_dump(mode="json", exclude={"failure_sha256"})
+        if self.schema_version == "1.0":
+            for field in (
+                "exception_class",
+                "exception_message",
+                "exception_message_sha256",
+            ):
+                payload.pop(field)
+        expected = _canonical_sha256(payload)
         if self.failure_sha256 != expected:
             raise ValueError("failure_sha256 does not match archived attempt")
         return self
+
+
+_SECRET_ENV_NAME = re.compile(
+    r"(?:api[_-]?key|token|secret|password|credential|authorization)",
+    re.IGNORECASE,
+)
+_CREDENTIAL_PATTERNS = (
+    re.compile(r"(?i)(bearer\s+)[^\s,;]+"),
+    re.compile(r"(?i)((?:api[_-]?key|token|password|secret)\s*[:=]\s*)[^\s,;]+"),
+    re.compile(r"\bsk-[A-Za-z0-9._-]{8,}\b"),
+)
+
+
+def _sanitized_exception_message(exception: Exception | None) -> str | None:
+    """Retain bounded diagnostics without persisting ambient credentials."""
+
+    if exception is None:
+        return None
+    message = " ".join(str(exception).split())
+    if not message:
+        return None
+    for name, value in os.environ.items():
+        if _SECRET_ENV_NAME.search(name) and len(value) >= 4:
+            message = message.replace(value, "<redacted>")
+    for pattern in _CREDENTIAL_PATTERNS:
+        message = pattern.sub(
+            lambda match: (
+                f"{match.group(1)}<redacted>" if match.lastindex else "<redacted>"
+            ),
+            message,
+        )
+    return message[:2_000] or None
 
 
 def _canonical_sha256(value: Any) -> str:

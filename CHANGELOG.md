@@ -5,6 +5,23 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Corrected lifecycle Taste learning to preserve the sign of admitted causal
+  credit. The v2 estimator treats beneficial credit as a pairwise win and
+  harmful credit as a loss, rejects mixed-sign admissions, and aggregates both
+  against the same semantic action features. Re-fitting the frozen corpus now
+  gives STOP 0.5 win / 0.5 loss rather than rewarding both a successful and a
+  failed NewtonBench termination.
+- Completed a second source-disjoint T0 development trajectory on NewtonBench
+  Fourier. Its five-turn, 21-experiment run was numerically close but failed the
+  frozen exact-symbolic endpoint; two identical-packet local reviewers admitted
+  harmful STOP credit and two outcome-blind reviewers assigned
+  `scientific-value`. Corpus v4 and policy v6 retain the negative result and
+  continue to abstain below the precommitted support threshold.
+- Added content-addressed compact outcome projections for long Taste-review
+  packets, provider-facing cross-field JSON Schema constraints, and bounded
+  schema repair in the local Transformers backend. Runtime failures now archive
+  the exception class plus a credential-redacted, hash-bound diagnostic while
+  remaining compatible with v1.0 failure evidence.
 - Implemented the first real T0 interactive-research runtime around the exact
   NewtonBench source: real environment interventions, isolated code analysis,
   hidden objective scoring, bounded provider-neutral agent decisions,

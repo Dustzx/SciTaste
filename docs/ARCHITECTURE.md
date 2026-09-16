@@ -4008,12 +4008,15 @@ supported credit, and conservative minimum confidence into a self-hashed episode
 Admission grants training eligibility only: it does not silently mutate a
 running controller or authorize an experiment.
 
-The first estimator is `factorized-beta-pairwise-v1`. For every admitted episode,
-the reviewed preferred action is compared with each recorded alternative. Its
-total confidence weight is divided across alternatives, and all decisions from
-one source trajectory share at most one source-group unit of weight, so neither
-a large authored candidate set nor a long trajectory can masquerade as
-independent sample size. Independent Beta posteriors estimate action-type,
+The replayable first estimator is `factorized-beta-pairwise-v1`; the current
+estimator is `signed-factorized-beta-pairwise-v2`. The legacy field
+`preferred_action_id` identifies the action receiving reviewed causal credit.
+Beneficial credit compares it as the winner against every alternative; harmful
+credit compares it as the loser. Mixed-sign admissions fail closed. Total
+confidence weight is divided across alternatives, and all decisions from one
+source trajectory share at most one source-group unit of weight, so neither a
+large authored candidate set nor a long trajectory can masquerade as independent
+sample size. Independent Beta posteriors estimate action-type,
 stage-action, domain-action, venue-action, tag, and stage-tag features. The
 explicit update modes—outcome-updated, no-update, unambiguous success-only,
 unambiguous failure-only, and deterministically shuffled credit—are experimental
@@ -4644,3 +4647,32 @@ is the current T1 route and explicitly declares `training-based-research` while
 retaining its fixed initialization, 50-epoch recipe, candidate checkpoint, and
 one-way hidden scorer. T0 and T1 outcomes are reported separately rather than
 pooled into one headline score.
+
+### ADR-143: Lifecycle Taste credit is signed and failure evidence is diagnostic
+
+Status: accepted and implemented for development-policy refreshes; formal effect
+evidence remains open.
+
+An admitted outcome attribution identifies the action receiving causal credit,
+not an unconditional positive preference. The lifecycle estimator therefore
+maps beneficial credit to pairwise wins for that action and harmful credit to
+pairwise losses against the same alternatives. Admissions that mix beneficial
+and harmful scientific credit fail closed. The explicit estimator identity
+`signed-factorized-beta-pairwise-v2` keeps old v1 policy artifacts replayable
+without silently changing their meaning.
+
+This distinction matters whenever the same semantic action succeeds in one
+source group and fails in another. Action type, stage/action, domain/action,
+venue/action, tags, and decision-state/action remain the transferable features;
+run-local action IDs remain provenance only. Source-group weighting and review
+confidence still cap effective support, so contradictory evidence changes the
+posterior rather than manufacturing readiness. Frozen minimum-support and
+uncertainty gates are never lowered merely to activate a policy.
+
+Long trajectory review uses a compact outcome projection whose file hash and
+terminal receipt SHA-256 bind it to the complete immutable run. This reduces
+context pressure without replacing the full source evidence. Model-node
+attempts that fail now archive their exception class and a bounded,
+credential-redacted, hash-bound diagnostic. Legacy v1.0 archives remain valid;
+the diagnostic improves reproduction but never changes cost accounting,
+execution authority, or a failed outcome into evidence of success.
