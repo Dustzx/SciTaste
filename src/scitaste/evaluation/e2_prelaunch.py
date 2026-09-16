@@ -19,6 +19,10 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+from scitaste.evaluation.h4_state_probe import (
+    H4FrozenStateProbeContract,
+    H4StateProbeReport,
+)
 from scitaste.evaluation.mlrc_perception_runtime import (
     MLRCPerceptionRuntimeManifest,
     inspect_mlrc_perception_runtime,
@@ -33,6 +37,11 @@ from scitaste.evaluation.research_workload import (
     ResearchWorkloadParadigm,
 )
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
+from scitaste.taste.decision_families import (
+    FamilyConditionedLifecycleTastePolicy,
+    ScientificTasteDecisionFamily,
+)
+from scitaste.taste.project_policy import ProjectTastePolicyReadiness
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _SHA256 = r"^[0-9a-f]{64}$"
@@ -399,7 +408,7 @@ class E2MatchedPair(BaseModel):
 class E2BlockBudget(BaseModel):
     model_config = _CONFIG
 
-    block_id: Literal["B0", "B1"]
+    block_id: Literal["B0", "B1", "development", "formal"]
     formal_evidence: bool
     cell_count: Literal[2]
     allocated_gpu_devices_per_cell: Literal[2]
@@ -413,18 +422,18 @@ class E2BlockBudget(BaseModel):
 
     @model_validator(mode="after")
     def block_semantics_are_safe(self) -> E2BlockBudget:
-        if self.block_id == "B0":
+        if self.block_id in {"B0", "development"}:
             if self.formal_evidence or self.hidden_labels_allowed or self.hidden_score_authority:
-                raise ValueError("E2 B0 cannot open or claim a real hidden endpoint")
+                raise ValueError("E2 development cannot open or claim a real hidden endpoint")
             if self.scope != "development-only-complete-shape":
-                raise ValueError("E2 B0 must remain development-only")
+                raise ValueError("E2 development must remain development-only")
         else:
             if not (
                 self.formal_evidence and self.hidden_labels_allowed and self.hidden_score_authority
             ):
-                raise ValueError("E2 B1 must use the real scorer-owned held-out endpoint")
+                raise ValueError("E2 formal must use the real scorer-owned held-out endpoint")
             if self.scope != "formal-heldout-paired-effect":
-                raise ValueError("E2 B1 must retain its paired formal scope")
+                raise ValueError("E2 formal must retain its paired scope")
         if self.maximum_aggregate_gpu_hours < (
             self.cell_count * self.allocated_gpu_devices_per_cell * self.maximum_wall_hours_per_cell
         ):
@@ -473,8 +482,12 @@ class E2ResourcePlan(BaseModel):
 
     @model_validator(mode="after")
     def blocks_are_distinct(self) -> E2ResourcePlan:
-        if {item.block_id for item in self.blocks} != {"B0", "B1"}:
-            raise ValueError("E2 requires exactly one B0 and one B1 resource envelope")
+        phases = {
+            "development" if item.block_id in {"B0", "development"} else "formal"
+            for item in self.blocks
+        }
+        if phases != {"development", "formal"}:
+            raise ValueError("E2 requires one development and one formal resource envelope")
         return self
 
 
@@ -545,12 +558,65 @@ class E2ReadinessGates(BaseModel):
     b1_owner_hash_approval: Literal["pending", "verified"]
 
 
+class E2DevelopmentReadinessGates(BaseModel):
+    """Public v1.1 names that distinguish execution from role B0."""
+
+    model_config = _CONFIG
+
+    development_agent_load_generation_preflight: Literal["pending", "verified"]
+    development_exact_model_role_attestation: Literal["pending", "verified"]
+    development_owner_hash_approval: Literal["pending", "verified"]
+    development_complete: Literal["pending", "verified"]
+    actual_gpu_baseline_reproduction: Literal["pending", "verified"]
+    formal_task_excluded_role_selection: Literal["pending", "verified"]
+    formal_exact_model_and_budget_freeze: Literal["pending", "verified"]
+    formal_owner_hash_approval: Literal["pending", "verified"]
+
+
+class E2TasteIntervention(BaseModel):
+    """Exact learned treatment whose weight differs across the E2 pair."""
+
+    model_config = _CONFIG
+
+    family_policy: E2FileBinding
+    readiness: E2FileBinding
+    state_probe_contract: E2FileBinding | None = None
+    state_probe_report: E2FileBinding | None = None
+    policy_id: str
+    decision_family: Literal[ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION]
+    target_domain: Literal["mlrc-bench"]
+    evaluation_source_group_ids: tuple[str, ...] = Field(min_length=1, max_length=32)
+    source_group_disjoint_from_evaluation: Literal[True] = True
+    behaviorally_active_required: Literal[True] = True
+    formal_effect_claim_ready: Literal[False] = False
+
+    @field_validator("policy_id")
+    @classmethod
+    def policy_id_is_safe(cls, value: str) -> str:
+        return validate_entry_id(value, field_name="E2 Taste policy_id")
+
+    @field_validator("evaluation_source_group_ids")
+    @classmethod
+    def source_groups_are_canonical(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if value != tuple(sorted(set(value))):
+            raise ValueError("E2 evaluation source groups must be sorted and unique")
+        for item in value:
+            validate_entry_id(item, field_name="E2 evaluation source_group_id")
+        return value
+
+    @model_validator(mode="after")
+    def probe_binding_is_atomic(self) -> E2TasteIntervention:
+        if (self.state_probe_contract is None) != (self.state_probe_report is None):
+            raise ValueError("E2 Taste state-probe contract and report must be bound together")
+        return self
+
+
 class E2PrelaunchManifest(BaseModel):
     """Exact no-run handoff for the first title-relevant E2 Native pair."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     manifest_id: str
     study_id: Literal["E2"]
     inference_role: Literal["title-critical-confirmatory"]
@@ -559,12 +625,13 @@ class E2PrelaunchManifest(BaseModel):
     workload: E2TaskWorkload
     model_selection: E2ModelSelection
     comparison: E2MatchedPair
+    taste_intervention: E2TasteIntervention | None = None
     resources: E2ResourcePlan
     hidden_scoring: E2HiddenScoring
     workflow: tuple[E2WorkflowHandoff, ...]
     commands: tuple[E2ExecutionCommand, ...]
     stop_rules: tuple[str, ...] = Field(min_length=8, max_length=32)
-    gates: E2ReadinessGates
+    gates: E2ReadinessGates | E2DevelopmentReadinessGates
     command_identity_closed: bool = False
     authorizes_download: Literal[False] = False
     authorizes_api_calls: Literal[False] = False
@@ -578,6 +645,19 @@ class E2PrelaunchManifest(BaseModel):
 
     @model_validator(mode="after")
     def lifecycle_and_commands_are_closed(self) -> E2PrelaunchManifest:
+        if self.schema_version == "1.1" and self.taste_intervention is None:
+            raise ValueError("E2 schema 1.1 requires an exact learned Taste intervention")
+        if self.schema_version == "1.0" and not isinstance(self.gates, E2ReadinessGates):
+            raise ValueError("E2 schema 1.0 requires legacy B0/B1 readiness names")
+        if self.schema_version == "1.1" and not isinstance(
+            self.gates, E2DevelopmentReadinessGates
+        ):
+            raise ValueError("E2 schema 1.1 requires development/formal readiness names")
+        block_ids = {item.block_id for item in self.resources.blocks}
+        if self.schema_version == "1.0" and block_ids != {"B0", "B1"}:
+            raise ValueError("E2 schema 1.0 requires legacy B0/B1 block IDs")
+        if self.schema_version == "1.1" and block_ids != {"development", "formal"}:
+            raise ValueError("E2 schema 1.1 requires development/formal block IDs")
         if (
             self.workload.research_workload_contract.paradigm
             is not ResearchWorkloadParadigm.TRAINING_BASED
@@ -606,8 +686,8 @@ class E2PrelaunchManifest(BaseModel):
                         "E2 campaign execution and result admission must use the manifest ID"
                     )
         if (
-            self.gates.b0_exact_model_role_attestation == "verified"
-            or self.gates.b1_task_excluded_role_selection == "verified"
+            _gate_value(self, "development_exact_model_role_attestation") == "verified"
+            or _gate_value(self, "formal_task_excluded_role_selection") == "verified"
         ) and self.model_selection.conformance_selection is None:
             raise ValueError(
                 "verified E2 model-role gates require a content-bound conformance selection"
@@ -623,7 +703,7 @@ class E2PrelaunchManifest(BaseModel):
 class E2PrelaunchInspection(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     manifest_id: str
     manifest_sha256: str = Field(pattern=_SHA256)
     manifest_fingerprint: str = Field(pattern=_SHA256)
@@ -634,13 +714,15 @@ class E2PrelaunchInspection(BaseModel):
     workload_runtime_ready: bool
     task_initialization_closed: bool
     matched_pair_closed: bool
+    taste_intervention_identity_closed: bool
+    taste_intervention_behaviorally_active: bool
     model_selection_boundary_closed: bool
     resource_envelope_closed: bool
     hidden_scorer_firewall_closed: bool
     complete_workflow_closed: bool
-    ready_for_b0_static_handoff: bool
-    ready_for_b0_execution: bool
-    ready_for_b1_execution: bool
+    ready_for_development_static_handoff: bool
+    ready_for_development_execution: bool
+    ready_for_formal_execution: bool
     blocker_codes: tuple[str, ...]
     no_download_performed: Literal[True] = True
     no_model_load_or_generation_performed: Literal[True] = True
@@ -648,6 +730,22 @@ class E2PrelaunchInspection(BaseModel):
     no_gpu_work_performed: Literal[True] = True
     no_benchmark_execution_performed: Literal[True] = True
     no_hidden_labels_read_by_this_inspector: Literal[True] = True
+
+
+class E2TasteInterventionInspection(BaseModel):
+    """No-run disposition of the treatment, separate from its causal effect."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    identity_closed: bool
+    behaviorally_active: bool
+    blocker_codes: tuple[str, ...]
+    no_model_load_or_generation_performed: Literal[True] = True
+    no_api_call_performed: Literal[True] = True
+    no_gpu_work_performed: Literal[True] = True
+    no_benchmark_execution_performed: Literal[True] = True
+    no_formal_effect_claim_made: Literal[True] = True
 
 
 def load_e2_prelaunch_manifest(path: str | Path) -> tuple[E2PrelaunchManifest, str]:
@@ -659,6 +757,153 @@ def load_e2_prelaunch_manifest(path: str | Path) -> tuple[E2PrelaunchManifest, s
     if not isinstance(payload, dict):
         raise ValueError("E2 prelaunch manifest must contain one mapping")
     return E2PrelaunchManifest.model_validate(payload), hashlib.sha256(raw).hexdigest()
+
+
+def _gate_value(
+    manifest: E2PrelaunchManifest,
+    name: Literal[
+        "development_agent_load_generation_preflight",
+        "development_exact_model_role_attestation",
+        "development_owner_hash_approval",
+        "development_complete",
+        "actual_gpu_baseline_reproduction",
+        "formal_task_excluded_role_selection",
+        "formal_exact_model_and_budget_freeze",
+        "formal_owner_hash_approval",
+    ],
+) -> Literal["pending", "verified"]:
+    legacy = {
+        "development_agent_load_generation_preflight": "b0_agent_load_generation_preflight",
+        "development_exact_model_role_attestation": "b0_exact_model_role_attestation",
+        "development_owner_hash_approval": "b0_owner_hash_approval",
+        "development_complete": "b0_complete",
+        "actual_gpu_baseline_reproduction": "actual_gpu_baseline_reproduction",
+        "formal_task_excluded_role_selection": "b1_task_excluded_role_selection",
+        "formal_exact_model_and_budget_freeze": "b1_exact_model_and_budget_freeze",
+        "formal_owner_hash_approval": "b1_owner_hash_approval",
+    }
+    field = legacy[name] if isinstance(manifest.gates, E2ReadinessGates) else name
+    return getattr(manifest.gates, field)
+
+
+def inspect_e2_taste_intervention(
+    manifest: E2PrelaunchManifest,
+    *,
+    workspace_root: str | Path,
+) -> E2TasteInterventionInspection:
+    """Verify that E2 changes a real, feedback-sensitive learned treatment."""
+
+    root = Path(workspace_root).resolve(strict=True)
+    intervention = manifest.taste_intervention
+    if intervention is None:
+        return E2TasteInterventionInspection(
+            identity_closed=False,
+            behaviorally_active=False,
+            blocker_codes=("taste-intervention-not-bound",),
+        )
+
+    blockers: list[str] = []
+    try:
+        policy = FamilyConditionedLifecycleTastePolicy.model_validate_json(
+            _bound_bytes(root, intervention.family_policy),
+            strict=True,
+        )
+        readiness = ProjectTastePolicyReadiness.model_validate_json(
+            _bound_bytes(root, intervention.readiness),
+            strict=True,
+        )
+    except (OSError, ValueError):
+        return E2TasteInterventionInspection(
+            identity_closed=False,
+            behaviorally_active=False,
+            blocker_codes=("taste-intervention-binding-invalid",),
+        )
+
+    family = ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION
+    head = policy.family_heads.get(family)
+    family_readiness = next(
+        (item for item in readiness.families if item.decision_family is family),
+        None,
+    )
+    idea_binding = policy.idea_revision
+    identity_closed = bool(
+        policy.policy_id == intervention.policy_id
+        and readiness.project_id == manifest.project.project_id
+        and readiness.policy_id == policy.policy_id
+        and readiness.policy_sha256 == policy.policy_sha256
+        and idea_binding.project_id == manifest.project.project_id
+        and idea_binding.revision_id == manifest.project.idea_revision_id
+        and manifest.project.idea_revision is not None
+        and idea_binding.record_sha256 == manifest.project.idea_revision.sha256
+        and family_readiness is not None
+        and head is not None
+        and family_readiness.source_episode_count == len(head.source_episode_ids)
+        and family_readiness.training_episode_count == head.training_episode_count
+        and readiness.minimum_feature_support == head.config.minimum_feature_support
+    )
+    if not identity_closed:
+        blockers.append("taste-intervention-identity-mismatch")
+        return E2TasteInterventionInspection(
+            identity_closed=False,
+            behaviorally_active=False,
+            blocker_codes=tuple(blockers),
+        )
+
+    assert head is not None
+    assert family_readiness is not None
+    evaluation_groups = set(intervention.evaluation_source_group_ids)
+    if evaluation_groups.intersection(head.source_group_ids):
+        blockers.append("taste-intervention-source-group-overlap")
+    if not head.training_episode_count or not head.training_source_group_count:
+        blockers.append("taste-intervention-no-training-support")
+    if not head.h4_adaptive_policy_eligible:
+        blockers.append("taste-intervention-head-not-h4-eligible")
+    if not family_readiness.support_sufficient or not family_readiness.adaptive_head_ready:
+        blockers.append("taste-intervention-family-not-ready")
+    if not readiness.policy_application_ready:
+        blockers.append("taste-intervention-policy-not-ready")
+    if (
+        head.trained_domain_tags
+        and not head.config.allow_cross_domain
+        and intervention.target_domain.casefold() not in set(head.trained_domain_tags)
+    ):
+        blockers.append("taste-intervention-domain-out-of-scope")
+
+    contract_binding = intervention.state_probe_contract
+    report_binding = intervention.state_probe_report
+    if contract_binding is None or report_binding is None:
+        blockers.append("taste-intervention-state-probe-not-bound")
+    else:
+        try:
+            contract = H4FrozenStateProbeContract.model_validate_json(
+                _bound_bytes(root, contract_binding),
+                strict=True,
+            )
+            report = H4StateProbeReport.model_validate_json(
+                _bound_bytes(root, report_binding),
+                strict=True,
+            )
+        except (OSError, ValueError):
+            blockers.append("taste-intervention-state-probe-invalid")
+        else:
+            if not (
+                contract.project_id == manifest.project.project_id
+                and contract.evaluation_id == manifest.manifest_id
+                and contract.target_domain.casefold() == intervention.target_domain.casefold()
+                and contract.lifecycle_policy_sha256 == head.policy_sha256
+                and report.contract_sha256 == contract.contract_sha256
+                and report.lifecycle_policy_sha256 == head.policy_sha256
+                and report.treatment_active
+                and report.feedback_sensitive
+                and report.passed
+            ):
+                blockers.append("taste-intervention-state-probe-failed")
+
+    return E2TasteInterventionInspection(
+        identity_closed=True,
+        behaviorally_active=not blockers,
+        blocker_codes=tuple(blockers),
+    )
 
 
 def inspect_e2_prelaunch_manifest(
@@ -731,6 +976,9 @@ def inspect_e2_prelaunch_manifest(
     if not matched_pair_closed:
         blockers.append("matched-pair-mismatch")
 
+    taste = inspect_e2_taste_intervention(manifest, workspace_root=root)
+    blockers.extend(taste.blocker_codes)
+
     model_selection_boundary_closed = _model_selection_matches(root, manifest)
     if not model_selection_boundary_closed:
         blockers.append("model-selection-boundary-mismatch")
@@ -759,37 +1007,38 @@ def inspect_e2_prelaunch_manifest(
             workload_runtime_ready,
             task_initialization_closed,
             matched_pair_closed,
+            taste.identity_closed,
             model_selection_boundary_closed,
             resource_envelope_closed,
             hidden_scorer_firewall_closed,
             complete_workflow_closed,
         )
     )
-    b0_gate_names = (
-        "b0_agent_load_generation_preflight",
-        "b0_exact_model_role_attestation",
-        "b0_owner_hash_approval",
+    development_gate_names = (
+        "development_agent_load_generation_preflight",
+        "development_exact_model_role_attestation",
+        "development_owner_hash_approval",
     )
-    for name in b0_gate_names:
-        if getattr(manifest.gates, name) != "verified":
+    for name in development_gate_names:
+        if _gate_value(manifest, name) != "verified":
             blockers.append(name.replace("_", "-") + "-pending")
-    ready_for_b0_execution = static_ready and all(
-        getattr(manifest.gates, name) == "verified" for name in b0_gate_names
+    ready_for_development_execution = static_ready and taste.behaviorally_active and all(
+        _gate_value(manifest, name) == "verified" for name in development_gate_names
     )
-    b1_gate_names = (
-        "b0_complete",
+    formal_gate_names = (
+        "development_complete",
         "actual_gpu_baseline_reproduction",
-        "b1_task_excluded_role_selection",
-        "b1_exact_model_and_budget_freeze",
-        "b1_owner_hash_approval",
+        "formal_task_excluded_role_selection",
+        "formal_exact_model_and_budget_freeze",
+        "formal_owner_hash_approval",
     )
-    for name in b1_gate_names:
-        if getattr(manifest.gates, name) != "verified":
+    for name in formal_gate_names:
+        if _gate_value(manifest, name) != "verified":
             blockers.append(name.replace("_", "-") + "-pending")
-    ready_for_b1_execution = ready_for_b0_execution and all(
-        getattr(manifest.gates, name) == "verified" for name in b1_gate_names
+    ready_for_formal_execution = ready_for_development_execution and all(
+        _gate_value(manifest, name) == "verified" for name in formal_gate_names
     )
-    if not ready_for_b0_execution:
+    if not ready_for_development_execution:
         blockers.append("execution-authority-not-granted")
 
     return E2PrelaunchInspection(
@@ -803,13 +1052,15 @@ def inspect_e2_prelaunch_manifest(
         workload_runtime_ready=workload_runtime_ready,
         task_initialization_closed=task_initialization_closed,
         matched_pair_closed=matched_pair_closed,
+        taste_intervention_identity_closed=taste.identity_closed,
+        taste_intervention_behaviorally_active=taste.behaviorally_active,
         model_selection_boundary_closed=model_selection_boundary_closed,
         resource_envelope_closed=resource_envelope_closed,
         hidden_scorer_firewall_closed=hidden_scorer_firewall_closed,
         complete_workflow_closed=complete_workflow_closed,
-        ready_for_b0_static_handoff=static_ready,
-        ready_for_b0_execution=ready_for_b0_execution,
-        ready_for_b1_execution=ready_for_b1_execution,
+        ready_for_development_static_handoff=static_ready,
+        ready_for_development_execution=ready_for_development_execution,
+        ready_for_formal_execution=ready_for_formal_execution,
         blocker_codes=tuple(dict.fromkeys(blockers)),
     )
 
@@ -835,6 +1086,21 @@ def _all_bindings(manifest: E2PrelaunchManifest) -> tuple[tuple[str, E2FileBindi
         )
     if manifest.project.idea_revision is not None:
         values.append(("idea-revision", manifest.project.idea_revision))
+    if manifest.taste_intervention is not None:
+        values.extend(
+            (
+                ("taste-family-policy", manifest.taste_intervention.family_policy),
+                ("taste-policy-readiness", manifest.taste_intervention.readiness),
+            )
+        )
+        if manifest.taste_intervention.state_probe_contract is not None:
+            values.append(
+                ("taste-state-probe-contract", manifest.taste_intervention.state_probe_contract)
+            )
+        if manifest.taste_intervention.state_probe_report is not None:
+            values.append(
+                ("taste-state-probe-report", manifest.taste_intervention.state_probe_report)
+            )
     values.extend(
         (f"model-resource:{item.candidate_id}", item.resource_manifest)
         for item in manifest.model_selection.candidates
@@ -1244,7 +1510,10 @@ if __name__ == "__main__":  # pragma: no cover - exercised through the module en
 __all__ = [
     "E2PrelaunchInspection",
     "E2PrelaunchManifest",
+    "E2TasteIntervention",
+    "E2TasteInterventionInspection",
     "inspect_e2_prelaunch_manifest",
+    "inspect_e2_taste_intervention",
     "load_e2_prelaunch_manifest",
     "main",
 ]

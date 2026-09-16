@@ -22,6 +22,12 @@ CAPABILITY_PROGRAM = (
     / "iclr2027_scitaste_capability_driven_autoresearch_program_v4.yaml"
 )
 MODEL_INVENTORY = ROOT / "configs/resources/assets/model_role_inventory_v1.yaml"
+CURRENT_CAPABILITY_PROGRAM = (
+    ROOT
+    / "configs/evaluation/programs/"
+    / "iclr2027_scitaste_capability_driven_autoresearch_program_v9.yaml"
+)
+CURRENT_MODEL_INVENTORY = ROOT / "configs/resources/assets/model_role_inventory_v2.yaml"
 
 
 def _runtime(tmp_path: Path, project_id: str = "program-project") -> ResearchProgramRuntime:
@@ -141,6 +147,22 @@ def test_initialize_binds_capability_driven_v4_without_selecting_qwen2b(
     )
     assert run.condition == "complete-autoresearch-program-v4"
     assert run.model == "task-excluded-selection-pending"
+
+
+def test_initialize_binds_v9_behavioral_treatment_program(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path, "capability-program-v9")
+
+    initialized = runtime.initialize(
+        project_id="capability-program-v9",
+        program_path=CURRENT_CAPABILITY_PROGRAM,
+        model_inventory_path=CURRENT_MODEL_INVENTORY,
+        expected_revision=0,
+    )
+
+    assert initialized.state.program_id.endswith("-v9")
+    assert initialized.contract.source_program_schema_version == "4.0"
+    assert initialized.contract.controller_authorizes_api_calls is False
+    assert initialized.contract.controller_authorizes_gpu_work is False
 
 
 def test_review_disagreement_adjudicates_and_revision_can_return_to_experiment(

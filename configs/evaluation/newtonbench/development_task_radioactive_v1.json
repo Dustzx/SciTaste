@@ -1,0 +1,10 @@
+{
+  "module": "m5_radioactive_decay",
+  "difficulty": "easy",
+  "system": "vanilla_equation",
+  "law_version": "v2",
+  "noise_level": 0.0,
+  "environment_seed": 109,
+  "score_seed": 109,
+  "code_assisted": false
+}

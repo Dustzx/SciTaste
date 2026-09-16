@@ -1420,6 +1420,9 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
         "scitaste-iclr2027-capability-driven-autoresearch-program-v8": (
             "scitaste-iclr2027-capability-driven-autoresearch-program-v7"
         ),
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v9": (
+            "scitaste-iclr2027-capability-driven-autoresearch-program-v8"
+        ),
     }
     expected_predecessor = predecessor_by_program.get(
         program_id,
@@ -1490,6 +1493,7 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
     if program_id in {
         "scitaste-iclr2027-capability-driven-autoresearch-program-v7",
         "scitaste-iclr2027-capability-driven-autoresearch-program-v8",
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v9",
     }:
         if (
             selection.get("candidate_universe_authority")

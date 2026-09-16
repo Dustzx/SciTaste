@@ -6,11 +6,18 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from scitaste.evaluation.e2_prelaunch import E2PrelaunchManifest, load_e2_prelaunch_manifest
+from scitaste.evaluation.e2_prelaunch import (
+    E2PrelaunchManifest,
+    inspect_e2_taste_intervention,
+    load_e2_prelaunch_manifest,
+)
 
 MANIFEST_PATH = Path("configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v1.yaml")
 RELATED_WORK_MANIFEST_PATH = Path(
     "configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml"
+)
+TREATMENT_GATED_MANIFEST_PATH = Path(
+    "configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v5.yaml"
 )
 
 
@@ -71,7 +78,7 @@ def test_e2_rejects_hidden_score_authority_in_b0() -> None:
     payload = _payload()
     payload["resources"]["blocks"][0]["hidden_score_authority"] = True
 
-    with pytest.raises(ValidationError, match="B0 cannot open"):
+    with pytest.raises(ValidationError, match="development cannot open"):
         E2PrelaunchManifest.model_validate(payload)
 
 
@@ -104,3 +111,27 @@ def test_e2_closed_command_identity_rejects_cross_evaluation_admission() -> None
 
     with pytest.raises(ValidationError, match="must use the manifest ID"):
         E2PrelaunchManifest.model_validate(payload)
+
+
+def test_e2_schema_11_requires_exact_taste_intervention() -> None:
+    payload = _payload()
+    payload["schema_version"] = "1.1"
+
+    with pytest.raises(ValidationError, match="requires an exact learned Taste intervention"):
+        E2PrelaunchManifest.model_validate(payload)
+
+
+def test_current_e2_treatment_identity_is_closed_but_behavior_is_inactive() -> None:
+    manifest, _ = load_e2_prelaunch_manifest(TREATMENT_GATED_MANIFEST_PATH)
+
+    report = inspect_e2_taste_intervention(manifest, workspace_root=Path.cwd())
+
+    assert report.identity_closed is True
+    assert report.behaviorally_active is False
+    assert report.blocker_codes == (
+        "taste-intervention-no-training-support",
+        "taste-intervention-head-not-h4-eligible",
+        "taste-intervention-family-not-ready",
+        "taste-intervention-policy-not-ready",
+        "taste-intervention-state-probe-not-bound",
+    )
