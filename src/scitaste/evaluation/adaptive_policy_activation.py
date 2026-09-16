@@ -1923,9 +1923,11 @@ def _activation_candidate_from_batch(
 ) -> tuple[TasteEpisodeCandidate, ActivationFileBinding]:
     if (
         batch.project_id != manifest.project_id
-        or batch.task_id != task_state.task_id
         or batch.run_id != task_state.run_id
         or batch.source_group_id != task_state.source_group_id
+        # The terminal batch hash already binds the NewtonBench runtime task
+        # identity.  ``task_state.task_id`` is the campaign alias and must not
+        # be compared to that separate identifier namespace.
         or batch.batch_sha256 != terminal.batch_sha256
         or len(batch.items) != 1
     ):
