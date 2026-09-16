@@ -109,15 +109,25 @@ def run(args: argparse.Namespace):
     receipt_path = run_root / "interactive_development" / "RESULT" / "RECEIPT.json"
     save_interactive_research_run_receipt(receipt, receipt_path)
     lock_paths = provider.lock_paths
-    if len(lock_paths) != len(receipt.turns):
+    # Guidance is locked before the provider request. A terminal provider
+    # failure therefore leaves exactly one prospective lock without an agent
+    # decision. Retain that lock as audit evidence, but never project it as a
+    # completed decision or discard the failed trajectory.
+    orphaned_provider_lock = len(lock_paths) == len(receipt.turns) + 1
+    if (
+        len(lock_paths) < len(receipt.turns)
+        or len(lock_paths) > len(receipt.turns) + 1
+        or (orphaned_provider_lock and receipt.status != "agent_failure")
+    ):
         raise ValueError("effective prospective lock coverage differs from executed turns")
+    completed_lock_paths = lock_paths[: len(receipt.turns)]
     batch = finalize_interactive_development_episodes(
         protocol,
         plan,
         runtime=runtime,
         current_idea_revision=idea,
         expected_project_revision=plan.observed_project_revision,
-        lock_paths=lock_paths,
+        lock_paths=completed_lock_paths,
         receipt_path=receipt_path,
         output_root=run_root / "interactive_development" / "taste_episodes",
     )

@@ -287,18 +287,23 @@ from scitaste.evaluation.adaptive_policy_activation import (
     approve_adaptive_policy_activation,
     authorize_adaptive_policy_activation,
     compile_adaptive_policy_activation_no_run_plan,
+    complete_adaptive_policy_activation_task,
     initialize_adaptive_policy_activation_state,
     inspect_adaptive_policy_activation,
+    issue_adaptive_policy_activation_task,
     load_adaptive_policy_activation_approval,
+    load_adaptive_policy_activation_episode_batch,
     load_adaptive_policy_activation_manifest,
     load_adaptive_policy_activation_no_run_plan,
     load_adaptive_policy_activation_state,
+    load_adaptive_policy_activation_task_permit,
     save_adaptive_policy_activation_artifact,
 )
 from scitaste.evaluation.decision_episode_integrity import (
     inspect_track_a_decision_episode_integrity_plan,
     prepare_track_a_decision_episode_integrity_plan,
 )
+from scitaste.evaluation.interactive_research import load_interactive_research_run_receipt
 from scitaste.evaluation.lifecycle_benchmark_bridge_cli import (
     register_lifecycle_benchmark_bridge_cli,
 )
@@ -4063,6 +4068,37 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(adaptive_activation_authorize)
     adaptive_activation_authorize.set_defaults(
         handler=_handle_evaluation_adaptive_policy_activation_authorize
+    )
+    adaptive_activation_issue = evaluation_commands.add_parser(
+        "adaptive-policy-activation-issue-task",
+        help="Issue one-use authority for the next frozen activation task without running it",
+    )
+    adaptive_activation_issue.add_argument("--manifest", type=Path, required=True)
+    adaptive_activation_issue.add_argument("--plan", type=Path, required=True)
+    adaptive_activation_issue.add_argument("--approval", type=Path, required=True)
+    adaptive_activation_issue.add_argument("--state", type=Path, required=True)
+    adaptive_activation_issue.add_argument("--permit-output", type=Path, required=True)
+    adaptive_activation_issue.add_argument("--state-output", type=Path, required=True)
+    _add_log_level_option(adaptive_activation_issue)
+    adaptive_activation_issue.set_defaults(
+        handler=_handle_evaluation_adaptive_policy_activation_issue_task
+    )
+    adaptive_activation_complete = evaluation_commands.add_parser(
+        "adaptive-policy-activation-complete-task",
+        help="Bind one terminal receipt and advance to the next frozen activation task",
+    )
+    adaptive_activation_complete.add_argument("--manifest", type=Path, required=True)
+    adaptive_activation_complete.add_argument("--plan", type=Path, required=True)
+    adaptive_activation_complete.add_argument("--approval", type=Path, required=True)
+    adaptive_activation_complete.add_argument("--state", type=Path, required=True)
+    adaptive_activation_complete.add_argument("--permit", type=Path, required=True)
+    adaptive_activation_complete.add_argument("--receipt", type=Path, required=True)
+    adaptive_activation_complete.add_argument("--batch", type=Path, required=True)
+    adaptive_activation_complete.add_argument("--new-disk-bytes", type=int, required=True)
+    adaptive_activation_complete.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(adaptive_activation_complete)
+    adaptive_activation_complete.set_defaults(
+        handler=_handle_evaluation_adaptive_policy_activation_complete_task
     )
     direct_agent_run = evaluation_commands.add_parser(
         "direct-agent-run",
@@ -11218,6 +11254,79 @@ def _handle_evaluation_adaptive_policy_activation_authorize(
                 "execution_authorized": authorized.execution_authorized,
                 "formal_effect_claim_authorized": (authorized.formal_effect_claim_authorized),
                 "external_execution_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_adaptive_policy_activation_issue_task(
+    args: argparse.Namespace,
+) -> int:
+    for output in (args.permit_output, args.state_output):
+        if output.exists() or output.is_symlink():
+            raise FileExistsError(output)
+    manifest, _ = load_adaptive_policy_activation_manifest(args.manifest)
+    plan = load_adaptive_policy_activation_no_run_plan(args.plan)
+    approval = load_adaptive_policy_activation_approval(args.approval)
+    state = load_adaptive_policy_activation_state(args.state)
+    permit, running = issue_adaptive_policy_activation_task(manifest, plan, approval, state)
+    permit_output = save_adaptive_policy_activation_artifact(permit, args.permit_output)
+    state_output = save_adaptive_policy_activation_artifact(running, args.state_output)
+    print(
+        json.dumps(
+            {
+                "status": "adaptive-policy-activation-task-issued",
+                "permit_output": str(permit_output),
+                "state_output": str(state_output),
+                "permit_sha256": permit.permit_sha256,
+                "state_sha256": running.state_sha256,
+                "task_id": permit.task_id,
+                "ordinal": permit.ordinal,
+                "external_execution_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_adaptive_policy_activation_complete_task(
+    args: argparse.Namespace,
+) -> int:
+    manifest, _ = load_adaptive_policy_activation_manifest(args.manifest)
+    plan = load_adaptive_policy_activation_no_run_plan(args.plan)
+    approval = load_adaptive_policy_activation_approval(args.approval)
+    state = load_adaptive_policy_activation_state(args.state)
+    permit = load_adaptive_policy_activation_task_permit(args.permit)
+    receipt = load_interactive_research_run_receipt(args.receipt)
+    batch = load_adaptive_policy_activation_episode_batch(args.batch)
+    advanced = complete_adaptive_policy_activation_task(
+        manifest,
+        plan,
+        approval,
+        state,
+        permit,
+        receipt,
+        batch,
+        new_disk_bytes=args.new_disk_bytes,
+    )
+    output = save_adaptive_policy_activation_artifact(advanced, args.output)
+    print(
+        json.dumps(
+            {
+                "status": advanced.status,
+                "output": str(output),
+                "state_sha256": advanced.state_sha256,
+                "completed_trajectory_count": advanced.completed_trajectory_count,
+                "next_task_id": advanced.next_task_id,
+                "consumed_api_calls": advanced.consumed_api_calls,
+                "consumed_api_tokens": advanced.consumed_api_tokens,
+                "consumed_new_disk_bytes": advanced.consumed_new_disk_bytes,
+                "formal_effect_claim_authorized": (advanced.formal_effect_claim_authorized),
             },
             indent=2,
             ensure_ascii=False,

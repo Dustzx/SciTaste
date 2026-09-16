@@ -13,10 +13,14 @@ from scitaste.evaluation.adaptive_policy_activation import (
     approve_adaptive_policy_activation,
     authorize_adaptive_policy_activation,
     compile_adaptive_policy_activation_no_run_plan,
+    complete_adaptive_policy_activation_task,
     initialize_adaptive_policy_activation_state,
     inspect_adaptive_policy_activation,
+    issue_adaptive_policy_activation_task,
     load_adaptive_policy_activation_manifest,
 )
+from scitaste.evaluation.interactive_development import InteractiveDevelopmentEpisodeBatch
+from scitaste.evaluation.interactive_research import InteractiveResearchRunReceipt
 
 MANIFEST = Path("configs/evaluation/taste_policy/adaptive_allocation_activation_v1.yaml")
 
@@ -78,6 +82,9 @@ def test_activation_approval_requires_both_exact_confirmation_hashes() -> None:
         campaign_id=manifest.campaign_id,
         manifest_file_sha256=digest,
         manifest_fingerprint=manifest.fingerprint,
+        idea_revision_id="idea-v1",
+        idea_scientific_contract_sha256="f" * 64,
+        idea_scientific_contract_ready=True,
         exact_bindings_ready=True,
         predecessor_state_matches=True,
         program_and_limits_match=True,
@@ -107,6 +114,9 @@ def test_exact_approval_authorizes_state_without_launching_work() -> None:
         campaign_id=manifest.campaign_id,
         manifest_file_sha256=digest,
         manifest_fingerprint=manifest.fingerprint,
+        idea_revision_id="idea-v1",
+        idea_scientific_contract_sha256="f" * 64,
+        idea_scientific_contract_ready=True,
         exact_bindings_ready=True,
         predecessor_state_matches=True,
         program_and_limits_match=True,
@@ -137,3 +147,100 @@ def test_exact_approval_authorizes_state_without_launching_work() -> None:
     assert authorized.formal_effect_claim_authorized is False
     assert authorized.next_task_id == manifest.frozen_execution.tasks[0].task_id
     assert all(item.attempt_count == 0 for item in authorized.tasks)
+
+
+def test_task_permit_retains_terminal_failure_and_advances_once() -> None:
+    manifest, digest = load_adaptive_policy_activation_manifest(MANIFEST)
+    inspection = AdaptivePolicyActivationInspection(
+        campaign_id=manifest.campaign_id,
+        manifest_file_sha256=digest,
+        manifest_fingerprint=manifest.fingerprint,
+        idea_revision_id="idea-v1",
+        idea_scientific_contract_sha256="f" * 64,
+        idea_scientific_contract_ready=True,
+        exact_bindings_ready=True,
+        predecessor_state_matches=True,
+        program_and_limits_match=True,
+        task_population_and_source_groups_match=True,
+        checkout_matches_and_is_clean=True,
+        resource_arithmetic_closed=True,
+        sampling_rule_closed=True,
+        ready_for_owner_approval=True,
+        blocker_codes=(),
+    )
+    plan = compile_adaptive_policy_activation_no_run_plan(manifest, inspection)
+    approval = approve_adaptive_policy_activation(
+        manifest,
+        plan,
+        confirm_manifest_file_sha256=digest,
+        confirm_plan_sha256=plan.plan_sha256,
+        approved_by="test-owner",
+        approved_at=datetime.now(UTC),
+    )
+    authorized = authorize_adaptive_policy_activation(
+        plan,
+        approval,
+        initialize_adaptive_policy_activation_state(plan),
+    )
+
+    permit, running = issue_adaptive_policy_activation_task(manifest, plan, approval, authorized)
+    receipt = InteractiveResearchRunReceipt.create(
+        project_id=manifest.project_id,
+        run_id=permit.run_id,
+        condition_id="development-foundation",
+        task_id=permit.task_id,
+        environment_sha256="a" * 64,
+        status="agent_failure",
+        turns=(),
+        experiment_count=0,
+        code_call_count=0,
+        input_tokens=0,
+        output_tokens=0,
+        api_cost_usd=None,
+        terminal_error="provider returned no valid response",
+    )
+    batch = InteractiveDevelopmentEpisodeBatch.create(
+        batch_id=f"{permit.run_id}-episodes",
+        project_id=manifest.project_id,
+        run_id=permit.run_id,
+        task_id=permit.task_id,
+        source_group_id=permit.source_group_id,
+        protocol_sha256="b" * 64,
+        sampling_plan_sha256="c" * 64,
+        receipt_sha256=receipt.receipt_sha256,
+        items=(),
+    )
+
+    advanced = complete_adaptive_policy_activation_task(
+        manifest,
+        plan,
+        approval,
+        running,
+        permit,
+        receipt,
+        batch,
+        new_disk_bytes=1024,
+    )
+
+    assert running.status == "running"
+    assert running.tasks[0].attempt_count == 1
+    assert advanced.status == "ready"
+    assert advanced.tasks[0].status == "retained-failure"
+    assert advanced.next_task_id == manifest.frozen_execution.tasks[1].task_id
+    assert advanced.completed_trajectory_count == 1
+    assert advanced.consumed_api_calls == 1
+    assert advanced.consumed_api_tokens == permit.maximum_api_tokens
+    assert advanced.consumed_new_disk_bytes == 1024
+    assert advanced.terminal_evidence[0].receipt_sha256 == receipt.receipt_sha256
+
+    with pytest.raises(ValueError, match="active permit"):
+        complete_adaptive_policy_activation_task(
+            manifest,
+            plan,
+            approval,
+            advanced,
+            permit,
+            receipt,
+            batch,
+            new_disk_bytes=1024,
+        )

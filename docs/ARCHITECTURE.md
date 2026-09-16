@@ -4777,3 +4777,17 @@ approval, plan, initial state, frozen task population, and resource ceiling,
 then emits sequence 1 in `ready` status. This transition still performs no
 external work and never grants formal-effect authority. Consequently an
 approval can neither authorize a drifted cohort nor be mistaken for a result.
+
+The executable successor plan additionally freezes the current Idea revision
+and its scientific-contract hash, while deliberately allowing ordinary project
+revision increments caused by run registration. Each trajectory requires a
+one-use task permit bound to the preceding state, exact ordinal, run, source
+group, per-task API ceiling, zero retries, zero task GPU, and no downloads. A
+terminal receipt plus its at-most-one-candidate batch advances the hash chain,
+accounts calls, tokens, and new disk bytes, and exposes only the next frozen
+task. A provider failure with unavailable telemetry is charged the complete
+per-task token envelope rather than assumed free. Provider failures remain
+terminal campaign members; a prospective lock
+created before a failed provider response is retained as audit evidence but is
+not projected as a completed decision. Existing run evidence makes the live
+wrapper fail rather than selectively rerun the task.

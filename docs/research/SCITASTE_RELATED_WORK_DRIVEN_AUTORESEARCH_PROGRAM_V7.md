@@ -243,10 +243,16 @@ GLM-5.3-Flash calls / 1,080,000 tokens, plus at most 36 local Qwen3-VL-4B/8B
 review generations and eight aggregate review GPU-hours. It requires no task GPU
 and no download. These resources are disclosed, not authorized or consumed. The
 typed no-run compiler verifies every predecessor, task, canonical source group,
-checkout, model, and resource binding and produces plan SHA-256
-`50f37408330ab47c718d1b25a0455a0a5869b316849a6e3b8c450470d05ad310` plus
-initial state SHA-256
-`6e45a1ad9dc1d8209882c7cc1c96b425073f73b7768d891ad46f1cf8624c9f60`.
+checkout, model, and resource binding. The first no-run plan, SHA-256
+`50f37408330ab47c718d1b25a0455a0a5869b316849a6e3b8c450470d05ad310`,
+is retained as superseded because it did not freeze the Idea scientific
+contract. The successor binds Idea revision
+`outcome-calibrated-scientific-taste-policy-v2`, scientific-contract SHA-256
+`21074cf339af8994f38f108242b382d12e4f480ce54289e1675f20e54a633147`,
+plan SHA-256
+`4f13f0cc41181f00fd86758e54efb45f7d1d0f437cfe64c44ca256bfd78f4b5a`,
+and initial-state SHA-256
+`54ed0c97231eb6a14a4682ee3a68fd8efa04f569e8d7d6c259c6b355440dee0e`.
 That state remains `awaiting-owner-approval` with all nine attempt counts at
 zero. Interactive protocol v1.1 makes the sampling promise executable: one
 earliest actually executed non-STOP decision after retained feedback per task,
@@ -255,6 +261,12 @@ The approval artifact and sequence-1 `ready` state are separate, hash-bound
 objects. Producing either still performs no API, GPU, model, or benchmark work;
 only the exact plan population and resource ceiling can receive authority, and
 formal-effect authority remains false.
+After approval, each task receives a one-use state-bound permit. The live
+wrapper refuses an existing run directory, executes only the permit's exact
+task, and advances state only from a terminal receipt and its zero-or-one
+candidate batch. API calls, tokens, and new disk bytes are accumulated against
+the campaign ceiling. A failed provider request remains a zero-candidate member
+of the frozen cohort and cannot be replaced or rerun.
 
 The remote fixed-revision `Qwen/Qwen3.5-9B` candidate is now statically complete:
 16 files, four indexed shards, 15,664,539,861 bytes, aggregate checkpoint digest

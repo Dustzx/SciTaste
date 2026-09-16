@@ -3,7 +3,9 @@
 The activation cohort is scientific development data, not an effectiveness
 experiment.  This module makes its frozen task population, sampling rule, model
 identities, and aggregate resource ceiling executable inputs instead of prose.
-It deliberately cannot authorize or launch API, GPU, or benchmark work.
+It can bind explicit owner authority and advance immutable task states, but it
+never launches API, GPU, or benchmark work itself; the separate live runner
+requires both an issued one-use permit and an explicit command-line opt-in.
 """
 
 from __future__ import annotations
@@ -20,13 +22,22 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
-from scitaste.evaluation.interactive_research import InteractiveResearchLimits
+from scitaste.evaluation.interactive_development import InteractiveDevelopmentEpisodeBatch
+from scitaste.evaluation.interactive_research import (
+    InteractiveResearchLimits,
+    InteractiveResearchRunReceipt,
+)
 from scitaste.evaluation.newtonbench_runtime import NewtonBenchTask
 from scitaste.evaluation.source_identity import (
     canonical_benchmark_task_source_group_id,
     load_canonical_source_identity_registry,
 )
+from scitaste.project.idea_revision import (
+    idea_scientific_contract_sha256,
+    inspect_current_idea_revision,
+)
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
+from scitaste.project.runtime import ProjectRuntime
 from scitaste.taste.decision_families import (
     FamilyConditionedLifecycleTastePolicy,
     ScientificTasteDecisionFamily,
@@ -285,6 +296,9 @@ class AdaptivePolicyActivationInspection(BaseModel):
     campaign_id: str
     manifest_file_sha256: str = Field(pattern=_SHA256)
     manifest_fingerprint: str = Field(pattern=_SHA256)
+    idea_revision_id: str
+    idea_scientific_contract_sha256: str = Field(pattern=_SHA256)
+    idea_scientific_contract_ready: bool
     exact_bindings_ready: bool
     predecessor_state_matches: bool
     program_and_limits_match: bool
@@ -309,6 +323,8 @@ class AdaptivePolicyActivationNoRunPlan(BaseModel):
     project_id: str
     manifest_file_sha256: str = Field(pattern=_SHA256)
     manifest_fingerprint: str = Field(pattern=_SHA256)
+    idea_revision_id: str
+    idea_scientific_contract_sha256: str = Field(pattern=_SHA256)
     ordered_task_ids: tuple[str, ...]
     ordered_run_ids: tuple[str, ...]
     ordered_source_group_ids: tuple[str, ...]
@@ -326,6 +342,7 @@ class AdaptivePolicyActivationNoRunPlan(BaseModel):
     def plan_is_closed(self) -> AdaptivePolicyActivationNoRunPlan:
         validate_entry_id(self.campaign_id, field_name="activation plan campaign_id")
         validate_project_id(self.project_id)
+        validate_entry_id(self.idea_revision_id, field_name="activation plan idea_revision_id")
         populations = (
             self.ordered_task_ids,
             self.ordered_run_ids,
@@ -351,6 +368,8 @@ class AdaptivePolicyActivationNoRunPlan(BaseModel):
             "project_id": manifest.project_id,
             "manifest_file_sha256": inspection.manifest_file_sha256,
             "manifest_fingerprint": manifest.fingerprint,
+            "idea_revision_id": inspection.idea_revision_id,
+            "idea_scientific_contract_sha256": (inspection.idea_scientific_contract_sha256),
             "ordered_task_ids": tuple(item.task_id for item in manifest.frozen_execution.tasks),
             "ordered_run_ids": tuple(item.run_id for item in manifest.frozen_execution.tasks),
             "ordered_source_group_ids": tuple(
@@ -388,6 +407,24 @@ class AdaptivePolicyActivationTaskState(BaseModel):
     replacement_allowed: Literal[False] = False
 
 
+class AdaptivePolicyActivationTaskEvidence(BaseModel):
+    """Terminal trajectory evidence retained before independent review."""
+
+    model_config = _CONFIG
+
+    task_id: str
+    run_id: str
+    source_group_id: str
+    permit_sha256: str = Field(pattern=_SHA256)
+    receipt_sha256: str = Field(pattern=_SHA256)
+    batch_sha256: str = Field(pattern=_SHA256)
+    terminal_status: str
+    candidate_count: int = Field(ge=0, le=1)
+    accounted_api_calls: int = Field(ge=1, le=100)
+    accounted_api_tokens: int = Field(ge=0)
+    new_disk_bytes: int = Field(ge=0)
+
+
 class AdaptivePolicyActivationCampaignState(BaseModel):
     """Hash-chained campaign state; authorization still performs no external work."""
 
@@ -397,19 +434,27 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
     campaign_id: str
     project_id: str
     plan_sha256: str = Field(pattern=_SHA256)
-    sequence: Literal[0, 1] = 0
-    status: Literal["awaiting-owner-approval", "ready"] = "awaiting-owner-approval"
+    sequence: int = Field(default=0, ge=0)
+    status: Literal[
+        "awaiting-owner-approval",
+        "ready",
+        "running",
+        "trajectory-complete",
+    ] = "awaiting-owner-approval"
     tasks: tuple[AdaptivePolicyActivationTaskState, ...]
-    next_task_id: str
-    completed_trajectory_count: Literal[0] = 0
-    admitted_episode_count: Literal[0] = 0
-    consumed_api_calls: Literal[0] = 0
-    consumed_api_tokens: Literal[0] = 0
-    consumed_local_review_generations: Literal[0] = 0
-    consumed_local_review_gpu_hours: Literal[0.0] = 0.0
+    next_task_id: str | None
+    completed_trajectory_count: int = Field(default=0, ge=0)
+    admitted_episode_count: int = Field(default=0, ge=0)
+    consumed_api_calls: int = Field(default=0, ge=0)
+    consumed_api_tokens: int = Field(default=0, ge=0)
+    consumed_local_review_generations: int = Field(default=0, ge=0)
+    consumed_local_review_gpu_hours: float = Field(default=0.0, ge=0, allow_inf_nan=False)
+    consumed_new_disk_bytes: int = Field(default=0, ge=0)
     policy_refresh_status: Literal["pending"] = "pending"
     target_domain_state_probe_status: Literal["pending"] = "pending"
     approval_sha256: str | None = Field(default=None, pattern=_SHA256)
+    active_permit_sha256: str | None = Field(default=None, pattern=_SHA256)
+    terminal_evidence: tuple[AdaptivePolicyActivationTaskEvidence, ...] = ()
     execution_authorized: bool = False
     formal_effect_claim_authorized: Literal[False] = False
     state_sha256: str = Field(pattern=_SHA256)
@@ -419,23 +464,57 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
         if not self.tasks:
             raise ValueError("activation state requires its frozen task population")
         task_ids = tuple(item.task_id for item in self.tasks)
-        if len(task_ids) != len(set(task_ids)) or self.next_task_id not in task_ids:
-            raise ValueError("activation next task must identify one unique frozen task")
+        if len(task_ids) != len(set(task_ids)):
+            raise ValueError("activation state task identities must be unique")
+        if self.next_task_id is not None and self.next_task_id not in task_ids:
+            raise ValueError("activation next task must identify one frozen task")
         if self.status == "awaiting-owner-approval":
             if (
                 self.sequence != 0
                 or self.next_task_id != self.tasks[0].task_id
                 or self.approval_sha256 is not None
+                or self.active_permit_sha256 is not None
                 or self.execution_authorized
             ):
                 raise ValueError("activation initial state cannot carry execution authority")
         elif self.sequence < 1 or self.approval_sha256 is None or not self.execution_authorized:
             raise ValueError("active campaign state requires exact owner approval authority")
+        if self.status == "running" and self.active_permit_sha256 is None:
+            raise ValueError("running activation state requires one active task permit")
+        if self.status != "running" and self.active_permit_sha256 is not None:
+            raise ValueError("only a running activation state may retain an active permit")
+        if self.status == "ready" and self.next_task_id is None:
+            raise ValueError("ready activation state requires one next frozen task")
+        if self.status == "trajectory-complete" and self.next_task_id is not None:
+            raise ValueError("completed activation trajectories cannot name a next task")
+        if self.completed_trajectory_count != len(self.terminal_evidence):
+            raise ValueError("activation completed count differs from terminal evidence")
+        if len({item.task_id for item in self.terminal_evidence}) != len(self.terminal_evidence):
+            raise ValueError("activation terminal task evidence repeats")
+        terminal_task_ids = {item.task_id for item in self.terminal_evidence}
+        observed_terminal_ids = {
+            item.task_id
+            for item in self.tasks
+            if item.status in {"review-pending", "admitted", "retained-failure"}
+        }
+        if terminal_task_ids != observed_terminal_ids:
+            raise ValueError("activation task states differ from terminal evidence")
+        if self.status == "trajectory-complete" and self.completed_trajectory_count != len(
+            self.tasks
+        ):
+            raise ValueError("activation trajectory completion requires the complete cohort")
         excluded = {"state_sha256"}
         # Preserve the hash of the already materialized pre-authorization v1.0
         # state, which predates the optional approval binding.
         if "approval_sha256" not in self.model_fields_set:
             excluded.add("approval_sha256")
+        for field_name in (
+            "active_permit_sha256",
+            "terminal_evidence",
+            "consumed_new_disk_bytes",
+        ):
+            if field_name not in self.model_fields_set:
+                excluded.add(field_name)
         expected = content_sha256(self.model_dump(mode="json", exclude=excluded))
         if self.state_sha256 != expected:
             raise ValueError("activation campaign state hash mismatch")
@@ -465,13 +544,15 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             "plan_sha256": plan.plan_sha256,
             "tasks": tasks,
             "next_task_id": tasks[0].task_id,
+            "consumed_new_disk_bytes": 0,
+            "approval_sha256": None,
+            "active_permit_sha256": None,
+            "terminal_evidence": (),
         }
         unsigned = cls.model_construct(state_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            state_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"state_sha256", "approval_sha256"})
-            ),
+            state_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"state_sha256"})),
         )
 
     @classmethod
@@ -559,6 +640,51 @@ class AdaptivePolicyActivationApproval(BaseModel):
         )
 
 
+class AdaptivePolicyActivationTaskPermit(BaseModel):
+    """One-use authority for exactly the next frozen development trajectory."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    campaign_id: str
+    project_id: str
+    plan_sha256: str = Field(pattern=_SHA256)
+    approval_sha256: str = Field(pattern=_SHA256)
+    preceding_state_sha256: str = Field(pattern=_SHA256)
+    ordinal: int = Field(ge=1)
+    task_id: str
+    run_id: str
+    source_group_id: str
+    maximum_api_calls: int = Field(ge=1)
+    maximum_api_tokens: int = Field(ge=1)
+    maximum_new_disk_bytes: int = Field(ge=1)
+    provider_retries: Literal[0] = 0
+    task_gpu_hours: Literal[0.0] = 0.0
+    downloads_authorized: Literal[False] = False
+    review_execution_authorized: Literal[False] = False
+    formal_effect_claim_authorized: Literal[False] = False
+    permit_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def permit_is_closed(self) -> AdaptivePolicyActivationTaskPermit:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"permit_sha256"}))
+        if self.permit_sha256 != expected:
+            raise ValueError("activation task permit hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AdaptivePolicyActivationTaskPermit:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("permit_sha256", None)
+        unsigned = cls.model_construct(permit_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            permit_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"permit_sha256"})
+            ),
+        )
+
+
 def load_adaptive_policy_activation_manifest(
     path: str | Path,
 ) -> tuple[AdaptivePolicyActivationManifest, str]:
@@ -584,6 +710,24 @@ def inspect_adaptive_policy_activation(
 
     root = Path(workspace_root).resolve(strict=True)
     blockers: list[str] = []
+    try:
+        idea_report = inspect_current_idea_revision(
+            ProjectRuntime(root / "outputs"), manifest.project_id
+        )
+        idea = idea_report.current_binding
+        idea_revision_id = idea.revision_id if idea is not None else "unavailable"
+        idea_contract_sha256 = (
+            idea_scientific_contract_sha256(idea) if idea is not None else "0" * 64
+        )
+        idea_scientific_contract_ready = bool(
+            idea is not None and idea_report.method_development_binding_available
+        )
+    except (OSError, ValueError):
+        idea_revision_id = "unavailable"
+        idea_contract_sha256 = "0" * 64
+        idea_scientific_contract_ready = False
+    if not idea_scientific_contract_ready:
+        blockers.append("activation-idea-scientific-contract-unavailable")
     bindings = _manifest_bindings(manifest)
     exact_bindings_ready = all(_binding_matches(root, item) for item in bindings)
     if not exact_bindings_ready:
@@ -622,6 +766,7 @@ def inspect_adaptive_policy_activation(
     ready = all(
         (
             exact_bindings_ready,
+            idea_scientific_contract_ready,
             predecessor_state_matches,
             program_and_limits_match,
             task_population_and_source_groups_match,
@@ -634,6 +779,9 @@ def inspect_adaptive_policy_activation(
         campaign_id=manifest.campaign_id,
         manifest_file_sha256=manifest_file_sha256,
         manifest_fingerprint=manifest.fingerprint,
+        idea_revision_id=idea_revision_id,
+        idea_scientific_contract_sha256=idea_contract_sha256,
+        idea_scientific_contract_ready=idea_scientific_contract_ready,
         exact_bindings_ready=exact_bindings_ready,
         predecessor_state_matches=predecessor_state_matches,
         program_and_limits_match=program_and_limits_match,
@@ -732,6 +880,303 @@ def authorize_adaptive_policy_activation(
     return AdaptivePolicyActivationCampaignState.authorize(state, approval)
 
 
+def issue_adaptive_policy_activation_task(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+) -> tuple[AdaptivePolicyActivationTaskPermit, AdaptivePolicyActivationCampaignState]:
+    """Reserve exactly the next task; this transition performs no external work."""
+
+    _validate_activation_authority(manifest, plan, approval, state)
+    if state.status != "ready" or state.active_permit_sha256 is not None:
+        raise ValueError("adaptive activation task issue requires a ready state")
+    if state.next_task_id is None:
+        raise ValueError("adaptive activation has no remaining frozen task")
+    index = next(
+        (offset for offset, item in enumerate(state.tasks) if item.task_id == state.next_task_id),
+        None,
+    )
+    if index is None:
+        raise ValueError("adaptive activation next task is absent from state")
+    task_state = state.tasks[index]
+    task_spec = manifest.frozen_execution.tasks[index]
+    if (
+        task_state.status != "pending"
+        or task_state.attempt_count != 0
+        or (
+            task_state.task_id,
+            task_state.run_id,
+            task_state.source_group_id,
+        )
+        != (task_spec.task_id, task_spec.run_id, task_spec.source_group_id)
+    ):
+        raise ValueError("adaptive activation next task is not an untouched frozen task")
+    model = manifest.frozen_execution.agent_and_symbolic_judge
+    ceiling = manifest.resource_ceiling
+    if (
+        state.consumed_api_calls + model.maximum_calls_per_task > ceiling.api_calls
+        or state.consumed_api_tokens + model.maximum_total_tokens_per_task
+        > ceiling.api_total_tokens
+        or state.consumed_new_disk_bytes >= ceiling.maximum_new_disk_bytes
+    ):
+        raise ValueError("adaptive activation remaining resource ceiling cannot fit next task")
+    permit = AdaptivePolicyActivationTaskPermit.create(
+        campaign_id=state.campaign_id,
+        project_id=state.project_id,
+        plan_sha256=state.plan_sha256,
+        approval_sha256=approval.approval_sha256,
+        preceding_state_sha256=state.state_sha256,
+        ordinal=index + 1,
+        task_id=task_state.task_id,
+        run_id=task_state.run_id,
+        source_group_id=task_state.source_group_id,
+        maximum_api_calls=model.maximum_calls_per_task,
+        maximum_api_tokens=model.maximum_total_tokens_per_task,
+        maximum_new_disk_bytes=ceiling.maximum_new_disk_bytes - state.consumed_new_disk_bytes,
+        provider_retries=model.provider_retries,
+        task_gpu_hours=ceiling.task_gpu_hours,
+    )
+    tasks = list(state.tasks)
+    tasks[index] = task_state.model_copy(update={"status": "running", "attempt_count": 1})
+    running = _replace_activation_state(
+        state,
+        tasks=tuple(tasks),
+        sequence=state.sequence + 1,
+        status="running",
+        active_permit_sha256=permit.permit_sha256,
+    )
+    return permit, running
+
+
+def complete_adaptive_policy_activation_task(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+    permit: AdaptivePolicyActivationTaskPermit,
+    receipt: InteractiveResearchRunReceipt,
+    batch: InteractiveDevelopmentEpisodeBatch,
+    *,
+    new_disk_bytes: int,
+) -> AdaptivePolicyActivationCampaignState:
+    """Consume one terminal trajectory and advance to the next frozen task."""
+
+    validate_adaptive_policy_activation_task_authority(manifest, plan, approval, state, permit)
+    if new_disk_bytes < 0:
+        raise ValueError("adaptive activation new disk bytes cannot be negative")
+    if new_disk_bytes > permit.maximum_new_disk_bytes:
+        raise ValueError("adaptive activation task exceeded its remaining disk ceiling")
+    index = permit.ordinal - 1
+    if index >= len(state.tasks):
+        raise ValueError("adaptive activation task permit ordinal is outside the cohort")
+    task_state = state.tasks[index]
+    if (
+        task_state.status != "running"
+        or task_state.attempt_count != 1
+        or (task_state.task_id, task_state.run_id, task_state.source_group_id)
+        != (permit.task_id, permit.run_id, permit.source_group_id)
+    ):
+        raise ValueError("adaptive activation running task differs from its permit")
+    if (
+        receipt.project_id != state.project_id
+        or receipt.run_id != permit.run_id
+        or receipt.task_id != permit.task_id
+        or receipt.condition_id != "development-foundation"
+    ):
+        raise ValueError("adaptive activation receipt differs from its task permit")
+    if (
+        batch.project_id != state.project_id
+        or batch.run_id != permit.run_id
+        or batch.task_id != permit.task_id
+        or batch.source_group_id != permit.source_group_id
+        or batch.receipt_sha256 != receipt.receipt_sha256
+        or len(batch.items) > 1
+    ):
+        raise ValueError("adaptive activation episode batch differs from terminal receipt")
+    api_calls = len(receipt.turns)
+    if receipt.status == "agent_failure" or receipt.submission is not None:
+        api_calls += 1
+    api_tokens = receipt.input_tokens + receipt.output_tokens
+    if receipt.status in {"agent_failure", "scorer_failure"}:
+        # Provider failures expose no trustworthy usage telemetry. Charge the
+        # full per-task envelope so later tasks can never oversubscribe the
+        # approved campaign on the assumption that a failed request was free.
+        api_tokens = permit.maximum_api_tokens
+    if api_calls > permit.maximum_api_calls or api_tokens > permit.maximum_api_tokens:
+        raise ValueError("adaptive activation task exceeded its API ceiling")
+    ceiling = manifest.resource_ceiling
+    if (
+        state.consumed_api_calls + api_calls > ceiling.api_calls
+        or state.consumed_api_tokens + api_tokens > ceiling.api_total_tokens
+        or state.consumed_new_disk_bytes + new_disk_bytes > ceiling.maximum_new_disk_bytes
+    ):
+        raise ValueError("adaptive activation campaign exceeded its aggregate resource ceiling")
+    evidence = AdaptivePolicyActivationTaskEvidence(
+        task_id=permit.task_id,
+        run_id=permit.run_id,
+        source_group_id=permit.source_group_id,
+        permit_sha256=permit.permit_sha256,
+        receipt_sha256=receipt.receipt_sha256,
+        batch_sha256=batch.batch_sha256,
+        terminal_status=receipt.status,
+        candidate_count=len(batch.items),
+        accounted_api_calls=api_calls,
+        accounted_api_tokens=api_tokens,
+        new_disk_bytes=new_disk_bytes,
+    )
+    tasks = list(state.tasks)
+    tasks[index] = task_state.model_copy(
+        update={"status": "review-pending" if batch.items else "retained-failure"}
+    )
+    next_item = next((item for item in tasks[index + 1 :] if item.status == "pending"), None)
+    return _replace_activation_state(
+        state,
+        tasks=tuple(tasks),
+        sequence=state.sequence + 1,
+        status="ready" if next_item is not None else "trajectory-complete",
+        next_task_id=next_item.task_id if next_item is not None else None,
+        completed_trajectory_count=state.completed_trajectory_count + 1,
+        consumed_api_calls=state.consumed_api_calls + api_calls,
+        consumed_api_tokens=state.consumed_api_tokens + api_tokens,
+        consumed_new_disk_bytes=state.consumed_new_disk_bytes + new_disk_bytes,
+        active_permit_sha256=None,
+        terminal_evidence=(*state.terminal_evidence, evidence),
+    )
+
+
+def validate_adaptive_policy_activation_task_authority(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+    permit: AdaptivePolicyActivationTaskPermit,
+) -> None:
+    """Validate one issued task boundary without contacting any backend."""
+
+    _validate_activation_authority(manifest, plan, approval, state)
+    if state.status != "running" or state.active_permit_sha256 != permit.permit_sha256:
+        raise ValueError("adaptive activation running state lacks its active permit")
+    if (
+        permit.campaign_id != state.campaign_id
+        or permit.project_id != state.project_id
+        or permit.plan_sha256 != state.plan_sha256
+        or permit.approval_sha256 != approval.approval_sha256
+        or permit.task_id != state.next_task_id
+    ):
+        raise ValueError("adaptive activation task permit belongs to another state")
+    index = permit.ordinal - 1
+    if index >= len(state.tasks):
+        raise ValueError("adaptive activation task permit ordinal is outside the cohort")
+    task = state.tasks[index]
+    if (
+        task.status != "running"
+        or task.attempt_count != 1
+        or (task.task_id, task.run_id, task.source_group_id)
+        != (permit.task_id, permit.run_id, permit.source_group_id)
+    ):
+        raise ValueError("adaptive activation running task differs from its permit")
+
+
+def validate_adaptive_policy_activation_idea_binding(
+    plan: AdaptivePolicyActivationNoRunPlan,
+    *,
+    outputs_root: str | Path,
+) -> None:
+    """Require one scientific Idea contract across every activation task."""
+
+    report = inspect_current_idea_revision(ProjectRuntime(outputs_root), plan.project_id)
+    idea = report.current_binding
+    if idea is None or not report.method_development_binding_available:
+        raise ValueError("adaptive activation current Idea is unavailable for development")
+    if (
+        idea.revision_id != plan.idea_revision_id
+        or idea_scientific_contract_sha256(idea) != plan.idea_scientific_contract_sha256
+    ):
+        raise ValueError("adaptive activation current Idea scientific contract changed")
+
+
+def _validate_activation_authority(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+) -> None:
+    if (
+        manifest.campaign_id != plan.campaign_id
+        or manifest.project_id != plan.project_id
+        or manifest.fingerprint != plan.manifest_fingerprint
+        or manifest.resource_ceiling != plan.resource_ceiling
+    ):
+        raise ValueError("adaptive activation manifest differs from its plan")
+    if (
+        approval.campaign_id != plan.campaign_id
+        or approval.project_id != plan.project_id
+        or approval.plan_sha256 != plan.plan_sha256
+        or approval.manifest_file_sha256 != plan.manifest_file_sha256
+        or approval.manifest_fingerprint != plan.manifest_fingerprint
+        or approval.resource_ceiling != plan.resource_ceiling
+    ):
+        raise ValueError("adaptive activation approval differs from its plan")
+    if (
+        state.campaign_id != plan.campaign_id
+        or state.project_id != plan.project_id
+        or state.plan_sha256 != plan.plan_sha256
+        or state.approval_sha256 != approval.approval_sha256
+        or not state.execution_authorized
+    ):
+        raise ValueError("adaptive activation state lacks exact execution authority")
+    expected = tuple(
+        zip(
+            plan.ordered_task_ids,
+            plan.ordered_run_ids,
+            plan.ordered_source_group_ids,
+            strict=True,
+        )
+    )
+    manifest_population = tuple(
+        (item.task_id, item.run_id, item.source_group_id)
+        for item in manifest.frozen_execution.tasks
+    )
+    state_population = tuple(
+        (item.task_id, item.run_id, item.source_group_id) for item in state.tasks
+    )
+    if expected != manifest_population or expected != state_population:
+        raise ValueError("adaptive activation frozen task population changed")
+    ceiling = manifest.resource_ceiling
+    if (
+        state.completed_trajectory_count > ceiling.trajectory_count
+        or state.consumed_api_calls > ceiling.api_calls
+        or state.consumed_api_tokens > ceiling.api_total_tokens
+        or state.consumed_new_disk_bytes > ceiling.maximum_new_disk_bytes
+    ):
+        raise ValueError("adaptive activation state already exceeds its resource ceiling")
+
+
+def _replace_activation_state(
+    state: AdaptivePolicyActivationCampaignState,
+    *,
+    tasks: tuple[AdaptivePolicyActivationTaskState, ...] | None = None,
+    terminal_evidence: tuple[AdaptivePolicyActivationTaskEvidence, ...] | None = None,
+    **updates: object,
+) -> AdaptivePolicyActivationCampaignState:
+    payload = state.model_dump(
+        mode="python", exclude={"state_sha256", "tasks", "terminal_evidence"}
+    )
+    payload["tasks"] = state.tasks if tasks is None else tasks
+    payload["terminal_evidence"] = (
+        state.terminal_evidence if terminal_evidence is None else terminal_evidence
+    )
+    payload.update(updates)
+    unsigned = AdaptivePolicyActivationCampaignState.model_construct(
+        state_sha256="0" * 64, **payload
+    )
+    return AdaptivePolicyActivationCampaignState(
+        **payload,
+        state_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"state_sha256"})),
+    )
+
+
 def load_adaptive_policy_activation_no_run_plan(
     path: str | Path,
 ) -> AdaptivePolicyActivationNoRunPlan:
@@ -750,6 +1195,18 @@ def load_adaptive_policy_activation_state(
     return AdaptivePolicyActivationCampaignState.model_validate_json(
         _bounded_json(path), strict=True
     )
+
+
+def load_adaptive_policy_activation_task_permit(
+    path: str | Path,
+) -> AdaptivePolicyActivationTaskPermit:
+    return AdaptivePolicyActivationTaskPermit.model_validate_json(_bounded_json(path), strict=True)
+
+
+def load_adaptive_policy_activation_episode_batch(
+    path: str | Path,
+) -> InteractiveDevelopmentEpisodeBatch:
+    return InteractiveDevelopmentEpisodeBatch.model_validate_json(_bounded_json(path), strict=True)
 
 
 def save_adaptive_policy_activation_artifact(
@@ -997,12 +1454,22 @@ __all__ = [
     "AdaptivePolicyActivationInspection",
     "AdaptivePolicyActivationManifest",
     "AdaptivePolicyActivationNoRunPlan",
+    "AdaptivePolicyActivationTaskEvidence",
+    "AdaptivePolicyActivationTaskPermit",
     "approve_adaptive_policy_activation",
+    "authorize_adaptive_policy_activation",
     "compile_adaptive_policy_activation_no_run_plan",
+    "complete_adaptive_policy_activation_task",
     "initialize_adaptive_policy_activation_state",
     "inspect_adaptive_policy_activation",
+    "issue_adaptive_policy_activation_task",
     "load_adaptive_policy_activation_approval",
+    "load_adaptive_policy_activation_episode_batch",
     "load_adaptive_policy_activation_manifest",
     "load_adaptive_policy_activation_no_run_plan",
+    "load_adaptive_policy_activation_state",
+    "load_adaptive_policy_activation_task_permit",
     "save_adaptive_policy_activation_artifact",
+    "validate_adaptive_policy_activation_idea_binding",
+    "validate_adaptive_policy_activation_task_authority",
 ]

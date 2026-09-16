@@ -17,7 +17,11 @@ semantic versioning.
   retaining zero execution authority before owner approval. Exact approval can
   now be bound into a separate sequence-1 `ready` state without loading a model
   or launching a task; mismatched plans, approvals, populations, or resource
-  ceilings fail closed, and formal-effect authority remains false.
+  ceilings fail closed, and formal-effect authority remains false. The
+  successor plan also freezes the current Idea revision and scientific-contract
+  hash. One-use task permits now advance a restart-safe state chain, account
+  terminal calls/tokens/disk, retain zero-candidate failures, and refuse reruns;
+  an issued task can be executed through one approval-bound live wrapper.
 - Closed the missing causal-treatment gate in E2. Schema 1.1 now binds the
   exact family-conditioned policy, readiness report, adaptive-allocation head,
   source-group exclusions, and outcome-blind H4 state-probe evidence before a
