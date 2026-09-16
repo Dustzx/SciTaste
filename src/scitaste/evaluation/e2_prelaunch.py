@@ -259,6 +259,7 @@ class E2ModelSelection(BaseModel):
 
     inventory: E2FileBinding
     candidate_catalog: E2FileBinding | None = None
+    conformance_selection: E2FileBinding | None = None
     candidates: tuple[E2ModelCandidate, ...] = Field(min_length=2, max_length=24)
     b0_agent_candidate_id: str | None = None
     b1_agent_model_id: Literal[None] = None
@@ -564,6 +565,13 @@ class E2PrelaunchManifest(BaseModel):
         stages = {item.stage for item in self.commands}
         if stages != {"inspect", "prepare", "execute", "score", "admit", "write", "review"}:
             raise ValueError("E2 handoff must expose every execution-to-review command stage")
+        if (
+            self.gates.b0_exact_model_role_attestation == "verified"
+            or self.gates.b1_task_excluded_role_selection == "verified"
+        ) and self.model_selection.conformance_selection is None:
+            raise ValueError(
+                "verified E2 model-role gates require a content-bound conformance selection"
+            )
         return self
 
     @computed_field
@@ -781,6 +789,10 @@ def _all_bindings(manifest: E2PrelaunchManifest) -> tuple[tuple[str, E2FileBindi
     ]
     if manifest.model_selection.candidate_catalog is not None:
         values.append(("model-candidate-catalog", manifest.model_selection.candidate_catalog))
+    if manifest.model_selection.conformance_selection is not None:
+        values.append(
+            ("model-conformance-selection", manifest.model_selection.conformance_selection)
+        )
     if manifest.project.idea_revision is not None:
         values.append(("idea-revision", manifest.project.idea_revision))
     values.extend(
@@ -1025,6 +1037,45 @@ def _model_selection_matches(root: Path, manifest: E2PrelaunchManifest) -> bool:
             "verified",
         }:
             return False
+    selection_binding = manifest.model_selection.conformance_selection
+    if selection_binding is not None:
+        selection_path = _under(root, selection_binding.locator)
+        if selection_path is None:
+            return False
+        try:
+            from scitaste.evaluation.model_role_conformance import (
+                ModelRole,
+                SelectionStatus,
+                load_model_role_selection,
+            )
+
+            selection = load_model_role_selection(selection_path)
+        except (OSError, ValueError):
+            return False
+        selected = {item.role: item for item in selection.selections}
+        candidate_id = manifest.model_selection.b0_agent_candidate_id
+        expected = next(
+            (
+                item
+                for item in manifest.model_selection.candidates
+                if item.candidate_id == candidate_id
+            ),
+            None,
+        )
+        judge = selected.get(ModelRole.JUDGE)
+        if (
+            expected is None
+            or selection.status is not SelectionStatus.COMPLETE
+            or not selection.headline_eligible
+            or selection.missing_roles
+            or judge is None
+            or not judge.headline_independent
+        ):
+            return False
+        for role in (ModelRole.RESEARCH_AGENT, ModelRole.CODE_AGENT):
+            binding = selected.get(role)
+            if binding is None or binding.exact_identity.model_id != expected.model_id:
+                return False
     return True
 
 

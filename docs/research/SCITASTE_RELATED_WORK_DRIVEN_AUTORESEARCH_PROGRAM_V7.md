@@ -1,7 +1,7 @@
 # SciTaste related-work-driven AutoResearch program v7
 
-Status: **current project authority; B0 role panel incomplete; no formal E1--E4
-result yet**.
+Status: **current project authority; one-shot B0 role selection complete;
+controller at development execution; no formal E1--E4 result yet**.
 
 The machine-readable authority is
 [`iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml).
@@ -157,12 +157,15 @@ permitted.
 
 ## Current evidence and next execution
 
-The latest B0 role campaign executed 14 real task-excluded requests. Research
-and code with GLM-5.3-Flash each passed 4/4 cases; the local Qwen3-VL-8B task
-executor passed 2/2; local MiniLM retrieval passed 2/2. Qwen3.8-Max produced one
-correct and one incorrect blind judgment, so it failed the frozen reliability
-threshold and is not selected as the paper's reviewer panel. This failure is
-retained rather than hidden or repaired by lowering the gate.
+The independent-judge successor B0 executed 14 real task-excluded requests
+without selective reruns. Qwen3.8-Max passed 4/4 research and 4/4 code cases;
+GLM-5.3-Flash passed 2/2 blind judge repetitions and is identity-distinct from
+the generator; local MiniLM retrieval and Qwen3-VL-8B task execution each passed
+2/2. The API portion used 12,738 input and 6,950 output tokens for USD 0.060684.
+The incomplete predecessor, where Qwen3.8-Max failed judge reproducibility, is
+retained and explicitly superseded rather than repaired by lowering a gate.
+This selects execution roles only; it does not by itself qualify the two-model
+paper-review panel or supply an effectiveness result.
 
 Two source-disjoint T0 development trajectories now exercise signed lifecycle
 learning. NewtonBench Gravity v7 accepted an evidence-backed STOP before scorer
@@ -178,30 +181,35 @@ episodes with `signed-factorized-beta-pairwise-v2`. The shared STOP feature now
 has 0.5 win and 0.5 loss rather than two false wins. Its support 1.0 remains
 below the frozen threshold 3, so the policy correctly abstains.
 
+The project controller has replayed acquisition, quarantine, split/firewall,
+and actual role-selection evidence. It then prospectively selected the accepted
+Idea from three alternatives and froze H0--H4 plus E2 v3, reaching
+`development-execution` without launching a benchmark cell.
+
 The immediate critical path is therefore:
 
-1. refresh independent judge candidates from the related-work-derived universe
-   and qualify two generator-disjoint reviewers plus one adjudicator;
-2. execute one development-only full trajectory through paper, review, return,
+1. approve and execute the exact two-arm E2 development block disclosed by v3;
+2. carry that trajectory through paper, review, return,
    revision, and final disposition;
-3. freeze and disclose the exact E2 Native/Base manifest: MLRC bytes,
-   `LocPointTransformer` recipe, scientific-agent identity, two GPUs per arm,
-   16 aggregate GPU-hours, API ceiling, scorer firewall, and zero formal rescue;
-4. after explicit launch approval, run the paired E2 objective experiment;
+3. before its paper-review phase, qualify a second generator-disjoint reviewer
+   and a distinct adjudicator without reopening the execution-role selection;
+4. after the development trajectory validates the loop, request separate B1
+   authority for the 16-GPU-hour paired hidden-objective experiment;
 5. run the smallest complete E1/E3/E4 block and scale only effects that need
    power.
 
 The current no-run E2 handoff is
-[`mlrc_perception_native_pair_e2_v2.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v2.yaml),
-SHA-256 `f21aa7747088b1f6fd784caa0866d7d8e1a98d6839463249b1965944874de10f`.
+[`mlrc_perception_native_pair_e2_v3.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v3.yaml),
+SHA-256 `b1390fdd48319f19b29ffd6591b962c9a39d18f6469fa8f177d6d39d37731d9d`.
 Its eleven static scientific and execution boundaries pass, including exact
 bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
-and the related-work candidate catalog. The E2 pool now includes unconfigured
-GPT and Gemini candidates alongside current GLM, DeepSeek, Qwen API, and open
-9B candidates, so local inventory cannot silently define the experiment.
-It is deliberately not
-launchable while the independent judge panel, development-only full-loop receipt,
-actual GPU baseline, final role/budget freeze, and owner approval remain open.
+and the related-work candidate catalog. V3 additionally binds the actual B0
+selection file and verifies Qwen3.8-Max for both agent roles plus independent
+GLM-5.3-Flash judging. The broader pool still includes unconfigured GPT and
+Gemini candidates alongside current GLM, DeepSeek, Qwen API, and open 9B
+candidates, so local inventory cannot silently define the experiment. It is
+deliberately not launchable while exact owner approval, the development-only
+two-arm/full-loop receipt, and actual GPU baseline remain open.
 
 The remote fixed-revision `Qwen/Qwen3.5-9B` candidate is now statically complete:
 16 files, four indexed shards, 15,664,539,861 bytes, aggregate checkpoint digest

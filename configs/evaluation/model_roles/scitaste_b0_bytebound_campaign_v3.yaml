@@ -1,0 +1,45 @@
+schema_version: "1.0"
+campaign_id: scitaste-b0-bytebound-conformance-v3
+base_suite_ref: configs/evaluation/model_roles/scitaste_b0_model_role_conformance_v3.yaml
+base_suite_sha256: 880b7d62b4ab5158ade2d2092da92ddf40f83b8052a0df3705dd5012ea6cfea9
+formal_program_ref: configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml
+formal_program_sha256: 5c27721ab923516129de8b6ea9c40ddc20a82fab668190b2df2d6980a0ebec41
+formal_partition_source_groups:
+  - E1-scitastebench-formal
+  - E2-external-objective-formal
+  - E3-mlr-bench-formal
+  - E4-exp-bench-formal
+  - scitastebench-formal-sources
+  - external-autoresearch-formal-sources
+  - scitastebench-private-heldout-sources
+  - external-private-heldout-sources
+source_group_overlap_allowed: false
+cases:
+  - {path: configs/evaluation/model_roles/b0_cases/research_decision_a.json, sha256: 10348998de3b755654c6364128a2e214059c0a891e047af261fbe1f8e41f0d97}
+  - {path: configs/evaluation/model_roles/b0_cases/research_decision_b_v2.json, sha256: 9b40f74e79481aaed11b60ab2f9ad996655c8bff2c6ef93fda110067bf269356}
+  - {path: configs/evaluation/model_roles/b0_cases/code_repair_a.json, sha256: 0b9d8b9f17ef800aa58eb447d1dc5e52608253cb2a9caabd11eddcf140368d1e}
+  - {path: configs/evaluation/model_roles/b0_cases/code_repair_b_v2.json, sha256: 2ab51b9208457d95e5ab56d26376c7f621eb60a612bbeafa322d5f3a779651f6}
+  - {path: configs/evaluation/model_roles/b0_cases/judge_blind_a.json, sha256: df1f4c0610c0c032222f40acda9ebdebc199690009646bdaab33aa7053a747eb}
+  - {path: configs/evaluation/model_roles/b0_cases/embedding_retrieval_a.json, sha256: f3dbae41235d02d1fea9a2ebf0fb0c3e402512858eb15d4ef1efaa4aa3bd0ccf}
+  - {path: configs/evaluation/model_roles/b0_cases/multimodal_task_a.json, sha256: a19d1d1aabe2fb1cd935d61f91cbb9277a981337dbe6d8b884b190766b7bf963}
+candidate_ids:
+  - research-bailian-qwen38-max
+  - code-bailian-qwen38-max
+  - judge-zhipu-glm53-flash
+  - embedding-minilm-local
+  - training-qwen3vl-8b-local
+repetitions: 2
+api_backend_refs:
+  bailian-qwen38-max: configs/model_nodes/bailian_qwen38max.priced_20260916.example.yaml
+  zhipu-glm53-flash: configs/model_nodes/zhipu_glm53_flash.priced_20260908.example.yaml
+campaign_budget:
+  max_api_calls: 10
+  max_input_tokens_per_call: 8000
+  max_output_tokens_per_call: 2000
+  max_input_tokens: 80000
+  max_output_tokens: 20000
+  max_api_cost_usd: 1.0
+  max_local_gpu_hours: 2.0
+  max_local_cpu_hours: 2.0
+  max_disk_bytes: 2147483648
+execution_authority: false

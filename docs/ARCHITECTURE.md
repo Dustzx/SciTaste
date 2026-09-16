@@ -4676,3 +4676,27 @@ attempts that fail now archive their exception class and a bounded,
 credential-redacted, hash-bound diagnostic. Legacy v1.0 archives remain valid;
 the diagnostic improves reproduction but never changes cost accounting,
 execution authority, or a failed outcome into evidence of success.
+
+### ADR-144: Model-role conformance is a one-shot execution dependency
+
+Status: accepted and implemented for the current E2 development handoff.
+
+Model-role conformance is an engineering selection gate, not an effectiveness
+experiment. A campaign freezes task-excluded case bytes, candidates, role
+profiles, budgets, and receipt rules before any request. Failed or inconsistent
+answers are retained and cannot be selectively rerun. A successor campaign may
+change the declared candidate/role assignment, but it receives a new campaign
+identity and never overwrites predecessor evidence.
+
+Local checkpoint visibility is the only planning blocker that may be rechecked
+in place: removable or network storage can be absent at plan time. Resumption
+must resolve the same frozen path and then content-hash the checkpoint before
+execution. It cannot alter the candidate, path, case, budget, or completed API
+receipts. This avoids repeating paid calls merely because a mount was restored.
+
+An E2 manifest that marks model-role selection verified must content-bind the
+actual `SELECTION.json`. Inspection requires a complete selection, no missing
+roles, the same selected research/code model as the declared E2 agent, and an
+identity-independent judge. The selection has no paper-effectiveness authority;
+it only determines which exact roles may enter the subsequently approved paired
+development and formal runs.

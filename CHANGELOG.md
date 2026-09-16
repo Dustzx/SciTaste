@@ -5,6 +5,21 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Completed the one-shot successor B0 model-role gate without selective reruns.
+  Qwen3.8-Max passed four research and four code requests, GLM-5.3-Flash passed
+  two generator-independent judge requests, and the frozen MiniLM and
+  Qwen3-VL-8B checkpoints each passed two local requests. The 14-request gate
+  used 19,688 API tokens and USD 0.060684, remains engineering-only, and now
+  binds exact identities, profiles, budgets, and receipts into the E2 handoff.
+- Advanced the self-development program from task acquisition through a
+  prospective three-candidate Idea lock and frozen experiment plan. The E2 v3
+  handoff now verifies the actual conformance selection instead of accepting a
+  declarative "verified" flag, and stops at `development-execution` pending the
+  separately disclosed two-arm MLRC development run.
+- Made byte-bound local role campaigns resumable when an exact frozen model
+  path becomes visible after planning. The runtime rechecks only the dynamic
+  path-visibility blocker, then hashes the checkpoint; scientific inputs,
+  identities, case bytes, budgets, and all other blockers remain immutable.
 - Corrected lifecycle Taste learning to preserve the sign of admitted causal
   credit. The v2 estimator treats beneficial credit as a pairwise win and
   harmful credit as a loss, rejects mixed-sign admissions, and aggregates both
@@ -79,11 +94,11 @@ semantic versioning.
   models, keeps 2B/4B Qwen variants as lower bounds, requires actual experiment
   execution and review-routed revision for completion, and records exact
   per-track resource disclosures before launch.
-- Executed a 14-request task-excluded B0 role campaign: GLM-5.3-Flash research
-  and code, local Qwen3-VL-8B task execution, and local MiniLM retrieval passed;
-  Qwen3.8-Max failed the frozen judge reproducibility gate and was not promoted
-  into the independent paper-review panel. All responses, costs, failures, and
-  exact local checkpoint identities remain in project-owned ignored outputs.
+- Executed the initial 14-request task-excluded B0 role campaign:
+  GLM-5.3-Flash research and code, local Qwen3-VL-8B task execution, and local
+  MiniLM retrieval passed; Qwen3.8-Max failed the frozen judge reproducibility
+  gate. That incomplete campaign is retained and explicitly superseded by the
+  independent-judge successor described above rather than selectively rerun.
 - Added the capability-driven ICLR 2027 AutoResearch program v4 and made it the
   default for new project-program initialization. The controller preserves v3
   replay while v4 rejects partial research workflows, requires the full

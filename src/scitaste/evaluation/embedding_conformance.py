@@ -72,8 +72,9 @@ def execute_embedding_conformance(
     """Execute every repetition for one frozen embedding candidate.
 
     The runner deliberately accepts the legacy campaign blocker that named this
-    missing dispatcher: the function itself is that implementation.  All other
-    blockers remain fatal.
+    missing dispatcher: the function itself is that implementation.  A frozen
+    local path that was unavailable during planning may also be revalidated at
+    execution time; all scientific-input and contract blockers remain fatal.
     """
 
     if not allow_local:
@@ -94,6 +95,12 @@ def execute_embedding_conformance(
         raise ValueError("selected candidate is not an embedding runner")
     for request in requests:
         residual = set(request.blockers) - {"embedding-dispatcher-not-implemented"}
+        if (
+            "local-model-directory-missing" in residual
+            and request.resource.local_model_path is not None
+            and Path(request.resource.local_model_path).is_dir()
+        ):
+            residual.remove("local-model-directory-missing")
         if residual:
             raise ValueError(f"embedding request remains blocked: {sorted(residual)!r}")
         if request.resource.local_model_path is None:

@@ -716,8 +716,19 @@ def materialize_conformance_executor_bindings(
         if request.runner_kind is ConformanceRunnerKind.EMBEDDING_LOCAL:
             updated.append(request)
             continue
-        blockers = [item for item in request.blockers if not item.startswith("executor-")]
         resource = request.resource
+        blockers = [item for item in request.blockers if not item.startswith("executor-")]
+        # Local visibility is an execution-environment observation, not a
+        # scientific input.  A removable disk or network mount may be absent
+        # while the byte-bound plan is prepared and become available later.
+        # Revalidate the exact frozen path here so resuming the same campaign
+        # does not require repeating already completed API requests.
+        if (
+            resource.execution_kind is ExecutionKind.LOCAL
+            and resource.local_model_path is not None
+            and Path(resource.local_model_path).is_dir()
+        ):
+            blockers = [item for item in blockers if item != "local-model-directory-missing"]
         checkpoint_manifest_path: Path | None = None
         if resource.execution_kind is ExecutionKind.LOCAL and not blockers:
             assert resource.local_model_path is not None

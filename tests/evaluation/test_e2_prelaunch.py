@@ -73,3 +73,11 @@ def test_e2_rejects_hidden_score_authority_in_b0() -> None:
 
     with pytest.raises(ValidationError, match="B0 cannot open"):
         E2PrelaunchManifest.model_validate(payload)
+
+
+def test_e2_verified_model_role_gate_requires_bound_selection() -> None:
+    payload = _payload()
+    payload["gates"]["b0_exact_model_role_attestation"] = "verified"
+
+    with pytest.raises(ValidationError, match="content-bound conformance selection"):
+        E2PrelaunchManifest.model_validate(payload)

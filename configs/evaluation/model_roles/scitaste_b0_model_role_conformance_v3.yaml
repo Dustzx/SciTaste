@@ -1,0 +1,134 @@
+schema_version: "1.0"
+suite_id: scitaste-b0-model-role-conformance-v3
+inventory_ref: configs/resources/assets/model_role_inventory_v2.yaml
+inventory_sha256: 4b7ceaa3038acf2c1d45d37d1116a67a41a6c97bce1f66399d042058906f3e63
+
+criteria:
+  schema_adherence: {weight: 0.16, minimum: 0.90}
+  tool_adherence: {weight: 0.12, minimum: 0.85}
+  success: {weight: 0.22, minimum: 0.75}
+  context: {weight: 0.14, minimum: 0.70}
+  latency_cost: {weight: 0.12, minimum: 0.65}
+  reproducibility: {weight: 0.12, minimum: 0.70}
+  task_fit: {weight: 0.12, minimum: 0.70}
+
+exclusions:
+  conformance_task_ids:
+    - b0-conformance-structured-decision
+    - b0-conformance-tool-routing
+    - b0-conformance-code-repair
+    - b0-conformance-long-context
+    - b0-conformance-blind-judgment
+    - b0-conformance-retrieval-stability
+    - b0-conformance-task-runtime
+  conformance_source_group_ids:
+    - b0-synthetic-contract-cases
+    - b0-public-nonbenchmark-smoke-cases
+  formal_task_ids:
+    - scitastebench-formal-partition
+    - mlr-bench-formal-partition
+    - exp-bench-formal-partition
+    - external-objective-formal-partition
+  heldout_task_ids:
+    - scitastebench-heldout-partition
+    - lifecycle-heldout-partition
+  formal_source_group_ids:
+    - scitastebench-formal-sources
+    - external-autoresearch-formal-sources
+  heldout_source_group_ids:
+    - scitastebench-private-heldout-sources
+    - external-private-heldout-sources
+  formal_or_heldout_inputs_allowed: false
+  conformance_task_bytes_bound: false
+  conformance_tasks_are_planning_labels_only: true
+  conformance_case_input_sha256: {}
+  conformance_source_group_by_task: {}
+
+profiles:
+  - profile_id: b0-research-agent
+    profile_version: 1.0.0
+    role: research_agent
+    contract_ref: configs/evaluation/model_roles/b0_role_contracts_v1.yaml
+    contract_sha256: 646d6ff5332ff02ad66e429ee8a7a4d397177a23680fb88a30a16fe60416f6b1
+    prompt_contract_id: b0-research-agent-v1
+    tool_contract_id: b0-bounded-research-tools-v1
+    inference_parameters: {temperature: 0.2, top_p: 0.95, structured_output: true}
+  - profile_id: b0-code-agent
+    profile_version: 1.0.0
+    role: code_agent
+    contract_ref: configs/evaluation/model_roles/b0_role_contracts_v1.yaml
+    contract_sha256: 646d6ff5332ff02ad66e429ee8a7a4d397177a23680fb88a30a16fe60416f6b1
+    prompt_contract_id: b0-code-agent-v1
+    tool_contract_id: b0-repository-sandbox-tools-v1
+    inference_parameters: {temperature: 0.1, top_p: 0.95, structured_output: true}
+  - profile_id: b0-judge
+    profile_version: 1.0.0
+    role: judge
+    contract_ref: configs/evaluation/model_roles/b0_role_contracts_v1.yaml
+    contract_sha256: 646d6ff5332ff02ad66e429ee8a7a4d397177a23680fb88a30a16fe60416f6b1
+    prompt_contract_id: b0-judge-v1
+    tool_contract_id: b0-blinded-read-only-tools-v1
+    inference_parameters: {temperature: 0.0, top_p: 1.0, structured_output: true}
+  - profile_id: b0-embedding
+    profile_version: 1.0.0
+    role: embedding
+    contract_ref: configs/evaluation/model_roles/b0_role_contracts_v1.yaml
+    contract_sha256: 646d6ff5332ff02ad66e429ee8a7a4d397177a23680fb88a30a16fe60416f6b1
+    prompt_contract_id: b0-embedding-v1
+    tool_contract_id: b0-no-tools-v1
+    inference_parameters: {normalize_embeddings: true, deterministic: true}
+  - profile_id: b0-task-training
+    profile_version: 1.0.0
+    role: task_training
+    contract_ref: configs/evaluation/model_roles/b0_role_contracts_v1.yaml
+    contract_sha256: 646d6ff5332ff02ad66e429ee8a7a4d397177a23680fb88a30a16fe60416f6b1
+    prompt_contract_id: b0-task-training-v1
+    tool_contract_id: b0-task-sandbox-tools-v1
+    inference_parameters: {deterministic_seed_required: true, mixed_precision: true}
+
+budgets:
+  - budget_id: b0-api-agent
+    max_invocations: 12
+    max_input_tokens: 64000
+    max_output_tokens: 8192
+    max_total_tokens: 866304
+    max_latency_ms: 600000
+    max_cost_usd: 12.0
+    max_gpu_hours: 0.0
+  - budget_id: b0-local-agent
+    max_invocations: 12
+    max_input_tokens: 32000
+    max_output_tokens: 8192
+    max_total_tokens: 482304
+    max_latency_ms: 900000
+    max_cost_usd: 0.0
+    max_gpu_hours: 6.0
+  - budget_id: b0-embedding-local
+    max_invocations: 1000
+    max_input_tokens: 512
+    max_output_tokens: 1
+    max_total_tokens: 513000
+    max_latency_ms: 120000
+    max_cost_usd: 0.0
+    max_gpu_hours: 1.0
+  - budget_id: b0-task-training-local
+    max_invocations: 50
+    max_input_tokens: 16384
+    max_output_tokens: 4096
+    max_total_tokens: 1024000
+    max_latency_ms: 3600000
+    max_cost_usd: 0.0
+    max_gpu_hours: 16.0
+
+candidates:
+  - {candidate_id: research-bailian-qwen38-max, role: research_agent, selection_scope_id: agent-global, resource_id: bailian-qwen38-max, identity: {execution_kind: api, provider: alibaba-bailian, model_id: qwen3.8-max}, profile_id: b0-research-agent, budget_id: b0-api-agent, minimum_receipts: 2}
+  - {candidate_id: code-bailian-qwen38-max, role: code_agent, selection_scope_id: agent-global, resource_id: bailian-qwen38-max, identity: {execution_kind: api, provider: alibaba-bailian, model_id: qwen3.8-max}, profile_id: b0-code-agent, budget_id: b0-api-agent, minimum_receipts: 2}
+  - {candidate_id: judge-zhipu-glm53-flash, role: judge, selection_scope_id: agent-global, resource_id: zhipu-glm53-flash, identity: {execution_kind: api, provider: zhipu-direct, model_id: glm-5.3-flash}, profile_id: b0-judge, budget_id: b0-api-agent, minimum_receipts: 2}
+  - {candidate_id: embedding-minilm-local, role: embedding, selection_scope_id: general-retrieval-corpus, resource_id: all-minilm-l6-v2-local, identity: {execution_kind: local, provider: sentence-transformers, model_id: all-MiniLM-L6-v2}, profile_id: b0-embedding, budget_id: b0-embedding-local, minimum_receipts: 2}
+  - {candidate_id: training-qwen3vl-8b-local, role: task_training, selection_scope_id: multimodal-reasoning-task-family, resource_id: qwen3-vl-8b-instruct-local, identity: {execution_kind: local, provider: local-transformers, model_id: Qwen3-VL-8B-Instruct}, profile_id: b0-task-training, budget_id: b0-task-training-local, minimum_receipts: 2}
+
+inventory_presence_selects_model: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_downloads: false
+authorizes_execution: false
