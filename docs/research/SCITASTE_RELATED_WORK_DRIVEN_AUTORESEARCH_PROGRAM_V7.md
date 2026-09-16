@@ -116,7 +116,7 @@ product and not required for the headline claim.
 
 The workload contract is independently two-stratum and is frozen in
 [`iclr2027_scitaste_workload_paradigms_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_workload_paradigms_v1.yaml),
-SHA-256 `38bc5a0b972565cf42c266c56a2bf42a1ff6a22ba252cbce1b8495b1145b7ec3`:
+SHA-256 `5deb8d1eac593a0022f15caab56c2ec2e43c3c099e53660523d8ee6479ff6e42`:
 
 - **T0 training-free research** executes a complete project by changing
   analysis, code, prompts, retrieval, or algorithms while keeping task-model
@@ -128,6 +128,13 @@ SHA-256 `38bc5a0b972565cf42c266c56a2bf42a1ff6a22ba252cbce1b8495b1145b7ec3`:
 
 Both T0 and T1 compare `scitaste-native` with `native-base` under the same
 research-agent model and budget. Their primary results are reported separately.
+This workload axis is orthogonal to SciTaste's adaptation axis: **A0** is the
+headline nonparametric, outcome-updated Taste policy, while **A1** is an optional
+learned Taste component evaluated only on selected tasks if justified. T1 does
+not imply A1, and T0 does not define a separate A0 product. The primary paper
+therefore tests one SciTaste system in T0 and T1 under A0; it does not require a
+decorative T0/T1 × A0/A1 full grid.
+
 The direct Scientific Judge/Thinker training comparison is a third, external
 mechanism-reproduction question; it is not one of these SciTaste workload
 strata. A learned-weight SciTaste policy may be studied later, but it is not

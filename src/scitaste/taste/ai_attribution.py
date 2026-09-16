@@ -175,8 +175,13 @@ class AITasteAttributionReviewProposal(BaseModel):
 
     review_packet_sha256: str = Field(pattern=_SHA256)
     verdict: TasteAttributionReviewVerdict
-    preferred_action_id: str | None = Field(default=None, max_length=300)
-    supported_credit_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    # Keep both keys required in the provider-facing JSON Schema. Their values
+    # may still be null/empty for a rejection, while the validator below
+    # requires a concrete preference and credit assignment for acceptance.
+    # Defaults made these fields disappear from ``required`` even though an
+    # accepted response cannot be valid without them.
+    preferred_action_id: str | None = Field(max_length=300)
+    supported_credit_ids: tuple[str, ...] = Field(max_length=100)
     decision_trace_supported: bool
     outcome_trace_supported: bool
     alternatives_supported: bool

@@ -59,6 +59,7 @@ from scitaste.taste import (
     load_ai_taste_review_panel_contract,
 )
 from scitaste.taste.ai_attribution import (
+    AITasteAttributionReviewProposal,
     build_ai_taste_attribution_review_material,
     build_ai_taste_attribution_runtime_config,
     materialize_ai_taste_attribution_review,
@@ -560,6 +561,13 @@ def test_two_ai_reviews_admit_training_but_forbid_human_validity_claim(
     )
     assert diagnostic.intervention_policy_artifact_eligible is True
     assert diagnostic.h3_policy_artifact_eligible is False
+
+
+def test_ai_attribution_schema_requires_acceptance_credit_fields() -> None:
+    schema = AITasteAttributionReviewProposal.model_json_schema()
+
+    assert "preferred_action_id" in schema["required"]
+    assert "supported_credit_ids" in schema["required"]
 
 
 def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path) -> None:

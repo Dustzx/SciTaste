@@ -75,6 +75,18 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.36 — complete AutoResearch program and resource binding | implementation complete; B0 requests prepared, launch not ready | one project-owned 17-state controller now covers acquisition, task admission, role-scoped model/system freeze, idea selection, experiment execution, hidden scoring, evidence admission, paper assembly, dual-AI review, adjudication, review-driven revision, and immutable package closure. The program separates SciTasteBench mechanism evidence, hidden-objective progress, idea-to-paper comparison, and experiment-chain diagnosis; real MLR-Bench and EXP-Bench bytes enter through agent/scorer-separated task packages. A source-disjoint B0 campaign now contains seven byte-bound development tasks and 46 role-scoped requests: 44 are request-prepared, zero are launch-ready, and two embedding requests remain blocked. Runtime/profile files and immutable local-checkpoint identities must be bound before any model dispatch. Qwen3-VL-2B is only a low-cost inventory baseline, inventory presence never selects a model, and no planning artifact authorizes or impersonates API, GPU, download, scorer, or unavailable external-system execution. |
 | Phase 9.37 — capability-driven complete AutoResearch execution | in progress | v7 remains the self-project authority. SciTaste is one system with a frozen research-model backbone and an outcome-updated lifecycle controller; T0 training-free and T1 training-based name the research workloads it executes, not product variants. Optional neural Taste training is a secondary mechanism study. NewtonBench is now the source-qualified T0 candidate, with a first-party provider-neutral loop, hidden scorer, network/worktree-isolated code tool, condition-hidden Taste intervention traces, immutable receipts, paired effects, and separate prepare/run entrypoints. A scripted CPU integration completed real experiment → code → submission → scoring with no API/GPU and is adapter evidence only. The direct-neighbor 4B Scientific Judge/Thinker checkpoints and their exact Qwen bases are full-tree hashed, project-bound in resource v13, and task-excluded B0 qualified; the Thinking base retains its 1024-token failure and requires a role-specific 2048-token envelope. DeepSeek's current canonical resource is again `deepseek-flash` / `DeepSeek-V4.1-Flash`; retired V4 is historical. Formal results remain zero. Next collect source-disjoint scientific-outcome development trajectories, refresh a behaviorally active current-Idea family policy, freeze one NewtonBench T0 pair and one T1 development pair, then disclose their exact API/GPU budgets before execution. |
 
+The first real NewtonBench T0 development trajectory now completes experiment
+selection, six environment observations, evidence-sensitive stopping, hidden
+scoring, and immutable attribution-candidate construction with objective
+`symbolic_accuracy=1.0`. It remains development evidence. Its STOP-credit
+candidate was deliberately not admitted: an initial two-primary panel used
+different frozen packets, a corrected local 8B primary exposed and motivated a
+provider-facing required-field schema fix, the corrected Bailian calls failed
+before telemetry, and the local 2B fallback returned the request envelope rather
+than the review object. The failed and rejected runs are retained, no Taste
+policy was updated, and the next evidence unit moves to a source-disjoint task
+rather than spending more reviewers on this single gravity case.
+
 The Phase 9.37 execution boundary now encodes the workload distinction rather
 than relying on prose. T0 NewtonBench events have isolated deterministic RNG
 state and an opaque hidden-environment commitment; a proposal that violates its

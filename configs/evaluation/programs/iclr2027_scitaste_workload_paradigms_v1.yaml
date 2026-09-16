@@ -16,6 +16,27 @@ concept_partition:
     controller_state_updates: [source-grounded-taste-memory, delayed-outcome-credit, routing-statistics, calibrated-abstention]
     neural_weight_training_required: false
     optional_learned_taste_extension: secondary-mechanism-study-not-a-product-fork
+  adaptation_axis:
+    distinct_from_research_workload_axis: true
+    primary_condition:
+      adaptation_id: A0
+      name: nonparametric-outcome-updated-taste
+      research_backbone_weight_updates: false
+      taste_component_weight_updates: false
+      update_targets: [taste-memory, delayed-outcome-credit, routing-statistics, calibrated-abstention]
+      role: headline-scitaste-method
+    optional_extension:
+      adaptation_id: A1
+      name: learned-taste-component
+      research_backbone_weight_updates: false
+      taste_component_weight_updates: optional
+      role: selected-task-mechanism-study-only
+      required_for_headline_claim: false
+    invariants:
+      - T0-and-T1-may-both-use-A0
+      - a-training-based-workload-does-not-imply-A1
+      - A1-does-not-change-the-workload-paradigm-label
+      - neither-axis-creates-a-second-SciTaste-product
   research_workload_execution:
     required_paradigms: [training-free-research, training-based-research]
     meaning: whether the scientific experiment designed and executed by SciTaste updates a task-model parameter
@@ -89,16 +110,23 @@ reporting:
     - does-the-same-policy-improve-training-based-research
     - which-Taste-mechanisms-and-failures-differ-between-workload-paradigms
   learned-versus-training-free-scitaste_claim_required: false
+  a0_vs_a1_claim_required: false
+  workload_and_adaptation_axes_reported_separately: true
   direct_neighbor_results_reported_separately: true
   resource_inventory_may_choose_paradigm_or_task: false
   failures_and_abstentions_retained: true
 
 execution_state:
   policy_definition_frozen: true
+  scitaste_A0_runtime_implemented: true
+  scitaste_A1_runtime_required: false
   scitastebench_D_available_for-development: true
   scitastebench_T0_primary_candidate_selected: true
   scitastebench_T0_formal_task_selected: false
   scitastebench_T0_provider_neutral_runtime_implemented: true
   scitastebench_T0_scripted_environment_integration_passed: true
   scitastebench_T1_formal_task_selected: true
+  first_T0_development_trajectory_completed: true
+  first_T0_attribution_episode_admitted: false
+  formal_result_count: 0
   both_workload_paradigms_executed: false

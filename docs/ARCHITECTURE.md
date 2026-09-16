@@ -4626,6 +4626,15 @@ backbone frozen and allow the same outcome-updated Taste state. Neural training
 of a Taste scorer remains an optional mechanism study rather than a prerequisite
 for either workload.
 
+The independent adaptation axis names the implemented primary mechanism **A0**
+(`nonparametric-outcome-updated-taste`) and the optional learned extension
+**A1** (`learned-taste-component`). T0/T1 answer what experiment SciTaste runs;
+A0/A1 answer how SciTaste updates Taste. A training-based T1 workload may still
+use A0, and enabling A1 does not relabel the workload or create another product.
+The formal primary comparison holds A0 fixed across T0 and T1; an A0/A1 contrast
+is a selected-task mechanism ablation only after A1 has real implementation and
+evidence.
+
 The NewtonBench interactive runtime is the current T0 route. Its measurement
 RNG is isolated per event and bound to an environment seed; new protocols and
 receipts carry an opaque hidden-environment commitment. Locked Taste actions are
