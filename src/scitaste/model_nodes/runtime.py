@@ -1665,9 +1665,11 @@ class _ArchivedAttempt(RuntimeModel):
     def hash_matches(self) -> _ArchivedAttempt:
         if (self.exception_message is None) != (self.exception_message_sha256 is None):
             raise ValueError("archived exception message identity is incomplete")
-        if self.exception_message is not None and self.exception_message_sha256 != hashlib.sha256(
-            self.exception_message.encode("utf-8")
-        ).hexdigest():
+        if (
+            self.exception_message is not None
+            and self.exception_message_sha256
+            != hashlib.sha256(self.exception_message.encode("utf-8")).hexdigest()
+        ):
             raise ValueError("archived exception message hash differs")
         payload = self.model_dump(mode="json", exclude={"failure_sha256"})
         if self.schema_version == "1.0":
@@ -1707,9 +1709,7 @@ def _sanitized_exception_message(exception: Exception | None) -> str | None:
             message = message.replace(value, "<redacted>")
     for pattern in _CREDENTIAL_PATTERNS:
         message = pattern.sub(
-            lambda match: (
-                f"{match.group(1)}<redacted>" if match.lastindex else "<redacted>"
-            ),
+            lambda match: f"{match.group(1)}<redacted>" if match.lastindex else "<redacted>",
             message,
         )
     return message[:2_000] or None

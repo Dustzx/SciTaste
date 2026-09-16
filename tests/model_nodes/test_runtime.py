@@ -611,9 +611,10 @@ def test_failed_schema_response_still_advances_known_usage_and_archive_hash(
     assert failure["schema_version"] == "1.1"
     assert failure["exception_class"] == "RuntimeError"
     assert failure["exception_message"] == "simulated deterministic post-response failure"
-    assert failure["exception_message_sha256"] == hashlib.sha256(
-        failure["exception_message"].encode("utf-8")
-    ).hexdigest()
+    assert (
+        failure["exception_message_sha256"]
+        == hashlib.sha256(failure["exception_message"].encode("utf-8")).hexdigest()
+    )
     archived_recording = next((_stage(project) / "attempts").glob("*/recording.jsonl"))
     archived_recording.write_text("tampered\n", encoding="utf-8")
     with pytest.raises(ModelNodeRuntimeError, match="archived recording evidence drift"):

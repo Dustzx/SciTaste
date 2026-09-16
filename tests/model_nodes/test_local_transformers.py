@@ -114,8 +114,8 @@ def test_local_structured_backend_retains_every_bounded_repair_attempt() -> None
         "not-json",
         '{"verdict":"qualify"}',
     ]
-    assert "deterministic structured-output validator" in (
-        runtime.calls[1]["messages"][-1]["content"]
+    assert (
+        "deterministic structured-output validator" in (runtime.calls[1]["messages"][-1]["content"])
     )
 
 
