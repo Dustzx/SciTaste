@@ -649,9 +649,7 @@ class E2PrelaunchManifest(BaseModel):
             raise ValueError("E2 schema 1.1 requires an exact learned Taste intervention")
         if self.schema_version == "1.0" and not isinstance(self.gates, E2ReadinessGates):
             raise ValueError("E2 schema 1.0 requires legacy B0/B1 readiness names")
-        if self.schema_version == "1.1" and not isinstance(
-            self.gates, E2DevelopmentReadinessGates
-        ):
+        if self.schema_version == "1.1" and not isinstance(self.gates, E2DevelopmentReadinessGates):
             raise ValueError("E2 schema 1.1 requires development/formal readiness names")
         block_ids = {item.block_id for item in self.resources.blocks}
         if self.schema_version == "1.0" and block_ids != {"B0", "B1"}:
@@ -1022,8 +1020,10 @@ def inspect_e2_prelaunch_manifest(
     for name in development_gate_names:
         if _gate_value(manifest, name) != "verified":
             blockers.append(name.replace("_", "-") + "-pending")
-    ready_for_development_execution = static_ready and taste.behaviorally_active and all(
-        _gate_value(manifest, name) == "verified" for name in development_gate_names
+    ready_for_development_execution = (
+        static_ready
+        and taste.behaviorally_active
+        and all(_gate_value(manifest, name) == "verified" for name in development_gate_names)
     )
     formal_gate_names = (
         "development_complete",
