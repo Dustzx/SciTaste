@@ -413,6 +413,16 @@ class DevelopmentTasteGuidanceProvider:
             action_type=selected.type.value,
             instruction=instruction,
             decision_sha256=content_sha256(selected),
+            allowed_agent_actions=(
+                ("run_experiments",)
+                if (
+                    self.protocol.episode_sampling_rule == "preassigned-action-stratum-v1"
+                    and self.protocol.episode_target_action != "STOP"
+                    and target_turn is not None
+                    and context.turn <= target_turn
+                )
+                else None
+            ),
         )
         lock_path = self.lock_root / f"turn-{context.turn:03d}" / "LOCK.json"
         lock = lock_prospective_taste_decision(

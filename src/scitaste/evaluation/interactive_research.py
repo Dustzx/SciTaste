@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
+import re
 from pathlib import Path
 from typing import Literal, Protocol, runtime_checkable
 
@@ -108,6 +110,14 @@ class InteractiveGuidance(BaseModel):
     action_type: str
     instruction: str = Field(min_length=1, max_length=2_000)
     decision_sha256: str = Field(pattern=_SHA256)
+    allowed_agent_actions: tuple[
+        Literal["run_experiments", "run_code", "submit_hypothesis"], ...
+    ] | None = Field(
+        default=None,
+        min_length=1,
+        max_length=3,
+        exclude_if=lambda value: value is None,
+    )
 
 
 class InteractiveGuidanceEnvelope(BaseModel):
@@ -175,6 +185,11 @@ class InteractiveAgentDecision(BaseModel):
     response_sha256: str = Field(pattern=_SHA256)
     usage: Usage
     latency_ms: float = Field(ge=0, allow_inf_nan=False)
+    normalization_repairs: tuple[str, ...] = Field(
+        default=(),
+        max_length=8,
+        exclude_if=lambda value: not value,
+    )
     decision_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -542,6 +557,17 @@ class StructuredInteractiveResearchAgent:
                 "action_schema": "interactive-research-action-v2-evidence-state",
             }
         )
+        allowed_actions = guidance.allowed_agent_actions or (
+            "run_experiments",
+            "run_code",
+            "submit_hypothesis",
+        )
+        action_constraint = (
+            " The controller has constrained this turn to exactly these executable actions: "
+            f"{', '.join(allowed_actions)}. Do not emit any other action."
+            if guidance.allowed_agent_actions is not None
+            else ""
+        )
         request = StructuredModelRequest(
             request_id=f"{context.run_id}-turn-{context.turn:03d}",
             node_name="interactive-research-action",
@@ -561,6 +587,7 @@ class StructuredInteractiveResearchAgent:
                 "candidate is strongly supported and another experiment has negligible value, "
                 "you may request an evidence-backed stop by submitting the hypothesis; the "
                 "controller will independently approve or reject that request before scoring."
+                + action_constraint
             ),
             input_payload={
                 "task_prompt": context.task_prompt,
@@ -588,7 +615,7 @@ class StructuredInteractiveResearchAgent:
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["run_experiments", "run_code", "submit_hypothesis"],
+                        "enum": list(allowed_actions),
                     },
                     "experiments": {
                         "type": "array",
@@ -635,7 +662,10 @@ class StructuredInteractiveResearchAgent:
         response = self.backend.complete(request)
         if response.backend != self.backend.name or response.model != self.backend.model:
             raise ValueError("interactive research backend returned another model identity")
-        proposal = InteractiveAgentProposal.model_validate(response.output_payload)
+        normalized_payload, normalization_repairs = _normalize_interactive_agent_payload(
+            response.output_payload
+        )
+        proposal = InteractiveAgentProposal.model_validate(normalized_payload)
         return InteractiveAgentDecision.create(
             proposal=proposal,
             provider=response.backend,
@@ -644,6 +674,7 @@ class StructuredInteractiveResearchAgent:
             response_sha256=response.raw_response_sha256,
             usage=response.usage,
             latency_ms=response.latency_ms,
+            normalization_repairs=normalization_repairs,
         )
 
 
@@ -1051,6 +1082,42 @@ def raw_response_sha256(raw_response: str) -> str:
     """Public helper for non-structured adapters producing the same receipt contract."""
 
     return hashlib.sha256(raw_response.encode()).hexdigest()
+
+
+_BOUNDED_NUMBER_WITH_OPTIONAL_STRAY_QUOTE = re.compile(
+    r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?[\"']?$"
+)
+
+
+def _normalize_interactive_agent_payload(
+    payload: JsonValue,
+) -> tuple[JsonValue, tuple[str, ...]]:
+    """Repair only unambiguous scalar-number serialization artifacts.
+
+    This is a deterministic boundary normalization, not a model retry: it can
+    remove one stray terminal quote from the two bounded confidence fields and
+    records every changed field in the signed decision receipt.
+    """
+
+    if not isinstance(payload, dict):
+        return payload, ()
+    normalized = dict(payload)
+    repairs: list[str] = []
+    for field_name in ("evidence_confidence", "next_experiment_value"):
+        value = normalized.get(field_name)
+        if not isinstance(value, str):
+            continue
+        candidate = value.strip()
+        if not _BOUNDED_NUMBER_WITH_OPTIONAL_STRAY_QUOTE.fullmatch(candidate):
+            continue
+        if candidate[-1:] in {'"', "'"}:
+            candidate = candidate[:-1]
+        number = float(candidate)
+        if not math.isfinite(number) or not 0.0 <= number <= 1.0:
+            continue
+        normalized[field_name] = number
+        repairs.append(f"{field_name}:numeric-string-to-number")
+    return normalized, tuple(repairs)
 
 
 def guidance_action_complied(action_type: str, model_action: str) -> bool:
