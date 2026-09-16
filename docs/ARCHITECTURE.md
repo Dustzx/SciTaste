@@ -4700,3 +4700,19 @@ roles, the same selected research/code model as the declared E2 agent, and an
 identity-independent judge. The selection has no paper-effectiveness authority;
 it only determines which exact roles may enter the subsequently approved paired
 development and formal runs.
+
+### ADR-145: Pre-execution command identities are closed across result admission
+
+Status: accepted and implemented for E2 v4; execution remains owner-gated.
+
+An executable handoff must use its manifest identity in both the campaign launch
+and the result-admission command. A mismatch discovered before launch is recorded
+as a failed no-execution program, not edited out of its immutable transition
+history. A successor program may replay the same verified content-hashed inputs,
+but receives new program and manifest identities.
+
+The closed handoff must also state its matched per-block API ceiling. E2 v4
+freezes Qwen3.8-Max at eight calls, 16,000 input and 8,192 output tokens per call,
+193,536 total tokens, USD 1, and zero retries. These bounds plus static readiness
+do not authorize provider, GPU, benchmark, or hidden-score execution; the exact
+manifest hash and execution authority remain separate owner decisions.

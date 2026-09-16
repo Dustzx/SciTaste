@@ -1,13 +1,13 @@
-# SciTaste related-work-driven AutoResearch program v7
+# SciTaste related-work-driven AutoResearch program v7 to v8 handoff
 
-Status: **current project authority; one-shot B0 role selection complete;
+Status: **v8 is the current project authority; one-shot B0 role selection complete;
 controller at development execution; no formal E1--E4 result yet**.
 
 The machine-readable authority is
-[`iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v7.yaml).
+[`iclr2027_scitaste_capability_driven_autoresearch_program_v8.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v8.yaml).
 The self-development project binds an immutable copy of that program and the
 v2 resource inventory under run
-`scitaste-iclr2027-capability-driven-autoresearch-program-v7`. Planning does not
+`scitaste-iclr2027-capability-driven-autoresearch-program-v8`. Planning does not
 itself authorize a benchmark, GPU, download, or provider call.
 
 ## Selection order
@@ -181,14 +181,17 @@ episodes with `signed-factorized-beta-pairwise-v2`. The shared STOP feature now
 has 0.5 win and 0.5 loss rather than two false wins. Its support 1.0 remains
 below the frozen threshold 3, so the policy correctly abstains.
 
-The project controller has replayed acquisition, quarantine, split/firewall,
-and actual role-selection evidence. It then prospectively selected the accepted
-Idea from three alternatives and froze H0--H4 plus E2 v3, reaching
+The v7 controller replayed acquisition, quarantine, split/firewall, and actual
+role-selection evidence, then prospectively selected the accepted Idea from
+three alternatives and froze H0--H4 plus E2 v3. Before launch, inspection found
+that its campaign command named E2 v3 while result admission named E2 v2. V7 is
+therefore retained as a zero-execution failed plan. V8 replayed the same
+content-hashed evidence against E2 v4 and again reached
 `development-execution` without launching a benchmark cell.
 
 The immediate critical path is therefore:
 
-1. approve and execute the exact two-arm E2 development block disclosed by v3;
+1. approve and execute the exact two-arm E2 development block disclosed by v4;
 2. carry that trajectory through paper, review, return,
    revision, and final disposition;
 3. before its paper-review phase, qualify a second generator-disjoint reviewer
@@ -199,13 +202,15 @@ The immediate critical path is therefore:
    power.
 
 The current no-run E2 handoff is
-[`mlrc_perception_native_pair_e2_v3.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v3.yaml),
-SHA-256 `b1390fdd48319f19b29ffd6591b962c9a39d18f6469fa8f177d6d39d37731d9d`.
+[`mlrc_perception_native_pair_e2_v4.yaml`](../../configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v4.yaml),
+SHA-256 `03dccd1adcf803c804f28b8b67abc97f3a9c6335f10a037780649d6341514c9e`.
 Its eleven static scientific and execution boundaries pass, including exact
 bindings to accepted Idea revision `outcome-calibrated-scientific-taste-policy-v2`
-and the related-work candidate catalog. V3 additionally binds the actual B0
+and the related-work candidate catalog. V4 additionally binds the actual B0
 selection file and verifies Qwen3.8-Max for both agent roles plus independent
-GLM-5.3-Flash judging. The broader pool still includes unconfigured GPT and
+GLM-5.3-Flash judging. It closes campaign-to-admission identity and freezes, per
+block, eight Qwen3.8-Max calls, 16,000 input and 8,192 output tokens per call,
+193,536 total tokens, USD 1, and zero retries. The broader pool still includes unconfigured GPT and
 Gemini candidates alongside current GLM, DeepSeek, Qwen API, and open 9B
 candidates, so local inventory cannot silently define the experiment. It is
 deliberately not launchable while exact owner approval, the development-only

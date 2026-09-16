@@ -1417,6 +1417,9 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
         "scitaste-iclr2027-capability-driven-autoresearch-program-v7": (
             "scitaste-iclr2027-capability-driven-autoresearch-program-v6"
         ),
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v8": (
+            "scitaste-iclr2027-capability-driven-autoresearch-program-v7"
+        ),
     }
     expected_predecessor = predecessor_by_program.get(
         program_id,
@@ -1484,7 +1487,10 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
     ):
         raise ValueError("program v4 model selection is not capability-driven and expandable")
 
-    if program_id == "scitaste-iclr2027-capability-driven-autoresearch-program-v7":
+    if program_id in {
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v7",
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v8",
+    }:
         if (
             selection.get("candidate_universe_authority")
             != "recent-related-work-and-idea-task-fit-first"

@@ -432,6 +432,31 @@ class E2BlockBudget(BaseModel):
         return self
 
 
+class E2APIBudget(BaseModel):
+    """Per-block matched API ceiling for the two E2 research-agent arms."""
+
+    model_config = _CONFIG
+
+    provider_id: Literal["alibaba-bailian"]
+    model_id: Literal["qwen3.8-max"]
+    model_revision: Literal["qwen3.8-max-2026-09-02"]
+    maximum_invocations_per_block: Literal[8]
+    maximum_input_tokens_per_call: int = Field(gt=0, le=64_000)
+    maximum_output_tokens_per_call: int = Field(gt=0, le=32_768)
+    maximum_total_tokens_per_block: int = Field(gt=0, le=1_000_000)
+    maximum_cost_usd_per_block: float = Field(gt=0, le=10, allow_inf_nan=False)
+    retry_count: Literal[0] = 0
+
+    @model_validator(mode="after")
+    def total_covers_all_invocations(self) -> E2APIBudget:
+        required = self.maximum_invocations_per_block * (
+            self.maximum_input_tokens_per_call + self.maximum_output_tokens_per_call
+        )
+        if self.maximum_total_tokens_per_block < required:
+            raise ValueError("E2 API total-token ceiling cannot be below all call ceilings")
+        return self
+
+
 class E2ResourcePlan(BaseModel):
     model_config = _CONFIG
 
@@ -443,6 +468,7 @@ class E2ResourcePlan(BaseModel):
         "hosted-api-or-separately-accounted-qualified-local-agent",
     ]
     task_device_role: Literal["candidate-training-and-inference"]
+    api_budget: E2APIBudget | None = None
     blocks: tuple[E2BlockBudget, E2BlockBudget]
 
     @model_validator(mode="after")
@@ -539,6 +565,7 @@ class E2PrelaunchManifest(BaseModel):
     commands: tuple[E2ExecutionCommand, ...]
     stop_rules: tuple[str, ...] = Field(min_length=8, max_length=32)
     gates: E2ReadinessGates
+    command_identity_closed: bool = False
     authorizes_download: Literal[False] = False
     authorizes_api_calls: Literal[False] = False
     authorizes_gpu_work: Literal[False] = False
@@ -565,6 +592,19 @@ class E2PrelaunchManifest(BaseModel):
         stages = {item.stage for item in self.commands}
         if stages != {"inspect", "prepare", "execute", "score", "admit", "write", "review"}:
             raise ValueError("E2 handoff must expose every execution-to-review command stage")
+        if self.command_identity_closed:
+            if self.resources.api_budget is None:
+                raise ValueError("closed E2 execution requires an exact per-block API budget")
+            commands = {item.command_id: item.argv for item in self.commands}
+            for command_id in ("project-campaign-execute", "project-result-admit"):
+                argv = commands.get(command_id)
+                if argv is None or "--evaluation-id" not in argv:
+                    raise ValueError("E2 execution commands must bind an evaluation identity")
+                index = argv.index("--evaluation-id")
+                if index + 1 >= len(argv) or argv[index + 1] != self.manifest_id:
+                    raise ValueError(
+                        "E2 campaign execution and result admission must use the manifest ID"
+                    )
         if (
             self.gates.b0_exact_model_role_attestation == "verified"
             or self.gates.b1_task_excluded_role_selection == "verified"

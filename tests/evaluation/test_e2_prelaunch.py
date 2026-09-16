@@ -81,3 +81,26 @@ def test_e2_verified_model_role_gate_requires_bound_selection() -> None:
 
     with pytest.raises(ValidationError, match="content-bound conformance selection"):
         E2PrelaunchManifest.model_validate(payload)
+
+
+def test_e2_closed_command_identity_rejects_cross_evaluation_admission() -> None:
+    payload = _payload()
+    payload["resources"]["api_budget"] = {
+        "provider_id": "alibaba-bailian",
+        "model_id": "qwen3.8-max",
+        "model_revision": "qwen3.8-max-2026-09-02",
+        "maximum_invocations_per_block": 8,
+        "maximum_input_tokens_per_call": 16000,
+        "maximum_output_tokens_per_call": 8192,
+        "maximum_total_tokens_per_block": 193536,
+        "maximum_cost_usd_per_block": 1.0,
+        "retry_count": 0,
+    }
+    payload["command_identity_closed"] = True
+    for command in payload["commands"]:
+        if command["command_id"] == "project-result-admit":
+            index = command["argv"].index("--evaluation-id")
+            command["argv"][index + 1] = "another-evaluation"
+
+    with pytest.raises(ValidationError, match="must use the manifest ID"):
+        E2PrelaunchManifest.model_validate(payload)

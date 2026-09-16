@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed the E2 execution/admission identity boundary before launch. The v7/v3
+  plan is retained as a zero-execution failure because its campaign command and
+  result-admission command named different evaluation IDs. Program v8 and E2 v4
+  now bind the same evaluation identity end to end plus an exact per-block
+  Qwen3.8-Max ceiling of eight calls, 193,536 tokens, USD 1, and zero retries.
+  The new controller has replayed only existing content-hashed evidence and is
+  stopped at `development-execution`; no benchmark, API, GPU, or hidden-score
+  work was launched by the repair.
 - Completed the one-shot successor B0 model-role gate without selective reruns.
   Qwen3.8-Max passed four research and four code requests, GLM-5.3-Flash passed
   two generator-independent judge requests, and the frozen MiniLM and
@@ -12,7 +20,7 @@ semantic versioning.
   used 19,688 API tokens and USD 0.060684, remains engineering-only, and now
   binds exact identities, profiles, budgets, and receipts into the E2 handoff.
 - Advanced the self-development program from task acquisition through a
-  prospective three-candidate Idea lock and frozen experiment plan. The E2 v3
+  prospective three-candidate Idea lock and frozen experiment plan. The E2 v4
   handoff now verifies the actual conformance selection instead of accepting a
   declarative "verified" flag, and stops at `development-execution` pending the
   separately disclosed two-arm MLRC development run.
