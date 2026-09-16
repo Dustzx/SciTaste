@@ -7,7 +7,9 @@ import yaml
 from pydantic import ValidationError
 
 from scitaste.evaluation.e2_prelaunch import (
+    E2FileBinding,
     E2PrelaunchManifest,
+    E2TasteIntervention,
     inspect_e2_taste_intervention,
     load_e2_prelaunch_manifest,
 )
@@ -143,3 +145,29 @@ def test_current_e2_treatment_identity_is_closed_but_behavior_is_inactive() -> N
         "taste-intervention-policy-not-ready",
         "taste-intervention-state-probe-not-bound",
     )
+
+
+def test_e2_state_probe_requires_an_acyclic_activation_basis() -> None:
+    manifest, _ = load_e2_prelaunch_manifest(TREATMENT_GATED_MANIFEST_PATH)
+    assert manifest.taste_intervention is not None
+    payload = manifest.taste_intervention.model_dump(mode="python")
+    payload.update(
+        {
+            "state_probe_contract": E2FileBinding(
+                locator="outputs/probe-contract.json", sha256="a" * 64
+            ),
+            "state_probe_report": E2FileBinding(
+                locator="outputs/probe-report.json", sha256="b" * 64
+            ),
+        }
+    )
+
+    with pytest.raises(ValidationError, match="acyclic activation basis"):
+        E2TasteIntervention.model_validate(payload)
+
+    payload["activation_basis"] = E2FileBinding(
+        locator="configs/evaluation/prelaunch/base.yaml", sha256="c" * 64
+    )
+    intervention = E2TasteIntervention.model_validate(payload)
+
+    assert intervention.activation_basis is not None

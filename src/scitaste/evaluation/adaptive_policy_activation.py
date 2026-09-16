@@ -1423,6 +1423,37 @@ def issue_adaptive_policy_activation_review(
     return permit, reviewing
 
 
+def close_adaptive_policy_activation_empty_review(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+) -> AdaptivePolicyActivationCampaignState:
+    """Close a fully retained cohort when no trajectory yielded a candidate.
+
+    Zero-candidate cohorts are valid scientific development outcomes.  This
+    transition records that fact without inventing a review, generation, retry,
+    replacement, or admitted episode, and makes deterministic finalization
+    reachable.
+    """
+
+    _validate_activation_authority(manifest, plan, approval, state)
+    if state.status != "trajectory-complete":
+        raise ValueError("empty activation review closure requires completed trajectories")
+    if state.completed_trajectory_count != len(state.tasks):
+        raise ValueError("empty activation review closure requires the complete cohort")
+    if any(item.status in {"review-pending", "review-running"} for item in state.tasks):
+        raise ValueError("empty activation review closure cannot skip a candidate")
+    if state.review_evidence or state.admitted_episode_count:
+        raise ValueError("empty activation review closure cannot discard review evidence")
+    return _replace_activation_state(
+        state,
+        sequence=state.sequence + 1,
+        status="review-complete",
+        next_review_task_id=None,
+    )
+
+
 def complete_adaptive_policy_activation_review(
     manifest: AdaptivePolicyActivationManifest,
     plan: AdaptivePolicyActivationNoRunPlan,

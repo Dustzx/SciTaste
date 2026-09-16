@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the approval-to-E2 activation operator. One command now journals every
+  one-use task and review permit plus every hash-chained state, resumes completed
+  task evidence without another provider call, recovers sealed state outputs
+  after an interrupted rename, and deterministically closes a valid zero-candidate
+  cohort without fabricating reviews. A finalized, support-ready activation now
+  compiles an immutable E2 successor that binds policy v7, readiness, a
+  successor-ID state probe, and the exact E2-v5 activation basis. The acyclic
+  basis avoids a manifest self-hash while leaving API/GPU/benchmark execution
+  behind a separate owner approval. Abrupt termination inside an unfinished
+  local generation remains fail-closed and is never silently retried.
 - Made adaptive-allocation activation an executable no-run project contract.
   The new inspector verifies the exact predecessor policy/readiness, all nine
   NewtonBench task and canonical source-group identities, clean pinned checkout,

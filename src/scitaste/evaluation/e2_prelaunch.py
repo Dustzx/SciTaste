@@ -578,6 +578,7 @@ class E2TasteIntervention(BaseModel):
 
     model_config = _CONFIG
 
+    activation_basis: E2FileBinding | None = None
     family_policy: E2FileBinding
     readiness: E2FileBinding
     state_probe_contract: E2FileBinding | None = None
@@ -608,6 +609,8 @@ class E2TasteIntervention(BaseModel):
     def probe_binding_is_atomic(self) -> E2TasteIntervention:
         if (self.state_probe_contract is None) != (self.state_probe_report is None):
             raise ValueError("E2 Taste state-probe contract and report must be bound together")
+        if self.state_probe_contract is not None and self.activation_basis is None:
+            raise ValueError("E2 Taste state probe requires its acyclic activation basis")
         return self
 
 
@@ -887,6 +890,9 @@ def inspect_e2_taste_intervention(
             if not (
                 contract.project_id == manifest.project.project_id
                 and contract.evaluation_id == manifest.manifest_id
+                and intervention.activation_basis is not None
+                and contract.evaluation_bundle_sha256
+                == intervention.activation_basis.sha256
                 and contract.target_domain.casefold() == intervention.target_domain.casefold()
                 and contract.lifecycle_policy_sha256 == head.policy_sha256
                 and report.contract_sha256 == contract.contract_sha256
@@ -1087,6 +1093,10 @@ def _all_bindings(manifest: E2PrelaunchManifest) -> tuple[tuple[str, E2FileBindi
     if manifest.project.idea_revision is not None:
         values.append(("idea-revision", manifest.project.idea_revision))
     if manifest.taste_intervention is not None:
+        if manifest.taste_intervention.activation_basis is not None:
+            values.append(
+                ("taste-activation-basis", manifest.taste_intervention.activation_basis)
+            )
         values.extend(
             (
                 ("taste-family-policy", manifest.taste_intervention.family_policy),

@@ -4817,3 +4817,36 @@ head fails it. The final state distinguishes policy support, probe disposition,
 and permission to proceed to E2 development. None of these deterministic
 transitions authorizes the E2 benchmark, hidden scorer, formal claim, API, or
 GPU execution.
+
+### ADR-148: activation execution is append-only and hands off through an acyclic E2 successor
+
+Status: accepted and implemented; the exact activation and all external E2
+execution remain owner-gated.
+
+The activation cohort is now operated as one durable campaign rather than a
+manual sequence of task, review, and finalization commands. Every issued permit
+and campaign state is written once under the project-owned activation journal.
+The next action is a pure projection of the sealed state. Completed trajectory
+receipts and batches are consumed without another provider call, a sealed state
+left between write and canonical rename is recovered, and a review or
+finalization result written before its successor state is deterministically
+rebound. A cohort in which no trajectory yields a candidate advances to
+`review-complete` with zero review generations and zero admissions; it cannot be
+made to look productive by generating substitute candidates.
+
+The operator requires the exact approval artifact plus separate `--allow-live`
+and `--allow-local` flags. It retains zero retries and zero replacements. If a
+process stops inside a local generation before a terminal review result exists,
+the partial evidence is ambiguous and the campaign fails closed for audit
+instead of rerunning the model. This is the deliberate boundary between durable
+resumption and selective repetition.
+
+An E2 manifest that embeds the probe proving its own treatment would otherwise
+create a content-hash cycle: the probe must bind the manifest, while the
+manifest must bind the probe. The successor therefore names a new E2 identity
+and carries an `activation_basis` binding to the immutable predecessor E2-v5
+bytes. Its newly derived state-probe contract targets the successor identity but
+hashes that predecessor basis. The successor then binds policy v7, readiness,
+the contract, and the report. Inspection verifies this chain and behavioral
+activation. Compilation performs no API, model, GPU, benchmark, or hidden-score
+work, and keeps development execution behind a new owner hash approval.
