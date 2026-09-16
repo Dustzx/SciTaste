@@ -299,6 +299,22 @@ class AITasteAttributionReviewNode(
     input_model = AITasteAttributionReviewInput
     output_model = AITasteAttributionReviewProposal
 
+    def _normalize_output_payload(
+        self,
+        payload: dict[str, object],
+        *,
+        input_data: AITasteAttributionReviewInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> dict[str, object]:
+        """Bind a missing redundant packet identity without changing a judgment."""
+
+        del context, policy
+        normalized = dict(payload)
+        if "review_packet_sha256" not in normalized:
+            normalized["review_packet_sha256"] = input_data.review_packet_sha256
+        return normalized
+
     def _proposal_rejections(
         self,
         proposal: AITasteAttributionReviewProposal,

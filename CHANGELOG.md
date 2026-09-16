@@ -63,6 +63,11 @@ semantic versioning.
   outcome rather than unrelated turns and repeated arrays. This keeps the
   remaining Qwen3-VL-4B/8B zero-retry reviews within their 32K context window;
   the first over-context failure remains terminal and is not retried.
+- Deterministically bind a missing `review_packet_sha256` from the immutable
+  reviewer input after generation. The original response remains unchanged and
+  hash-retained, semantic verdict fields are never repaired, and any model-
+  supplied mismatching identity still fails closed. This prevents an exact-hash
+  copy task from masquerading as Scientific Taste review capability.
 - Added a resume-safe Track-A abstraction campaign runner. It replaces the
   manual per-invocation loop with one batch command, executes only missing
   frozen model-node identities behind `--allow-live`, never retries terminal

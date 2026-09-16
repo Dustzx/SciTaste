@@ -727,6 +727,8 @@ def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path)
             "attribution_confidence": 0.9,
             "rationale": f"Independent model {label} supports the bounded attribution.",
         }
+        if label == "a":
+            payload.pop("review_packet_sha256")
         scripted = ScriptedStructuredBackend(
             name=profile.provider,
             model=profile.model,
@@ -768,7 +770,7 @@ def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path)
             seed=7,
         )
         assert receipt.outcome is RuntimeOutcome.ACCEPTED, receipt.blockers
-        review, _ = materialize_ai_taste_attribution_review(
+        review, review_path = materialize_ai_taste_attribution_review(
             project,
             candidate,
             project_id="episode-project",
@@ -781,6 +783,12 @@ def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path)
             evidence_root=tmp_path,
             output_directory=f"reviews/{label}",
         )
+        if label == "a":
+            raw_response = json.loads((review_path.parent / "RAW_RESPONSE.json").read_text())
+            assert "review_packet_sha256" not in raw_response["output_payload"]
+            assert review.normalized_response_sha256 != content_sha256(
+                raw_response["output_payload"]
+            )
         reviews.append(review)
 
     admitted = admit_taste_episode(
