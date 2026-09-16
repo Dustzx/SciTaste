@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -59,6 +60,7 @@ from scitaste.taste import (
     inspect_taste_episode_admission,
     load_ai_taste_review_panel_contract,
 )
+from scitaste.taste import ai_attribution as ai_attribution_module
 from scitaste.taste.ai_attribution import (
     AITasteAttributionReviewProposal,
     build_ai_taste_attribution_review_material,
@@ -594,6 +596,65 @@ def test_ai_attribution_schema_exposes_cross_field_verdict_contract() -> None:
     with pytest.raises(fastjsonschema.JsonSchemaException):
         validate({**payload, "verdict": "reject"})
     validate({**payload, "verdict": "reject", "transfer_scope_supported": False})
+
+
+def test_interactive_review_projection_keeps_target_successor_and_source_binding(
+    tmp_path: Path,
+) -> None:
+    candidate = _candidate(tmp_path, 1)
+    receipt = {
+        "receipt_sha256": "a" * 64,
+        "project_id": candidate.project_id,
+        "run_id": "interactive-run",
+        "condition_id": "development-foundation",
+        "task_id": "runtime-task",
+        "status": "completed",
+        "turns": [
+            {
+                "turn": 1,
+                "guidance": {
+                    "guidance": {"action_type": "PROBE"},
+                    "audit": {
+                        "controller_decision": {
+                            "decision_id": candidate.decision_id,
+                            "rationale": "Probe the unresolved boundary.",
+                        }
+                    },
+                },
+                "decision": {"proposal": {"action": "run_experiments"}},
+                "observation": {"results": list(range(20))},
+                "observation_sha256": "b" * 64,
+            },
+            {
+                "turn": 2,
+                "guidance": {"guidance": {"action_type": "ANALYZE"}, "audit": {}},
+                "decision": {
+                    "proposal": {
+                        "action": "run_experiments",
+                        "rationale": "The observation changes the next experiment.",
+                    }
+                },
+                "observation": {"private": "must-not-enter-successor-projection"},
+            },
+        ],
+        "objective_score": 0.8,
+        "experiment_count": 2,
+        "input_tokens": 100,
+        "output_tokens": 20,
+    }
+
+    projected = json.loads(
+        ai_attribution_module._compact_interactive_trajectory_receipt(
+            json.dumps(receipt), candidate=candidate
+        )
+    )
+
+    assert projected["source_receipt_sha256"] == "a" * 64
+    assert projected["selected_turn"]["observation"]["results"]["count"] == 20
+    assert projected["successor_turn"]["agent_decision"]["proposal"]["rationale"].startswith(
+        "The observation"
+    )
+    assert "observation" not in projected["successor_turn"]
 
 
 def test_runtime_bridge_materializes_cross_model_ai_review_panel(tmp_path: Path) -> None:

@@ -157,6 +157,7 @@ def execute(args: argparse.Namespace):
                 evidence_root=run_root,
                 current_idea_revision=idea,
                 seed=panel_index - 1,
+                evidence_projection_mode="interactive-trajectory-compact-v1",
             )
             config = build_ai_taste_attribution_runtime_config(
                 material,
@@ -190,7 +191,7 @@ def execute(args: argparse.Namespace):
                 role=TasteAttributionReviewRole.PRIMARY,
                 panel_contract=contract,
                 evidence_root=run_root,
-                output_directory=output_dir.relative_to(project_root).as_posix(),
+                output_directory=output_dir.relative_to(run_root).as_posix(),
             )
             attribution_reviews.append(review)
             attribution_bindings.append(_binding(workspace, review_path))

@@ -56,6 +56,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a hash-bound compact projection for long interactive trajectory receipts
+  used by activation attribution reviewers. The complete raw receipt is still
+  rehashed before projection, while the reviewer sees the exact target turn,
+  its successor rationale, a bounded observation summary, and the terminal
+  outcome rather than unrelated turns and repeated arrays. This keeps the
+  remaining Qwen3-VL-4B/8B zero-retry reviews within their 32K context window;
+  the first over-context failure remains terminal and is not retried.
 - Added a resume-safe Track-A abstraction campaign runner. It replaces the
   manual per-invocation loop with one batch command, executes only missing
   frozen model-node identities behind `--allow-live`, never retries terminal

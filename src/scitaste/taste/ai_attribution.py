@@ -107,13 +107,14 @@ class AITasteReviewSamplingConfig(BaseModel):
 
 
 class AITasteReviewEvidenceProjection(BaseModel):
-    """Exact UTF-8 evidence made visible to one isolated reviewer."""
+    """Hash-bound UTF-8 evidence projection made visible to one isolated reviewer."""
 
     model_config = _CONFIG
 
     evidence_id: str
     role: TasteEpisodeEvidenceRole
     source_sha256: str = Field(pattern=_SHA256)
+    projection_mode: Literal["verbatim-v1", "interactive-trajectory-compact-v1"] = "verbatim-v1"
     content: str = Field(min_length=1, max_length=_MAX_EVIDENCE_FILE_BYTES)
 
 
@@ -348,6 +349,9 @@ def build_ai_taste_attribution_review_material(
     evidence_root: str | Path,
     current_idea_revision: ProjectIdeaRevisionBinding,
     seed: int,
+    evidence_projection_mode: Literal[
+        "verbatim-v1", "interactive-trajectory-compact-v1"
+    ] = "verbatim-v1",
 ) -> AITasteAttributionReviewMaterial:
     """Build one shared, evidence-bearing review packet without invoking a model."""
 
@@ -371,20 +375,28 @@ def build_ai_taste_attribution_review_material(
             raise ValueError(f"Taste review evidence hash differs: {binding.locator}")
         if not 1 <= len(raw) <= _MAX_EVIDENCE_FILE_BYTES:
             raise ValueError(f"Taste review evidence exceeds the per-file limit: {binding.locator}")
-        visible_bytes += len(raw)
-        if visible_bytes > _MAX_VISIBLE_EVIDENCE_BYTES:
-            raise ValueError("Taste review evidence exceeds the panel packet byte limit")
         try:
             content = raw.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ValueError(
                 "AI Taste review evidence must be an explicit UTF-8 projection"
             ) from exc
+        projection_mode: Literal["verbatim-v1", "interactive-trajectory-compact-v1"] = "verbatim-v1"
+        if (
+            evidence_projection_mode == "interactive-trajectory-compact-v1"
+            and binding.role is TasteEpisodeEvidenceRole.OUTCOME
+        ):
+            content = _compact_interactive_trajectory_receipt(content, candidate=candidate)
+            projection_mode = "interactive-trajectory-compact-v1"
+        visible_bytes += len(content.encode("utf-8"))
+        if visible_bytes > _MAX_VISIBLE_EVIDENCE_BYTES:
+            raise ValueError("Taste review evidence exceeds the panel packet byte limit")
         visible.append(
             AITasteReviewEvidenceProjection(
                 evidence_id=binding.evidence_id,
                 role=binding.role,
                 source_sha256=binding.sha256,
+                projection_mode=projection_mode,
                 content=content,
             )
         )
@@ -413,6 +425,138 @@ def build_ai_taste_attribution_review_material(
             sampling=AITasteReviewSamplingConfig(seed=seed),
         ),
     )
+
+
+def _compact_interactive_trajectory_receipt(
+    content: str,
+    *,
+    candidate: TasteEpisodeCandidate,
+) -> str:
+    """Project one long trajectory onto the decision, successor, and terminal outcome."""
+
+    try:
+        receipt = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise ValueError("compact Taste outcome evidence is not valid JSON") from exc
+    if not isinstance(receipt, dict) or not isinstance(receipt.get("turns"), list):
+        raise ValueError("compact Taste outcome evidence is not an interactive receipt")
+    selected_index = None
+    for index, turn in enumerate(receipt["turns"]):
+        if not isinstance(turn, dict):
+            continue
+        guidance = turn.get("guidance")
+        audit = guidance.get("audit") if isinstance(guidance, dict) else None
+        controller = audit.get("controller_decision") if isinstance(audit, dict) else None
+        if isinstance(controller, dict) and controller.get("decision_id") == candidate.decision_id:
+            selected_index = index
+            break
+    if selected_index is None:
+        raise ValueError("compact Taste outcome evidence lacks the candidate decision")
+    selected = receipt["turns"][selected_index]
+    successor = (
+        receipt["turns"][selected_index + 1] if selected_index + 1 < len(receipt["turns"]) else None
+    )
+    projection = {
+        "schema_version": "interactive-trajectory-review-projection-v1",
+        "source_receipt_sha256": receipt.get("receipt_sha256"),
+        "project_id": receipt.get("project_id"),
+        "run_id": receipt.get("run_id"),
+        "condition_id": receipt.get("condition_id"),
+        "task_id": receipt.get("task_id"),
+        "status": receipt.get("status"),
+        "selected_turn": _compact_interactive_turn(selected, include_observation=True),
+        "successor_turn": (
+            _compact_interactive_turn(successor, include_observation=False)
+            if isinstance(successor, dict)
+            else None
+        ),
+        "terminal": {
+            "submission": receipt.get("submission"),
+            "objective_score": receipt.get("objective_score"),
+            "experiment_count": receipt.get("experiment_count"),
+            "code_call_count": receipt.get("code_call_count"),
+            "input_tokens": receipt.get("input_tokens"),
+            "output_tokens": receipt.get("output_tokens"),
+            "terminal_error": receipt.get("terminal_error"),
+        },
+    }
+    return json.dumps(
+        projection,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _compact_interactive_turn(turn: dict[str, object], *, include_observation: bool) -> dict:
+    guidance = turn.get("guidance")
+    guidance = guidance if isinstance(guidance, dict) else {}
+    audit = guidance.get("audit")
+    audit = audit if isinstance(audit, dict) else {}
+    decision = turn.get("decision")
+    decision = decision if isinstance(decision, dict) else {}
+    proposal = decision.get("proposal")
+    proposal = proposal if isinstance(proposal, dict) else {}
+    controller = audit.get("controller_decision")
+    controller = controller if isinstance(controller, dict) else {}
+    projected: dict[str, object] = {
+        "turn": turn.get("turn"),
+        "guidance": guidance.get("guidance"),
+        "controller_decision": {
+            key: controller.get(key)
+            for key in (
+                "decision_id",
+                "stage",
+                "state_snapshot_id",
+                "selected_action",
+                "rationale",
+                "confidence",
+                "expected_cost",
+                "expected_value",
+                "executor_result_id",
+                "actual_outcome",
+            )
+        },
+        "agent_decision": {
+            "proposal": {
+                key: proposal.get(key)
+                for key in (
+                    "action",
+                    "rationale",
+                    "evidence_status",
+                    "evidence_confidence",
+                    "next_experiment_value",
+                    "submission",
+                )
+            },
+            "provider": decision.get("provider"),
+            "model": decision.get("model"),
+            "request_sha256": decision.get("request_sha256"),
+            "response_sha256": decision.get("response_sha256"),
+            "usage": decision.get("usage"),
+            "decision_sha256": decision.get("decision_sha256"),
+        },
+        "observation_sha256": turn.get("observation_sha256"),
+    }
+    if include_observation:
+        projected["observation"] = _compact_json_value(turn.get("observation"))
+    return projected
+
+
+def _compact_json_value(value: object) -> object:
+    if isinstance(value, dict):
+        return {str(key): _compact_json_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        if len(value) <= 8:
+            return [_compact_json_value(item) for item in value]
+        return {
+            "count": len(value),
+            "first": [_compact_json_value(item) for item in value[:2]],
+            "last": [_compact_json_value(item) for item in value[-2:]],
+            "content_sha256": content_sha256(value),
+        }
+    return value
 
 
 def build_ai_taste_attribution_runtime_config(
