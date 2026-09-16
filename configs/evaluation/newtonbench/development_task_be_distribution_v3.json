@@ -1,0 +1,10 @@
+{
+  "module": "m10_be_distribution",
+  "difficulty": "hard",
+  "system": "complex_system",
+  "law_version": "v2",
+  "noise_level": 0.0,
+  "environment_seed": 7139,
+  "score_seed": 7139,
+  "code_assisted": false
+}

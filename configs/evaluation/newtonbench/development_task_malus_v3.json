@@ -1,0 +1,10 @@
+{
+  "module": "m7_malus_law",
+  "difficulty": "hard",
+  "system": "complex_system",
+  "law_version": "v1",
+  "noise_level": 0.0,
+  "environment_seed": 7127,
+  "score_seed": 7127,
+  "code_assisted": false
+}

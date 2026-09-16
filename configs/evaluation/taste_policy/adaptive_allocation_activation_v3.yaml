@@ -1,0 +1,218 @@
+schema_version: "1.1"
+campaign_id: adaptive-allocation-activation-v3
+project_id: scitaste-self-development
+purpose: >-
+  Execute the fresh prospective fixed-turn EXPERIMENT/REFINE activation cohort
+  after v2 was consumed by a host-level network denial before provider contact.
+formal_evidence: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_benchmark_execution: false
+
+predecessor:
+  policy_id: scitaste-self-development-policy-v7
+  family_policy:
+    locator: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-v7-refresh/POLICY.json
+    sha256: 03f32d9b270890536288e6b1e41def85331f58ee65be039832e05c6fbe98b451
+  readiness:
+    locator: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-v7-refresh/READINESS.json
+    sha256: 27c5112404ba7f0f52635cf487424fb1a4e12df4bf63ba26ceae135d3603cc65
+  decision_family: adaptive-allocation
+  training_episode_count: 0
+  training_source_group_count: 0
+  maximum_feature_support: 0.0
+  minimum_feature_support: 3.0
+
+frozen_execution:
+  program:
+    locator: configs/evaluation/programs/newtonbench_taste_development_v9.yaml
+    sha256: e874d9122f487a906e22321765f53706d7fc634b4b8dc71554d21c42b2b1ea75
+  limits:
+    locator: configs/evaluation/newtonbench/development_limits_v1.json
+    sha256: c506b04d3e39810ba65494e00d12f31f2b18679fdb861c51f9907c6bde46cccb
+  source_identity_registry:
+    locator: outputs/projects/scitaste-self-development/evaluations/source-identities/scitastebench-source-identities-v5/REGISTRY.json
+    sha256: e11f3b3cb633c3a4b264f05b20ac367ef1ac8685f5ac1062b9d233becbd3646e
+    registry_sha256: 699196e724d0b7fec2329a26500bc4d6fc3810582bed4afd17923cef1e13cc49
+  checkout:
+    locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout
+    repository_commit: 912a4ba5f4356ddd06acc16e44460ca30be4abc2
+  agent_and_symbolic_judge:
+    provider_id: zhipu-direct
+    model_id: glm-5.3-flash
+    backend:
+      locator: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v5.yaml
+      sha256: 246a49ea12aedca85a4b6d3fe998eafb250eda681b136d768e3bf24d62e0ce3a
+    maximum_calls_per_task: 9
+    maximum_total_tokens_per_task: 120000
+    maximum_output_tokens_per_call: 32768
+    provider_retries: 0
+  tasks:
+    - task_id: coulomb-easy-v1-seed-7101
+      locator: configs/evaluation/newtonbench/development_task_coulomb_v3.json
+      sha256: 8202e793116866910aaf422978e069d359401b60d7dc02ee7b72b0f8574f88e4
+      source_group_id: benchmark-task-2d6c192ed79bdaab3a160d54a101e0af1cc87dc88efb1451ab4b95f145920ac8
+      run_id: 2026-09-16__zhipu-glm53__newton-coulomb-activation-v3__seed-8101
+      protocol_id: newton-coulomb-activation-v3
+      agent_seed: 8101
+      judge_seed: 9101
+      taste_seed: 10101
+      episode_target_action: EXPERIMENT
+      episode_target_turn: 3
+    - task_id: snell-hard-v0-seed-7107
+      locator: configs/evaluation/newtonbench/development_task_snell_v3.json
+      sha256: d24227879362d905fa8c7318cc86ae4828e2bb3f8b67a5055600f55efb4728b3
+      source_group_id: benchmark-task-59afed380c65ac9b008e0eed196a191c64ce1fec5740fdf5e75033e0f530b324
+      run_id: 2026-09-16__zhipu-glm53__newton-snell-activation-v3__seed-8107
+      protocol_id: newton-snell-activation-v3
+      agent_seed: 8107
+      judge_seed: 9107
+      taste_seed: 10107
+      episode_target_action: EXPERIMENT
+      episode_target_turn: 3
+    - task_id: sound-easy-v0-seed-7131
+      locator: configs/evaluation/newtonbench/development_task_sound_v3.json
+      sha256: 391ec7eb8ea462ac2e2f4b7cb207369e2a358293bc931b226b286f27d53426f6
+      source_group_id: benchmark-task-3ddffe22113d8b7cd45c087c9f35781834f1b61c6ea2d2c7de3fae6f42aa93bf
+      run_id: 2026-09-16__zhipu-glm53__newton-sound-activation-v3__seed-8131
+      protocol_id: newton-sound-activation-v3
+      agent_seed: 8131
+      judge_seed: 9131
+      taste_seed: 10131
+      episode_target_action: EXPERIMENT
+      episode_target_turn: 3
+    - task_id: magnetic-medium-v2-seed-7103
+      locator: configs/evaluation/newtonbench/development_task_magnetic_v3.json
+      sha256: d4d5a9a25347a63dbc7bd404ef5b69e2216575ecda18b976e0046f514f9b86d3
+      source_group_id: benchmark-task-95b7c53347f626e0fef16eeb903ea56b4d08567abab10f86c98a82c612051395
+      run_id: 2026-09-16__zhipu-glm53__newton-magnetic-activation-v3__seed-8103
+      protocol_id: newton-magnetic-activation-v3
+      agent_seed: 8103
+      judge_seed: 9103
+      taste_seed: 10103
+      episode_target_action: REFINE
+      episode_target_turn: 4
+    - task_id: radioactive-easy-v2-seed-7109
+      locator: configs/evaluation/newtonbench/development_task_radioactive_v3.json
+      sha256: 1f594db68c19d631db6c4f549a99d3795e4072573455250f7cc3516a226e85d9
+      source_group_id: benchmark-task-9ea88a979bc3b248bd1ffb62f67f3dd700ff463866f867298253ed67f73d3b49
+      run_id: 2026-09-16__zhipu-glm53__newton-radioactive-activation-v3__seed-8109
+      protocol_id: newton-radioactive-activation-v3
+      agent_seed: 8109
+      judge_seed: 9109
+      taste_seed: 10109
+      episode_target_action: REFINE
+      episode_target_turn: 4
+    - task_id: hooke-medium-v1-seed-7137
+      locator: configs/evaluation/newtonbench/development_task_hooke_v3.json
+      sha256: bcead7df6fe52880fc29b48f838b9d6d7c322a3705eb500c544561eea4582abf
+      source_group_id: benchmark-task-49337d185e3740f06d092505b14f380f5eae94e3b3cf31f74e96ddd581f3f211
+      run_id: 2026-09-16__zhipu-glm53__newton-hooke-activation-v3__seed-8137
+      protocol_id: newton-hooke-activation-v3
+      agent_seed: 8137
+      judge_seed: 9137
+      taste_seed: 10137
+      episode_target_action: REFINE
+      episode_target_turn: 4
+
+episode_sampling:
+  unit: one-candidate-per-benchmark-task-source-group
+  rule: preassigned-action-stratum-at-fixed-turn-or-first-approved-stop
+  rule_frozen_before_execution: true
+  terminal_stop_is_not_substituted_when_no-candidate-qualifies: true
+  failures_and_zero-score-trajectories_retained: true
+  no_selection_by_terminal_score_or-credit-direction: true
+
+review_and_admission:
+  attribution_primary_models:
+    - model_id: DeepSeek-V4.1-Flash
+      runtime_model_id: deepseek-flash
+      execution_mode: live
+      backend:
+        locator: configs/model_nodes/deepseek_v41flash.taste_review_long_live_20260916.yaml
+        sha256: 4117ffa7e712377215ca2c051a1b166f183c7cb61317fdc0cea7098ac2a00eb9
+      profile_set:
+        locator: configs/model_nodes/runtime_profiles.taste_attribution_strong_closed_v4.yaml
+        sha256: 8b0bedcda3fe3303ad92be032e05a7d9e9f88a07b9cc5aac9958730f20cb2260
+      profile_id: deepseek-v41flash-taste-review-v3
+    - model_id: Qwen3.8-Max
+      runtime_model_id: qwen3.8-max
+      execution_mode: live
+      backend:
+        locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+        sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+      profile_set:
+        locator: configs/model_nodes/runtime_profiles.taste_attribution_strong_closed_v4.yaml
+        sha256: 8b0bedcda3fe3303ad92be032e05a7d9e9f88a07b9cc5aac9958730f20cb2260
+      profile_id: bailian-qwen38max-taste-review
+  family_primary_models: [DeepSeek-V4.1-Flash, Qwen3.8-Max]
+  review_contract:
+    locator: configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml
+    sha256: 131e7885893710dff0271a690444e081c43b297915f770e4bf1e5e3f65030fa2
+  review_authority_package:
+    locator: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
+    sha256: 02d5c550522d2c830cbc9476bdc8ae903de60047af403fab8ddebc428884a2d7
+  required_family: adaptive-allocation
+  family_assignment_outcome_blind: true
+  non_adaptive_assignments_retained_but_excluded_from_adaptive_head: true
+  no_manual_family_override: true
+  maximum_review_generations_per_qualifying_task: 4
+  maximum_retries_per_generation: 0
+
+policy_refresh:
+  successor_policy_id: scitaste-self-development-policy-v8
+  update_mode: outcome-updated
+  minimum_feature_support: 3.0
+  allow_cross_domain: true
+  rationale_for_cross_domain: >-
+    H4 tests whether prospectively assigned state-conditioned allocation learned
+    on source-disjoint NewtonBench development trajectories transfers to MLRC;
+    target-domain behavior must still pass the frozen outcome-blind state probe.
+  require_schema_version: "1.5"
+  require_ai_review_only: true
+  require_at_least_two_supported_action_types: true
+  lowering_support_threshold_for_activation_forbidden: true
+
+activation_gate:
+  target_e2_manifest_id: mlrc-perception-native-pair-e2-v5
+  target_e2_manifest:
+    locator: configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v5.yaml
+    sha256: d7c9b2c70766d0ce415db20b7ff6cd67e3a02d07c2700d4742ee501cf38a462f
+  target_domain: mlrc-bench
+  target_venue: ICLR 2027
+  state_probe_seed: 2301
+  state_probe_maximum_failed_experiments: 2
+  state_probe_maximum_experiments: 5
+  state_probe_research_direction: >-
+    Improve a frozen MLRC Perception benchmark task under identical
+    candidate-action and resource constraints.
+  required:
+    - adaptive-family-support-sufficient
+    - adaptive-head-h4-eligible
+    - evaluation-source-groups-disjoint
+    - outcome-blind-state-probe-treatment-active
+    - outcome-blind-state-probe-feedback-sensitive
+  formal_effect_claim_established: false
+
+resource_ceiling:
+  trajectory_count: 6
+  api_calls: 54
+  api_total_tokens: 720000
+  api_provider_retries: 0
+  local_review_generations: 0
+  local_review_gpu_hours: 0.0
+  live_review_generations: 24
+  live_review_total_tokens: 800000
+  live_review_cost_usd: 35.0
+  task_gpu_hours: 0.0
+  maximum_new_disk_bytes: 2147483648
+  downloads_required: false
+
+stop_rules:
+  - Complete all six frozen task attempts before reviewing any candidate.
+  - Retain zero-candidate, failed, and zero-score trajectories without replacement.
+  - Select only the fixed action and turn assigned before execution; never harvest another turn.
+  - Stop the affected generation on provider drift, malformed output, or any retry request.
+  - Do not admit an episode without two independent runtime-bound attribution reviews.
+  - Do not route an episode into adaptive-allocation without two outcome-blind family reviews.
+  - Do not launch E2 until the successor head passes the target-domain state probe.
