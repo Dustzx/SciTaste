@@ -21,7 +21,18 @@ semantic versioning.
   successor plan also freezes the current Idea revision and scientific-contract
   hash. One-use task permits now advance a restart-safe state chain, account
   terminal calls/tokens/disk, retain zero-candidate failures, and refuse reruns;
-  an issued task can be executed through one approval-bound live wrapper.
+  an issued task can be executed through one approval-bound live wrapper. Once
+  the complete trajectory cohort terminates, candidate-bound review permits
+  drive two independent attribution reviews, deterministic admission, two
+  outcome-blind decision-family reviews, and immutable terminal accounting.
+  The dedicated Qwen3-VL-4B/8B configs use zero retries, so the disclosed
+  36-generation ceiling cannot silently expand to 72. Review rejection,
+  disagreement, or runtime failure is retained without replacement, while only
+  a complete runtime-bound four-review chain becomes policy-refresh input. A
+  deterministic finalizer now merges eligible activation episodes into the
+  prior corpus, fits policy v7 at the unchanged support threshold, and runs the
+  exact target-domain five-state manipulation probe only for a support-ready
+  adaptive head; failed readiness or probing stops before E2 execution.
 - Closed the missing causal-treatment gate in E2. Schema 1.1 now binds the
   exact family-conditioned policy, readiness report, adaptive-allocation head,
   source-group exclusions, and outcome-blind H4 state-probe evidence before a

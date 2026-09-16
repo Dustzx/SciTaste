@@ -22,6 +22,11 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from scitaste.evaluation.evidence_review import load_evidence_review_package
+from scitaste.evaluation.h4_state_probe import (
+    H4FrozenStateProbeContract,
+    H4StateProbeReport,
+)
 from scitaste.evaluation.interactive_development import InteractiveDevelopmentEpisodeBatch
 from scitaste.evaluation.interactive_research import (
     InteractiveResearchLimits,
@@ -32,17 +37,32 @@ from scitaste.evaluation.source_identity import (
     canonical_benchmark_task_source_group_id,
     load_canonical_source_identity_registry,
 )
+from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.project.idea_revision import (
     idea_scientific_contract_sha256,
     inspect_current_idea_revision,
 )
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 from scitaste.project.runtime import ProjectRuntime
+from scitaste.taste.ai_attribution import ai_review_authority_sha256
 from scitaste.taste.decision_families import (
     FamilyConditionedLifecycleTastePolicy,
+    ScientificDecisionFamilyAssignment,
+    ScientificDecisionFamilyReview,
     ScientificTasteDecisionFamily,
 )
-from scitaste.taste.project_policy import ProjectTastePolicyReadiness
+from scitaste.taste.episode_learning import (
+    AdmittedTasteEpisode,
+    AITasteEpisodeAttributionReview,
+    LifecycleTastePolicyConfig,
+    load_ai_taste_review_panel_contract,
+)
+from scitaste.taste.episodes import TasteEpisodeCandidate
+from scitaste.taste.project_policy import (
+    ProjectTastePolicyCorpusManifest,
+    ProjectTastePolicyReadiness,
+    ProjectTastePolicyRefreshReceipt,
+)
 
 _CONFIG = ConfigDict(
     extra="forbid",
@@ -167,7 +187,10 @@ class ActivationReviewModel(BaseModel):
     model_config = _CONFIG
 
     model_id: str
+    runtime_model_id: str
     backend: ActivationFileBinding
+    profile_set: ActivationFileBinding
+    profile_id: str
 
 
 class ActivationReviewAndAdmission(BaseModel):
@@ -175,11 +198,14 @@ class ActivationReviewAndAdmission(BaseModel):
 
     attribution_primary_models: tuple[ActivationReviewModel, ...] = Field(min_length=2)
     family_primary_models: tuple[str, ...] = Field(min_length=2)
+    review_contract: ActivationFileBinding
+    review_authority_package: ActivationFileBinding
     required_family: Literal["adaptive-allocation"]
     family_assignment_outcome_blind: Literal[True]
     non_adaptive_assignments_retained_but_excluded_from_adaptive_head: Literal[True]
     no_manual_family_override: Literal[True]
     maximum_review_generations_per_qualifying_task: int = Field(ge=4, le=20)
+    maximum_retries_per_generation: Literal[0] = 0
 
 
 class ActivationPolicyRefresh(BaseModel):
@@ -199,8 +225,14 @@ class ActivationPolicyRefresh(BaseModel):
 class ActivationGate(BaseModel):
     model_config = _CONFIG
 
-    target_e2_manifest: str
+    target_e2_manifest_id: str
+    target_e2_manifest: ActivationFileBinding
     target_domain: str
+    target_venue: str
+    state_probe_seed: int = Field(ge=0)
+    state_probe_maximum_failed_experiments: int = Field(ge=2, le=10)
+    state_probe_maximum_experiments: int = Field(ge=4, le=100)
+    state_probe_research_direction: str = Field(min_length=1, max_length=16_000)
     required: tuple[str, ...] = Field(min_length=5)
     formal_effect_claim_established: Literal[False]
 
@@ -304,6 +336,7 @@ class AdaptivePolicyActivationInspection(BaseModel):
     program_and_limits_match: bool
     task_population_and_source_groups_match: bool
     checkout_matches_and_is_clean: bool
+    review_runtime_and_authority_match: bool
     resource_arithmetic_closed: bool
     sampling_rule_closed: bool
     execution_authority_absent: Literal[True] = True
@@ -400,6 +433,7 @@ class AdaptivePolicyActivationTaskState(BaseModel):
         "running",
         "trajectory-terminal",
         "review-pending",
+        "review-running",
         "admitted",
         "retained-failure",
     ] = "pending"
@@ -425,6 +459,199 @@ class AdaptivePolicyActivationTaskEvidence(BaseModel):
     new_disk_bytes: int = Field(ge=0)
 
 
+class AdaptivePolicyActivationReviewPermit(BaseModel):
+    """One-use authority for the review chain of one exact candidate."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    campaign_id: str
+    project_id: str
+    plan_sha256: str = Field(pattern=_SHA256)
+    approval_sha256: str = Field(pattern=_SHA256)
+    preceding_state_sha256: str = Field(pattern=_SHA256)
+    ordinal: int = Field(ge=1)
+    task_id: str
+    run_id: str
+    source_group_id: str
+    batch_sha256: str = Field(pattern=_SHA256)
+    candidate_id: str
+    candidate_sha256: str = Field(pattern=_SHA256)
+    candidate: ActivationFileBinding
+    reviewer_model_ids: tuple[str, str]
+    maximum_local_generations: Literal[4] = 4
+    maximum_local_gpu_hours: float = Field(gt=0, allow_inf_nan=False)
+    maximum_new_disk_bytes: int = Field(ge=1)
+    maximum_retries_per_generation: Literal[0] = 0
+    local_execution_authorized: Literal[True] = True
+    api_execution_authorized: Literal[False] = False
+    task_replacement_authorized: Literal[False] = False
+    formal_effect_claim_authorized: Literal[False] = False
+    permit_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def permit_is_closed(self) -> AdaptivePolicyActivationReviewPermit:
+        if len(set(self.reviewer_model_ids)) != 2:
+            raise ValueError("activation review permit requires two distinct models")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"permit_sha256"}))
+        if self.permit_sha256 != expected:
+            raise ValueError("activation review permit hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AdaptivePolicyActivationReviewPermit:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("permit_sha256", None)
+        unsigned = cls.model_construct(permit_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            permit_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"permit_sha256"})
+            ),
+        )
+
+
+class AdaptivePolicyActivationReviewResult(BaseModel):
+    """Terminal evidence from at most four zero-retry local review generations."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    permit_sha256: str = Field(pattern=_SHA256)
+    task_id: str
+    run_id: str
+    candidate_sha256: str = Field(pattern=_SHA256)
+    status: Literal[
+        "policy-eligible",
+        "attribution-panel-not-admitted",
+        "family-panel-unresolved",
+        "runtime-failure",
+    ]
+    local_generation_count: int = Field(ge=1, le=4)
+    local_gpu_hours: float = Field(ge=0, allow_inf_nan=False)
+    new_disk_bytes: int = Field(ge=0)
+    attribution_reviews: tuple[ActivationFileBinding, ...] = Field(max_length=2)
+    admission: ActivationFileBinding | None = None
+    family_reviews: tuple[ActivationFileBinding, ...] = Field(max_length=2)
+    family_assignment: ActivationFileBinding | None = None
+    assigned_family: ScientificTasteDecisionFamily | None = None
+    failure_reason: str | None = Field(default=None, max_length=2_000)
+    retry_count: Literal[0] = 0
+    replacement_performed: Literal[False] = False
+    result_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def result_is_closed(self) -> AdaptivePolicyActivationReviewResult:
+        accepted_review_count = len(self.attribution_reviews) + len(self.family_reviews)
+        if accepted_review_count > self.local_generation_count:
+            raise ValueError("activation accepted reviews exceed local generations")
+        if (
+            self.status != "runtime-failure"
+            and accepted_review_count != self.local_generation_count
+        ):
+            raise ValueError("activation review result generation count differs")
+        complete = self.status == "policy-eligible"
+        if complete != bool(
+            len(self.attribution_reviews) == 2
+            and self.admission is not None
+            and len(self.family_reviews) == 2
+            and self.family_assignment is not None
+            and self.assigned_family is not None
+        ):
+            raise ValueError("activation review result completion artifacts differ")
+        if self.admission is None and self.family_reviews:
+            raise ValueError("activation family reviews require an admitted episode")
+        if self.family_assignment is not None and self.assigned_family is None:
+            raise ValueError("activation family assignment lacks its family")
+        if (self.status == "runtime-failure") != (self.failure_reason is not None):
+            raise ValueError("activation runtime failure reason differs from status")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"result_sha256"}))
+        if self.result_sha256 != expected:
+            raise ValueError("activation review result hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AdaptivePolicyActivationReviewResult:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("result_sha256", None)
+        unsigned = cls.model_construct(result_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            result_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"result_sha256"})
+            ),
+        )
+
+
+class AdaptivePolicyActivationFinalizationResult(BaseModel):
+    """Deterministic policy refresh and target-domain treatment-probe closure."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    campaign_id: str
+    project_id: str
+    plan_sha256: str = Field(pattern=_SHA256)
+    preceding_state_sha256: str = Field(pattern=_SHA256)
+    successor_policy_id: str
+    target_e2_manifest_id: str
+    target_e2_manifest_sha256: str = Field(pattern=_SHA256)
+    activation_episode_count: int = Field(ge=0)
+    total_corpus_episode_count: int = Field(ge=1)
+    corpus: ActivationFileBinding
+    policy_config: ActivationFileBinding
+    refresh_receipt: ActivationFileBinding
+    policy: ActivationFileBinding
+    readiness: ActivationFileBinding
+    state_probe_contract: ActivationFileBinding | None = None
+    state_probe_report: ActivationFileBinding | None = None
+    adaptive_family_support_sufficient: bool
+    adaptive_head_ready: bool
+    policy_refresh_status: Literal["ready", "insufficient-support"]
+    target_domain_state_probe_status: Literal["passed", "failed", "not-run-insufficient-support"]
+    activation_ready_for_e2_development: bool
+    no_model_calls_performed: Literal[True] = True
+    no_api_calls_performed: Literal[True] = True
+    no_gpu_work_performed: Literal[True] = True
+    formal_effect_claim_established: Literal[False] = False
+    result_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def result_is_closed(self) -> AdaptivePolicyActivationFinalizationResult:
+        if self.adaptive_head_ready and not self.adaptive_family_support_sufficient:
+            raise ValueError("activation adaptive head cannot bypass support")
+        if (self.policy_refresh_status == "ready") != self.adaptive_head_ready:
+            raise ValueError("activation policy refresh disposition differs from readiness")
+        if (self.state_probe_contract is None) != (self.state_probe_report is None):
+            raise ValueError("activation state-probe artifacts must be paired")
+        probe_present = self.state_probe_contract is not None
+        if (self.target_domain_state_probe_status != "not-run-insufficient-support") != (
+            probe_present
+        ):
+            raise ValueError("activation state-probe artifacts differ from disposition")
+        expected_ready = self.adaptive_head_ready and (
+            self.target_domain_state_probe_status == "passed"
+        )
+        if self.activation_ready_for_e2_development != expected_ready:
+            raise ValueError("activation E2 readiness differs from policy and probe")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"result_sha256"}))
+        if self.result_sha256 != expected:
+            raise ValueError("activation finalization result hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> AdaptivePolicyActivationFinalizationResult:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("result_sha256", None)
+        unsigned = cls.model_construct(result_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            result_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"result_sha256"})
+            ),
+        )
+
+
 class AdaptivePolicyActivationCampaignState(BaseModel):
     """Hash-chained campaign state; authorization still performs no external work."""
 
@@ -440,6 +667,10 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
         "ready",
         "running",
         "trajectory-complete",
+        "review-ready",
+        "reviewing",
+        "review-complete",
+        "finalized",
     ] = "awaiting-owner-approval"
     tasks: tuple[AdaptivePolicyActivationTaskState, ...]
     next_task_id: str | None
@@ -450,11 +681,17 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
     consumed_local_review_generations: int = Field(default=0, ge=0)
     consumed_local_review_gpu_hours: float = Field(default=0.0, ge=0, allow_inf_nan=False)
     consumed_new_disk_bytes: int = Field(default=0, ge=0)
-    policy_refresh_status: Literal["pending"] = "pending"
-    target_domain_state_probe_status: Literal["pending"] = "pending"
+    policy_refresh_status: Literal["pending", "ready", "insufficient-support"] = "pending"
+    target_domain_state_probe_status: Literal[
+        "pending", "passed", "failed", "not-run-insufficient-support"
+    ] = "pending"
     approval_sha256: str | None = Field(default=None, pattern=_SHA256)
     active_permit_sha256: str | None = Field(default=None, pattern=_SHA256)
+    active_review_permit_sha256: str | None = Field(default=None, pattern=_SHA256)
+    next_review_task_id: str | None = None
     terminal_evidence: tuple[AdaptivePolicyActivationTaskEvidence, ...] = ()
+    review_evidence: tuple[AdaptivePolicyActivationReviewResult, ...] = ()
+    finalization: AdaptivePolicyActivationFinalizationResult | None = None
     execution_authorized: bool = False
     formal_effect_claim_authorized: Literal[False] = False
     state_sha256: str = Field(pattern=_SHA256)
@@ -468,12 +705,15 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             raise ValueError("activation state task identities must be unique")
         if self.next_task_id is not None and self.next_task_id not in task_ids:
             raise ValueError("activation next task must identify one frozen task")
+        if self.next_review_task_id is not None and self.next_review_task_id not in task_ids:
+            raise ValueError("activation next review task must identify one frozen task")
         if self.status == "awaiting-owner-approval":
             if (
                 self.sequence != 0
                 or self.next_task_id != self.tasks[0].task_id
                 or self.approval_sha256 is not None
                 or self.active_permit_sha256 is not None
+                or self.active_review_permit_sha256 is not None
                 or self.execution_authorized
             ):
                 raise ValueError("activation initial state cannot carry execution authority")
@@ -483,10 +723,18 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             raise ValueError("running activation state requires one active task permit")
         if self.status != "running" and self.active_permit_sha256 is not None:
             raise ValueError("only a running activation state may retain an active permit")
+        if self.status == "reviewing" and self.active_review_permit_sha256 is None:
+            raise ValueError("reviewing activation state requires one active review permit")
+        if self.status != "reviewing" and self.active_review_permit_sha256 is not None:
+            raise ValueError("only a reviewing state may retain an active review permit")
         if self.status == "ready" and self.next_task_id is None:
             raise ValueError("ready activation state requires one next frozen task")
         if self.status == "trajectory-complete" and self.next_task_id is not None:
             raise ValueError("completed activation trajectories cannot name a next task")
+        if self.status == "review-ready" and self.next_review_task_id is None:
+            raise ValueError("review-ready activation state requires one next review task")
+        if self.status == "review-complete" and self.next_review_task_id is not None:
+            raise ValueError("completed activation review cannot name a next review task")
         if self.completed_trajectory_count != len(self.terminal_evidence):
             raise ValueError("activation completed count differs from terminal evidence")
         if len({item.task_id for item in self.terminal_evidence}) != len(self.terminal_evidence):
@@ -495,7 +743,7 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
         observed_terminal_ids = {
             item.task_id
             for item in self.tasks
-            if item.status in {"review-pending", "admitted", "retained-failure"}
+            if item.status in {"review-pending", "review-running", "admitted", "retained-failure"}
         }
         if terminal_task_ids != observed_terminal_ids:
             raise ValueError("activation task states differ from terminal evidence")
@@ -503,6 +751,42 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             self.tasks
         ):
             raise ValueError("activation trajectory completion requires the complete cohort")
+        review_task_ids = tuple(item.task_id for item in self.review_evidence)
+        if len(review_task_ids) != len(set(review_task_ids)):
+            raise ValueError("activation review task evidence repeats")
+        if not set(review_task_ids).issubset(terminal_task_ids):
+            raise ValueError("activation review evidence lacks terminal trajectory evidence")
+        if self.admitted_episode_count != sum(
+            item.status == "policy-eligible" for item in self.review_evidence
+        ):
+            raise ValueError("activation admitted episode count differs from review evidence")
+        if self.consumed_local_review_generations != sum(
+            item.local_generation_count for item in self.review_evidence
+        ):
+            raise ValueError("activation review generation count differs from review evidence")
+        if (
+            abs(
+                self.consumed_local_review_gpu_hours
+                - sum(item.local_gpu_hours for item in self.review_evidence)
+            )
+            > 1e-9
+        ):
+            raise ValueError("activation review GPU hours differ from review evidence")
+        if self.status == "review-complete" and any(
+            item.status in {"review-pending", "review-running"} for item in self.tasks
+        ):
+            raise ValueError("activation review completion requires every candidate resolved")
+        if (self.status == "finalized") != (self.finalization is not None):
+            raise ValueError("activation finalization evidence differs from campaign status")
+        if self.finalization is not None:
+            if (
+                self.finalization.preceding_state_sha256 == self.state_sha256
+                or self.finalization.activation_episode_count != self.admitted_episode_count
+                or self.finalization.policy_refresh_status != self.policy_refresh_status
+                or self.finalization.target_domain_state_probe_status
+                != self.target_domain_state_probe_status
+            ):
+                raise ValueError("activation finalization differs from campaign state")
         excluded = {"state_sha256"}
         # Preserve the hash of the already materialized pre-authorization v1.0
         # state, which predates the optional approval binding.
@@ -510,7 +794,11 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             excluded.add("approval_sha256")
         for field_name in (
             "active_permit_sha256",
+            "active_review_permit_sha256",
+            "next_review_task_id",
             "terminal_evidence",
+            "review_evidence",
+            "finalization",
             "consumed_new_disk_bytes",
         ):
             if field_name not in self.model_fields_set:
@@ -547,7 +835,11 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
             "consumed_new_disk_bytes": 0,
             "approval_sha256": None,
             "active_permit_sha256": None,
+            "active_review_permit_sha256": None,
+            "next_review_task_id": None,
             "terminal_evidence": (),
+            "review_evidence": (),
+            "finalization": None,
         }
         unsigned = cls.model_construct(state_sha256="0" * 64, **payload)
         return cls(
@@ -749,6 +1041,10 @@ def inspect_adaptive_policy_activation(
     if not checkout_matches_and_is_clean:
         blockers.append("activation-checkout-mismatch")
 
+    review_runtime_and_authority_match = _review_runtime_and_authority_match(root, manifest)
+    if not review_runtime_and_authority_match:
+        blockers.append("activation-review-runtime-or-authority-mismatch")
+
     resource_arithmetic_closed = _resource_arithmetic_closed(manifest)
     if not resource_arithmetic_closed:
         blockers.append("activation-resource-arithmetic-mismatch")
@@ -771,6 +1067,7 @@ def inspect_adaptive_policy_activation(
             program_and_limits_match,
             task_population_and_source_groups_match,
             checkout_matches_and_is_clean,
+            review_runtime_and_authority_match,
             resource_arithmetic_closed,
             sampling_rule_closed,
         )
@@ -787,6 +1084,7 @@ def inspect_adaptive_policy_activation(
         program_and_limits_match=program_and_limits_match,
         task_population_and_source_groups_match=task_population_and_source_groups_match,
         checkout_matches_and_is_clean=checkout_matches_and_is_clean,
+        review_runtime_and_authority_match=review_runtime_and_authority_match,
         resource_arithmetic_closed=resource_arithmetic_closed,
         sampling_rule_closed=sampling_rule_closed,
         ready_for_owner_approval=ready,
@@ -1045,6 +1343,326 @@ def complete_adaptive_policy_activation_task(
     )
 
 
+def issue_adaptive_policy_activation_review(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+    batch: InteractiveDevelopmentEpisodeBatch,
+    *,
+    workspace_root: str | Path,
+) -> tuple[AdaptivePolicyActivationReviewPermit, AdaptivePolicyActivationCampaignState]:
+    """Reserve one exact candidate for its zero-retry four-generation review chain."""
+
+    _validate_activation_authority(manifest, plan, approval, state)
+    if state.status not in {"trajectory-complete", "review-ready"}:
+        raise ValueError("activation review issue requires completed trajectories")
+    if state.completed_trajectory_count != len(state.tasks):
+        raise ValueError("activation review cannot begin before the frozen cohort completes")
+    review_pending = tuple(item for item in state.tasks if item.status == "review-pending")
+    if not review_pending:
+        raise ValueError("activation has no candidate awaiting review")
+    task_state = review_pending[0]
+    if state.next_review_task_id not in {None, task_state.task_id}:
+        raise ValueError("activation next review task differs from canonical order")
+    index = next(
+        offset for offset, item in enumerate(state.tasks) if item.task_id == task_state.task_id
+    )
+    terminal = next(item for item in state.terminal_evidence if item.task_id == task_state.task_id)
+    candidate, candidate_binding = _activation_candidate_from_batch(
+        manifest,
+        task_state,
+        terminal,
+        batch,
+        workspace_root=workspace_root,
+    )
+    review = manifest.review_and_admission
+    ceiling = manifest.resource_ceiling
+    if (
+        state.consumed_local_review_generations
+        + review.maximum_review_generations_per_qualifying_task
+        > ceiling.local_review_generations
+    ):
+        raise ValueError("activation remaining generation ceiling cannot fit review task")
+    remaining_gpu_hours = ceiling.local_review_gpu_hours - state.consumed_local_review_gpu_hours
+    remaining_disk = ceiling.maximum_new_disk_bytes - state.consumed_new_disk_bytes
+    if remaining_gpu_hours <= 0 or remaining_disk <= 0:
+        raise ValueError("activation remaining local resource ceiling cannot fit review task")
+    permit = AdaptivePolicyActivationReviewPermit.create(
+        campaign_id=state.campaign_id,
+        project_id=state.project_id,
+        plan_sha256=state.plan_sha256,
+        approval_sha256=approval.approval_sha256,
+        preceding_state_sha256=state.state_sha256,
+        ordinal=index + 1,
+        task_id=task_state.task_id,
+        run_id=task_state.run_id,
+        source_group_id=task_state.source_group_id,
+        batch_sha256=batch.batch_sha256,
+        candidate_id=candidate.candidate_id,
+        candidate_sha256=candidate.candidate_sha256,
+        candidate=candidate_binding,
+        reviewer_model_ids=tuple(
+            item.runtime_model_id for item in review.attribution_primary_models
+        ),
+        maximum_local_generations=review.maximum_review_generations_per_qualifying_task,
+        maximum_local_gpu_hours=remaining_gpu_hours,
+        maximum_new_disk_bytes=remaining_disk,
+        maximum_retries_per_generation=review.maximum_retries_per_generation,
+    )
+    tasks = list(state.tasks)
+    tasks[index] = task_state.model_copy(update={"status": "review-running"})
+    reviewing = _replace_activation_state(
+        state,
+        tasks=tuple(tasks),
+        sequence=state.sequence + 1,
+        status="reviewing",
+        next_review_task_id=task_state.task_id,
+        active_review_permit_sha256=permit.permit_sha256,
+    )
+    return permit, reviewing
+
+
+def complete_adaptive_policy_activation_review(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+    permit: AdaptivePolicyActivationReviewPermit,
+    result: AdaptivePolicyActivationReviewResult,
+    *,
+    workspace_root: str | Path,
+) -> AdaptivePolicyActivationCampaignState:
+    """Retain one bounded review outcome and advance without replacement or rerun."""
+
+    validate_adaptive_policy_activation_review_authority(
+        manifest,
+        plan,
+        approval,
+        state,
+        permit,
+        workspace_root=workspace_root,
+    )
+    if (
+        result.permit_sha256 != permit.permit_sha256
+        or result.task_id != permit.task_id
+        or result.run_id != permit.run_id
+        or result.candidate_sha256 != permit.candidate_sha256
+    ):
+        raise ValueError("activation review result belongs to another permit")
+    if (
+        result.local_generation_count > permit.maximum_local_generations
+        or result.local_gpu_hours > permit.maximum_local_gpu_hours
+        or result.new_disk_bytes > permit.maximum_new_disk_bytes
+    ):
+        raise ValueError("activation review result exceeded its task ceiling")
+    ceiling = manifest.resource_ceiling
+    if (
+        state.consumed_local_review_generations + result.local_generation_count
+        > ceiling.local_review_generations
+        or state.consumed_local_review_gpu_hours + result.local_gpu_hours
+        > ceiling.local_review_gpu_hours
+        or state.consumed_new_disk_bytes + result.new_disk_bytes > ceiling.maximum_new_disk_bytes
+    ):
+        raise ValueError("activation review result exceeded its campaign ceiling")
+    _validate_activation_review_result(
+        manifest,
+        permit,
+        result,
+        workspace_root=workspace_root,
+    )
+    index = permit.ordinal - 1
+    task_state = state.tasks[index]
+    tasks = list(state.tasks)
+    tasks[index] = task_state.model_copy(
+        update={"status": "admitted" if result.status == "policy-eligible" else "retained-failure"}
+    )
+    next_item = next((item for item in tasks[index + 1 :] if item.status == "review-pending"), None)
+    return _replace_activation_state(
+        state,
+        tasks=tuple(tasks),
+        review_evidence=(*state.review_evidence, result),
+        sequence=state.sequence + 1,
+        status="review-ready" if next_item is not None else "review-complete",
+        next_review_task_id=next_item.task_id if next_item is not None else None,
+        active_review_permit_sha256=None,
+        admitted_episode_count=(
+            state.admitted_episode_count + (result.status == "policy-eligible")
+        ),
+        consumed_local_review_generations=(
+            state.consumed_local_review_generations + result.local_generation_count
+        ),
+        consumed_local_review_gpu_hours=(
+            state.consumed_local_review_gpu_hours + result.local_gpu_hours
+        ),
+        consumed_new_disk_bytes=state.consumed_new_disk_bytes + result.new_disk_bytes,
+    )
+
+
+def complete_adaptive_policy_activation_finalization(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+    result: AdaptivePolicyActivationFinalizationResult,
+    *,
+    workspace_root: str | Path,
+) -> AdaptivePolicyActivationCampaignState:
+    """Verify policy refresh plus target-domain probe and close activation state."""
+
+    validate_adaptive_policy_activation_finalization_authority(manifest, plan, approval, state)
+    if (
+        result.campaign_id != state.campaign_id
+        or result.project_id != state.project_id
+        or result.plan_sha256 != state.plan_sha256
+        or result.preceding_state_sha256 != state.state_sha256
+        or result.successor_policy_id != manifest.policy_refresh.successor_policy_id
+        or result.target_e2_manifest_id != manifest.activation_gate.target_e2_manifest_id
+        or result.target_e2_manifest_sha256 != manifest.activation_gate.target_e2_manifest.sha256
+        or result.activation_episode_count != state.admitted_episode_count
+    ):
+        raise ValueError("activation finalization result belongs to another campaign state")
+    root = Path(workspace_root).resolve(strict=True)
+    target_payload = yaml.safe_load(_bound_bytes(root, manifest.activation_gate.target_e2_manifest))
+    if (
+        not isinstance(target_payload, dict)
+        or target_payload.get("manifest_id") != result.target_e2_manifest_id
+    ):
+        raise ValueError("activation target E2 manifest identity differs")
+    corpus = _load_bound_json_model(root, result.corpus, ProjectTastePolicyCorpusManifest)
+    config = _load_bound_json_model(root, result.policy_config, LifecycleTastePolicyConfig)
+    receipt = _load_bound_json_model(root, result.refresh_receipt, ProjectTastePolicyRefreshReceipt)
+    policy = _load_bound_json_model(root, result.policy, FamilyConditionedLifecycleTastePolicy)
+    readiness = _load_bound_json_model(root, result.readiness, ProjectTastePolicyReadiness)
+    if (
+        corpus.project_id != state.project_id
+        or len(corpus.episodes) != result.total_corpus_episode_count
+        or policy.policy_id != result.successor_policy_id
+        or readiness.policy_id != policy.policy_id
+        or readiness.policy_sha256 != policy.policy_sha256
+        or receipt.policy_sha256 != policy.policy_sha256
+        or receipt.readiness_sha256 != readiness.readiness_sha256
+        or config.minimum_feature_support != manifest.policy_refresh.minimum_feature_support
+        or config.allow_cross_domain is not manifest.policy_refresh.allow_cross_domain
+    ):
+        raise ValueError("activation policy refresh artifacts differ")
+    activation_admission_hashes = {
+        _load_bound_json_model(root, item.admission, AdmittedTasteEpisode).admission_sha256
+        for item in state.review_evidence
+        if item.status == "policy-eligible" and item.admission is not None
+    }
+    if activation_admission_hashes - {item.admission_sha256 for item in corpus.episodes}:
+        raise ValueError("activation policy corpus omits an eligible activation episode")
+    adaptive = next(
+        item
+        for item in readiness.families
+        if item.decision_family is ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION
+    )
+    if (
+        adaptive.support_sufficient != result.adaptive_family_support_sufficient
+        or adaptive.adaptive_head_ready != result.adaptive_head_ready
+    ):
+        raise ValueError("activation adaptive readiness summary differs")
+    if result.state_probe_contract is not None and result.state_probe_report is not None:
+        contract = _load_bound_json_model(
+            root, result.state_probe_contract, H4FrozenStateProbeContract
+        )
+        report = _load_bound_json_model(root, result.state_probe_report, H4StateProbeReport)
+        head = policy.require_head(ScientificTasteDecisionFamily.ADAPTIVE_ALLOCATION)
+        if (
+            contract.evaluation_id != result.target_e2_manifest_id
+            or contract.evaluation_bundle_sha256 != result.target_e2_manifest_sha256
+            or contract.plan_sha256 != state.plan_sha256
+            or contract.target_domain != manifest.activation_gate.target_domain
+            or contract.lifecycle_policy_sha256 != head.policy_sha256
+            or report.contract_sha256 != contract.contract_sha256
+            or report.lifecycle_policy_sha256 != head.policy_sha256
+            or report.passed != (result.target_domain_state_probe_status == "passed")
+        ):
+            raise ValueError("activation target-domain state probe differs")
+    return _replace_activation_state(
+        state,
+        sequence=state.sequence + 1,
+        status="finalized",
+        policy_refresh_status=result.policy_refresh_status,
+        target_domain_state_probe_status=result.target_domain_state_probe_status,
+        finalization=result,
+    )
+
+
+def validate_adaptive_policy_activation_finalization_authority(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+) -> None:
+    """Require a complete, unresolved review cohort before deterministic refresh."""
+
+    _validate_activation_authority(manifest, plan, approval, state)
+    if (
+        state.status != "review-complete"
+        or state.active_review_permit_sha256 is not None
+        or state.finalization is not None
+    ):
+        raise ValueError("activation finalization requires completed candidate review")
+
+
+def validate_adaptive_policy_activation_review_authority(
+    manifest: AdaptivePolicyActivationManifest,
+    plan: AdaptivePolicyActivationNoRunPlan,
+    approval: AdaptivePolicyActivationApproval,
+    state: AdaptivePolicyActivationCampaignState,
+    permit: AdaptivePolicyActivationReviewPermit,
+    *,
+    workspace_root: str | Path,
+) -> None:
+    """Validate one local-review permit and its immutable candidate bytes."""
+
+    _validate_activation_authority(manifest, plan, approval, state)
+    if state.status != "reviewing" or state.active_review_permit_sha256 != permit.permit_sha256:
+        raise ValueError("activation reviewing state lacks its active review permit")
+    if (
+        permit.campaign_id != state.campaign_id
+        or permit.project_id != state.project_id
+        or permit.plan_sha256 != state.plan_sha256
+        or permit.approval_sha256 != approval.approval_sha256
+        or permit.task_id != state.next_review_task_id
+    ):
+        raise ValueError("activation review permit belongs to another state")
+    index = permit.ordinal - 1
+    if index >= len(state.tasks):
+        raise ValueError("activation review permit ordinal is outside the cohort")
+    task = state.tasks[index]
+    if task.status != "review-running" or (task.task_id, task.run_id, task.source_group_id) != (
+        permit.task_id,
+        permit.run_id,
+        permit.source_group_id,
+    ):
+        raise ValueError("activation review-running task differs from its permit")
+    expected_models = tuple(
+        item.runtime_model_id for item in manifest.review_and_admission.attribution_primary_models
+    )
+    if (
+        permit.reviewer_model_ids != expected_models
+        or permit.maximum_local_generations
+        != manifest.review_and_admission.maximum_review_generations_per_qualifying_task
+        or permit.maximum_retries_per_generation != 0
+    ):
+        raise ValueError("activation review permit differs from the frozen panel")
+    root = Path(workspace_root).resolve(strict=True)
+    candidate_path = _under(root, permit.candidate.locator)
+    if candidate_path is None or _file_sha256(candidate_path) != permit.candidate.sha256:
+        raise ValueError("activation review candidate bytes changed after permit issue")
+    candidate = TasteEpisodeCandidate.model_validate_json(candidate_path.read_bytes(), strict=True)
+    if (
+        candidate.candidate_id != permit.candidate_id
+        or candidate.candidate_sha256 != permit.candidate_sha256
+        or candidate.project_id != permit.project_id
+        or candidate.source_group_id != permit.source_group_id
+    ):
+        raise ValueError("activation review candidate semantics changed after permit issue")
+
+
 def validate_adaptive_policy_activation_task_authority(
     manifest: AdaptivePolicyActivationManifest,
     plan: AdaptivePolicyActivationNoRunPlan,
@@ -1148,6 +1766,8 @@ def _validate_activation_authority(
         state.completed_trajectory_count > ceiling.trajectory_count
         or state.consumed_api_calls > ceiling.api_calls
         or state.consumed_api_tokens > ceiling.api_total_tokens
+        or state.consumed_local_review_generations > ceiling.local_review_generations
+        or state.consumed_local_review_gpu_hours > ceiling.local_review_gpu_hours
         or state.consumed_new_disk_bytes > ceiling.maximum_new_disk_bytes
     ):
         raise ValueError("adaptive activation state already exceeds its resource ceiling")
@@ -1203,6 +1823,30 @@ def load_adaptive_policy_activation_task_permit(
     return AdaptivePolicyActivationTaskPermit.model_validate_json(_bounded_json(path), strict=True)
 
 
+def load_adaptive_policy_activation_review_permit(
+    path: str | Path,
+) -> AdaptivePolicyActivationReviewPermit:
+    return AdaptivePolicyActivationReviewPermit.model_validate_json(
+        _bounded_json(path), strict=True
+    )
+
+
+def load_adaptive_policy_activation_review_result(
+    path: str | Path,
+) -> AdaptivePolicyActivationReviewResult:
+    return AdaptivePolicyActivationReviewResult.model_validate_json(
+        _bounded_json(path), strict=True
+    )
+
+
+def load_adaptive_policy_activation_finalization_result(
+    path: str | Path,
+) -> AdaptivePolicyActivationFinalizationResult:
+    return AdaptivePolicyActivationFinalizationResult.model_validate_json(
+        _bounded_json(path), strict=True
+    )
+
+
 def load_adaptive_policy_activation_episode_batch(
     path: str | Path,
 ) -> InteractiveDevelopmentEpisodeBatch:
@@ -1234,6 +1878,146 @@ def save_adaptive_policy_activation_artifact(
     return target
 
 
+def _activation_candidate_from_batch(
+    manifest: AdaptivePolicyActivationManifest,
+    task_state: AdaptivePolicyActivationTaskState,
+    terminal: AdaptivePolicyActivationTaskEvidence,
+    batch: InteractiveDevelopmentEpisodeBatch,
+    *,
+    workspace_root: str | Path,
+) -> tuple[TasteEpisodeCandidate, ActivationFileBinding]:
+    if (
+        batch.project_id != manifest.project_id
+        or batch.task_id != task_state.task_id
+        or batch.run_id != task_state.run_id
+        or batch.source_group_id != task_state.source_group_id
+        or batch.batch_sha256 != terminal.batch_sha256
+        or len(batch.items) != 1
+    ):
+        raise ValueError("activation review batch differs from terminal task evidence")
+    item = batch.items[0]
+    _safe_locator(item.candidate_locator)
+    locator = (
+        PurePosixPath("outputs")
+        / "projects"
+        / manifest.project_id
+        / "runs"
+        / task_state.run_id
+        / PurePosixPath(item.candidate_locator)
+    ).as_posix()
+    root = Path(workspace_root).resolve(strict=True)
+    path = _under(root, locator)
+    if path is None:
+        raise ValueError("activation review candidate is unavailable")
+    raw = path.read_bytes()
+    candidate = TasteEpisodeCandidate.model_validate_json(raw, strict=True)
+    if (
+        candidate.candidate_id != item.candidate_id
+        or candidate.candidate_sha256 != item.candidate_sha256
+        or candidate.project_id != manifest.project_id
+        or candidate.source_group_id != task_state.source_group_id
+    ):
+        raise ValueError("activation review candidate differs from its frozen batch")
+    return candidate, ActivationFileBinding(locator=locator, sha256=hashlib.sha256(raw).hexdigest())
+
+
+def _validate_activation_review_result(
+    manifest: AdaptivePolicyActivationManifest,
+    permit: AdaptivePolicyActivationReviewPermit,
+    result: AdaptivePolicyActivationReviewResult,
+    *,
+    workspace_root: str | Path,
+) -> None:
+    root = Path(workspace_root).resolve(strict=True)
+    attribution = tuple(
+        _load_bound_json_model(root, item, AITasteEpisodeAttributionReview)
+        for item in result.attribution_reviews
+    )
+    if any(
+        item.candidate_id != permit.candidate_id
+        or item.candidate_sha256 != permit.candidate_sha256
+        or item.role.value != "primary"
+        for item in attribution
+    ):
+        raise ValueError("activation attribution review binds another candidate or role")
+    if len({item.reviewer_id for item in attribution}) != len(attribution):
+        raise ValueError("activation attribution reviewers are not independent")
+    if {item.model_id for item in attribution} - set(permit.reviewer_model_ids):
+        raise ValueError("activation attribution review uses an unapproved model")
+
+    admission = (
+        None
+        if result.admission is None
+        else _load_bound_json_model(root, result.admission, AdmittedTasteEpisode)
+    )
+    if admission is not None:
+        if admission.candidate.candidate_sha256 != permit.candidate_sha256 or {
+            item.review_sha256 for item in admission.reviews
+        } != {item.review_sha256 for item in attribution}:
+            raise ValueError("activation admission differs from its attribution panel")
+
+    family_reviews = tuple(
+        _load_bound_json_model(root, item, ScientificDecisionFamilyReview)
+        for item in result.family_reviews
+    )
+    if family_reviews and admission is None:
+        raise ValueError("activation family reviews lack an admission")
+    if any(
+        not item.runtime_bound
+        or item.role != "primary"
+        or item.admission_sha256 != admission.admission_sha256  # type: ignore[union-attr]
+        for item in family_reviews
+    ):
+        raise ValueError("activation family review differs from its admission")
+    if len({item.reviewer_id for item in family_reviews}) != len(family_reviews):
+        raise ValueError("activation family reviewers are not independent")
+    if {item.model_id for item in family_reviews} - set(permit.reviewer_model_ids):
+        raise ValueError("activation family review uses an unapproved model")
+
+    assignment = (
+        None
+        if result.family_assignment is None
+        else _load_bound_json_model(
+            root,
+            result.family_assignment,
+            ScientificDecisionFamilyAssignment,
+        )
+    )
+    if assignment is not None:
+        if admission is None or (
+            assignment.admission_sha256 != admission.admission_sha256
+            or assignment.decision_family is not result.assigned_family
+            or {item.invocation_id for item in assignment.reviews}
+            != {item.invocation_id for item in family_reviews}
+        ):
+            raise ValueError("activation family assignment differs from its review panel")
+    if result.status == "attribution-panel-not-admitted" and (
+        len(attribution) != 2 or admission is not None or family_reviews
+    ):
+        raise ValueError("activation attribution rejection artifacts differ")
+    if result.status == "family-panel-unresolved" and (
+        len(attribution) != 2
+        or admission is None
+        or len(family_reviews) != 2
+        or assignment is not None
+    ):
+        raise ValueError("activation family disagreement artifacts differ")
+    if result.status == "policy-eligible" and (
+        {item.model_id for item in attribution} != set(permit.reviewer_model_ids)
+        or {item.model_id for item in family_reviews} != set(permit.reviewer_model_ids)
+    ):
+        raise ValueError("activation complete review lacks the frozen cross-model panel")
+
+
+def _load_bound_json_model(
+    root: Path,
+    binding: ActivationFileBinding,
+    model_type: type[BaseModel],
+) -> BaseModel:
+    raw = _bound_bytes(root, binding)
+    return model_type.model_validate_json(raw, strict=True)
+
+
 def _manifest_bindings(
     manifest: AdaptivePolicyActivationManifest,
 ) -> tuple[ActivationFileBinding, ...]:
@@ -1250,6 +2034,10 @@ def _manifest_bindings(
             for item in execution.tasks
         ),
         *(item.backend for item in manifest.review_and_admission.attribution_primary_models),
+        *(item.profile_set for item in manifest.review_and_admission.attribution_primary_models),
+        manifest.review_and_admission.review_contract,
+        manifest.review_and_admission.review_authority_package,
+        manifest.activation_gate.target_e2_manifest,
     )
 
 
@@ -1356,6 +2144,54 @@ def _checkout_matches(root: Path, binding: ActivationCheckoutBinding) -> bool:
     return head == binding.repository_commit and not dirty
 
 
+def _review_runtime_and_authority_match(
+    root: Path,
+    manifest: AdaptivePolicyActivationManifest,
+) -> bool:
+    review = manifest.review_and_admission
+    try:
+        contract_path = _under(root, review.review_contract.locator)
+        package_path = _under(root, review.review_authority_package.locator)
+        if contract_path is None or package_path is None:
+            return False
+        contract = load_ai_taste_review_panel_contract(contract_path)
+        authority = load_evidence_review_package(package_path)
+        if (
+            ai_review_authority_sha256(authority, panel_contract=contract, workspace_root=root)
+            != contract.contract_sha256
+        ):
+            return False
+        for item in review.attribution_primary_models:
+            backend = yaml.safe_load(_bound_bytes(root, item.backend))
+            profile_path = _under(root, item.profile_set.locator)
+            if not isinstance(backend, dict) or profile_path is None:
+                return False
+            profiles = load_model_node_profile_set(profile_path)
+            profile = profiles.profiles.get(item.profile_id)
+            if (
+                backend.get("provider") != "local-transformers"
+                or backend.get("model_id") != item.model_id
+                or backend.get("max_retries") != review.maximum_retries_per_generation
+                or backend.get("execution_enabled") is not True
+                or backend.get("require_cuda") is not True
+                or profile is None
+                or profile.provider != "local-transformers"
+                or profile.model != item.runtime_model_id
+                or profile.model.split("@", maxsplit=1)[0] != item.model_id
+                or not profile.local_execution_permitted
+                or profile.live_execution_permitted
+                or not {
+                    "taste-episode-attribution-review",
+                    "scientific-decision-family-review",
+                }.issubset(profile.allowed_node_names)
+                or profile.generation.max_output_tokens > int(backend.get("max_new_tokens", 0))
+            ):
+                return False
+    except (KeyError, OSError, TypeError, ValueError, yaml.YAMLError):
+        return False
+    return True
+
+
 def _resource_arithmetic_closed(manifest: AdaptivePolicyActivationManifest) -> bool:
     tasks = manifest.frozen_execution.tasks
     model = manifest.frozen_execution.agent_and_symbolic_judge
@@ -1368,6 +2204,7 @@ def _resource_arithmetic_closed(manifest: AdaptivePolicyActivationManifest) -> b
         and ceiling.local_review_generations
         == len(tasks) * review.maximum_review_generations_per_qualifying_task
         and ceiling.api_provider_retries == model.provider_retries == 0
+        and review.maximum_retries_per_generation == 0
         and ceiling.task_gpu_hours == 0
         and ceiling.downloads_required is False
     )
@@ -1451,25 +2288,36 @@ def _git(root: Path, *args: str) -> str:
 __all__ = [
     "AdaptivePolicyActivationApproval",
     "AdaptivePolicyActivationCampaignState",
+    "AdaptivePolicyActivationFinalizationResult",
     "AdaptivePolicyActivationInspection",
     "AdaptivePolicyActivationManifest",
     "AdaptivePolicyActivationNoRunPlan",
+    "AdaptivePolicyActivationReviewPermit",
+    "AdaptivePolicyActivationReviewResult",
     "AdaptivePolicyActivationTaskEvidence",
     "AdaptivePolicyActivationTaskPermit",
     "approve_adaptive_policy_activation",
     "authorize_adaptive_policy_activation",
     "compile_adaptive_policy_activation_no_run_plan",
+    "complete_adaptive_policy_activation_finalization",
+    "complete_adaptive_policy_activation_review",
     "complete_adaptive_policy_activation_task",
     "initialize_adaptive_policy_activation_state",
     "inspect_adaptive_policy_activation",
+    "issue_adaptive_policy_activation_review",
     "issue_adaptive_policy_activation_task",
     "load_adaptive_policy_activation_approval",
     "load_adaptive_policy_activation_episode_batch",
+    "load_adaptive_policy_activation_finalization_result",
     "load_adaptive_policy_activation_manifest",
     "load_adaptive_policy_activation_no_run_plan",
+    "load_adaptive_policy_activation_review_permit",
+    "load_adaptive_policy_activation_review_result",
     "load_adaptive_policy_activation_state",
     "load_adaptive_policy_activation_task_permit",
     "save_adaptive_policy_activation_artifact",
+    "validate_adaptive_policy_activation_finalization_authority",
     "validate_adaptive_policy_activation_idea_binding",
+    "validate_adaptive_policy_activation_review_authority",
     "validate_adaptive_policy_activation_task_authority",
 ]

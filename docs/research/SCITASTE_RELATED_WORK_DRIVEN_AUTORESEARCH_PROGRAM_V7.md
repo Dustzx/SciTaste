@@ -235,7 +235,7 @@ remains open.
 
 The prerequisite activation manifest is
 [`adaptive_allocation_activation_v1.yaml`](../../configs/evaluation/taste_policy/adaptive_allocation_activation_v1.yaml),
-SHA-256 `40bb18ef099c01a811e0dd3e7176f4889e77fc362e67321b7523826f7c7555ab`.
+SHA-256 `936090b32e02e6c3ffc5176c90552f396d4ac1cc30660bbd8929cbcca26bb300`.
 It freezes nine previously unused NewtonBench modules before observing outcomes,
 uses one post-feedback nonterminal decision per source group, retains failures,
 and forbids score- or credit-directed selection. Its hard ceiling is 81
@@ -246,15 +246,45 @@ typed no-run compiler verifies every predecessor, task, canonical source group,
 checkout, model, and resource binding. The first no-run plan, SHA-256
 `50f37408330ab47c718d1b25a0455a0a5869b316849a6e3b8c450470d05ad310`,
 is retained as superseded because it did not freeze the Idea scientific
-contract. The successor binds Idea revision
+contract. The Idea-bound successor binds Idea revision
 `outcome-calibrated-scientific-taste-policy-v2`, scientific-contract SHA-256
 `21074cf339af8994f38f108242b382d12e4f480ce54289e1675f20e54a633147`,
 plan SHA-256
 `4f13f0cc41181f00fd86758e54efb45f7d1d0f437cfe64c44ca256bfd78f4b5a`,
 and initial-state SHA-256
 `54ed0c97231eb6a14a4682ee3a68fd8efa04f569e8d7d6c259c6b355440dee0e`.
-That state remains `awaiting-owner-approval` with all nine attempt counts at
-zero. Interactive protocol v1.1 makes the sampling promise executable: one
+It is also superseded before execution: its generic local-review backends
+allowed one retry and could therefore turn a nominal 36-generation ceiling into
+72 physical attempts. Review-bound v3 froze dedicated zero-retry
+4B and 8B backends, their exact runtime profile sets, the AI panel contract, and
+the central review-authority package. Its manifest fingerprint is
+`5eaa0aefee1e4c680604143a8c14d2523bc770157afed20e69600762cfa27d33`,
+plan SHA-256 is
+`1e5157ab5dc4e385557f2a48aa0d3666030f579c802af387f6890fb6357dcd02`,
+and the review-state-machine initial state SHA-256 is
+`88c46d96154eaf179a7d28d312a077416b6a1fe0ce2cfdf5d79a479eaf5ebab4`.
+It too is superseded before execution because its permit named base model labels
+while the durable local runtime returns revision-bearing checkpoint identities.
+Runtime-identity-bound v4 froze those exact identities. Its manifest
+fingerprint is
+`aa86ef7f69bd4a40b9d7abc4a4ec8d6cfa651f4c1cfd8c043d0ada9662b3d605`,
+plan SHA-256 is
+`6c9a41a7b8d295d47f89b2ccd9024312f42975243663c2ac7eb0f5a292958e36`,
+and initial-state SHA-256 is
+`d77068c4ef50a2cd2e8be0178e2f90d8f636d396d6365885f71843128755b95a`.
+It is superseded before execution because policy refresh did not yet bind the
+exact downstream E2 bytes and state-probe inputs. Current finalization-bound v5
+adds the E2-v5 file binding, target domain and venue, frozen five-state seed,
+failure budget, experiment budget, and research direction. Its manifest
+fingerprint is
+`e879dd24af0729d3fafed86f92d8c0eebb9702ded2684f8a97912835da593fc7`,
+plan SHA-256 is
+`ee3df9fd33f14544353c054d292d35c621d80155b5e0c613edd8bffc2d97eb52`,
+and initial-state SHA-256 is
+`3d35f3080cb68873a102b21e9182affb4e9b9b74e8055f8539a65e94464a0b87`.
+That state remains `awaiting-owner-approval` with all nine trajectory and review
+attempt counts at zero. Interactive protocol v1.1 makes the sampling promise
+executable: one
 earliest actually executed non-STOP decision after retained feedback per task,
 selected without terminal score or credit direction and never replaced by STOP.
 The approval artifact and sequence-1 `ready` state are separate, hash-bound
@@ -267,6 +297,26 @@ task, and advances state only from a terminal receipt and its zero-or-one
 candidate batch. API calls, tokens, and new disk bytes are accumulated against
 the campaign ceiling. A failed provider request remains a zero-candidate member
 of the frozen cohort and cannot be replaced or rerun.
+
+After the complete nine-task cohort terminates, review work is exposed in the
+same frozen order. Each one-use permit binds an exact candidate file and allows
+at most four actual local generations: Qwen3-VL-4B plus Qwen3-VL-8B attribution,
+followed only after deterministic admission by outcome-blind family assignment
+from the same two distinct models. Both activation backends set `max_retries=0`.
+The runner records elapsed local GPU-hours and disk growth; a model rejection,
+panel split, malformed result, or runtime failure consumes its attempt and ends
+that source group without adjudication or replacement. Only a complete
+four-generation runtime-bound chain can enter policy v7. This activation is
+development policy data, not B0 and not a Native/Base effectiveness result.
+After every candidate is resolved, the deterministic finalizer joins eligible
+admission/assignment pairs with the existing v6 corpus, fits isolated policy-v7
+family heads at the unchanged support threshold, and materializes readiness.
+Only a support-ready adaptive-allocation head receives the frozen five-state
+MLRC-domain ON/OFF probe. Insufficient support or a probe that is inactive or
+feedback-insensitive ends activation without launching E2. A passing probe
+establishes the treatment manipulation only; it still provides no hidden-score
+effectiveness claim and merely permits the separately approved E2 development
+pair to become the next action.
 
 The remote fixed-revision `Qwen/Qwen3.5-9B` candidate is now statically complete:
 16 files, four indexed shards, 15,664,539,861 bytes, aggregate checkpoint digest

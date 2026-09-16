@@ -8,8 +8,11 @@ import yaml
 from pydantic import ValidationError
 
 from scitaste.evaluation.adaptive_policy_activation import (
+    ActivationFileBinding,
+    AdaptivePolicyActivationFinalizationResult,
     AdaptivePolicyActivationInspection,
     AdaptivePolicyActivationManifest,
+    AdaptivePolicyActivationReviewResult,
     approve_adaptive_policy_activation,
     authorize_adaptive_policy_activation,
     compile_adaptive_policy_activation_no_run_plan,
@@ -34,6 +37,11 @@ def test_activation_manifest_closes_population_sampling_and_resource_arithmetic(
     assert manifest.resource_ceiling.api_calls == 81
     assert manifest.resource_ceiling.api_total_tokens == 1_080_000
     assert manifest.resource_ceiling.local_review_generations == 36
+    assert manifest.review_and_admission.maximum_retries_per_generation == 0
+    assert all(
+        item.backend.locator.endswith("taste_review_activation_v1.yaml")
+        for item in manifest.review_and_admission.attribution_primary_models
+    )
     assert (
         manifest.episode_sampling.rule
         == "earliest-executed-nonterminal-decision-after-one-retained-observation"
@@ -90,6 +98,7 @@ def test_activation_approval_requires_both_exact_confirmation_hashes() -> None:
         program_and_limits_match=True,
         task_population_and_source_groups_match=True,
         checkout_matches_and_is_clean=True,
+        review_runtime_and_authority_match=True,
         resource_arithmetic_closed=True,
         sampling_rule_closed=True,
         ready_for_owner_approval=True,
@@ -122,6 +131,7 @@ def test_exact_approval_authorizes_state_without_launching_work() -> None:
         program_and_limits_match=True,
         task_population_and_source_groups_match=True,
         checkout_matches_and_is_clean=True,
+        review_runtime_and_authority_match=True,
         resource_arithmetic_closed=True,
         sampling_rule_closed=True,
         ready_for_owner_approval=True,
@@ -163,6 +173,7 @@ def test_task_permit_retains_terminal_failure_and_advances_once() -> None:
         program_and_limits_match=True,
         task_population_and_source_groups_match=True,
         checkout_matches_and_is_clean=True,
+        review_runtime_and_authority_match=True,
         resource_arithmetic_closed=True,
         sampling_rule_closed=True,
         ready_for_owner_approval=True,
@@ -244,3 +255,65 @@ def test_task_permit_retains_terminal_failure_and_advances_once() -> None:
             batch,
             new_disk_bytes=1024,
         )
+
+
+def test_review_result_counts_failed_generation_without_fabricating_review() -> None:
+    result = AdaptivePolicyActivationReviewResult.create(
+        permit_sha256="a" * 64,
+        task_id="task-one",
+        run_id="run-one",
+        candidate_sha256="b" * 64,
+        status="runtime-failure",
+        local_generation_count=1,
+        local_gpu_hours=0.01,
+        new_disk_bytes=100,
+        attribution_reviews=(),
+        family_reviews=(),
+        failure_reason="local generation failed before an accepted review artifact",
+    )
+
+    assert result.retry_count == 0
+    assert result.replacement_performed is False
+    assert result.local_generation_count == 1
+
+    with pytest.raises(ValidationError, match="generation count differs"):
+        AdaptivePolicyActivationReviewResult.create(
+            permit_sha256="a" * 64,
+            task_id="task-one",
+            run_id="run-one",
+            candidate_sha256="b" * 64,
+            status="policy-eligible",
+            local_generation_count=4,
+            local_gpu_hours=0.01,
+            new_disk_bytes=100,
+            attribution_reviews=(),
+            family_reviews=(),
+        )
+
+
+def test_finalization_keeps_insufficient_policy_separate_from_effect_claim() -> None:
+    binding = ActivationFileBinding(locator="outputs/evidence.json", sha256="c" * 64)
+    result = AdaptivePolicyActivationFinalizationResult.create(
+        campaign_id="activation-v1",
+        project_id="scitaste-self-development",
+        plan_sha256="a" * 64,
+        preceding_state_sha256="b" * 64,
+        successor_policy_id="policy-v7",
+        target_e2_manifest_id="e2-v5",
+        target_e2_manifest_sha256="d" * 64,
+        activation_episode_count=0,
+        total_corpus_episode_count=4,
+        corpus=binding,
+        policy_config=binding,
+        refresh_receipt=binding,
+        policy=binding,
+        readiness=binding,
+        adaptive_family_support_sufficient=False,
+        adaptive_head_ready=False,
+        policy_refresh_status="insufficient-support",
+        target_domain_state_probe_status="not-run-insufficient-support",
+        activation_ready_for_e2_development=False,
+    )
+
+    assert result.no_model_calls_performed is True
+    assert result.formal_effect_claim_established is False

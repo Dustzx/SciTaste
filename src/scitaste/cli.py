@@ -287,14 +287,18 @@ from scitaste.evaluation.adaptive_policy_activation import (
     approve_adaptive_policy_activation,
     authorize_adaptive_policy_activation,
     compile_adaptive_policy_activation_no_run_plan,
+    complete_adaptive_policy_activation_review,
     complete_adaptive_policy_activation_task,
     initialize_adaptive_policy_activation_state,
     inspect_adaptive_policy_activation,
+    issue_adaptive_policy_activation_review,
     issue_adaptive_policy_activation_task,
     load_adaptive_policy_activation_approval,
     load_adaptive_policy_activation_episode_batch,
     load_adaptive_policy_activation_manifest,
     load_adaptive_policy_activation_no_run_plan,
+    load_adaptive_policy_activation_review_permit,
+    load_adaptive_policy_activation_review_result,
     load_adaptive_policy_activation_state,
     load_adaptive_policy_activation_task_permit,
     save_adaptive_policy_activation_artifact,
@@ -4099,6 +4103,40 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(adaptive_activation_complete)
     adaptive_activation_complete.set_defaults(
         handler=_handle_evaluation_adaptive_policy_activation_complete_task
+    )
+    adaptive_activation_issue_review = evaluation_commands.add_parser(
+        "adaptive-policy-activation-issue-review",
+        help="Issue one-use authority for one exact candidate's bounded local review chain",
+    )
+    adaptive_activation_issue_review.add_argument("--manifest", type=Path, required=True)
+    adaptive_activation_issue_review.add_argument("--plan", type=Path, required=True)
+    adaptive_activation_issue_review.add_argument("--approval", type=Path, required=True)
+    adaptive_activation_issue_review.add_argument("--state", type=Path, required=True)
+    adaptive_activation_issue_review.add_argument("--batch", type=Path, required=True)
+    adaptive_activation_issue_review.add_argument("--workspace-root", type=Path, default=Path("."))
+    adaptive_activation_issue_review.add_argument("--permit-output", type=Path, required=True)
+    adaptive_activation_issue_review.add_argument("--state-output", type=Path, required=True)
+    _add_log_level_option(adaptive_activation_issue_review)
+    adaptive_activation_issue_review.set_defaults(
+        handler=_handle_evaluation_adaptive_policy_activation_issue_review
+    )
+    adaptive_activation_complete_review = evaluation_commands.add_parser(
+        "adaptive-policy-activation-complete-review",
+        help="Bind one terminal local review result and advance without replacement",
+    )
+    adaptive_activation_complete_review.add_argument("--manifest", type=Path, required=True)
+    adaptive_activation_complete_review.add_argument("--plan", type=Path, required=True)
+    adaptive_activation_complete_review.add_argument("--approval", type=Path, required=True)
+    adaptive_activation_complete_review.add_argument("--state", type=Path, required=True)
+    adaptive_activation_complete_review.add_argument("--permit", type=Path, required=True)
+    adaptive_activation_complete_review.add_argument("--result", type=Path, required=True)
+    adaptive_activation_complete_review.add_argument(
+        "--workspace-root", type=Path, default=Path(".")
+    )
+    adaptive_activation_complete_review.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(adaptive_activation_complete_review)
+    adaptive_activation_complete_review.set_defaults(
+        handler=_handle_evaluation_adaptive_policy_activation_complete_review
     )
     direct_agent_run = evaluation_commands.add_parser(
         "direct-agent-run",
@@ -11326,6 +11364,86 @@ def _handle_evaluation_adaptive_policy_activation_complete_task(
                 "consumed_api_calls": advanced.consumed_api_calls,
                 "consumed_api_tokens": advanced.consumed_api_tokens,
                 "consumed_new_disk_bytes": advanced.consumed_new_disk_bytes,
+                "formal_effect_claim_authorized": (advanced.formal_effect_claim_authorized),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_adaptive_policy_activation_issue_review(
+    args: argparse.Namespace,
+) -> int:
+    for output in (args.permit_output, args.state_output):
+        if output.exists() or output.is_symlink():
+            raise FileExistsError(output)
+    manifest, _ = load_adaptive_policy_activation_manifest(args.manifest)
+    plan = load_adaptive_policy_activation_no_run_plan(args.plan)
+    approval = load_adaptive_policy_activation_approval(args.approval)
+    state = load_adaptive_policy_activation_state(args.state)
+    batch = load_adaptive_policy_activation_episode_batch(args.batch)
+    permit, reviewing = issue_adaptive_policy_activation_review(
+        manifest,
+        plan,
+        approval,
+        state,
+        batch,
+        workspace_root=args.workspace_root,
+    )
+    permit_output = save_adaptive_policy_activation_artifact(permit, args.permit_output)
+    state_output = save_adaptive_policy_activation_artifact(reviewing, args.state_output)
+    print(
+        json.dumps(
+            {
+                "status": "adaptive-policy-activation-review-issued",
+                "permit_output": str(permit_output),
+                "state_output": str(state_output),
+                "permit_sha256": permit.permit_sha256,
+                "state_sha256": reviewing.state_sha256,
+                "task_id": permit.task_id,
+                "candidate_sha256": permit.candidate_sha256,
+                "maximum_local_generations": permit.maximum_local_generations,
+                "maximum_retries_per_generation": permit.maximum_retries_per_generation,
+                "external_execution_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_adaptive_policy_activation_complete_review(
+    args: argparse.Namespace,
+) -> int:
+    manifest, _ = load_adaptive_policy_activation_manifest(args.manifest)
+    plan = load_adaptive_policy_activation_no_run_plan(args.plan)
+    approval = load_adaptive_policy_activation_approval(args.approval)
+    state = load_adaptive_policy_activation_state(args.state)
+    permit = load_adaptive_policy_activation_review_permit(args.permit)
+    result = load_adaptive_policy_activation_review_result(args.result)
+    advanced = complete_adaptive_policy_activation_review(
+        manifest,
+        plan,
+        approval,
+        state,
+        permit,
+        result,
+        workspace_root=args.workspace_root,
+    )
+    output = save_adaptive_policy_activation_artifact(advanced, args.output)
+    print(
+        json.dumps(
+            {
+                "status": advanced.status,
+                "output": str(output),
+                "state_sha256": advanced.state_sha256,
+                "admitted_episode_count": advanced.admitted_episode_count,
+                "next_review_task_id": advanced.next_review_task_id,
+                "consumed_local_review_generations": (advanced.consumed_local_review_generations),
+                "consumed_local_review_gpu_hours": (advanced.consumed_local_review_gpu_hours),
                 "formal_effect_claim_authorized": (advanced.formal_effect_claim_authorized),
             },
             indent=2,

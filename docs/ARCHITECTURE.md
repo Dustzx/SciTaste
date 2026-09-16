@@ -4791,3 +4791,29 @@ terminal campaign members; a prospective lock
 created before a failed provider response is retained as audit evidence but is
 not projected as a completed decision. Existing run evidence makes the live
 wrapper fail rather than selectively rerun the task.
+
+Trajectory completion is not policy admission. Only after all nine frozen
+members terminate may `adaptive-policy-activation-issue-review` bind the next
+one-candidate batch to a one-use local-review permit. The permit freezes the
+candidate file bytes, both reviewer identities, four-generation maximum, zero
+retries, remaining GPU-hour and disk ceilings, and absence of API or formal
+claim authority. The review runner executes two identical-packet attribution
+reviews, deterministic admission, and—only for an admitted episode—two
+outcome-blind family reviews. Attribution rejection, cross-model disagreement,
+family disagreement, or runtime failure is terminal evidence for that source
+group; it cannot trigger adjudication, replacement, or an extra generation in
+this activation cohort. A task becomes `admitted` only when all four actual
+runtime-bound generations and the deterministic admission/assignment artifacts
+form one verified chain. Thus the declared 36 generations are physical
+generation attempts, not 36 nominal calls with a hidden retry multiplier.
+
+`finalize_adaptive_policy_activation.py` then performs the resource-free part
+of the scientific gate exactly once. It seals the old plus newly eligible
+episode population, fits policy v7 with the unchanged support threshold and
+explicit cross-domain flag, and reports adaptive-family readiness. A ready head
+is evaluated on the manifest-bound five-state MLRC-domain ON/OFF manipulation;
+an insufficient head skips the probe, and an inactive or feedback-insensitive
+head fails it. The final state distinguishes policy support, probe disposition,
+and permission to proceed to E2 development. None of these deterministic
+transitions authorizes the E2 benchmark, hidden scorer, formal claim, API, or
+GPU execution.

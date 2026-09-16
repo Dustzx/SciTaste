@@ -141,19 +141,36 @@ episode_sampling:
 review_and_admission:
   attribution_primary_models:
     - model_id: Qwen3-VL-4B-Instruct
+      runtime_model_id: Qwen3-VL-4B-Instruct@hf-manifest-f6be4a0d2276
       backend:
-        locator: configs/model_nodes/local_qwen3vl4b.taste_review_repair_v2.yaml
-        sha256: a8dc7862bfbe8da3c0f1eeadbab53489898f88ccfc4e82df68252f3c6250229a
+        locator: configs/model_nodes/local_qwen3vl4b.taste_review_activation_v1.yaml
+        sha256: dd12ecbc30476c27ee98c8ae94baddf56bc6b615d5d9a20458790acf2fece052
+      profile_set:
+        locator: configs/model_nodes/runtime_profiles.taste_attribution_primary_local4b_repair_v2.yaml
+        sha256: bcf7697d0b699293df9beb739e01871c534cb1b351d64a4a4cce1bfde2969ae1
+      profile_id: local-qwen3vl4b-taste-review-repair-v2
     - model_id: Qwen3-VL-8B-Instruct
+      runtime_model_id: Qwen3-VL-8B-Instruct@hf-manifest-bbf50ed8664b
       backend:
-        locator: configs/model_nodes/local_qwen3vl8b.taste_review_repair_v2.yaml
-        sha256: 527500f405ad92f600f7134978c9e8a83e8947af88b3081e04f95a6323153d7e
+        locator: configs/model_nodes/local_qwen3vl8b.taste_review_activation_v1.yaml
+        sha256: d6727332d1e3dbecab6b550ca5b564527757489ff74c323977df77ade85dd6ef
+      profile_set:
+        locator: configs/model_nodes/runtime_profiles.taste_attribution_primary_local8b_repair_v2.yaml
+        sha256: 92827f3597031782e14014c0683dafb538d5ebbd21385c6cd10395470de98dea
+      profile_id: local-qwen3vl8b-taste-review-repair-v2
   family_primary_models: [Qwen3-VL-4B-Instruct, Qwen3-VL-8B-Instruct]
+  review_contract:
+    locator: configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml
+    sha256: 131e7885893710dff0271a690444e081c43b297915f770e4bf1e5e3f65030fa2
+  review_authority_package:
+    locator: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
+    sha256: 02d5c550522d2c830cbc9476bdc8ae903de60047af403fab8ddebc428884a2d7
   required_family: adaptive-allocation
   family_assignment_outcome_blind: true
   non_adaptive_assignments_retained_but_excluded_from_adaptive_head: true
   no_manual_family_override: true
   maximum_review_generations_per_qualifying_task: 4
+  maximum_retries_per_generation: 0
 
 policy_refresh:
   successor_policy_id: scitaste-self-development-policy-v7
@@ -170,8 +187,18 @@ policy_refresh:
   lowering_support_threshold_for_activation_forbidden: true
 
 activation_gate:
-  target_e2_manifest: mlrc-perception-native-pair-e2-v5
+  target_e2_manifest_id: mlrc-perception-native-pair-e2-v5
+  target_e2_manifest:
+    locator: configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v5.yaml
+    sha256: d7c9b2c70766d0ce415db20b7ff6cd67e3a02d07c2700d4742ee501cf38a462f
   target_domain: mlrc-bench
+  target_venue: ICLR 2027
+  state_probe_seed: 2301
+  state_probe_maximum_failed_experiments: 2
+  state_probe_maximum_experiments: 5
+  state_probe_research_direction: >-
+    Improve a frozen MLRC Perception benchmark task under identical
+    candidate-action and resource constraints.
   required:
     - adaptive-family-support-sufficient
     - adaptive-head-h4-eligible
