@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh policy v7 and run the deterministic target-domain H4 state probe."""
+"""Refresh the declared successor policy and run its target-domain state probe."""
 
 from __future__ import annotations
 
@@ -101,7 +101,10 @@ def execute(args: argparse.Namespace):
         episode_paths.append(_bound_path(workspace, item.admission.locator))
         assignment_paths.append(_bound_path(workspace, item.family_assignment.locator))
 
-    corpus_id = f"{manifest.project_id}-ai-reviewed-v5"
+    # Activation campaigns are append-only.  Binding the corpus name to the
+    # declared successor policy prevents a completed campaign from occupying a
+    # fixed global filename needed by every later campaign.
+    corpus_id = f"{manifest.policy_refresh.successor_policy_id}-corpus"
     corpus = seal_project_taste_policy_corpus(
         runtime,
         project_id=manifest.project_id,
