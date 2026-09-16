@@ -1,0 +1,10 @@
+{
+  "module": "m9_hooke_law",
+  "difficulty": "medium",
+  "system": "simple_system",
+  "law_version": "v1",
+  "noise_level": 0,
+  "environment_seed": 7213,
+  "score_seed": 7213,
+  "code_assisted": false
+}
