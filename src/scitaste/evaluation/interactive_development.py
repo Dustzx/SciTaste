@@ -80,7 +80,7 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     protocol_id: str
     project_id: str
     benchmark_id: str
@@ -114,6 +114,15 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
     executor_sha256: str = Field(pattern=_SHA256)
     idea_scientific_contract_sha256: str = Field(pattern=_SHA256)
     idea_revision_binding_sha256: str = Field(pattern=_SHA256)
+    episode_sampling_rule: Literal[
+        "all-compliant-turns",
+        "earliest-executed-nonterminal-after-observation",
+    ] = "all-compliant-turns"
+    maximum_episode_candidates: int = Field(default=20, ge=1, le=20)
+    candidate_credit_projection: Literal[
+        "shared-terminal-v1",
+        "action-local-scientific-v4",
+    ] = "shared-terminal-v1"
     protocol_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -138,6 +147,22 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
             excluded.add("workload_contract")
         if self.environment_sha256 is None:
             excluded.add("environment_sha256")
+        sampling_fields = {
+            "episode_sampling_rule",
+            "maximum_episode_candidates",
+            "candidate_credit_projection",
+        }
+        if self.schema_version == "1.0":
+            excluded.update(sampling_fields - self.model_fields_set)
+        elif (
+            self.episode_sampling_rule != "earliest-executed-nonterminal-after-observation"
+            or self.maximum_episode_candidates != 1
+            or self.candidate_credit_projection != "action-local-scientific-v4"
+        ):
+            raise ValueError(
+                "interactive development v1.1 requires one outcome-independent "
+                "post-observation action-local candidate"
+            )
         expected = content_sha256(self.model_dump(mode="json", exclude=excluded))
         if self.protocol_sha256 != expected:
             raise ValueError("interactive development protocol hash mismatch")
@@ -161,12 +186,20 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
             "workload_contract": workload_contract,
         }
         payload.pop("protocol_sha256", None)
+        excluded = {"protocol_sha256"}
+        if payload["schema_version"] == "1.0":
+            excluded.update(
+                {
+                    "episode_sampling_rule",
+                    "maximum_episode_candidates",
+                    "candidate_credit_projection",
+                }
+                - values.keys()
+            )
         unsigned = cls.model_construct(protocol_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            protocol_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"protocol_sha256"})
-            ),
+            protocol_sha256=content_sha256(unsigned.model_dump(mode="json", exclude=excluded)),
         )
 
 
@@ -528,8 +561,9 @@ def finalize_interactive_development_episodes(
         "terminal_error": receipt.terminal_error,
         "receipt_sha256": receipt.receipt_sha256,
     }
+    selected_lock_paths = _selected_development_lock_paths(protocol, receipt, lock_paths)
     items: list[InteractiveDevelopmentEpisodeItem] = []
-    for lock_path in lock_paths:
+    for lock_path in selected_lock_paths:
         lock_source = Path(lock_path).expanduser().resolve()
         if not lock_source.is_relative_to(run_root):
             raise ValueError("interactive development lock escapes its project run")
@@ -693,6 +727,17 @@ def finalize_interactive_development_episodes(
             expected_project_revision=expected_project_revision,
             output=candidate_path,
         )
+        if (
+            protocol.candidate_credit_projection == "action-local-scientific-v4"
+            and _candidate_has_observed_successor(receipt, turn)
+        ):
+            candidate = refine_interactive_development_candidate(
+                candidate,
+                receipt,
+                turn=turn,
+            )
+            candidate_path = turn_root / "SCIENTIFIC_CREDIT_CANDIDATE.json"
+            _write_new_json(candidate_path, candidate.model_dump_json(indent=2) + "\n")
         items.append(
             InteractiveDevelopmentEpisodeItem(
                 turn=turn,
@@ -722,6 +767,41 @@ def finalize_interactive_development_episodes(
     )
     _write_new_json(root / "BATCH.json", batch.model_dump_json(indent=2) + "\n")
     return batch
+
+
+def _selected_development_lock_paths(
+    protocol: InteractiveTasteDevelopmentProtocol,
+    receipt: InteractiveResearchRunReceipt,
+    lock_paths: tuple[str | Path, ...],
+) -> tuple[str | Path, ...]:
+    """Apply the frozen sampling rule without inspecting terminal score or credit."""
+
+    if protocol.episode_sampling_rule == "all-compliant-turns":
+        return lock_paths[: protocol.maximum_episode_candidates]
+    for index, record in enumerate(receipt.turns):
+        if record.turn != index + 1:
+            raise ValueError("interactive development receipt turns are not contiguous")
+        prior_observation_exists = any(
+            prior.observation is not None for prior in receipt.turns[:index]
+        )
+        if not prior_observation_exists:
+            continue
+        action_type = record.guidance.guidance.action_type
+        if action_type == "STOP":
+            continue
+        if not guidance_action_complied(action_type, record.decision.proposal.action):
+            continue
+        if record.observation is None:
+            continue
+        return (lock_paths[index],)
+    return ()
+
+
+def _candidate_has_observed_successor(
+    receipt: InteractiveResearchRunReceipt,
+    turn: int,
+) -> bool:
+    return turn < len(receipt.turns) and receipt.turns[turn].turn == turn + 1
 
 
 def refine_interactive_development_candidate(

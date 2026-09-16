@@ -172,6 +172,7 @@ def prepare(args: argparse.Namespace) -> tuple[InteractiveTasteDevelopmentProtoc
         }
     )
     protocol = InteractiveTasteDevelopmentProtocol.create(
+        schema_version="1.1",
         protocol_id=args.protocol_id,
         project_id=args.project_id,
         benchmark_id="newtonbench",
@@ -209,6 +210,9 @@ def prepare(args: argparse.Namespace) -> tuple[InteractiveTasteDevelopmentProtoc
         ),
         idea_scientific_contract_sha256=idea_scientific_contract_sha256(idea),
         idea_revision_binding_sha256=idea.binding_sha256,
+        episode_sampling_rule="earliest-executed-nonterminal-after-observation",
+        maximum_episode_candidates=1,
+        candidate_credit_projection="action-local-scientific-v4",
     )
     protocol_path = stage_root / "PROTOCOL.json"
     save_interactive_taste_development_protocol(protocol, protocol_path)

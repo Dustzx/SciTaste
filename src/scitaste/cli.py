@@ -283,6 +283,13 @@ from scitaste.evaluation import (
     source_projection_protocol_sha256,
     summarize_evaluation_readiness,
 )
+from scitaste.evaluation.adaptive_policy_activation import (
+    compile_adaptive_policy_activation_no_run_plan,
+    initialize_adaptive_policy_activation_state,
+    inspect_adaptive_policy_activation,
+    load_adaptive_policy_activation_manifest,
+    save_adaptive_policy_activation_artifact,
+)
 from scitaste.evaluation.decision_episode_integrity import (
     inspect_track_a_decision_episode_integrity_plan,
     prepare_track_a_decision_episode_integrity_plan,
@@ -4010,6 +4017,21 @@ def build_parser() -> argparse.ArgumentParser:
     activation_approve.add_argument("--output", type=Path, required=True)
     _add_log_level_option(activation_approve)
     activation_approve.set_defaults(handler=_handle_evaluation_campaign_activation_approve)
+    adaptive_activation = evaluation_commands.add_parser(
+        "adaptive-policy-activation-inspect",
+        help="Compile the exact no-run adaptive-allocation activation cohort",
+    )
+    adaptive_activation.add_argument("--manifest", type=Path, required=True)
+    adaptive_activation.add_argument("--workspace-root", type=Path, default=Path("."))
+    adaptive_activation.add_argument("--plan-output", type=Path, default=None)
+    adaptive_activation.add_argument("--state-output", type=Path, default=None)
+    adaptive_activation.add_argument(
+        "--require-owner-approval-ready",
+        action="store_true",
+        help="return nonzero unless every static cohort boundary is closed",
+    )
+    _add_log_level_option(adaptive_activation)
+    adaptive_activation.set_defaults(handler=_handle_evaluation_adaptive_policy_activation_inspect)
     direct_agent_run = evaluation_commands.add_parser(
         "direct-agent-run",
         help="Run one exactly approved prompt-only API control cell",
@@ -11080,6 +11102,40 @@ def _handle_evaluation_campaign_activation_approve(args: argparse.Namespace) -> 
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_adaptive_policy_activation_inspect(
+    args: argparse.Namespace,
+) -> int:
+    manifest, manifest_file_sha256 = load_adaptive_policy_activation_manifest(args.manifest)
+    inspection = inspect_adaptive_policy_activation(
+        manifest,
+        manifest_file_sha256=manifest_file_sha256,
+        workspace_root=args.workspace_root,
+    )
+    plan = compile_adaptive_policy_activation_no_run_plan(manifest, inspection)
+    state = initialize_adaptive_policy_activation_state(plan)
+    payload = {
+        "manifest": str(args.manifest),
+        **inspection.model_dump(mode="json"),
+        "plan_sha256": plan.plan_sha256,
+        "ordered_task_count": len(plan.ordered_task_ids),
+        "owner_approval_required": plan.owner_approval_required,
+        "execution_authorized": plan.execution_authorized,
+        "initial_state_sha256": state.state_sha256,
+    }
+    if args.plan_output is not None:
+        payload["plan_output"] = str(
+            save_adaptive_policy_activation_artifact(plan, args.plan_output)
+        )
+    if args.state_output is not None:
+        payload["state_output"] = str(
+            save_adaptive_policy_activation_artifact(state, args.state_output)
+        )
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_owner_approval_ready and not inspection.ready_for_owner_approval:
+        return 1
     return 0
 
 

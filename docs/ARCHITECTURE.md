@@ -4745,3 +4745,27 @@ review, a support threshold of three, and cross-domain transfer followed by the
 MLRC-domain state probe. It is policy-training data, not another B0 or paper
 effect experiment, and cannot lower the support threshold to manufacture an
 active treatment.
+
+### ADR-147: policy activation is a prospective cohort, not a turn harvest
+
+Status: accepted and implemented at the no-run and episode-projection boundary;
+external execution remains owner-gated.
+
+The adaptive-allocation head cannot be activated by collecting every decision
+from a trajectory and later retaining whichever decisions receive favorable
+credit. Each frozen NewtonBench source group contributes at most one candidate:
+the earliest actually executed non-STOP controller decision after at least one
+observation was already retained. The selector cannot read terminal score or
+credit direction, never substitutes STOP when no decision qualifies, and keeps
+failed or zero-score trajectories in the campaign record. When a successor
+belief update exists, the selected candidate is projected to action-local
+scientific credit before independent attribution and outcome-blind family
+review; otherwise it remains quarantined rather than being replaced.
+
+`adaptive-policy-activation-inspect` turns the versioned activation manifest
+into a hash-bound project plan and initial state. It verifies the exact v6
+predecessor, nine task bytes and canonical groups, clean NewtonBench commit,
+program and limits, model configs, and resource arithmetic. The initial state is
+restart-safe but explicitly lacks API, benchmark, GPU, policy-refresh, formal
+claim, or E2 execution authority. Approval and execution remain separate state
+transitions so a no-run readiness result cannot launch work.

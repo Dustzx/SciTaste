@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Made adaptive-allocation activation an executable no-run project contract.
+  The new inspector verifies the exact predecessor policy/readiness, all nine
+  NewtonBench task and canonical source-group identities, clean pinned checkout,
+  model/reviewer configs, and aggregate resource arithmetic without touching a
+  backend. Interactive development protocol v1.1 now enforces the preregistered
+  one-candidate-per-task rule: the earliest actually executed non-STOP decision
+  after retained feedback is selected independently of score or credit, then
+  projected to action-local scientific credit when a successor update exists.
+  A hash-bound initial campaign state provides restart-safe task order while
+  retaining zero execution authority before owner approval.
 - Closed the missing causal-treatment gate in E2. Schema 1.1 now binds the
   exact family-conditioned policy, readiness report, adaptive-allocation head,
   source-group exclusions, and outcome-blind H4 state-probe evidence before a

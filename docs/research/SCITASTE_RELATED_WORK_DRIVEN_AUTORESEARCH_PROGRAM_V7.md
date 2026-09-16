@@ -241,7 +241,16 @@ uses one post-feedback nonterminal decision per source group, retains failures,
 and forbids score- or credit-directed selection. Its hard ceiling is 81
 GLM-5.3-Flash calls / 1,080,000 tokens, plus at most 36 local Qwen3-VL-4B/8B
 review generations and eight aggregate review GPU-hours. It requires no task GPU
-and no download. These resources are disclosed, not authorized or consumed.
+and no download. These resources are disclosed, not authorized or consumed. The
+typed no-run compiler verifies every predecessor, task, canonical source group,
+checkout, model, and resource binding and produces plan SHA-256
+`50f37408330ab47c718d1b25a0455a0a5869b316849a6e3b8c450470d05ad310` plus
+initial state SHA-256
+`6e45a1ad9dc1d8209882c7cc1c96b425073f73b7768d891ad46f1cf8624c9f60`.
+That state remains `awaiting-owner-approval` with all nine attempt counts at
+zero. Interactive protocol v1.1 makes the sampling promise executable: one
+earliest actually executed non-STOP decision after retained feedback per task,
+selected without terminal score or credit direction and never replaced by STOP.
 
 The remote fixed-revision `Qwen/Qwen3.5-9B` candidate is now statically complete:
 16 files, four indexed shards, 15,664,539,861 bytes, aggregate checkpoint digest

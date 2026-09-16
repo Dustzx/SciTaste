@@ -480,3 +480,86 @@ def test_mlrc_prelaunch_projects_the_same_unified_t1_contract() -> None:
     assert contract.task_model_id == "loc-point-transformer"
     assert contract.candidate_checkpoint_required is True
     assert contract.scitaste_research_backbone_weight_updates is False
+
+
+def _sampling_record(
+    turn: int,
+    *,
+    action_type: str,
+    model_action: str,
+    observation: object | None,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        turn=turn,
+        guidance=SimpleNamespace(guidance=SimpleNamespace(action_type=action_type)),
+        decision=SimpleNamespace(proposal=SimpleNamespace(action=model_action)),
+        observation=observation,
+    )
+
+
+def test_activation_sampling_selects_one_post_observation_nonterminal_decision() -> None:
+    protocol = SimpleNamespace(
+        episode_sampling_rule="earliest-executed-nonterminal-after-observation",
+        maximum_episode_candidates=1,
+    )
+    receipt = SimpleNamespace(
+        turns=(
+            _sampling_record(
+                1,
+                action_type="PROBE",
+                model_action="run_experiments",
+                observation={"results": [1]},
+            ),
+            _sampling_record(
+                2,
+                action_type="ANALYZE",
+                model_action="run_code",
+                observation={"stdout": "supported"},
+            ),
+            _sampling_record(
+                3,
+                action_type="STOP",
+                model_action="submit_hypothesis",
+                observation=None,
+            ),
+        )
+    )
+
+    selected = interactive_development_module._selected_development_lock_paths(
+        protocol,
+        receipt,
+        ("turn-1.json", "turn-2.json", "turn-3.json"),
+    )
+
+    assert selected == ("turn-2.json",)
+
+
+def test_activation_sampling_does_not_substitute_terminal_or_unexecuted_turn() -> None:
+    protocol = SimpleNamespace(
+        episode_sampling_rule="earliest-executed-nonterminal-after-observation",
+        maximum_episode_candidates=1,
+    )
+    receipt = SimpleNamespace(
+        turns=(
+            _sampling_record(
+                1,
+                action_type="PROBE",
+                model_action="run_experiments",
+                observation={"results": [1]},
+            ),
+            _sampling_record(
+                2,
+                action_type="STOP",
+                model_action="submit_hypothesis",
+                observation=None,
+            ),
+        )
+    )
+
+    selected = interactive_development_module._selected_development_lock_paths(
+        protocol,
+        receipt,
+        ("turn-1.json", "turn-2.json"),
+    )
+
+    assert selected == ()
