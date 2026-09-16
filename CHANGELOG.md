@@ -15,6 +15,17 @@
 - Added backward-compatible SciTasteBench v4 fields and runner metrics for
   decision context, Taste judgment, AI-panel authority, hidden action utility,
   abstention, and paired budgeted-regret reduction.
+- Materialized the outcome-separated natural development intake without model,
+  API, GPU, or formal-split access: 370 candidates collapse deterministically
+  to 141 source-group representatives across three domains, with 101 groups not
+  assigned an exact prior Track-A role and all observed outcomes retained in a
+  scoring-only vault.
+- Froze the causal interpretation behind the five endpoints. Strong-title
+  admission now requires evidence that structure beats identical raw bytes,
+  applicability beats high-quality mismatched advice, delayed credit beats
+  both no-update and shuffled controls, and behavior-mediated Taste shifts the
+  objective progress--budget frontier. Null signatures contract the claim
+  instead of being hidden by an aggregate score.
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning.

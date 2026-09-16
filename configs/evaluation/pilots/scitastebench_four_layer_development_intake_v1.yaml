@@ -1,0 +1,37 @@
+schema_version: "1.0"
+intake_id: scitastebench-four-layer-development-intake-v1
+project_id: scitaste-self-development
+protocol:
+  locator: configs/evaluation/programs/iclr2027_scitastebench_four_layer_v1.yaml
+  sha256: 7259834bc56a32d447088ae36d1f58b5ef27a3d1188bb01310d918626486bde0
+prior_track_a_plan:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-track-a-ai-pilot-v1/preparation-v2/PLAN.json
+  sha256: 5a467f420a0adb8fcbcd373cc69049550451ffa456484c59c99a1f176bd7b165
+packages:
+  - package_id: aries-original-v1
+    partition: original-construction
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-source-review-v1/CAMPAIGN.json
+      sha256: 85bced0fcc8a470578aa2fee4040c6182900657ab474c286eb21aad30b426844
+  - package_id: f1000-original-v1
+    partition: original-construction
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/reviews/f1000-multidomain-taste-source-review-v1/CAMPAIGN.json
+      sha256: deb793bc065d09ddcfd6e02350bd430ecb81f9fc563d9f1bb7b466ebcd60263e
+  - package_id: aries-validation-reserve-v3
+    partition: validation-reserve
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-validation-reserve-v1/derived/taste-source-review-v3/CAMPAIGN.json
+      sha256: 015d9a8a38b13462f0e109d4c984b30383e29bf677427b75e02e5a9dc5a400e4
+  - package_id: f1000-validation-reserve-v2
+    partition: validation-reserve
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-validation-reserve-v2/derived/taste-source-review-v2/CAMPAIGN.json
+      sha256: b3c53b960577ed7bb5230725c708d96212658054cd685a9685c5d008a69218c6
+representative_selection: minimum-sha256-per-source-group-v1
+target_case_count: 36
+precedent_source_count: 16
+model_calls_authorized: false
+api_spend_authorized: false
+gpu_work_authorized: false
+formal_split_access_authorized: false

@@ -26,13 +26,23 @@ The original natural construction pool contains 273 candidate review-to-revision
 episodes from 81 source groups: 196 ARIES candidates from 42 groups and 77 F1000
 candidates from 39 groups. Together they expose three observed domain or
 publisher-subject strata, but those strata are not yet independently confirmed.
-An independently acquired validation reserve now adds 84 candidate trajectories
-from 47 source-group-disjoint works: seven natural ARIES dev review/reply cases
+An independently acquired validation reserve now adds 97 candidate trajectories
+from 60 source-group-disjoint works: twenty natural ARIES dev review/reply cases
 and 77 F1000 cases from forty previously unseen works. ARIES reply-to-edit
 association is heuristic and explicitly not a human label. The combined local
-construction inventory is therefore 357 candidates across 128 source groups,
+construction inventory is therefore 370 candidates across 141 source groups,
 but the original calibration sample and the new reserve remain separately
 identified rather than being pooled after inspection.
+
+The current no-call development intake has materialized one deterministic,
+outcome-hidden representative for each of those 141 groups at
+`outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/`.
+It records 101 groups with no exact prior Track-A role and 40 groups already used
+as a target or precedent, spans computing (62), ecology (39), and public health
+(40), and keeps later outcomes in a separate scoring-only vault. This establishes
+screening capacity, not 36 accepted cases: source aliases, family coverage,
+utility construction, AI-panel labels, and the target/precedent allocation still
+have to close before a development suite exists.
 The candidates are not benchmark items or gold outcomes. A source enters a
 formal population only after the applicable domain, quality, privacy,
 decision-family, grounded-abstraction, attribution, and decision-episode
@@ -112,6 +122,16 @@ objective research progress per matched budget. In particular, an AI-panel
 preference cannot be relabelled as objective scientific progress, and a loaded
 Taste policy cannot receive causal credit unless it changes an eligible action
 that is carried through execution to a hidden outcome.
+
+These metrics support a top-tier argument only through their joint causal
+signature. The frozen interpretation asks whether structure beats the same raw
+bytes, matched applicability beats equally strong but mismatched advice,
+delayed credit beats both no update and shuffled credit, and the resulting
+behavior shifts objective progress per budget. Progress--budget frontiers,
+valid-evidence yield, selective regret, behavior-change rate, and invalid claims
+explain *how* an effect arises; they are not pooled into a convenient composite.
+The full positive, null, and boundary interpretation table is in the four-layer
+protocol.
 
 Suite schema `4.0` adds the D-layer execution fields without changing legacy
 suite hashes: six decision-context families, the orthogonal seven-family Taste

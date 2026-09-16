@@ -336,6 +336,9 @@ from scitaste.evaluation.review_authority import (
     load_ai_review_finality_policy,
     load_objective_title_evidence_registration,
 )
+from scitaste.evaluation.scitastebench_development_intake import (
+    materialize_scitastebench_development_intake,
+)
 from scitaste.evaluation.taste_abstraction_batch import (
     compile_taste_abstraction_runtime_batch,
 )
@@ -2391,6 +2394,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(cohort_inspect)
     cohort_inspect.set_defaults(handler=_handle_evaluation_prospective_cohort_inspect)
+    development_intake = evaluation_commands.add_parser(
+        "scitastebench-v4-development-intake",
+        help="Separate natural-source screening bytes from hidden outcomes for v4 development",
+    )
+    development_intake.add_argument("--config", type=Path, required=True)
+    development_intake.add_argument("--locator-root", type=Path, default=Path("."))
+    development_intake.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(development_intake)
+    development_intake.set_defaults(handler=_handle_evaluation_scitastebench_v4_intake)
     abstraction_review_prepare = evaluation_commands.add_parser(
         "ai-abstraction-review-prepare",
         help="Bridge accepted grounded abstractions into two AI-only review requests",
@@ -8522,6 +8534,43 @@ def _handle_evaluation_prospective_cohort_inspect(args: argparse.Namespace) -> i
     )
     if args.require_formal_ready and manifest.status != "formal-track-a-ready":
         return 1
+    return 0
+
+
+def _handle_evaluation_scitastebench_v4_intake(args: argparse.Namespace) -> int:
+    manifest = materialize_scitastebench_development_intake(
+        config_path=args.config,
+        locator_root=args.locator_root,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "development-intake-materialized",
+                "intake_id": manifest.intake_id,
+                "manifest_sha256": manifest.manifest_sha256,
+                "raw_candidate_count": manifest.raw_candidate_count,
+                "source_group_count": manifest.source_group_count,
+                "screening_item_count": manifest.screening_item_count,
+                "unused_source_group_count": manifest.unused_source_group_count,
+                "domain_counts": manifest.domain_counts,
+                "partition_counts": manifest.partition_counts,
+                "enough_unused_groups_for_target_and_precedent_allocation": (
+                    manifest.enough_unused_groups_for_target_and_precedent_allocation
+                ),
+                "outcome_fields_exposed_to_screening": (
+                    manifest.outcome_fields_exposed_to_screening
+                ),
+                "model_calls_performed": manifest.model_calls_performed,
+                "api_spend_performed": manifest.api_spend_performed,
+                "gpu_work_performed": manifest.gpu_work_performed,
+                "formal_split_opened": manifest.formal_split_opened,
+                "output": str(args.output / "MANIFEST.json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

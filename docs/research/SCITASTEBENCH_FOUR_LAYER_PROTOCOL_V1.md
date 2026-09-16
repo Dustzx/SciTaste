@@ -77,6 +77,66 @@ The paper reports five separate endpoints:
 Pairwise accuracy, calibration, wrong-level decisions, and AI-panel preference
 remain diagnostics. They are not relabelled as objective scientific progress.
 
+## What would make the result scientifically informative
+
+Lifecycle coverage is necessary but not sufficient. The study is not an ICLR
+result merely because an agent traverses every stage, and the five endpoints are
+not themselves an insight. The registered tests must distinguish the following
+mechanistic hypotheses:
+
+1. **Structure over bytes.** A grounded Taste abstraction should outperform a
+   token-matched view of the same raw source. Otherwise the contribution is
+   ordinary retrieval or context packing.
+2. **Applicability over generic advice.** Matched Taste should outperform an
+   equally high-quality, equal-token, source-disjoint but inapplicable Taste
+   abstraction. Otherwise the representation may contain only generic research
+   maxims.
+3. **Selective value at consequential decisions.** Regret reduction should be
+   largest for outcome-blind states registered as high-ambiguity or
+   high-leverage, and should not be manufactured by always continuing, always
+   stopping, or avoiding costly actions.
+4. **Credit rather than accumulation.** Delayed-outcome updating should improve
+   later source-disjoint decisions relative to both no update and shuffled
+   credit. A gain over no update but not shuffled credit is consistent with more
+   context, ordering, or drift rather than learning from outcomes.
+5. **Efficiency rather than activity.** In complete projects, Taste should move
+   the objective progress--budget frontier by reducing invalid, redundant, or
+   low-information work. More experiments, tokens, or prose are not themselves
+   progress.
+
+Ambiguity, decision leverage, domain shift, outcome polarity, and visible-token
+budget are frozen as moderators before labels or hidden outcomes are opened.
+They explain heterogeneity; they do not create post-hoc subgroups. Supporting
+analyses report the progress--budget frontier, valid-evidence yield, selective
+regret/abstention curve, behavior-change rate, and invalid-claim rate. These
+analyses are never averaged into a new omnibus score.
+
+The same SA and D contrasts are repeated with at least two generator-model
+families. A single primary model may own the much more expensive P-layer causal
+estimate, but a second model-family sensitivity result is required before the
+paper describes the decision mechanism as model-general. An identifier-free
+memorization probe and source-group isolation are required because a model that
+recalls a public paper's later outcome has not exercised Scientific Taste.
+
+## Claim signatures
+
+The interpretation is frozen before execution:
+
+| Observed signature | Permitted interpretation |
+|---|---|
+| SA gain, specificity gap, lower D regret, delayed-credit gain, and behavior-mediated P gain | complete evidence for the strong *Improving ... through Scientific Taste* claim |
+| SA gain but no specificity gap | useful source compression; no evidence of context-sensitive Taste |
+| lower D regret but no P gain | local decision assistance that did not improve autonomous research |
+| P gain without an eligible Taste-induced behavior change | executor or run variance; no causal Taste attribution |
+| update beats no-update but not shuffled credit | context accumulation or drift; no delayed-credit learning claim |
+| gain only for the weaker generator family | compensatory scaffold benefit; model-general language is forbidden |
+| more activity without a better progress--budget frontier | automation throughput, not better scientific judgment |
+
+The strong title therefore requires a coherent causal signature rather than one
+favorable aggregate number. A bounded negative or boundary result remains
+reportable, but the paper title and claims must contract to the observed
+signature.
+
 ## Behavioral attribution
 
 Every P-layer result must retain the chain from policy state to action,
