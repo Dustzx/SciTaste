@@ -143,6 +143,21 @@ class VenueEvidenceProgramMode(StrEnum):
     COMPLETE_FOR_REVIEW = "evidence-program-complete-for-review"
 
 
+class VenueCompetitivenessBand(StrEnum):
+    """Paper-level distance from the evidence standard of accepted neighbours.
+
+    The bands are ordered scientific blockers, not an acceptance score.  In
+    particular, a favorable local experiment cannot skip a contradicted central
+    claim or an incomplete claim argument merely by increasing a benchmark count.
+    """
+
+    COMPARISON_BASIS_INCOMPLETE = "accepted-paper-comparison-basis-incomplete"
+    CENTRAL_CLAIM_CONTRADICTED = "central-claim-contradicted"
+    CENTRAL_ARGUMENT_INCOMPLETE = "central-claim-argument-incomplete"
+    BELOW_ACCEPTED_PORTFOLIO = "below-accepted-paper-evidence-portfolio"
+    DECLARED_REVIEW_COMPARABLE = "declared-evidence-program-review-comparable"
+
+
 class VenueEvidenceScaleMetric(StrEnum):
     """Comparable counts that describe how much evidence a paper actually carries."""
 
@@ -497,6 +512,34 @@ class RankedVenueGapAction(BaseModel):
     reason: str
 
 
+class VenueCompetitivenessAssessment(BaseModel):
+    """Explicitly contrast the whole paper with accepted same-venue evidence.
+
+    This intentionally exposes counts and categorical blockers instead of blending
+    incomparable properties into a readiness score.  It is the paper-level guard
+    against treating one controlled table as a top-venue evidence program.
+    """
+
+    model_config = _CONFIG
+
+    band: VenueCompetitivenessBand
+    same_venue_neighbour_ids: tuple[str, ...]
+    same_venue_comparison_ready: bool
+    central_innovation_claim_count: int = Field(ge=0)
+    central_innovation_admitted_support_count: int = Field(ge=0)
+    central_innovation_contradicted_count: int = Field(ge=0)
+    central_claim_argument_complete_count: int = Field(ge=0)
+    accepted_neighbour_count: int = Field(ge=0)
+    accepted_neighbour_component_shape_match_count: int = Field(ge=0)
+    accepted_neighbour_with_scale_reference_count: int = Field(ge=0)
+    accepted_neighbour_scale_reference_match_count: int = Field(ge=0)
+    admitted_empirical_family_count: int = Field(ge=0)
+    blocking_claim_ids: tuple[str, ...]
+    missing_accepted_components: tuple[VenueEvidenceComponent, ...]
+    single_controlled_result_is_top_venue_insufficient: Literal[True] = True
+    diagnosis: str
+
+
 class VenueEvidenceProgramDecision(BaseModel):
     """Controller decision produced from claims and accepted-paper evidence gaps.
 
@@ -508,6 +551,7 @@ class VenueEvidenceProgramDecision(BaseModel):
     model_config = _CONFIG
 
     mode: VenueEvidenceProgramMode
+    competitiveness_band: VenueCompetitivenessBand
     next_action_id: str | None
     paper_polish_is_next_action: bool
     paper_level_claims_authorized: bool
@@ -703,6 +747,7 @@ class VenueGapAssessment(BaseModel):
     admitted_evidence_family_count: int = Field(ge=0)
     evidence_portfolio: VenueEvidencePortfolioAssessment
     venue_comparison: VenueComparisonAssessment | None = None
+    top_venue_comparison: VenueCompetitivenessAssessment
     evidence_program_decision: VenueEvidenceProgramDecision
     single_result_is_insufficient: Literal[True] = True
     acceptance_prediction_made: Literal[False] = False
@@ -789,7 +834,17 @@ def assess_venue_gap(
     portfolio = _assess_evidence_portfolio(manifest)
     paper_hours = _paper_deadline_hours(deadline)
     ranked = _rank_actions(manifest, assessments, paper_hours, comparison)
-    program_decision = _decide_evidence_program(position, comparison, ranked)
+    competitiveness = _assess_top_venue_competitiveness(
+        manifest,
+        comparison,
+        portfolio,
+    )
+    program_decision = _decide_evidence_program(
+        position,
+        comparison,
+        ranked,
+        competitiveness,
+    )
     criterion_rejection_reasons = tuple(
         item.diagnosis
         for item in sorted(
@@ -832,6 +887,7 @@ def assess_venue_gap(
         admitted_evidence_family_count=len(admitted_families),
         evidence_portfolio=portfolio,
         venue_comparison=comparison,
+        top_venue_comparison=competitiveness,
         evidence_program_decision=program_decision,
         single_result_is_insufficient=True,
         acceptance_prediction_made=False,
@@ -1735,10 +1791,148 @@ def _rank_actions(
     )
 
 
+def _assess_top_venue_competitiveness(
+    manifest: VenueGapManifest,
+    comparison: VenueComparisonAssessment | None,
+    portfolio: VenueEvidencePortfolioAssessment,
+) -> VenueCompetitivenessAssessment:
+    """Locate the first paper-level blocker relative to accepted neighbours."""
+
+    if comparison is None:
+        return VenueCompetitivenessAssessment(
+            band=VenueCompetitivenessBand.COMPARISON_BASIS_INCOMPLETE,
+            same_venue_neighbour_ids=(),
+            same_venue_comparison_ready=False,
+            central_innovation_claim_count=0,
+            central_innovation_admitted_support_count=0,
+            central_innovation_contradicted_count=0,
+            central_claim_argument_complete_count=0,
+            accepted_neighbour_count=0,
+            accepted_neighbour_component_shape_match_count=0,
+            accepted_neighbour_with_scale_reference_count=0,
+            accepted_neighbour_scale_reference_match_count=0,
+            admitted_empirical_family_count=portfolio.admitted_empirical_family_count,
+            blocking_claim_ids=(),
+            missing_accepted_components=(),
+            diagnosis=(
+                "No source-bound accepted-paper comparison is attached. A local result cannot "
+                "establish novelty or top-venue evidence strength without named same-venue "
+                "nearest neighbours."
+            ),
+        )
+
+    target_series = _venue_series(manifest.target_venue)
+    same_venue_ids = tuple(
+        sorted(
+            item.paper_id
+            for item in manifest.nearest_neighbours
+            if _venue_series(item.venue) == target_series
+        )
+    )
+    innovation_by_id = {item.claim_id: item for item in comparison.innovation_claims}
+    central_arguments = tuple(
+        item
+        for item in comparison.claim_arguments
+        if item.centrality is VenueClaimCentrality.CENTRAL
+    )
+    central_claim_ids = tuple(item.claim_id for item in central_arguments)
+    central_innovations = tuple(
+        innovation_by_id[item]
+        for item in central_claim_ids
+        if item in innovation_by_id
+    )
+    admitted_central = sum(
+        item.evidence_status is VenueInnovationEvidenceStatus.ADMITTED_SUPPORT
+        for item in central_innovations
+    )
+    contradicted_central = sum(
+        item.evidence_status is VenueInnovationEvidenceStatus.CONTRADICTED
+        for item in central_innovations
+    )
+    complete_central = sum(item.complete_for_review for item in central_arguments)
+    blocking_claim_ids = tuple(
+        item.claim_id for item in central_arguments if not item.complete_for_review
+    )
+    component_matches = sum(
+        item.component_shape_matched for item in comparison.accepted_neighbour_gaps
+    )
+    neighbours_with_scale = tuple(
+        item for item in comparison.accepted_neighbour_gaps if item.scale_gaps
+    )
+    scale_matches = sum(item.scale_reference_matched for item in neighbours_with_scale)
+    missing_components = tuple(
+        sorted(
+            set(comparison.missing_or_unadmitted_target_components)
+            | set(comparison.missing_or_unadmitted_accepted_majority_components),
+            key=lambda item: item.value,
+        )
+    )
+
+    if not comparison.same_venue_lineage_present:
+        band = VenueCompetitivenessBand.COMPARISON_BASIS_INCOMPLETE
+        diagnosis = (
+            "The comparison lacks at least two recent accepted papers from the target venue "
+            "series, so novelty and evidence strength are not yet calibrated to the intended "
+            "review standard."
+        )
+    elif contradicted_central:
+        band = VenueCompetitivenessBand.CENTRAL_CLAIM_CONTRADICTED
+        diagnosis = (
+            f"{contradicted_central}/{len(central_innovations)} central innovation claims have "
+            "admitted contradictory evidence. The paper is at mechanism-repair stage, not "
+            "top-venue result-synthesis stage, regardless of any favorable development table."
+        )
+    elif not central_arguments or complete_central < len(central_arguments):
+        band = VenueCompetitivenessBand.CENTRAL_ARGUMENT_INCOMPLETE
+        diagnosis = (
+            f"Only {complete_central}/{len(central_arguments)} central claim arguments satisfy "
+            "their claim-linked evidence contracts. A controlled result is a mechanism signal, "
+            "not a complete paper argument."
+        )
+    elif (
+        component_matches < comparison.accepted_neighbour_count
+        or scale_matches < len(neighbours_with_scale)
+    ):
+        band = VenueCompetitivenessBand.BELOW_ACCEPTED_PORTFOLIO
+        diagnosis = (
+            f"The current paper matches the admitted component shape of {component_matches}/"
+            f"{comparison.accepted_neighbour_count} accepted neighbours and registered scale "
+            f"references for {scale_matches}/{len(neighbours_with_scale)}. The central argument "
+            "may be formed, but the experimental portfolio remains below the accepted-paper "
+            "reference set."
+        )
+    else:
+        band = VenueCompetitivenessBand.DECLARED_REVIEW_COMPARABLE
+        diagnosis = (
+            "The declared central arguments and accepted-neighbour evidence portfolio are "
+            "complete for review. This is neither an acceptance prediction nor a claim of "
+            "equal novelty, rigor, or scientific importance."
+        )
+    return VenueCompetitivenessAssessment(
+        band=band,
+        same_venue_neighbour_ids=same_venue_ids,
+        same_venue_comparison_ready=comparison.same_venue_lineage_present,
+        central_innovation_claim_count=len(central_innovations),
+        central_innovation_admitted_support_count=admitted_central,
+        central_innovation_contradicted_count=contradicted_central,
+        central_claim_argument_complete_count=complete_central,
+        accepted_neighbour_count=comparison.accepted_neighbour_count,
+        accepted_neighbour_component_shape_match_count=component_matches,
+        accepted_neighbour_with_scale_reference_count=len(neighbours_with_scale),
+        accepted_neighbour_scale_reference_match_count=scale_matches,
+        admitted_empirical_family_count=portfolio.admitted_empirical_family_count,
+        blocking_claim_ids=blocking_claim_ids,
+        missing_accepted_components=missing_components,
+        single_controlled_result_is_top_venue_insufficient=True,
+        diagnosis=diagnosis,
+    )
+
+
 def _decide_evidence_program(
     position: SubmissionEvidencePosition,
     comparison: VenueComparisonAssessment | None,
     ranked: tuple[RankedVenueGapAction, ...],
+    competitiveness: VenueCompetitivenessAssessment,
 ) -> VenueEvidenceProgramDecision:
     blocking_claims = (
         ()
@@ -1810,6 +2004,7 @@ def _decide_evidence_program(
     authorized = mode is VenueEvidenceProgramMode.COMPLETE_FOR_REVIEW
     return VenueEvidenceProgramDecision(
         mode=mode,
+        competitiveness_band=competitiveness.band,
         next_action_id=None if next_action is None else next_action.action_id,
         paper_polish_is_next_action=(
             authorized
@@ -1897,6 +2092,8 @@ __all__ = [
     "VenueClaimEvidenceContract",
     "VenueComparisonAssessment",
     "VenueComparisonProfile",
+    "VenueCompetitivenessAssessment",
+    "VenueCompetitivenessBand",
     "VenueComponentDirection",
     "VenueComponentMaturity",
     "VenueContributionAxis",

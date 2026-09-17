@@ -11,6 +11,7 @@ from scitaste.evidence.venue_gap import (
     VenueClaimCentrality,
     VenueClaimEvidenceContract,
     VenueComparisonProfile,
+    VenueCompetitivenessBand,
     VenueContributionAxis,
     VenueEvidenceComponent,
     VenueEvidenceCriterion,
@@ -239,6 +240,9 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert assessment.evidence_program_decision.next_action_id == "broad-experiment"
     assert assessment.evidence_program_decision.paper_level_claims_authorized is False
     assert assessment.evidence_program_decision.paper_polish_is_next_action is False
+    assert assessment.evidence_program_decision.competitiveness_band is (
+        VenueCompetitivenessBand.CENTRAL_ARGUMENT_INCOMPLETE
+    )
     assert assessment.evidence_program_decision.blocking_central_claim_ids == (
         "conditional-scientific-policy",
     )
@@ -288,6 +292,20 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
         VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
         VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
     )
+    assert assessment.top_venue_comparison.band is (
+        VenueCompetitivenessBand.CENTRAL_ARGUMENT_INCOMPLETE
+    )
+    assert assessment.top_venue_comparison.same_venue_comparison_ready is True
+    assert assessment.top_venue_comparison.same_venue_neighbour_ids == (
+        "accepted-neighbour-1",
+        "accepted-neighbour-2",
+    )
+    assert assessment.top_venue_comparison.central_innovation_claim_count == 1
+    assert assessment.top_venue_comparison.central_innovation_admitted_support_count == 0
+    assert assessment.top_venue_comparison.central_claim_argument_complete_count == 0
+    assert assessment.top_venue_comparison.accepted_neighbour_component_shape_match_count == 0
+    assert assessment.top_venue_comparison.accepted_neighbour_scale_reference_match_count == 0
+    assert assessment.top_venue_comparison.single_controlled_result_is_top_venue_insufficient
 
     admitted_negative = manifest.evidence[0].model_copy(
         update={
@@ -308,6 +326,10 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert contradicted.evidence_program_decision.mode.value == (
         "repair-contradicted-core-claim"
     )
+    assert contradicted.top_venue_comparison.band is (
+        VenueCompetitivenessBand.CENTRAL_CLAIM_CONTRADICTED
+    )
+    assert contradicted.top_venue_comparison.central_innovation_contradicted_count == 1
     assert contradicted.evidence_portfolio.admitted_empirical_family_count == 1
     assert contradicted.evidence_portfolio.contradicting_empirical_family_count == 1
     assert contradicted.venue_comparison is not None

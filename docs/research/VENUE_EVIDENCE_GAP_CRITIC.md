@@ -262,3 +262,21 @@ admitted contradictions it selects `repair-contradicted-core-claim`, routes to
 linked to the three majority gaps: end-to-end trajectories, human/expert validation, and strong
 system baselines. Thus accepted-paper comparison now changes resource allocation; it is not a
 post-hoc paragraph appended to the paper.
+
+V17 exposes the paper-level distance explicitly instead of requiring a reader to reconstruct it
+from several matrices. The compiler assigns the first binding `competitiveness_band` across five
+ordered checks: a source-bound same-venue comparison basis, admitted contradictions to central
+innovations, complete claim-linked central arguments, accepted-neighbour component shape, and
+accepted-neighbour scale references. These are categorical scientific blockers rather than a
+weighted readiness score, and the selected band is copied into the evidence-program controller.
+
+The refreshed V18 self-development assessment admits the expanded-source result as
+development-only support and routes the next action to
+`confirm-content-conditioned-taste-policy`. Its paper-level result remains
+`central-claim-contradicted`: four of five central innovation claims have admitted contradictory
+evidence, zero of five central claim arguments is complete, zero of five accepted ICLR neighbours
+is component-shape matched, and zero of five is scale-reference matched. The new positive
+expanded-source selector result is correctly retained as development evidence: it authorizes a
+new independent confirmation population but cannot erase the earlier admitted contradiction or
+close the end-to-end, expert-validation, and strong-baseline gaps. This is the framework-level
+recognition that a favorable controlled table remains far below an ICLR paper evidence program.
