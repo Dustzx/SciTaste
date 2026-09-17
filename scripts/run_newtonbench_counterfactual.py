@@ -21,6 +21,7 @@ from scitaste.evaluation.interactive_research import (
     InteractiveResearchLimits,
     InteractiveResearchLoop,
     InteractiveResearchPrefix,
+    InteractiveResearchRunReceipt,
     StructuredInteractiveResearchAgent,
     load_interactive_research_run_receipt,
     save_interactive_research_prefix,
@@ -39,7 +40,9 @@ from scitaste.model_nodes.openai_compatible import (
 _MAX_CONFIG_BYTES = 4 * 1_048_576
 
 
-def run(args: argparse.Namespace) -> CounterfactualActionSetResult:
+def run(
+    args: argparse.Namespace,
+) -> CounterfactualActionSetResult | InteractiveResearchRunReceipt:
     limits = _load_model(args.limits, InteractiveResearchLimits)
     task = _load_model(args.task, NewtonBenchTask)
     if task.code_assisted or limits.max_code_calls:
@@ -110,6 +113,8 @@ def run(args: argparse.Namespace) -> CounterfactualActionSetResult:
         or source.environment_sha256 != source_toolbox.environment_sha256
     ):
         raise ValueError("counterfactual source receipt targets another task environment")
+    if args.source_only:
+        return source
 
     prefix = InteractiveResearchPrefix.from_receipt(
         source,
@@ -211,6 +216,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repository-commit", required=True)
     parser.add_argument("--prefix-turn-count", type=int, default=2)
     parser.add_argument("--source-receipt", type=Path, default=None)
+    parser.add_argument(
+        "--source-only",
+        action="store_true",
+        help="Generate and persist only the common source trajectory for coverage planning.",
+    )
     parser.add_argument("--rollout-condition-id", default=None)
     parser.add_argument("--rollout-policy-id", default=None)
     parser.add_argument(
