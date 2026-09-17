@@ -141,6 +141,8 @@ def test_confirmation_contrast_clusters_by_independent_task() -> None:
                 study_id=f"{task_id}-turn-1",
                 task_id=task_id,
                 prefix_turn_count=1,
+                decision_status="accepted",
+                abstained=False,
                 accepted_invocation_id=f"invoke-{task_id}",
                 selected_action=CounterfactualResearchAction.PILOT,
                 selected_value=selected_value,

@@ -275,8 +275,10 @@ class CounterfactualDeliberationConfirmationState(BaseModel):
     study_id: str
     task_id: str
     prefix_turn_count: int = Field(ge=1)
-    accepted_invocation_id: str
-    selected_action: CounterfactualResearchAction
+    decision_status: Literal["accepted", "missing"]
+    abstained: bool
+    accepted_invocation_id: str | None = None
+    selected_action: CounterfactualResearchAction | None = None
     selected_value: float = Field(allow_inf_nan=False)
     selected_objective_observed: bool
     objective_preferred_actions: tuple[CounterfactualResearchAction, ...]
@@ -303,6 +305,7 @@ class CounterfactualDeliberationConfirmationReport(BaseModel):
     accepted_state_count: int = Field(ge=0)
     objective_observation_rate: float = Field(ge=0.0, le=1.0)
     selected_action_counts: dict[CounterfactualResearchAction, int]
+    abstention_count: int = Field(ge=0)
     distinct_selected_action_count: int = Field(ge=0)
     maximum_selected_action_share: float = Field(ge=0.0, le=1.0)
     mean_selector_value: float = Field(allow_inf_nan=False)
@@ -576,25 +579,25 @@ def analyze_counterfactual_deliberation_confirmation(
     )
     if lock.protocol_sha256 != protocol_sha256:
         raise ValueError("confirmation population targets another protocol")
-    accepted: dict[str, tuple[str, str]] = {}
+    accepted: dict[str, tuple[str, str | None]] = {}
     input_tokens = 0
     output_tokens = 0
     known_cost = 0.0
     for path in sorted(Path(ledger_root).resolve(strict=True).glob("*.json")):
         entry = RuntimeLedgerEntry.model_validate_json(path.read_bytes(), strict=True)
-        input_tokens += entry.usage.input_tokens
-        output_tokens += entry.usage.output_tokens
-        if entry.usage.cost_usd is not None:
-            known_cost += entry.usage.cost_usd
+        input_tokens += entry.input_tokens
+        output_tokens += entry.output_tokens
+        if entry.cost_effect_usd is not None:
+            known_cost += entry.cost_effect_usd
         if entry.outcome is not RuntimeOutcome.ACCEPTED:
             continue
         verified = taste_deliberation_from_ledger(path, evidence_root=evidence_root)
-        recommendation = verified.proposal.recommended_action_id
-        if recommendation is None:
-            raise ValueError("confirmation selector abstained despite an accepted proposal")
         if verified.input.fingerprint in accepted:
             raise ValueError("confirmation contains multiple accepted decisions for one state")
-        accepted[verified.input.fingerprint] = (verified.invocation_id, recommendation)
+        accepted[verified.input.fingerprint] = (
+            verified.invocation_id,
+            verified.proposal.recommended_action_id,
+        )
 
     states: list[CounterfactualDeliberationConfirmationState] = []
     branch_observed = 0
@@ -617,11 +620,6 @@ def analyze_counterfactual_deliberation_confirmation(
             or target.confirmation_protocol_sha256 != protocol_sha256
         ):
             raise ValueError("confirmation input differs from the frozen population")
-        try:
-            invocation_id, selected_name = accepted[input_data.fingerprint]
-        except KeyError as exc:
-            raise ValueError(f"no accepted confirmation decision for {binding.study_id}") from exc
-        selected_action = CounterfactualResearchAction(selected_name)
         objective_values = {
             CounterfactualResearchAction(key): value
             for key, value in target.objective_values.items()
@@ -633,21 +631,40 @@ def analyze_counterfactual_deliberation_confirmation(
         branch_observed += sum(objective_observed.values())
         branch_count += len(objective_observed)
         oracle_value = max(objective_values.values())
+        accepted_decision = accepted.get(input_data.fingerprint)
+        if accepted_decision is None:
+            invocation_id = None
+            selected_action = None
+            selected_value = protocol.endpoint.failure_value
+            selected_observed = False
+            abstained = False
+        else:
+            invocation_id, selected_name = accepted_decision
+            abstained = selected_name is None
+            selected_action = (
+                CounterfactualResearchAction.PROBE
+                if selected_name is None
+                else CounterfactualResearchAction(selected_name)
+            )
+            selected_value = objective_values[selected_action]
+            selected_observed = objective_observed[selected_action]
         states.append(
             CounterfactualDeliberationConfirmationState(
                 study_id=binding.study_id,
                 task_id=binding.task_id,
                 prefix_turn_count=binding.prefix_turn_count,
+                decision_status=("missing" if accepted_decision is None else "accepted"),
+                abstained=abstained,
                 accepted_invocation_id=invocation_id,
                 selected_action=selected_action,
-                selected_value=objective_values[selected_action],
-                selected_objective_observed=objective_observed[selected_action],
+                selected_value=selected_value,
+                selected_objective_observed=selected_observed,
                 objective_preferred_actions=tuple(
                     CounterfactualResearchAction(item)
                     for item in target.objective_preferred_actions
                 ),
                 oracle_value=oracle_value,
-                regret=max(0.0, oracle_value - objective_values[selected_action]),
+                regret=max(0.0, oracle_value - selected_value),
                 static_values={item: objective_values[item] for item in _STATIC_ACTIONS},
                 static_objective_observed={
                     item: objective_observed[item] for item in _STATIC_ACTIONS
@@ -665,7 +682,7 @@ def analyze_counterfactual_deliberation_confirmation(
         for action in _STATIC_ACTIONS
     )
     strongest_contrast = next(item for item in contrasts if item.baseline_action is strongest)
-    counts = Counter(item.selected_action for item in states)
+    counts = Counter(item.selected_action for item in states if item.selected_action is not None)
     state_count = len(states)
     observation_rate = branch_observed / branch_count
     complete_gate = len(accepted) == state_count == protocol.success.expected_state_count
@@ -729,6 +746,7 @@ def analyze_counterfactual_deliberation_confirmation(
         accepted_state_count=len(accepted),
         objective_observation_rate=observation_rate,
         selected_action_counts=dict(sorted(counts.items(), key=lambda item: item[0].value)),
+        abstention_count=sum(item.abstained for item in states),
         distinct_selected_action_count=len(counts),
         maximum_selected_action_share=max(counts.values()) / state_count,
         mean_selector_value=math.fsum(item.selected_value for item in states) / state_count,

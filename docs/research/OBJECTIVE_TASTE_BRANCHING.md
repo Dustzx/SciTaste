@@ -255,6 +255,36 @@ machine-readable record is
 Any subsequent confirmation must use unseen task trajectories and a policy frozen before
 their outcomes are opened.
 
+## Formal-v5 content-conditioned confirmation
+
+Formal v5 prospectively froze the expanded 17-case source library, the direct-action selector,
+four previously unseen NewtonBench task configurations, three prefix phases per task, all seven
+forced actions, provider configurations, seeds, and success gates. The protocol was committed
+before execution. Its 12 target states cover Fourier conduction, Malus' law, sound speed, and
+Bose--Einstein distribution environments. The source library and target task IDs are disjoint,
+and the compiled population lock verifies that neither source nor target outcomes occur in the
+selector inputs.
+
+All 84 forced branches completed. Seventy-five exposed RMSLE, for an 89.3% objective-observation
+rate above the frozen 85% admission floor. Eleven of twelve selector calls produced accepted
+decisions; `sound-early` was rejected for an output-schema violation. Because the protocol
+allowed exactly 12 selector invocations and did not preregister a repair attempt, the rejected
+state was not retried. The population is therefore `inadmissible` for confirmatory effect claims.
+
+The intention-to-treat diagnostic is also negative. Missing selection receives the frozen
+failure value, and accepted abstentions use the pre-existing `PROBE` fallback. The selector chose
+`PILOT` four times, `PROBE` six times, and `REFINE` once, with six abstentions. Mean bounded
+objective was 0.2044 versus 0.2559 for the strongest static action, `PROBE`; the paired difference
+was -0.0515 with exhaustive task-cluster interval [-0.1296, -0.0003]. Selector failure rate was
+25.0% versus 16.7% for static `PROBE`. Thus formal v5 fails coverage, mean-margin, clustered-
+uncertainty, and failure-noninferiority gates. It does not support a Scientific Taste effect.
+
+This split is closed against policy updates. The result can diagnose confirmation reliability
+and delimit the current claim, but it cannot be used to tune the selector and then be rerun as
+confirmation. Any new policy must be developed without formal-v5 outcomes and evaluated on a
+new population under a separately frozen protocol. The machine-readable report is
+`evaluations/counterfactual-taste-deliberation-confirmation-formal-v5/REPORT.json`.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

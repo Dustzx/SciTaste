@@ -280,3 +280,19 @@ expanded-source selector result is correctly retained as development evidence: i
 new independent confirmation population but cannot erase the earlier admitted contradiction or
 close the end-to-end, expert-validation, and strong-baseline gaps. This is the framework-level
 recognition that a favorable controlled table remains far below an ICLR paper evidence program.
+
+V19 records the first prospectively frozen confirmation of that expanded selector. Formal v5
+used four source-disjoint NewtonBench tasks, 12 target states, and 84 forced branches. Its branch
+observation rate passed the frozen 85% floor, but one of 12 selector calls was rejected and the
+protocol did not authorize retries, making the confirmation inadmissible. The intention-to-treat
+diagnostic was also unfavorable: mean bounded objective 0.2044 versus 0.2559 for static `PROBE`,
+task-cluster interval [-0.1296, -0.0003], and 25.0% versus 16.7% failure. The split remains closed
+against policy updates, so it is registered only as development-level contradictory boundary
+evidence rather than recycled into a second confirmation.
+
+The evidence controller consequently replaces `confirm-content-conditioned-taste-policy` with
+`rebuild-content-conditioned-taste-before-new-confirmation`. Paper-level claims remain
+unauthorized and the overall competitiveness band remains `central-claim-contradicted`. This is
+the intended behavior of the embedded top-venue critic: a positive development table triggers a
+real independent test, and a failed or inadmissible test moves the project back to mechanism
+development rather than disappearing from the manuscript or being patched post hoc.
