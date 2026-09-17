@@ -1,0 +1,41 @@
+schema_version: "1.0"
+run_id: scitastebench-boundary-decision-development-v3
+evidence_role: consumed-development-only
+boundary_package:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pair-consensus-development-v1/PACKAGE.json
+  sha256: e8016c69ef937bc5726c4b88ebd6b488063109dbd92e4da558b05189b2f567fa
+source_suite:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-natural-development-v5/SUITE.yaml
+  sha256: c7fea6b6632f0e6b5cfc15a87428a1e673513a7ddb0d539f1fe61e8c03f5d340
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+outcome_vault:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/OUTCOME_VAULT.json
+  sha256: cb5948d1840ea3bbd5b3a2313cbf270a5837a69547479acedbe2ad9d71b8ee88
+card_corpus_summary:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-natural-contrastive-development-v1/SUMMARY.json
+  sha256: 916d1167678717d9770d854f20c677db6020219d33cf948e17e2f000a04f9b39
+card_response_root: outputs/projects/scitaste-self-development/evaluations/scitastebench-natural-contrastive-development-v1/card-construction
+card_batch_size: 6
+selector_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+decision_backend:
+  locator: configs/backends/deepseek_v41flash_scitastebench_natural_v2.yaml
+  sha256: 92eb85d296094263aa04582e42e6e96eb75c3cbaff44612f8a117e9d5436b627
+embedding_model: /media/good/dxhismyson/weights/Qwen3-Embedding-0.6B
+maximum_broad_candidates: 6
+selector_shard_size: 3
+context_token_budget: 256
+context_mode: grounded-capsule
+frozen_selector_run: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-decision-development-v2
+frozen_decision_run: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-decision-development-v2
+reused_conditions: [base, raw_source]
+candidate_orders: [declared, reversed]
+conditions: [base, raw_source, matched_taste, mismatched_taste]
+seed: 20271005
+target_outcomes_visible: false
+registered_labels_visible: false
+formal_split_opened: false
+effectiveness_claim_allowed: false

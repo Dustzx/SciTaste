@@ -58,6 +58,7 @@ class TasteDecisionFact(BaseModel):
         "obligation",
     ]
     text: str = Field(min_length=1, max_length=10_000)
+    boundary_candidate: bool = False
 
 
 class TasteDeliberationCandidate(BaseModel):
@@ -350,6 +351,9 @@ def validate_taste_deliberation(
     if len(proposal.selected_case_ids) > input_data.maximum_selected_cases:
         findings.append("Taste deliberation exceeds the selected-case ceiling")
     fact_ids = {item.fact_id for item in input_data.decision_facts}
+    boundary_fact_ids = {
+        item.fact_id for item in input_data.decision_facts if item.boundary_candidate
+    }
     action_ids = {item.action_id for item in input_data.current_actions}
     eligible: dict[str, TasteCaseTransferAssessment] = {}
     for case_id, assessment in assessment_by_id.items():
@@ -379,6 +383,14 @@ def validate_taste_deliberation(
             and candidate.hard_applicability_satisfied is not False
             and len(assessment.applicability_supports) >= 2
             and not assessment.triggered_failure_supports
+            and assessment.counterfactual_status is TasteCounterfactualStatus.NOT_TRIGGERED
+            and (
+                not boundary_fact_ids
+                or any(
+                    boundary_fact_ids.intersection(support.decision_fact_ids)
+                    for support in assessment.applicability_supports
+                )
+            )
             and assessment.aligned_current_action_ids
             and (
                 set(assessment.aligned_current_action_ids) != action_ids
@@ -545,6 +557,9 @@ def merge_taste_deliberation_proposals(
         raise ValueError("Taste deliberation shards do not partition the closed pool")
 
     assessment_by_id = {item.case_id: item for item in assessments}
+    boundary_fact_ids = {
+        item.fact_id for item in input_data.decision_facts if item.boundary_candidate
+    }
     eligible = [
         candidate
         for candidate in input_data.candidates
@@ -552,6 +567,7 @@ def merge_taste_deliberation_proposals(
             candidate,
             assessment_by_id[candidate.case_id],
             current_action_ids={item.action_id for item in input_data.current_actions},
+            required_boundary_fact_ids=boundary_fact_ids,
         )
     ]
     eligible.sort(
@@ -653,15 +669,22 @@ def _assessment_is_eligible(
     assessment: TasteCaseTransferAssessment,
     *,
     current_action_ids: set[str],
+    required_boundary_fact_ids: set[str] | None = None,
 ) -> bool:
     aligned = set(assessment.aligned_current_action_ids)
     opposed = set(assessment.opposed_current_action_ids)
     discriminates = bool(aligned) and (aligned != current_action_ids or bool(opposed))
+    boundary_grounded = not required_boundary_fact_ids or any(
+        required_boundary_fact_ids.intersection(support.decision_fact_ids)
+        for support in assessment.applicability_supports
+    )
     return (
         assessment.verdict is TasteTransferVerdict.APPLICABLE
         and candidate.hard_applicability_satisfied is not False
         and len(assessment.applicability_supports) >= 2
         and not assessment.triggered_failure_supports
+        and assessment.counterfactual_status is TasteCounterfactualStatus.NOT_TRIGGERED
+        and boundary_grounded
         and discriminates
     )
 

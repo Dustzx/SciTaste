@@ -291,6 +291,11 @@ separate questions. A good local choice does not guarantee downstream progress,
 and a better downstream score cannot be attributed to Taste when the policy did
 not intervene.
 
+![SciTasteBench isolates three mechanism questions---source abstraction,
+selective transfer, and outcome learning---from external validity. MLRC-Bench
+owns the objective executable-research endpoint, while MLR-Bench owns the
+complete idea-to-paper endpoint.](assets/fig3-scitastebench-study-design.png)
+
 ## SciTasteBench: boundary-conditioned scientific decisions
 
 The benchmark unit is not an isolated multiple-choice question. It is a natural,

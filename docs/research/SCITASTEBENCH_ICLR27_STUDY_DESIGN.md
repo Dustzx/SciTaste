@@ -4,7 +4,10 @@ Status: current scientific design; formal data have not been opened. A first
 outcome-hidden construction pass produced 26 unique candidate boundary pairs.
 Independent label-hidden GLM and DeepSeek construct review admitted only 13, so
 these cases are consumed development material rather than a paper result. The
-revised selector also failed its earlier consumed-case gate; no confirmation
+revised selector made all 26 state-level applicability decisions protocol-valid,
+but its best grounded representation still had higher mean regret than the
+equal-token raw source and lower pair success than the mismatched control. This
+falsifies the current abstraction as a confirmation candidate. No confirmation
 population is frozen.
 
 SciTasteBench is the mechanism instrument for the SciTaste method paper. It is

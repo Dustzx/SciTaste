@@ -26,6 +26,7 @@ from scitaste.state.research_state import ResearchState
 from scitaste.taste.controller import TasteController, TasteMode
 from scitaste.taste.deliberation import (
     TasteApplicabilityProposal,
+    TasteCounterfactualStatus,
     TasteDeliberationInput,
     TasteDeliberationProposal,
     TasteTransferVerdict,
@@ -340,6 +341,72 @@ def test_applicability_that_supports_every_action_cannot_force_a_tie_break(
         input_data,
         shard_inputs=(input_data,),
         shard_proposals=(nondiscriminative,),
+    )
+
+    assert merged.selected_case_ids == ()
+    assert merged.recommended_action_id is None
+
+
+def test_triggered_counterfactual_cannot_be_selected(
+    tmp_path, research_state: ResearchState
+) -> None:
+    input_data = _controller(tmp_path).prepare_taste_deliberation(
+        state=research_state,
+        candidate_actions=_actions(),
+    )
+    proposal = _proposal(input_data)
+    triggered = TasteApplicabilityProposal(
+        decision_id=input_data.decision_id,
+        assessments=tuple(
+            item.model_copy(
+                update={"counterfactual_status": TasteCounterfactualStatus.TRIGGERED}
+            )
+            for item in proposal.assessments
+        ),
+    )
+
+    merged = merge_taste_applicability_proposals(
+        input_data,
+        shard_inputs=(input_data,),
+        shard_proposals=(triggered,),
+    )
+
+    assert merged.selected_case_ids == ()
+    assert merged.recommended_action_id is None
+
+
+def test_boundary_fact_must_ground_selected_precedent(
+    tmp_path, research_state: ResearchState
+) -> None:
+    input_data = _controller(tmp_path).prepare_taste_deliberation(
+        state=research_state,
+        candidate_actions=_actions(),
+    )
+    facts = list(input_data.decision_facts)
+    facts[0] = facts[0].model_copy(update={"boundary_candidate": True})
+    boundary_input = input_data.model_copy(update={"decision_facts": tuple(facts)})
+    proposal = _proposal(boundary_input)
+    ungrounded = TasteApplicabilityProposal(
+        decision_id=boundary_input.decision_id,
+        assessments=tuple(
+            item.model_copy(
+                update={
+                    "applicability_supports": tuple(
+                        support.model_copy(
+                            update={"decision_fact_ids": (facts[1].fact_id,)}
+                        )
+                        for support in item.applicability_supports
+                    )
+                }
+            )
+            for item in proposal.assessments
+        ),
+    )
+
+    merged = merge_taste_applicability_proposals(
+        boundary_input,
+        shard_inputs=(boundary_input,),
+        shard_proposals=(ungrounded,),
     )
 
     assert merged.selected_case_ids == ()
