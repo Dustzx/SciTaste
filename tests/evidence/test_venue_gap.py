@@ -1,0 +1,130 @@
+from datetime import UTC, datetime, timedelta
+
+from scitaste.evidence.venue_gap import (
+    AcceptedNearestNeighbour,
+    AcceptedPaperKind,
+    EvidenceMaturity,
+    SubmissionEvidencePosition,
+    VenueEvidenceCriterion,
+    VenueEvidenceSignal,
+    VenueGapAction,
+    VenueGapActionKind,
+    VenueGapDimension,
+    VenueGapManifest,
+    assess_venue_gap,
+)
+from scitaste.project.deadlines import (
+    ProjectDeadlineStatus,
+    ProjectVenueMilestoneStatus,
+    VenueMilestoneKind,
+)
+
+
+def test_single_development_result_cannot_mark_top_venue_program_ready() -> None:
+    dimensions = tuple(sorted(VenueGapDimension, key=lambda item: item.value))
+    empirical = tuple(
+        dimension
+        for dimension in dimensions
+        if dimension is not VenueGapDimension.NARRATIVE_CONTRIBUTION
+    )
+    neighbours = tuple(
+        AcceptedNearestNeighbour(
+            paper_id=f"accepted-neighbour-{index}",
+            title=f"Accepted neighbour {index}",
+            venue="ICLR",
+            year=2026,
+            paper_kind=AcceptedPaperKind.METHOD,
+            source_url=f"https://example.org/paper-{index}",
+            closest_capability="autonomous research",
+            reported_evidence=("multi-task comparison",),
+        )
+        for index in (1, 2)
+    )
+    actions = (
+        VenueGapAction(
+            action_id="broad-experiment",
+            title="Run the missing objective evidence program",
+            kind=VenueGapActionKind.EXPERIMENT,
+            closes_dimensions=empirical,
+            produces_evidence_types=("result",),
+            estimated_hours=24,
+            expected_information_gain=0.9,
+            feasibility=0.8,
+        ),
+        VenueGapAction(
+            action_id="write-paper",
+            title="Polish the narrative",
+            kind=VenueGapActionKind.WRITING,
+            closes_dimensions=(VenueGapDimension.NARRATIVE_CONTRIBUTION,),
+            produces_evidence_types=("result",),
+            estimated_hours=2,
+            expected_information_gain=0.9,
+            feasibility=1.0,
+        ),
+    )
+    criteria = tuple(
+        VenueEvidenceCriterion(
+            dimension=dimension,
+            claim=f"Claim for {dimension.value}",
+            requirement="Independent admitted evidence",
+            required_evidence_types=("result",),
+            nearest_neighbour_ids=(
+                ("accepted-neighbour-1", "accepted-neighbour-2")
+                if dimension is VenueGapDimension.INNOVATION
+                else ()
+            ),
+            scientific_importance=1.0,
+            reviewer_rejection_risk=1.0,
+            candidate_action_ids=("broad-experiment", "write-paper"),
+        )
+        for dimension in dimensions
+    )
+    manifest = VenueGapManifest(
+        manifest_id="test-venue-gap",
+        project_id="test-project",
+        target_venue="ICLR 2027",
+        paper_title="A paper",
+        central_contribution="One central contribution",
+        nearest_neighbours=neighbours,
+        criteria=criteria,
+        evidence=(
+            VenueEvidenceSignal(
+                evidence_id="one-local-table",
+                family_id="one-local-study",
+                dimension=VenueGapDimension.MECHANISM,
+                evidence_type="result",
+                summary="One favorable controlled table",
+                maturity=EvidenceMaturity.DEVELOPMENT_ONLY,
+            ),
+        ),
+        candidate_actions=actions,
+    )
+    now = datetime(2026, 9, 17, tzinfo=UTC)
+    deadline = ProjectDeadlineStatus.model_construct(
+        project_id="test-project",
+        project_revision=3,
+        project_snapshot_sha256="1" * 64,
+        venue_id="iclr-2027",
+        status_sha256="2" * 64,
+        milestones=(
+            ProjectVenueMilestoneStatus(
+                milestone_id="paper",
+                kind=VenueMilestoneKind.PAPER_SUBMISSION,
+                deadline_at=now + timedelta(days=8),
+                hard_deadline=True,
+                completed=False,
+                overdue=False,
+                seconds_remaining=8 * 24 * 3600,
+                required_outcomes=("submit",),
+                external_action_required=True,
+            ),
+        ),
+    )
+
+    assessment = assess_venue_gap(manifest, deadline)
+
+    assert assessment.submission_position is SubmissionEvidencePosition.NOT_YET_COMPETITIVE
+    assert assessment.admitted_evidence_family_count == 0
+    assert len(assessment.unresolved_dimensions) == len(VenueGapDimension)
+    assert assessment.next_actions[0].action_id == "broad-experiment"
+    assert assessment.acceptance_prediction_made is False

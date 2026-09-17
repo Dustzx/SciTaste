@@ -15,21 +15,23 @@ only when its precedent is supported and applicable. This formulation predicts
 that a useful abstraction must do more than sound scientific: matched Taste
 should outperform both raw precedent and equally polished but mismatched advice.
 We test that prediction on 36 natural review-to-revision decisions with hidden
-dual-model proxy labels, two candidate orders, and 288 model decisions. Base,
-raw-precedent, matched-Taste, and mismatched-Taste accuracy is 58.3%, 66.7%,
-61.1%, and 66.7% when the two orders are averaged. Under the stricter convention
-that a case is correct only when both orders are correct, the corresponding
-scores are 50.0%, 55.6%, 47.2%, and 58.3%. Matched Taste therefore trails Base
-and both controls despite using 3.3 times fewer input tokens than raw precedent.
-The current abstraction compresses experience but does not yet isolate when a
-lesson applies. A separate eight-task execution study finds a second failure:
+dual-model proxy labels and both candidate orders. A first 288-decision study
+finds that a plain matched principle trails raw and mismatched controls. We use
+this failure to derive a contrastive representation that states when the lesson
+applies, when it reverses, and what diagnosis distinguishes the two. With raw,
+matched, and mismatched contexts fixed to 256 lexical tokens, order-consistent
+accuracy is 41.7%, 58.3%, and 50.0%, respectively; Base reaches 44.4%. Thus the
+contrastive card improves 16.7 points over raw precedent and 8.3 over a
+mismatched card, but the latter contrast remains uncertain in this small,
+unbalanced development population. A separate eight-task execution study finds
+a second failure:
 the learned policy abstains at every eligible decision, so its 16 trajectories
 cannot estimate a Taste effect. Revising the redundant uncertainty rule makes
 the policy change two of five decisions in a subsequent development trajectory
 and lowers RMSLE from 12.51 to 5.60, although neither arm recovers the target
-law. Together these results close an outcome-to-policy iteration while showing
-that selective transfer, rather than fluent abstraction, is the unresolved
-core of scientific taste.
+law. Together these results show an outcome-driven method revision and close an
+outcome-to-policy iteration. They provide a provisional selective-transfer
+signal, not evidence that SciTaste yet improves complete research outcomes.
 
 # Introduction
 
@@ -115,6 +117,17 @@ abstraction: the policy that chooses among scientifically meaningful next
 actions. This distinction matters experimentally. End-to-end quality can improve
 because of a stronger model, better tools, more compute, or better judgment;
 matched policy-on/policy-off runs isolate the last factor.
+
+Recent ICLR papers also set a substantially higher evidence bar than a local
+preference table. ScienceAgentBench validates 102 tasks from 44 peer-reviewed
+papers across models and agent frameworks, while EXP-Bench evaluates 461 tasks
+from 51 accepted papers with design, implementation, execution, and conclusion
+checks \citep{chen2025scienceagentbench,kon2026expbench}. TusoAI, a method rather
+than a benchmark, compares against expert methods, an MLE agent, and scientific
+agents on 11 scientific tasks, adds component ablations, and tests two genetics
+case studies \citep{turcan2026tusoai}. These works do not test outcome-learned
+scientific preferences, but they define the breadth, objective validation, and
+baseline strength that a full SciTaste claim must eventually meet.
 
 Reasoning-and-acting methods such as ReAct, Reflexion, and Tree of Thoughts
 interleave thought, action, search, and feedback
@@ -202,57 +215,30 @@ to the baseline.
 
 ## From high-quality content to decision episodes
 
-SciTaste begins with source admission, not retrieval ranking. Candidate sources
-include research trajectories, paper revisions, reviewer exchanges, benchmark
-solutions, and the system's own completed runs. Admission considers provenance,
-scientific quality, temporal order, and whether the record contains enough
-information to reconstruct a decision. Prestige and publication venue may be
-recorded for analysis but are not used as the supervision label.
-
-For an admitted source, the process miner identifies a consequential choice and
-projects only information available before that choice. It then reconstructs a
-closed set of plausible alternatives. An episode is rejected when the
-alternatives are artificial, when the chosen action was forced, or when the
-projection leaks the later outcome. These checks are important because a model
-can otherwise produce a convincing but circular explanation of why the observed
-path was best.
-
-The episode stores both concrete and abstract views. The concrete view preserves
-the exact state, action, and evidence for audit and reversal. The abstract view
-expresses the transferable principle—for example, prefer an intervention that
-separates two live explanations over another broad measurement—without retaining
-task-specific names as the lesson itself. Retrieval uses the abstract view to
-form a candidate pool, then rechecks each candidate against the concrete state.
+SciTaste admits trajectories, revisions, reviewer exchanges, benchmark
+solutions, and its own runs only when provenance and temporal order support a
+consequential pre-outcome decision. The process miner projects what was known,
+reconstructs a closed feasible alternative set, and rejects forced, artificial,
+or outcome-leaking choices. Each accepted episode retains a concrete audit view
+and an abstract transfer view. Retrieval proposes candidate precedents from the
+abstract view; application is rechecked against the concrete state.
 
 ## Delayed, signed outcome attribution
 
-Scientific outcomes arrive at different horizons. An experiment may immediately
-reveal a contradiction; an idea may be judged only after several experiments;
-a writing choice may matter after review. SciTaste preserves these horizons
-instead of collapsing executor success, task score, reviewer response, and
-publication outcome into one reward.
-
-Attribution asks a counterfactual question: under the same pre-decision state and
-budget, would a feasible alternative plausibly have produced a better scientific
-outcome? The answer may assign beneficial credit, harmful credit, or no usable
-credit. Informative failures are not automatically harmful, and successful tool
-execution is not automatically beneficial. Confounders and later decisions are
-retained so that a terminal score is not indiscriminately copied onto every turn.
-
-The current protocol uses two identity-distinct AI reviewers to assess the same
-frozen episode; substantive disagreement invokes a third adjudicator. This is
-scalable AI supervision, not expert ground truth. Deterministic checks enforce
-source identity, temporal order, split isolation, and agreement with the frozen
-packet. The review can reject an attribution but cannot rewrite the underlying
-trajectory.
+Outcomes may arrive after an experiment, a sequence, or review. Attribution asks
+whether a feasible alternative under the same earlier state and budget would
+plausibly have produced better evidence, then assigns beneficial, harmful, or no
+credit while retaining confounders. Two identity-distinct AI reviewers assess a
+frozen packet and a third adjudicates substantive disagreement. This is scalable
+AI supervision, not expert ground truth; reviewers can reject an attribution but
+cannot rewrite the trajectory.
 
 ## Outcome-updated preference model
 
-For each admitted episode, the selected action is compared with every meaningful
-alternative. Beneficial credit records wins for features of the selected action;
-harmful credit records losses. Features describe the decision family, lifecycle
-stage, action type, domain, venue, state regime, and abstract tags. Run-local
-identifiers remain provenance and are never treated as transferable features.
+For each episode, signed credit compares the selected action with its meaningful
+alternatives over semantic features such as decision family, lifecycle stage,
+action, domain, state regime, and abstract tags. Run-local identifiers never
+become transferable features.
 
 Let $g(i)$ be the source group of episode $i$ and let $n_g$ be the number of
 admitted training episodes from that group. Episode $i$ receives weight
@@ -267,19 +253,9 @@ W_f=\sum_i w_i\,\mathbb{1}[f\text{ wins in }i],\qquad
 L_f=\sum_i w_i\,\mathbb{1}[f\text{ loses in }i].
 $$
 
-A closed alternative set is treated as one correlated observation: a feature is
-credited at most once per episode, regardless of how many losing alternatives
-were enumerated. With a $\mathrm{Beta}(\alpha_0,\beta_0)$ prior, the posterior is
-$\mathrm{Beta}(\alpha_f,\beta_f)$ with $\alpha_f=\alpha_0+W_f$ and
-$\beta_f=\beta_0+L_f$. We use its log odds
-$\ell_f=\log\frac{\alpha_f}{\beta_f}$ and delta-method variance
-
-$$
-v_f=\frac{\alpha_f\beta_f}
-{(\alpha_f+\beta_f)^2(\alpha_f+\beta_f+1)}
-\left[\frac{1}{p_f(1-p_f)}\right]^2,
-\quad p_f=\frac{\alpha_f}{\alpha_f+\beta_f}.
-$$
+A closed alternative set counts as one correlated observation. With a
+$\mathrm{Beta}(\alpha_0,\beta_0)$ prior, these counts yield posterior log odds
+$\ell_f$ and variance $v_f$ for each feature.
 
 For action $a$, matched features $F(S,a)$ are combined with fixed semantic
 weights $\omega_f$,
@@ -290,12 +266,9 @@ s(a\mid S)=\frac{\sum_{f\in F(S,a)}\omega_f\ell_f}
 V(a\mid S)=\max_{f\in F(S,a)}v_f.
 $$
 
-The maximum in $V$ is deliberately conservative: features derived from one
-episode are correlated and must not manufacture sample size. For the two
-highest-scoring actions $a_1,a_2$, SciTaste computes margin
-$m=s(a_1)-s(a_2)$ and uncertainty
-$\sigma=\sqrt{V(a_1)}+\sqrt{V(a_2)}$. We approximate their pairwise posterior
-preference as
+The maximum in $V$ prevents correlated features from manufacturing sample size.
+For the top two actions, margin $m=s(a_1)-s(a_2)$ and uncertainty
+$\sigma=\sqrt{V(a_1)}+\sqrt{V(a_2)}$ give
 
 $$
 P(a_1\succ a_2\mid S)\approx
@@ -304,35 +277,21 @@ P(a_1\succ a_2\mid S)\approx
 \right).
 $$
 
-The deployed rule applies a centered, bounded adjustment only if both actions
-meet minimum support, the stage and domain are covered, and this probability
-exceeds a frozen threshold. Otherwise every adjustment is zero and the
-controller exposes the failed condition. We also record the more conservative
-diagnostic $m-z\sigma$. An earlier implementation required both conditions;
-the source-disjoint development cohort below showed that this made the
-probability threshold redundant and prevented every intervention even after the
-support criterion was met. We therefore version the decision rule rather than
-silently changing old policies. Abstention remains essential: a system that
-always voices a preference cannot distinguish learned judgment from confident
-language generation.
+The policy applies a bounded adjustment only with sufficient support, covered
+stage and domain, and posterior probability above a frozen threshold; otherwise
+it abstains and exposes the failed condition. A conservative margin remains a
+diagnostic. The source-disjoint cohort below revealed that requiring this margin
+as a second gate suppressed every intervention, motivating an explicit policy
+revision rather than a post-hoc change to old runs.
 
 ## One lifecycle, multiple decision families
 
-The same mechanism applies to different scientific choices without pretending
-that they share identical criteria. Problem selection emphasizes validity,
-importance, and tractability. Experiment selection emphasizes diagnosticity,
-confounding, and cost. Interpretation emphasizes evidence coverage and
-alternative explanations. Adaptation emphasizes expected improvement under the
-remaining budget. Communication emphasizes claim calibration and reader value.
-
-SciTaste maintains a persistent state across these choices. Experiments update
-evidence; evidence changes claims; reviewer feedback creates obligations; and a
-revision may route back to analysis or experimentation. A model may propose an
-action or artifact, but only the controller chooses among feasible actions and
-only the project runtime admits measured evidence. Tool Intelligence supplies
-bounded process observations, while Generation as Content exposes the same
-state and allows a user to inspect or redirect decisions. They support the
-lifecycle policy rather than constituting separate scientific contributions.
+Problem, experiment, interpretation, adaptation, and communication decisions
+share this mechanism but retain family-specific criteria. A persistent state
+links experiments to evidence, claims, review obligations, and revision. Models
+may propose actions; the controller selects among feasible choices and admits
+measured evidence. Tool Intelligence and Generation as Content expose and help
+operate this state but are not separate scientific contributions.
 
 # Evaluation
 
@@ -357,14 +316,23 @@ families. Resource-allocation decisions remain represented by only one case and
 adaptive-allocation Taste is absent. These are dual-AI proxy labels, not human
 expert judgments.
 
-Every target is paired with a source-group-disjoint precedent. The raw condition
-receives its abstract, decision context, and later record. The matched-Taste
-condition receives only the transferable principle reconstructed from a
-precedent in the same judgment family, preferentially from another domain. The
-placebo receives an equally formatted principle from a different judgment
-family. Base sees no precedent. This comparison asks whether abstraction adds
-the missing selection signal, rather than whether additional prose can influence
-a model.
+Every target is paired with a source-group-disjoint precedent. In the first
+study, the raw condition receives its abstract, decision context, and later
+record. Matched Taste receives a transferable principle reconstructed from a
+precedent in the same judgment family; the placebo receives an equally formatted
+principle from another family. This study diagnoses whether a plain principle
+retains a selective signal.
+
+We then revise the representation without changing the frozen targets, actions,
+or labels. A contrastive card is constructed from the precedent and its later
+outcome while the target remains hidden. It states a scientific preference,
+two or three applicability conditions, two or three reversal conditions, a
+diagnostic question, and the expected failure when misapplied. The raw
+precedent, matched card, and mismatched card are deterministically truncated or
+padded to 256 whitespace-delimited lexical tokens. Matched and mismatched source
+groups remain disjoint from the target and from one another. This second study
+therefore tests representation and selectivity without the first study's large
+length difference.
 
 DeepSeek V4.1 Flash chooses between the frozen actions under all four conditions.
 We present the actions in both declared and reversed order, yielding 288
@@ -374,7 +342,8 @@ correct only if the model selects the preferred action under both orders
 primary metric, with per-order accuracy, inconsistency, and token use as
 diagnostics. Raw and abstracted contexts are intentionally faithful but not
 token matched; token efficiency and decision quality must therefore be
-interpreted together.
+interpreted together in the first study; the contrastive study removes that
+length confound by construction.
 
 ## Objective research trajectories
 
@@ -435,6 +404,40 @@ act as generic scientific advice. The next policy version must learn a
 contrastive boundary: not only what succeeded in one record, but which state
 feature makes the preference reverse. Increasing the number of retrieved
 principles would not address the observed failure.
+
+## Contrastive applicability yields a provisional selective signal
+
+The second study asks whether the missing information is precisely the boundary
+of application. The matched contrastive card reaches 58.3% order-consistent
+accuracy, compared with 41.7% for its token-matched raw precedent, 50.0% for a
+token-matched card from the wrong judgment family, and 44.4% for Base. The
+registered representation contrast is therefore +16.7 points: seven cases
+improve, one regresses, and 28 are unchanged. The registered selectivity
+contrast is +8.3 points: eight improve, five regress, and 23 are unchanged.
+
+| Information shown with the target decision | Declared | Reversed | Correct in both | Order-inconsistent cases | Input tokens |
+|---|---:|---:|---:|---:|---:|
+| None (Base) | 52.8 | 58.3 | 44.4 | 8 / 36 | 71,700 |
+| Token-matched raw precedent | 61.1 | 55.6 | 41.7 | 12 / 36 | 96,880 |
+| Matched contrastive Taste card | 66.7 | 69.4 | 58.3 | 7 / 36 | 95,446 |
+| Mismatched contrastive Taste card | 66.7 | 58.3 | 50.0 | 9 / 36 | 95,490 |
+
+Order-averaged accuracy gives the same ordering: 68.1% for matched Taste,
+62.5% for mismatched Taste, 58.3% for raw precedent, and 55.6% for Base. A
+case-resampled interval for the secondary order-averaged selectivity contrast
+still crosses zero ($-5.6$ to $16.7$ points), whereas the corresponding
+representation interval is $0.0$ to $19.4$ points. We retain these intervals as
+diagnostics rather than headline tests because the population was chosen during
+development and contains only 36 unevenly distributed cases.
+
+The two studies jointly locate the mechanism more sharply than either alone.
+Compression into a generic principle destroys selection; explicitly encoding
+the conditions under which a lesson should reverse recovers a promising signal
+at nearly identical context length. This remains a hypothesis-generating result.
+The next decision-level experiment must freeze the contrastive representation
+and test it on an independent balanced population before the mechanism can be
+claimed. More importantly, even a replicated local effect would not establish
+that Taste improves downstream experiments or complete idea-to-paper research.
 
 ## Source-disjoint research trajectories
 
@@ -522,14 +525,14 @@ must therefore disclose source coverage, reconstruction confidence, reviewer
 agreement, and contamination risk. AI-panel labels are scalable proxies, not a
 replacement for expert validation.
 
-The natural pilot has only 36 cases and uneven coverage. Its preferred actions
+The natural studies reuse the same 36 cases and have uneven coverage. Their preferred actions
 are more often in the declared first position (23 versus 13), which is why both
 candidate orders are required. GLM and Qwen agreement reduces single-model noise
-but does not establish construct validity. Moreover, the raw precedent contains
-substantially more tokens than either abstracted condition. The study can reject
-the claim that the current matched abstraction is already selective, but it
-cannot determine whether the gap comes from information loss, poor applicability
-matching, or the proxy labels.
+but does not establish construct validity. The first study confounds representation
+with context length; the second removes that confound but was designed after
+observing the first failure and is therefore still development evidence. Its
+positive matched--mismatched difference requires an independent frozen
+population, and neither study can establish downstream causal utility.
 
 End-to-end comparisons introduce model, tool, compute, and implementation
 confounds. We separate matched-model from native-best comparisons and preserve
@@ -554,14 +557,17 @@ The formulation turns an appealing but vague property into a testable learning
 problem. Its success condition is demanding by design: high-quality source
 content must yield a grounded preference, the representation must distinguish
 where that preference applies from where it does not, and an admitted preference
-must improve evidence gathered under a matched budget. Our present results do
-not satisfy that condition. They show efficient abstraction without selective
-transfer, an inactive first policy, and one development case in which repairing
-that inactivity changes the trajectory. This is precisely the kind of evidence
-an iterative research system must use to revise both its algorithm and its
-paper. The remaining test is whether contrastively learned boundaries improve
-held-out decisions and active objective trajectories, rather than merely making
-the system's advice more persuasive.
+must improve evidence gathered under a matched budget. A generic abstraction
+fails that first test; adding explicit applicability and reversal conditions
+recovers a provisional +8.3-point selectivity signal on the same development
+population. Separately, an inactive first policy and a repaired single
+trajectory show why treatment activation must precede claims about downstream
+utility. This is precisely the kind of evidence an iterative research system
+must use to revise both its algorithm and its paper. The remaining tests are an
+independent contrastive replication, active objective trajectories, and
+artifact-verifiable idea-to-paper comparisons against strong systems. Until
+those tests are complete, the result is a mechanism hypothesis rather than a
+top-venue effectiveness claim.
 
 # AI Use Statement
 
@@ -582,8 +588,10 @@ remove the need for domain-specific safety review or human responsibility.
 
 The implementation records configuration and source hashes, seeds, model and
 provider identities, action alternatives, decision traces, raw outcomes, token
-and cost telemetry, and failed runs. The natural pilot retains both candidate
-orders and requires an order-consistent choice for its primary accuracy. A
+and cost telemetry, and failed runs. Both natural studies retain both candidate
+orders and require an order-consistent choice for primary accuracy. The
+contrastive study additionally fixes raw, matched, and mismatched context to 256
+lexical tokens and isolates every target from its precedent source groups. A
 case-resampled interval for the order-averaged diagnostic remains available in
 the machine-readable analysis but is not used as the headline metric. The
 reported trajectory pair is retained with both treatment arms and its

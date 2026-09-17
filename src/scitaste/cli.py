@@ -359,6 +359,11 @@ from scitaste.evaluation.taste_mechanism_suite import (
 from scitaste.evaluation.track_a_abstraction_campaign import (
     run_track_a_abstraction_campaign,
 )
+from scitaste.evidence.venue_gap import (
+    assess_venue_gap,
+    load_venue_gap_manifest,
+    save_venue_gap_assessment,
+)
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
@@ -2093,6 +2098,17 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common_options(evidence_plan, default_output="outputs/evidence")
     evidence_plan.add_argument("--state", type=Path, default=None)
     evidence_plan.set_defaults(handler=_handle_evidence_plan)
+    evidence_venue_gap = evidence_commands.add_parser(
+        "venue-gap",
+        help="Compare the complete claim-evidence portfolio with accepted venue neighbours",
+    )
+    evidence_venue_gap.add_argument("--manifest", type=Path, required=True)
+    evidence_venue_gap.add_argument("--project-id", required=True)
+    evidence_venue_gap.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    evidence_venue_gap.add_argument("--at", default=None)
+    evidence_venue_gap.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(evidence_venue_gap)
+    evidence_venue_gap.set_defaults(handler=_handle_evidence_venue_gap)
     write = commands.add_parser("write", help="Run the evidence-grounded communication loop")
     _add_common_options(write, default_output="outputs/communication")
     write.set_defaults(handler=_handle_communication)
@@ -8024,6 +8040,53 @@ def _handle_evidence_plan(args: argparse.Namespace) -> int:
         state_path=args.state,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    observed_at = None if args.at is None else datetime.fromisoformat(args.at)
+    deadline = inspect_project_deadline(
+        snapshot,
+        observed_at=observed_at,
+        project_root=runtime.projects_root / args.project_id,
+    )
+    manifest = load_venue_gap_manifest(args.manifest)
+    if manifest.project_id != args.project_id:
+        raise ValueError("venue-gap manifest project differs from --project-id")
+    assessment = assess_venue_gap(manifest, deadline)
+    output = save_venue_gap_assessment(assessment, args.output)
+    print(
+        json.dumps(
+            {
+                "project_id": assessment.project_id,
+                "project_revision": assessment.project_revision,
+                "submission_position": assessment.submission_position,
+                "unresolved_dimensions": assessment.unresolved_dimensions,
+                "admitted_evidence_family_count": (
+                    assessment.admitted_evidence_family_count
+                ),
+                "paper_deadline_hours_remaining": (
+                    assessment.paper_deadline_hours_remaining
+                ),
+                "next_action": (
+                    None
+                    if not assessment.next_actions
+                    else assessment.next_actions[0].model_dump(mode="json")
+                ),
+                "strongest_rejection_reasons": (
+                    assessment.strongest_rejection_reasons
+                ),
+                "single_result_is_insufficient": True,
+                "acceptance_prediction_made": False,
+                "oral_prediction_made": False,
+                "output": str(output),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

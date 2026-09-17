@@ -11,8 +11,7 @@ from typing import Any
 
 import yaml
 
-CONDITIONS = ("base", "knowledge_rag", "taste_library", "taste_placebo")
-CONTRASTS = (
+LEGACY_CONTRASTS = (
     ("knowledge_rag", "base"),
     ("taste_library", "base"),
     ("taste_placebo", "base"),
@@ -42,13 +41,15 @@ def _cluster_interval(
     return _percentile(draws, 0.025), _percentile(draws, 0.975)
 
 
-def _index_results(report: dict[str, Any]) -> dict[str, dict[str, dict[str, Any]]]:
+def _index_results(
+    report: dict[str, Any], conditions: tuple[str, ...]
+) -> dict[str, dict[str, dict[str, Any]]]:
     return {
         condition: {
             result["case_id"]: result
             for result in report["conditions"][condition]["results"]
         }
-        for condition in CONDITIONS
+        for condition in conditions
     }
 
 
@@ -70,19 +71,41 @@ def analyze(
     for order, report in reports.items():
         if report["candidate_order"] != order:
             raise ValueError(f"{order} report declares {report['candidate_order']!r}")
+    conditions = tuple(reports["declared"]["conditions"])
+    if set(conditions) != set(reports["reversed"]["conditions"]):
+        raise ValueError("candidate-order arms contain different conditions")
+    registered_contrasts = tuple(suite.get("registered_contrasts") or ())
+    contrasts = (
+        tuple(
+            (
+                item["contrast_id"],
+                item["treatment"],
+                item["comparator"],
+                item,
+            )
+            for item in registered_contrasts
+        )
+        if registered_contrasts
+        else tuple(
+            (f"{treatment}_minus_{control}", treatment, control, None)
+            for treatment, control in LEGACY_CONTRASTS
+        )
+    )
 
-    indexed = {order: _index_results(report) for order, report in reports.items()}
+    indexed = {
+        order: _index_results(report, conditions) for order, report in reports.items()
+    }
     case_ids = sorted(indexed["declared"]["base"])
     expected_ids = sorted(case["case_id"] for case in suite["cases"])
     if case_ids != expected_ids:
         raise ValueError("reported cases differ from the frozen suite")
     for order in reports:
-        for condition in CONDITIONS:
+        for condition in conditions:
             if sorted(indexed[order][condition]) != case_ids:
                 raise ValueError(f"{order}/{condition} has incomplete cases")
 
     condition_summary: dict[str, Any] = {}
-    for condition_index, condition in enumerate(CONDITIONS):
+    for condition_index, condition in enumerate(conditions):
         per_case_order_consistent = [
             int(
                 all(
@@ -142,7 +165,9 @@ def analyze(
         }
 
     contrast_summary: dict[str, Any] = {}
-    for contrast_index, (treatment, control) in enumerate(CONTRASTS):
+    for contrast_index, (contrast_id, treatment, control, registration) in enumerate(
+        contrasts
+    ):
         per_case_consistent_delta = [
             int(
                 all(
@@ -172,7 +197,10 @@ def analyze(
             resamples=bootstrap_resamples,
             seed=bootstrap_seed + 100 + contrast_index,
         )
-        contrast_summary[f"{treatment}_minus_{control}"] = {
+        contrast_summary[contrast_id] = {
+            "treatment": treatment,
+            "comparator": control,
+            "registration": registration,
             "order_consistent_accuracy_delta": sum(per_case_consistent_delta)
             / len(case_ids),
             "order_consistent_improved_cases": sum(
@@ -200,7 +228,7 @@ def analyze(
         "suite_id": reports["declared"]["suite_id"],
         "suite_sha256": reports["declared"]["suite_sha256"],
         "case_count": len(case_ids),
-        "decision_count": len(case_ids) * len(CONDITIONS) * len(reports),
+        "decision_count": len(case_ids) * len(conditions) * len(reports),
         "candidate_orders": list(reports),
         "preferred_action_position_counts": {
             "declared_a": preferred_a,
@@ -218,6 +246,11 @@ def analyze(
         },
         "claim_boundary": (
             "Development evidence only: labels are agreements between two AI reviewers, "
+            "the 36 cases are unbalanced across decision families, and no independent "
+            "construct-validity study was run. The contrastive suite token-matches raw, "
+            "matched, and mismatched contexts when registered contrasts are present."
+            if registered_contrasts
+            else "Development evidence only: labels are agreements between two AI reviewers, "
             "the 36 cases are unbalanced across decision families, raw and abstracted "
             "contexts are not token matched, and no human construct-validity study was run."
         ),
