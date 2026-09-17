@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "policy_id": "counterfactual-taste-evidence-state-policy-v1",
+  "policy_sha256": "739777efbe28a6aba4ed21dbe276e05405d6b8699f818c9a95d7a28f51f1c4fb",
+  "policy_file_sha256": "60821e22fa1a81461302c5462d09aca18f03c25bdd0556a8b81c999a4efb20a4",
+  "training_population_sha256": "e4288fb008486b2410088b1402cd335a32629124181876b4b7794107f1830b70",
+  "primary_metric": "rmsle",
+  "metric_direction": "lower",
+  "rules": {
+    "no-candidate": "PROBE",
+    "candidate-untested": "ANALYZE",
+    "candidate-supported": "STOP"
+  },
+  "fallback_action": "PROBE",
+  "development_only": true,
+  "frozen_before_confirmation": true
+}
