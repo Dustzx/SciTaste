@@ -1072,6 +1072,7 @@ class LifecycleTastePolicyModel(BaseModel):
     estimator: Literal[
         "factorized-beta-pairwise-v1",
         "signed-factorized-beta-pairwise-v2",
+        "signed-factorized-beta-closed-set-v3",
     ] = "signed-factorized-beta-pairwise-v2"
     policy_sha256: str = Field(pattern=_SHA256)
 
@@ -1470,11 +1471,12 @@ def fit_lifecycle_taste_policy(
         competitors = tuple(item for item in alternatives if item.action_id != preferred_id)
         episode_weight = episode.training_weight / group_counts[group_key]
         effective_weight += episode_weight
-        weight = episode_weight / len(competitors)
         attributed_features = set(_episode_action_features(episode, preferred))
         direction = _policy_credit_direction(episode, config)
         if direction is None:
             raise ValueError("lifecycle Taste training episode has no attributable credit")
+        episode_winning_features: set[tuple[str, str]] = set()
+        episode_losing_features: set[tuple[str, str]] = set()
         for competitor in competitors:
             competitor_features = set(_episode_action_features(episode, competitor))
             winning_features, losing_features = (
@@ -1482,11 +1484,17 @@ def fit_lifecycle_taste_policy(
                 if direction is TasteCreditDirection.BENEFICIAL
                 else (competitor_features, attributed_features)
             )
-            for feature, _ in winning_features - losing_features:
-                observations[feature][0] += weight
-            for feature, _ in losing_features - winning_features:
-                observations[feature][1] += weight
+            episode_winning_features.update(winning_features - losing_features)
+            episode_losing_features.update(losing_features - winning_features)
             comparisons += 1
+        # The candidate set is one correlated observation, not K-1 independent
+        # samples.  Credit each unique feature at most once per episode so a
+        # winner is not inflated while alternatives are not diluted merely
+        # because more feasible actions were enumerated.
+        for feature, _ in episode_winning_features:
+            observations[feature][0] += episode_weight
+        for feature, _ in episode_losing_features:
+            observations[feature][1] += episode_weight
     kinds = {
         feature: kind
         for episode in selected
@@ -1554,7 +1562,7 @@ def fit_lifecycle_taste_policy(
             sorted({tag.casefold() for item in selected for tag in item.candidate.venue_tags})
         ),
         feature_posteriors=posteriors,
-        estimator="signed-factorized-beta-pairwise-v2",
+        estimator="signed-factorized-beta-closed-set-v3",
     )
 
 

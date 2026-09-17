@@ -150,8 +150,9 @@ def _candidate(
     source_group_id: str | None = None,
     with_decision_context: bool = False,
     decision_context: TasteEpisodeDecisionContext | None = None,
+    actions: tuple[ResearchAction, ...] | None = None,
 ):
-    actions = _actions()
+    actions = actions or _actions()
     decision = ResearchDecision(
         decision_id=f"decision-{ordinal:02d}",
         stage="DISCOVERY",
@@ -992,12 +993,58 @@ def test_outcome_updated_policy_aggregates_signed_credit_for_same_action(
     )
     posteriors = {item.feature: item for item in policy.feature_posteriors}
 
-    assert policy.estimator == "signed-factorized-beta-pairwise-v2"
+    assert policy.estimator == "signed-factorized-beta-closed-set-v3"
     assert posteriors["action::probe"].wins == pytest.approx(0.9)
     assert posteriors["action::probe"].losses == pytest.approx(0.9)
     assert posteriors["action::probe"].support == pytest.approx(1.8)
     assert posteriors["action::advance"].wins == pytest.approx(0.9)
     assert posteriors["action::advance"].losses == pytest.approx(0.9)
+
+
+def test_closed_candidate_set_does_not_dilute_alternative_support(tmp_path: Path) -> None:
+    actions = (
+        *_actions(),
+        ResearchAction(
+            action_id="run-experiment",
+            type=MetaAction.EXPERIMENT,
+            description="Run the next bounded experiment.",
+        ),
+        ResearchAction(
+            action_id="refine-method",
+            type=MetaAction.REFINE,
+            description="Refine the current method.",
+        ),
+    )
+    candidate = _candidate(tmp_path, 1, actions=actions)
+    reviews = (
+        _review(candidate, reviewer_id="reviewer-a"),
+        _review(candidate, reviewer_id="reviewer-b"),
+    )
+    episode = admit_taste_episode(
+        candidate,
+        reviews,
+        admission_id="closed-set-episode",
+        evidence_root=str(tmp_path),
+        current_idea_revision=_idea_binding(),
+    )
+    policy = fit_lifecycle_taste_policy(
+        (episode,),
+        LifecycleTastePolicyConfig(
+            policy_id="closed-set-policy",
+            update_mode=LifecycleTastePolicyUpdateMode.OUTCOME_UPDATED,
+            idea_revision=_idea_binding(),
+        ),
+    )
+    action_posteriors = {
+        item.feature: item
+        for item in policy.feature_posteriors
+        if item.feature_kind == "action-type"
+    }
+
+    assert policy.pairwise_comparison_count == 3
+    assert policy.effective_training_weight == pytest.approx(0.9)
+    assert action_posteriors
+    assert all(item.support == pytest.approx(0.9) for item in action_posteriors.values())
 
 
 def test_shuffled_credit_control_preserves_action_marginal_and_records_assignment(

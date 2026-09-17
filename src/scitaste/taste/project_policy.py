@@ -467,10 +467,15 @@ def refresh_project_taste_policy(
             (item.support for item in (() if head is None else head.feature_posteriors)),
             default=0.0,
         )
+        supported_stage_actions = {
+            item.feature.rpartition("::action::")[2]
+            for item in (() if head is None else head.feature_posteriors)
+            if item.feature_kind == "stage-action"
+            and item.support >= head.config.minimum_feature_support
+        }
         support_sufficient = (
             head is not None
-            and bool(head.feature_posteriors)
-            and maximum_support >= head.config.minimum_feature_support
+            and len(supported_stage_actions) >= 2
         )
         families.append(
             ProjectTastePolicyFamilyReadiness(
