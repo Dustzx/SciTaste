@@ -173,6 +173,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--allow-api", action="store_true")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--allow-partial", action="store_true")
     return parser
 
 
@@ -299,6 +300,45 @@ def _normalize_output_payload(
     for proposal in proposals:
         if not isinstance(proposal, dict):
             continue
+        for observed_key in tuple(proposal):
+            canonical_key = observed_key.strip()
+            if (
+                canonical_key != observed_key
+                and canonical_key in PairProposal.model_fields
+                and canonical_key not in proposal
+            ):
+                proposal[canonical_key] = proposal.pop(observed_key)
+                corrections.append(
+                    {
+                        "request_id": request_id,
+                        "intake_candidate_id": str(proposal.get("intake_candidate_id", "")),
+                        "action_id": "",
+                        "field": observed_key,
+                        "observed": observed_key,
+                        "replacement": canonical_key,
+                        "authority": "bounded-json-key-whitespace-normalization-v1",
+                    }
+                )
+        _remove_null_provider_notes(
+            proposal,
+            path="proposal",
+            request_id=request_id,
+            intake_candidate_id=str(proposal.get("intake_candidate_id", "")),
+            corrections=corrections,
+        )
+        if isinstance(proposal.get("shared_decision_context_checked"), bool):
+            observed = proposal.pop("shared_decision_context_checked")
+            corrections.append(
+                {
+                    "request_id": request_id,
+                    "intake_candidate_id": str(proposal.get("intake_candidate_id", "")),
+                    "action_id": "",
+                    "field": "shared_decision_context_checked",
+                    "observed": str(observed).lower(),
+                    "replacement": "removed",
+                    "authority": "bounded-nonsemantic-envelope-removal-v1",
+                }
+            )
         actions = proposal.get("candidate_actions")
         if proposal.get("admitted") is True and (
             not isinstance(actions, list) or not 2 <= len(actions) <= 5
@@ -341,6 +381,51 @@ def _normalize_output_payload(
                     }
                 )
     return normalized, corrections
+
+
+def _remove_null_provider_notes(
+    value: object,
+    *,
+    path: str,
+    request_id: str,
+    intake_candidate_id: str,
+    corrections: list[dict[str, str]],
+) -> None:
+    """Remove only provider-added, null-valued ``*_note`` JSON fields."""
+
+    if isinstance(value, dict):
+        for key in tuple(value):
+            field_path = f"{path}.{key}"
+            if key.endswith("_note") and value[key] is None:
+                value.pop(key)
+                corrections.append(
+                    {
+                        "request_id": request_id,
+                        "intake_candidate_id": intake_candidate_id,
+                        "action_id": "",
+                        "field": field_path,
+                        "observed": "null",
+                        "replacement": "removed",
+                        "authority": "bounded-null-provider-note-removal-v1",
+                    }
+                )
+                continue
+            _remove_null_provider_notes(
+                value[key],
+                path=field_path,
+                request_id=request_id,
+                intake_candidate_id=intake_candidate_id,
+                corrections=corrections,
+            )
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _remove_null_provider_notes(
+                item,
+                path=f"{path}[{index}]",
+                request_id=request_id,
+                intake_candidate_id=intake_candidate_id,
+                corrections=corrections,
+            )
 
 
 def _compile_pair(
@@ -397,9 +482,7 @@ def _compile_pair(
         **common,
         **twin_payload,
     )
-    final = decision["final_decision"]
-    if not isinstance(final, dict):
-        raise ValueError("caseability final decision is missing")
+    final = _caseability_decision(decision)
     construction_sha256 = content_sha256(
         {
             "request_fingerprint": request.fingerprint,
@@ -435,6 +518,77 @@ def _compile_pair(
     )
 
 
+def _caseability_decision(record: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Accept a panel consensus or one outcome-hidden normalized screen decision."""
+
+    value = record.get("final_decision")
+    if not isinstance(value, dict):
+        value = record.get("decision")
+    if not isinstance(value, dict) or value.get("eligible") is not True:
+        raise ValueError("caseability decision is missing or ineligible")
+    return value
+
+
+def _caseability_candidate_id(record: dict[str, JsonValue]) -> str:
+    value = record.get("intake_candidate_id")
+    if isinstance(value, str):
+        return value
+    decision = record.get("decision")
+    if isinstance(decision, dict) and isinstance(decision.get("intake_candidate_id"), str):
+        return str(decision["intake_candidate_id"])
+    raise ValueError("caseability record lacks an intake candidate identity")
+
+
+def _recompute_utility_scalars(
+    proposal: PairProposal,
+    contract: BoundaryUtilityContract | None,
+    *,
+    request_id: str,
+) -> tuple[PairProposal, list[dict[str, str]], str | None]:
+    """Derive scalar utilities from registered components and reject label drift."""
+
+    if not proposal.admitted or contract is None:
+        return proposal, [], None
+    corrections: list[dict[str, str]] = []
+    updates: dict[str, StatePreferenceProposal] = {}
+    for role in ("base", "twin"):
+        state = getattr(proposal, role)
+        assert state is not None
+        if set(state.utility_components) != set(state.action_utilities):
+            return proposal, corrections, f"{role} utility components do not cover the action menu"
+        derived = {
+            action_id: contract.aggregate(vector)
+            for action_id, vector in state.utility_components.items()
+        }
+        maximum = max(derived.values())
+        maximizers = [
+            action_id for action_id, value in derived.items() if abs(value - maximum) <= 1e-12
+        ]
+        should_abstain = maximum <= contract.minimum_action_utility_for_commitment
+        if should_abstain != state.should_abstain:
+            return proposal, corrections, f"{role} abstention contradicts derived utility"
+        if not should_abstain and (
+            len(maximizers) != 1 or state.preferred_action_id != maximizers[0]
+        ):
+            return proposal, corrections, f"{role} preferred action contradicts derived utility"
+        for action_id, value in derived.items():
+            observed = state.action_utilities[action_id]
+            if abs(observed - value) > 1e-12:
+                corrections.append(
+                    {
+                        "request_id": request_id,
+                        "intake_candidate_id": proposal.intake_candidate_id,
+                        "action_id": action_id,
+                        "field": f"{role}.action_utilities",
+                        "observed": str(observed),
+                        "replacement": str(value),
+                        "authority": "registered-utility-contract-recomputation-v1",
+                    }
+                )
+        updates[role] = state.model_copy(update={"action_utilities": derived})
+    return proposal.model_copy(update=updates), corrections, None
+
+
 def _write(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
@@ -455,7 +609,7 @@ def main() -> int:
     decisions_path = _bound(root, config.caseability_decisions)
     backend_path = _bound(root, config.constructor_backend)
     screening = {str(item["intake_candidate_id"]): item for item in _jsonl(screening_path)}
-    decisions = {str(item["intake_candidate_id"]): item for item in _jsonl(decisions_path)}
+    decisions = {_caseability_candidate_id(item): item for item in _jsonl(decisions_path)}
     selected_ids = [item.intake_candidate_id for item in config.selected_candidates]
     missing = sorted(set(selected_ids) - screening.keys() | set(selected_ids) - decisions.keys())
     if missing:
@@ -488,8 +642,9 @@ def main() -> int:
         for selection in selections:
             source = screening[selection.intake_candidate_id]
             caseability = decisions[selection.intake_candidate_id]
-            final = caseability["final_decision"]
-            assert isinstance(final, dict)
+            final = _caseability_decision(caseability)
+            if str(final["decision_context_family"]) != (selection.decision_context_family.value):
+                raise ValueError("selected candidate context differs from caseability screen")
             candidates.append(
                 {
                     "intake_candidate_id": selection.intake_candidate_id,
@@ -548,6 +703,20 @@ def main() -> int:
                     }
                 )
                 continue
+            proposal, utility_corrections, utility_rejection = _recompute_utility_scalars(
+                proposal,
+                config.utility_contract,
+                request_id=request.request_id,
+            )
+            normalizations.extend(utility_corrections)
+            if utility_rejection is not None:
+                rejections.append(
+                    {
+                        "intake_candidate_id": proposal.intake_candidate_id,
+                        "reason": utility_rejection,
+                    }
+                )
+                continue
             pairs.append(
                 _compile_pair(
                     proposal,
@@ -580,7 +749,7 @@ def main() -> int:
     expected_batch_count = (
         len(config.selected_candidates) + config.batch_size - 1
     ) // config.batch_size
-    if completed_response_count != expected_batch_count:
+    if completed_response_count != expected_batch_count and not args.allow_partial:
         raise ValueError("cannot compile a partial boundary construction package")
     package = BoundaryPairPackage(
         package_id=config.construction_id,
@@ -596,6 +765,9 @@ def main() -> int:
         "schema_version": "1.0",
         "construction_id": config.construction_id,
         "selected_candidate_count": len(config.selected_candidates),
+        "completed_response_count": completed_response_count,
+        "expected_response_count": expected_batch_count,
+        "complete": completed_response_count == expected_batch_count,
         "admitted_pair_count": len(pairs),
         "rejected_candidate_count": len(rejections),
         "rejections": rejections,

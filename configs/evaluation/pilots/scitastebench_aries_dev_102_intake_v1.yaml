@@ -1,0 +1,22 @@
+schema_version: "1.0"
+intake_id: scitastebench-aries-dev-102-intake-v1
+project_id: scitaste-self-development
+protocol:
+  locator: configs/evaluation/programs/iclr2027_scitastebench_four_layer_v1.yaml
+  sha256: 7259834bc56a32d447088ae36d1f58b5ef27a3d1188bb01310d918626486bde0
+prior_track_a_plan:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-track-a-ai-pilot-v1/preparation-v2/PLAN.json
+  sha256: 5a467f420a0adb8fcbcd373cc69049550451ffa456484c59c99a1f176bd7b165
+packages:
+  - package_id: aries-dev-102-v1
+    partition: validation-reserve
+    campaign:
+      locator: outputs/projects/scitaste-self-development/evaluations/aries-dev-102-source-review-v1/CAMPAIGN.json
+      sha256: e446e41440cbdad41128ec68639134a4cb9b95a62eb0bcaf11f5a1e0159721de
+representative_selection: minimum-sha256-per-source-group-v1
+target_case_count: 36
+precedent_source_count: 16
+model_calls_authorized: false
+api_spend_authorized: false
+gpu_work_authorized: false
+formal_split_access_authorized: false

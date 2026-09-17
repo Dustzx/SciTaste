@@ -43,8 +43,8 @@
   <text class="small" x="370" y="328">CHECKS</text>
   <text class="body" x="370" y="358">decision and evidence fidelity</text>
   <text class="body" x="370" y="382">explicit applicability boundaries</text>
-  <text class="body" x="370" y="406">counterfactual reversal condition</text>
-  <text class="body" x="370" y="430">compression at equal information</text>
+  <text class="body" x="370" y="406">fact-neutral counterfactual context</text>
+  <text class="body" x="370" y="430">boundary-only cue control cannot solve</text>
   <text class="small" x="370" y="478">INSIGHT</text>
   <text class="body" x="370" y="506">Quality is learned from content,</text>
   <text class="body" x="370" y="528">not venue or author identity.</text>
@@ -85,10 +85,11 @@
 
   <rect class="external" filter="url(#shadow)" x="55" y="620" rx="16" width="935" height="170"/>
   <text class="head" x="80" y="656">External validity — separate from SciTasteBench</text>
-  <text class="body" x="80" y="690">MLRC-Bench: objective training-task progress and progress per GPU/API budget</text>
-  <text class="body" x="80" y="720">MLR-Bench: idea-to-paper package quality under blinded, evidence-aware review</text>
-  <text class="body" x="80" y="750">EXP-Bench: hypothesis → implementation → execution → conclusion integrity, when runtime assets qualify</text>
-  <text class="small" x="80" y="776">FULL vs NATIVE BASE · RAW/RAG · OFFICIAL MLAB / MLR-AGENT · SAME MODEL AND BUDGET</text>
+  <text class="body" x="80" y="685">MLRC-Bench: objective training-task progress per GPU/API budget</text>
+  <text class="body" x="80" y="711">MLR-Bench: evidence-valid idea-to-paper research products</text>
+  <text class="body" x="80" y="737">ScienceAgentBench: cross-domain execution required for the broad claim</text>
+  <text class="body" x="80" y="763">EXP-Bench: AI experiment integrity, when official runtime assets qualify</text>
+  <text class="small" x="80" y="783">FULL vs NATIVE BASE · RAW/RAG · OFFICIAL AGENT BASELINES · SAME MODEL AND BUDGET</text>
 
   <path class="arrow" d="M990 705 H1040"/>
   <rect class="gate" filter="url(#shadow)" x="1040" y="620" rx="16" width="405" height="170"/>

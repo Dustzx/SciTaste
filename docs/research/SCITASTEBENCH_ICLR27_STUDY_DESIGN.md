@@ -166,6 +166,46 @@ system comparison: the former measures human-grounded construct validity, while
 the latter evaluates an unconstrained end-to-end agent on untouched public
 tasks.
 
+### Fresh-source construction audit and revised admission gate
+
+The full ARIES dev reserve produced 102 independent source groups. Ten overlap
+with prior Track-A roles, so the outcome-hidden intake exposed 92 unused groups
+to caseability screening. A complete DeepSeek screen of 68 groups admitted 60
+candidate decisions, but again found no resource/pivot/stopping case. From the
+highest-leverage, lowest-ambiguity decisions, an axis-stratified construction
+attempt selected 24 sources. It produced 13 schema-1.1 pairs with registered
+four-component utilities: 7 Direction, 4 Information, and 2 Inference pairs.
+
+An independent Qwen reviewer, with expected labels, utilities, state roles, and
+later outcomes hidden, admitted **zero of 13**. Nine pairs were solvable by a
+boundary-cue shortcut and six retained source prose that contradicted one
+counterfactual state; one otherwise plausible pair could not establish which
+state was natural from the source. A second reviewer was not called because it
+cannot turn zero first-review admissions into two-review consensus. This is a
+consumed construction audit, not a benchmark or method result.
+
+The failure changes the construction gate. A proposed pair must now provide two
+views in addition to its full state:
+
+1. a **fact-neutral shared context**, produced by explicitly removing every
+   source sentence that asserts either boundary value while retaining those
+   spans in provenance; and
+2. a **boundary-only control** containing the action menu and changed fact but
+   none of the registered invariant scientific context.
+
+Pair-blinded review must recover the reversal from the full states, while a
+frozen strong boundary-only chooser must fail to recover it reliably. The
+reviewer must cite at least two invariant facts needed to distinguish the
+actions. “Baseline missing implies add baseline,” “evidence present implies
+retain,” and analogous one-cue mappings are rejected even when their labels are
+scientifically plausible. This converts shortcut resistance from a prose
+instruction into an observable contrast: the benchmark measures a
+fact-by-context interaction rather than reaction to a highlighted fact.
+
+No formal split is opened until a new source-disjoint cohort passes this gate.
+The 13 rejected pairs and all API responses remain development provenance and
+will not be repaired into validation or hidden test.
+
 ### Consumed construction audit (not a result)
 
 The first live construction deliberately used only the outcome-hidden screening
@@ -381,12 +421,16 @@ endpoints:
 | MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, Raw/generic memory, official MLR-Agent | accepted external idea-to-paper evaluation |
 | SciTasteBench | paired regret, correct boundary reversal, abstention, and delayed-credit learning | Base, equal-token raw, Matched Taste, Mismatched Taste | internal mechanism attribution rather than external competitiveness |
 
-EXP-Bench (ICLR 2026) is the preferred scope check outside ML research. It enters
-only through an unchanged official runnable subset; its experiment-integrity
-scorer must not be imitated locally. If that route cannot be qualified, the
-title and claims are narrowed to ML research agents. ScienceAgentBench (ICLR
-2025) remains a reserve because it tests scientific-program generation rather
-than open-ended research improvement.
+MLRC-Bench and MLR-Bench are both ML-research evaluations; they cannot by
+themselves support an unqualified cross-domain autonomous-research claim.
+ScienceAgentBench (ICLR 2025) is therefore the required external scope check if
+the broad title is retained: its 102 tasks were derived from 44 peer-reviewed
+papers in four scientific disciplines. It enters through its unchanged official
+tasks and execution-based evaluator, never through a local imitation.
+EXP-Bench (ICLR 2026) remains a strong experiment-integrity comparison, but its
+461 tasks are drawn from AI research papers and therefore do not substitute for
+cross-domain evidence. If ScienceAgentBench cannot be run comparably, the title
+and claims are narrowed to ML research agents.
 
 MLRC-Bench is the immediate objective route because its competition score directly
 measures improvement over a supplied baseline under a compute limit.  Its own
@@ -469,14 +513,16 @@ self-validating. The smallest defensible external portfolio is:
 |---|---|---|---|
 | Does Taste improve executable research on an accepted external benchmark? | all seven official MLRC-Bench tasks after one development task | Full, same-backbone Native Base, equal-context Raw/RAG, official MLAB; at least three paired seeds | objective score gain, cost curve, failures, and active-intervention mediation |
 | Does the complete research product improve on an accepted external benchmark? | ten frozen, source-disjoint MLR-Bench briefs | Full, Native Base, Raw/generic memory, official MLR-Agent | stagewise and final-package review with invalid-result accounting |
-| Does the broad claim transfer beyond ML research? | unchanged official EXP-Bench subset, only if its runtime and scorer qualify | Full, Native Base, official agent baseline | conjunctive hypothesis-to-conclusion success and failure accounting |
+| Does the broad claim transfer beyond ML research? | unchanged official ScienceAgentBench tasks spanning four disciplines | Full, Native Base, official agent baseline | execution success, program correctness, cost, and failure accounting |
+| Does Taste improve experiment integrity within AI research? | unchanged official EXP-Bench subset, only if its runtime and scorer qualify | Full, Native Base, official agent baseline | conjunctive hypothesis-to-conclusion success and failure accounting |
 
 The same-backbone Full/Base pair identifies the effect of Taste. The external
-system establishes competitiveness. EXP-Bench is not replaced by a local
-imitation if its official runtime is unavailable. The broad title is retained
-only if that external scope check runs; otherwise the paper is explicitly about
-ML research agents. Seed count is frozen from development variance before the
-formal run, with three paired seeds as the minimum.
+system establishes competitiveness. Neither ScienceAgentBench nor EXP-Bench is
+replaced by a local imitation if its official runtime is unavailable. The broad
+title is retained only if the cross-domain ScienceAgentBench scope check runs;
+otherwise the paper is explicitly about ML research agents. Seed count is
+frozen from development variance before the formal run, with three paired seeds
+as the minimum.
 
 ## Required paper figures and tables
 

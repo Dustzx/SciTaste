@@ -18,9 +18,10 @@ mismatched advice, reverse its preference when a decisive fact crosses the
 learned boundary, and abstain outside support. We make this hypothesis testable
 with SciTasteBench, a source-grounded collection of natural decisions paired
 with single-fact counterfactual twins. We evaluate downstream utility separately
-on the accepted MLRC-Bench and MLR-Bench suites, comparing SciTaste with the same
+on the accepted MLRC-Bench and MLR-Bench suites, and condition the broad
+cross-domain claim on ScienceAgentBench, comparing SciTaste with the same
 backbone and tools but no Taste intervention, an equal-context Raw/RAG control,
-and a runnable research-agent baseline. This separation distinguishes learning
+and runnable research-agent baselines. This separation distinguishes learning
 scientific judgment from adding context, generating fluent rationales, or using
 a stronger executor.
 
@@ -299,8 +300,9 @@ not intervene.
 
 ![SciTasteBench isolates three mechanism questions---source abstraction,
 selective transfer, and outcome learning---from external validity. MLRC-Bench
-owns the objective executable-research endpoint, while MLR-Bench owns the
-complete idea-to-paper endpoint.](assets/fig3-scitastebench-study-design.png)
+owns the objective executable-research endpoint, MLR-Bench owns the complete
+idea-to-paper endpoint, and ScienceAgentBench gates an unqualified cross-domain
+claim.](assets/fig3-scitastebench-study-design.png)
 
 ## SciTasteBench: boundary-conditioned scientific decisions
 
@@ -325,6 +327,14 @@ combines experiment design with resource, pivot, continue, and stop decisions;
 and Inference combines evidence interpretation with claim calibration. The six
 contexts remain visible coverage tags, but they are not presented as six
 underpowered miniature benchmarks.
+Construction also emits a boundary-only control containing the changed fact and
+action menu but no invariant scientific context. A pair is diagnostic only when
+reviewers can name at least two invariant facts required for the full-state
+decision and a frozen strong chooser cannot recover the registered reversal
+from the boundary-only control. Source sentences that state either boundary
+value are removed from the shared context and retained only as provenance. This
+prevents “baseline missing implies add baseline” and comparable cue rules from
+masquerading as context-sensitive judgment.
 Because the independent unit is an admitted pair rather than a raw review
 comment, source collection is separately buffered.  The construction pool is
 frozen at no fewer than 240 source-group-disjoint records---twice the 120-pair
@@ -410,9 +420,12 @@ The external comparison is not replaced by SciTasteBench. MLRC-Bench evaluates
 all seven official tasks with Full SciTaste, the same-backbone Native Base,
 equal-context Raw/RAG, and the runnable official MLAB scaffold. MLR-Bench then
 tests ten frozen source-disjoint briefs with Full, Native Base, Raw/generic
-memory, and official MLR-Agent. SciTasteBench identifies the mechanism;
-MLRC-Bench tests objective executable progress; MLR-Bench tests the validity of
-the complete research product.
+memory, and official MLR-Agent. If the unqualified autonomous-research claim is
+retained, ScienceAgentBench supplies the cross-domain execution check on its
+unchanged official tasks; EXP-Bench is a complementary AI experiment-integrity
+test rather than a substitute for cross-domain evidence. SciTasteBench identifies
+the mechanism; MLRC-Bench tests objective executable progress; MLR-Bench tests
+the validity of the complete research product.
 
 Complete research trajectories additionally connect idea selection,
 experimentation, evidence synthesis, paper construction, review, and
@@ -429,20 +442,23 @@ to confirmatory evidence.
 # Results
 
 The submission result boundary is intentionally empty until frozen evidence is
-available. Three result blocks are required: (i) SciTasteBench hidden boundary
+available. Three result blocks are required for the ML-research claim: (i)
+SciTasteBench hidden boundary
 judgment, including matched--mismatched specificity and abstention; (ii)
 MLRC-Bench objective progress for Full SciTaste, the same-backbone Native Base,
 equal-context Raw/RAG, and the official MLAB scaffold under the same
 research-agent model across all seven tasks; and (iii) MLR-Bench stagewise and
 final-package quality for Full, Native Base, Raw/generic memory, and official
-MLR-Agent, with invalid or fabricated results retained. Development effects are
-not substituted for any block.
+MLR-Agent, with invalid or fabricated results retained. A fourth cross-domain
+block on ScienceAgentBench is required before retaining the broader title.
+Development effects are not substituted for any block.
 
 | Claim-bearing block | Independent unit | Primary endpoint | Current status |
 |---|---|---|---|
 | SciTaste mechanism | source-group-disjoint boundary pair | paired decision regret and correct two-state reversal | hidden confirmation not opened |
 | Executable research progress | MLRC-Bench task | objective score gain over supplied baseline per GPU/API budget | matched external run pending |
 | Complete research product | MLR-Bench brief | evidence-valid stage and final-package quality | external-system comparison pending |
+| Cross-domain scope | ScienceAgentBench task | executable task success, program correctness, and cost | required for broad claim; pending |
 
 A result enters this table only if the method, task population, backbone,
 budget, scorer, and failure policy were frozen before outcomes were opened. Null
@@ -646,9 +662,10 @@ must improve evidence gathered under a matched budget. SciTasteBench tests the
 first two requirements; accepted external benchmarks test the third. The method
 claim requires an independent boundary-pair confirmation, active objective
 trajectories on MLRC-Bench, and artifact-verifiable MLR-Bench comparisons against
-a runnable research agent. Until those tests are complete, this manuscript is a
-method and evaluation design rather than evidence for improved autonomous
-research.
+a runnable research agent. An unqualified autonomous-research claim additionally
+requires unchanged cross-domain ScienceAgentBench tasks. Until those tests are
+complete, this manuscript is a method and evaluation design rather than evidence
+for improved autonomous research.
 
 # AI Use Statement
 

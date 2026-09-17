@@ -1,0 +1,46 @@
+schema_version: "1.0"
+screen_id: scitastebench-aries-dev-102-screen-deepseek-v2
+project_id: scitaste-self-development
+intake_manifest:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/MANIFEST.json
+  sha256: 62443d27e61fc57df2975e2b25f3543d3e1eeeca6ccb3b899f0c3af137799700
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: b6c903fef4698ff927a3321ea55b16b3e9c409aa302860bc61c4050b93facb91
+profile:
+  locator: configs/model_nodes/profile_deepseek_v41flash_scitastebench_screen_v1.yaml
+  sha256: d28489bb2ecf8d782454a04b2020369d5a0a678ad1741edbf40243dd1da677ef
+backend_config:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+admitted_prior_track_a_role: unused
+excluded_candidate_ids:
+  - intake-836f2a0c9a664c8a1b1a335e
+  - intake-67169471dd543c31a8671c62
+  - intake-b36a46a616d5c24f388e5bb6
+  - intake-496e1b44819ad3abd852df5b
+  - intake-26da972fe975cb172503f340
+  - intake-e68d37ac67b657b57e36840a
+  - intake-c09ebe7f0cb97a9a31d9ce26
+  - intake-97844d5a352ed7865c81fba9
+  - intake-7dcc4b4fcc69953ae7a81be0
+  - intake-bb6b9e83fcd5e1c582162e07
+  - intake-6db85d49b5fffa2c1e5fd54b
+  - intake-e3966f69e605098104ab1913
+  - intake-9a5e8138b46ea7030afa7afa
+  - intake-f6d68e5b9d393c39ab684db7
+  - intake-0472c9c0c278d71d79cac1d2
+  - intake-7b10dc43068332f89705f004
+  - intake-94bbe26044a492d4a9c4e531
+  - intake-045be046ab89366936283a6e
+  - intake-ca69bc10f19b7bd598864de6
+  - intake-a8a6971331c116e398c5252d
+  - intake-f93572b3dde7f13f2522cff6
+  - intake-5753760a2399b4dfbc20593d
+  - intake-a34462a0bbab7f066c1b905f
+  - intake-7b822523d6657ab1cd987ff9
+batch_size: 8
+seed: 20270922
+automatic_retry_permitted: false
+target_outcomes_visible: false
+formal_split_access_authorized: false

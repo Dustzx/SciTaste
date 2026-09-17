@@ -1,0 +1,57 @@
+schema_version: "1.1"
+construction_id: scitastebench-aries-axis-inference-pairs-v1
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: b6c903fef4698ff927a3321ea55b16b3e9c409aa302860bc61c4050b93facb91
+caseability_decisions:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-screen-deepseek-v2/normalization/NORMALIZED_DECISIONS.jsonl
+  sha256: ed2d8a581412a42c9bace5e86ae2459369b8e5e0dce5cf66b62513920202c854
+constructor_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+constructor_provider: deepseek
+constructor_model: deepseek-flash
+batch_size: 4
+seed: 20270925
+standard_visible_budget: >-
+  Make one bounded evidence-interpretation or claim-calibration decision in the
+  current revision. No new experiment or hidden result may be assumed.
+utility_contract:
+  contract_id: scitastebench-inference-utility-v1
+  evidence_value_weight: 0.40
+  expected_information_gain_weight: 0.10
+  resource_cost_weight: 0.10
+  claim_risk_weight: 0.40
+  minimum_action_utility_for_commitment: 0.05
+  component_anchors:
+    evidence_value: "0=ignores or obscures the visible evidence; 1=faithfully preserves all decision-relevant evidence"
+    expected_information_gain: "0=does not clarify the competing interpretations; 1=strongly separates them"
+    resource_cost: "0=negligible within the visible budget; 1=consumes or exceeds the full visible budget"
+    claim_risk: "0=claim strength is fully supported; 1=claim is materially unsupported by the visible evidence"
+  registered_before_system_outputs: true
+selection_mode: top-up
+selected_candidates:
+  - intake_candidate_id: intake-d948de9bc4b66606e4ce4bda
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-309270e7c50c080061005879
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-e6d1f7d288ed61f28fca6391
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-262c04280fd78fba5ab4d220
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-0ca8859355f006bb72546c6d
+    decision_context_family: claim-calibration-and-review-closure
+  - intake_candidate_id: intake-023c9ed5db66fdb17beed73d
+    decision_context_family: claim-calibration-and-review-closure
+  - intake_candidate_id: intake-3fc3cfec56fdce3f65e0b469
+    decision_context_family: claim-calibration-and-review-closure
+  - intake_candidate_id: intake-2fe96daac2488f4c65c1d043
+    decision_context_family: claim-calibration-and-review-closure
+target_pair_count: 8
+target_pairs_per_context: 1
+target_outcomes_visible_to_constructor: false
+formal_split_opened: false
+human_label_claim_allowed: false
+effectiveness_claim_allowed: false

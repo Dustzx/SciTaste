@@ -60,6 +60,7 @@ class SciTasteBenchDevelopmentScreenConfig(BaseModel):
     profile: ScreenFileBinding
     backend_config: ScreenFileBinding
     admitted_prior_track_a_role: Literal["unused"] = "unused"
+    excluded_candidate_ids: tuple[str, ...] = ()
     batch_size: int = Field(default=8, ge=1, le=12)
     seed: int = Field(default=2027, ge=0)
     automatic_retry_permitted: Literal[False] = False
@@ -69,6 +70,8 @@ class SciTasteBenchDevelopmentScreenConfig(BaseModel):
     @model_validator(mode="after")
     def config_is_closed(self) -> SciTasteBenchDevelopmentScreenConfig:
         validate_project_id(self.project_id)
+        if len(self.excluded_candidate_ids) != len(set(self.excluded_candidate_ids)):
+            raise ValueError("development screen exclusions must be unique")
         return self
 
 
@@ -375,6 +378,12 @@ def prepare_scitastebench_development_screen(
         raise ValueError("development screen intake exposed hidden outcomes")
     items_path = _require_binding(root, config.screening_items)
     rows = _load_screen_candidates(items_path, role=config.admitted_prior_track_a_role)
+    candidate_ids = {item.intake_candidate_id for item in rows}
+    unknown_exclusions = set(config.excluded_candidate_ids) - candidate_ids
+    if unknown_exclusions:
+        raise ValueError("development screen excludes an unknown candidate")
+    excluded = set(config.excluded_candidate_ids)
+    rows = [item for item in rows if item.intake_candidate_id not in excluded]
     if not rows:
         raise ValueError("development screen has no source-disjoint candidates")
 

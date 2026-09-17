@@ -8,6 +8,8 @@ from scitaste.benchmark.attribution import (
 from scitaste.benchmark.boundary_pairs import (
     BoundaryConstructAudit,
     BoundaryCounterfactualPair,
+    BoundaryCueControlState,
+    BoundaryCueControlView,
     BoundaryFactChange,
     BoundaryFlipKind,
     BoundaryPairJudgment,
@@ -18,6 +20,7 @@ from scitaste.benchmark.boundary_pairs import (
     BoundaryStateRole,
     BoundaryUtilityContract,
     BoundaryUtilityVector,
+    build_boundary_cue_control_view,
     inspect_boundary_pair_package,
 )
 from scitaste.benchmark.curation import (
@@ -134,6 +137,8 @@ __all__ = [
     "BenchmarkSuite",
     "BoundaryConstructAudit",
     "BoundaryCounterfactualPair",
+    "BoundaryCueControlState",
+    "BoundaryCueControlView",
     "BoundaryFactChange",
     "BoundaryFlipKind",
     "BoundaryPairJudgment",
@@ -198,6 +203,7 @@ __all__ = [
     "TreatmentSupportArtifact",
     "TreatmentSupportRole",
     "TreatmentTokenizationTrace",
+    "build_boundary_cue_control_view",
     "compare_model_boundaries",
     "compile_curated_suite",
     "discover_study_result_paths",

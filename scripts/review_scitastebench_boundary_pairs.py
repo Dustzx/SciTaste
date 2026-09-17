@@ -366,6 +366,28 @@ def _normalize_review_payload(
         codes = review.get("rejection_codes")
         if not isinstance(codes, list):
             continue
+        for state in ("state_1", "state_2"):
+            selection_key = f"{state}_selection_id"
+            abstain_key = f"{state}_should_abstain"
+            if review.get(abstain_key) is not None:
+                continue
+            selection = review.get(selection_key)
+            replacement = selection is None
+            review[abstain_key] = replacement
+            corrections.append(
+                {
+                    "request_id": request_id,
+                    "pair_id": str(review.get("pair_id", "")),
+                    "field": abstain_key,
+                    "observed": "null",
+                    "replacement": str(replacement).lower(),
+                    "authority": "bounded-null-abstention-normalization-v1",
+                }
+            )
+            if selection is None and review.get("construct_valid") is True:
+                review["construct_valid"] = False
+                if "INCOMPLETE_SELECTION" not in codes:
+                    codes.append("INCOMPLETE_SELECTION")
         if review.get("construct_valid") is True and codes:
             review["construct_valid"] = False
             corrections.append(

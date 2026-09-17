@@ -359,6 +359,68 @@ class BoundaryCounterfactualPair(BaseModel):
         return hashlib.sha256(canonical.encode()).hexdigest()
 
 
+class BoundaryCueControlState(BaseModel):
+    """One label-hidden state with the invariant scientific context removed."""
+
+    model_config = _CONFIG
+
+    role: BoundaryStateRole
+    visible_budget: str = Field(min_length=1, max_length=4_000)
+    fact_question: str = Field(min_length=1, max_length=1_000)
+    fact_value: str = Field(min_length=1, max_length=4_000)
+
+
+class BoundaryCueControlView(BaseModel):
+    """The boundary-only negative control used to detect shallow cue solving."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    pair_id: str = Field(min_length=1, max_length=300)
+    pair_sha256: str = Field(pattern=_SHA256)
+    candidate_actions: tuple[ResearchAction, ...] = Field(min_length=2, max_length=5)
+    base: BoundaryCueControlState
+    twin: BoundaryCueControlState
+    invariant_context_exposed: Literal[False] = False
+    expected_labels_exposed: Literal[False] = False
+
+    @property
+    def sha256(self) -> str:
+        canonical = json.dumps(
+            self.model_dump(mode="json"),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def build_boundary_cue_control_view(
+    pair: BoundaryCounterfactualPair,
+) -> BoundaryCueControlView:
+    """Project a pair to fact plus actions while withholding invariant context and labels."""
+
+    common = {
+        "visible_budget": pair.base.visible_budget,
+        "fact_question": pair.changed_fact.question,
+    }
+    return BoundaryCueControlView(
+        pair_id=pair.pair_id,
+        pair_sha256=pair.sha256,
+        candidate_actions=pair.candidate_actions,
+        base=BoundaryCueControlState(
+            role=BoundaryStateRole.BASE,
+            fact_value=pair.changed_fact.base_value,
+            **common,
+        ),
+        twin=BoundaryCueControlState(
+            role=BoundaryStateRole.TWIN,
+            fact_value=pair.changed_fact.twin_value,
+            **common,
+        ),
+    )
+
+
 class BoundaryPairPackage(BaseModel):
     """Immutable benchmark population divided before model evaluation."""
 

@@ -1,0 +1,21 @@
+schema_version: "1.0"
+screen_id: scitastebench-aries-dev-102-screen-glm-v1
+project_id: scitaste-self-development
+intake_manifest:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/MANIFEST.json
+  sha256: 62443d27e61fc57df2975e2b25f3543d3e1eeeca6ccb3b899f0c3af137799700
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: b6c903fef4698ff927a3321ea55b16b3e9c409aa302860bc61c4050b93facb91
+profile:
+  locator: configs/model_nodes/profile_zhipu_glm53_scitastebench_screen_v1.yaml
+  sha256: f715258682ca0bc2316f2d0eac08dd194fd147260e3575a6d8d9b17536f713d2
+backend_config:
+  locator: configs/model_nodes/zhipu_glm53_flash.scitastebench_live_20260916.yaml
+  sha256: ebb7f2495a04578a788f3bbb879d904ce8a5018b590285a5453bb30525dfc7c3
+admitted_prior_track_a_role: unused
+batch_size: 8
+seed: 20270921
+automatic_retry_permitted: false
+target_outcomes_visible: false
+formal_split_access_authorized: false
