@@ -306,3 +306,19 @@ diagnosis is unchanged: zero of five central claim arguments is complete, zero o
 ICLR neighbours is evidence-shape or scale matched, and admitted end-to-end trajectories,
 human/expert validation, and strong system baselines remain missing. A local mechanism repair can
 remove a central contradiction; it cannot by itself make the paper ICLR-comparable.
+
+V22 registers the balanced observable-state replay and sharpens the mechanism diagnosis. Six
+new cross-task precedents were frozen before their branch outcomes, exhaustively labelled over
+seven actions, and evaluated on the same 11-state development population. Utility decreased to
+0.4520 against 0.6808 for static `PROBE`, while failure increased to 36.4% against 9.1%. The
+controller therefore rejects another confirmation and replaces source expansion with an
+outcome-calibrated epistemic-state representation and abstention mechanism.
+
+The same assessment compares this result with five verified ICLR 2025--2026 accepted papers:
+EXP-Bench, HeurekaBench, the 100+ researcher ideation study, ScienceAgentBench, and TusoAI. It
+still reports `central-claim-contradicted`, 0/5 complete central arguments, 0/5 accepted-neighbour
+component-shape matches, and 0/5 scale-reference matches. Missing admitted portfolio components
+remain end-to-end trajectories, human or expert validation, and strong system baselines. Thus
+the top-venue critic changes the experiment controller before paper writing: one controlled
+family, whether positive or negative, is explicitly incapable of authorizing an ICLR-level
+claim.

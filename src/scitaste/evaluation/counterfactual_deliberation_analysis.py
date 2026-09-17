@@ -19,6 +19,7 @@ from scitaste.evaluation.counterfactual_taste import CounterfactualActionSetResu
 from scitaste.model_nodes.runtime import RuntimeLedgerEntry, RuntimeOutcome
 from scitaste.project.models import content_sha256
 from scitaste.taste.deliberation import (
+    TASTE_DELIBERATION_NODE,
     TasteDeliberationInput,
     TasteDeliberationProposal,
     VerifiedTasteDeliberation,
@@ -194,6 +195,7 @@ def analyze_counterfactual_deliberations(
             for item in candidates
             if item.invocation_id == target.study_id
             or item.invocation_id.startswith(f"{target.study_id}-schema-repair-")
+            or item.invocation_id.startswith(f"{target.study_id}-selector-")
         )
         if len(matching) != 1:
             raise ValueError(
@@ -328,7 +330,10 @@ def _accepted_deliberations(
     accepted: dict[str, list[VerifiedTasteDeliberation]] = {}
     for path in sorted(ledger_root.glob("*.json")):
         entry = RuntimeLedgerEntry.model_validate_json(path.read_bytes(), strict=True)
-        if entry.outcome is not RuntimeOutcome.ACCEPTED:
+        if (
+            entry.outcome is not RuntimeOutcome.ACCEPTED
+            or entry.intent.node_name != TASTE_DELIBERATION_NODE
+        ):
             continue
         verified = taste_deliberation_from_ledger(path, evidence_root=evidence_root)
         accepted.setdefault(verified.input.fingerprint, []).append(verified)

@@ -309,6 +309,31 @@ points to the need for an explicit transfer-value or abstention mechanism, not a
 library expansion. The machine-readable report is
 `evaluations/counterfactual-taste-policy-v3-comprehensive-selector-development-v2/REPORT.json`.
 
+## Balanced observable-state development replay
+
+The next iteration tested whether the comprehensive failure was merely a coverage artifact.
+Before any new branch outcomes were opened, SciTaste froze eight source trajectories under a
+common four-experiments-per-turn envelope and selected the six turn-two states whose visible
+status was `candidate-untested`. It then evaluated all seven actions for gravity, Coulomb,
+magnetic-force, Snell, underdamped, and Hooke tasks, producing 42 completed branches. Six
+outcome-grounded abstractions were compiled into temporally safe precedents and added to the
+existing library. The evaluated 11-state target population, selector, static baselines, bounded
+utility transform, and +0.02 development gate were unchanged.
+
+The additional cross-task coverage made transfer worse. Mean bounded utility fell to 0.4520
+versus 0.6808 for static `PROBE`; selected-action failure rose to 36.4% versus 9.1%; and the
+preferred-action hit rate was 45.5%. The selector failed particularly when identical coarse
+state descriptors concealed different epistemic bottlenecks. For example, the new
+`candidate-untested`, middle-phase, low-confidence, high-value precedents did not transfer safely
+to the sound-speed state even though their status and resource bands matched.
+
+This closes the “add more superficially matched precedents” development path. Formal v6 is not
+authorized. The next mechanism must represent the scientific situation itself—such as competing
+hypothesis families, unexplained contradictions, identifiability gaps, parameter-estimation
+needs, and submission readiness—and must calibrate transfer value and abstention from source
+outcomes. Its machine-readable report is
+`evaluations/counterfactual-taste-balanced-v6-comprehensive-selector-development-v1/REPORT.json`.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration
