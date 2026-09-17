@@ -50,22 +50,47 @@ writing polish while empirical core gaps remain open. This prevents a sequence
 of cheap local ablations from indefinitely outranking a decisive downstream or
 end-to-end experiment.
 
+The assessment also reports an evidence-portfolio breadth diagnostic. It counts
+distinct admitted held-out/objective experiment families, separates supporting
+and contradicting families, and compares their breadth with the reported
+evidence components of accepted neighbours. This is deliberately not an
+acceptance threshold: four weak tables are not better than one decisive study.
+It is a guard against the opposite error--treating one favorable controlled
+table as a complete ICLR argument when accepted neighbours combine task breadth,
+strong baselines, ablations, objective or external validation, and case studies.
+
 ## SciTaste self-development snapshot
 
 The current project-owned manifest and generated assessment are:
 
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V1.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V1.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V3.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V4.json`
 
 The comparison set contains the ICLR 2025 main-track ScienceAgentBench paper and
 the ICLR 2026 main-track EXP-Bench and TusoAI papers. The first two show the
 scale and validation expected of benchmark work; TusoAI shows the breadth,
 baseline strength, ablations, and real case studies expected of a method paper.
-The current SciTaste position is `not-yet-competitive`: the natural decision
-studies are development evidence, the first downstream cohort had an inactive
-treatment, and the single repaired trajectory cannot establish an average
-effect. The critic therefore ranks an artifact-verifiable matched-budget
-idea-to-paper comparison above additional manuscript polish.
+The current SciTaste position is `core-claim-contradicted`. A first frozen
+NewtonBench block was invalidated rather than reported because required cost
+telemetry was unavailable after independent scoring. The repaired, new-seed
+formal-v2 block then completed 12 domains and 24 arms under matched budgets.
+Learned Taste changed all 12 paired action trajectories, but the preregistered
+primary endpoint was 1/12 for Native versus 2/12 for Base (paired difference
+-0.083, bootstrap 95% interval [-0.333, 0.167], exact sign-test p=1). The result
+therefore establishes behavioral intervention without downstream improvement.
+The secondary RMSLE direction cannot replace the negative primary conclusion.
+Mechanistically, the treatment selected `REFINE` at all 48 nonterminal decisions
+(action entropy 0 bits), while Base used six action types (2.41 bits). The
+current learned policy is therefore an action prior rather than a conditional
+scientific policy in this environment.
+
+Only one objective empirical family is currently admitted, below the four
+reported evidence components in every registered accepted neighbour. The
+framework consequently forbids venue-readiness language and exposes the missing
+construct-validity, mechanism, end-to-end, strong-baseline, failure-boundary,
+and narrative evidence separately. The next iteration must change and diagnose
+the Taste mechanism on development data before any new independent confirmation;
+adding another presentation table would not close the scientific gap.
 
 This assessment is deliberately dynamic. Each admitted result updates the same
 manifest and recompiles the matrix, so completed work disappears from the next

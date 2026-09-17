@@ -125,6 +125,9 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
 
     assert assessment.submission_position is SubmissionEvidencePosition.NOT_YET_COMPETITIVE
     assert assessment.admitted_evidence_family_count == 0
+    assert assessment.evidence_portfolio.admitted_empirical_family_count == 0
+    assert assessment.evidence_portfolio.below_neighbour_reported_component_floor is True
+    assert "No held-out" in assessment.evidence_portfolio.diagnosis
     assert len(assessment.unresolved_dimensions) == len(VenueGapDimension)
     assert assessment.next_actions[0].action_id == "broad-experiment"
     assert assessment.acceptance_prediction_made is False

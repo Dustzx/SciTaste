@@ -262,6 +262,30 @@ class RankedVenueGapAction(BaseModel):
     reason: str
 
 
+class VenueEvidencePortfolioAssessment(BaseModel):
+    """Breadth check against the evidence shape of accepted neighbours.
+
+    Counts are diagnostic rather than acceptance thresholds: one experiment can
+    answer several questions, and a large benchmark can still miss the paper's
+    central causal claim.  The comparison nevertheless prevents one controlled
+    table from being mistaken for a complete top-venue evidence portfolio.
+    """
+
+    model_config = _CONFIG
+
+    accepted_neighbour_count: int = Field(ge=2)
+    accepted_method_neighbour_count: int = Field(ge=0)
+    accepted_benchmark_neighbour_count: int = Field(ge=0)
+    accepted_neighbour_reported_component_floor: int = Field(ge=1)
+    admitted_empirical_family_count: int = Field(ge=0)
+    supporting_empirical_family_count: int = Field(ge=0)
+    contradicting_empirical_family_count: int = Field(ge=0)
+    development_empirical_family_count: int = Field(ge=0)
+    admitted_empirical_dimensions: tuple[VenueGapDimension, ...]
+    below_neighbour_reported_component_floor: bool
+    diagnosis: str
+
+
 class VenueGapAssessment(BaseModel):
     """A venue comparison, not a prediction of acceptance or oral selection."""
 
@@ -280,6 +304,7 @@ class VenueGapAssessment(BaseModel):
     criteria: tuple[VenueCriterionAssessment, ...]
     unresolved_dimensions: tuple[VenueGapDimension, ...]
     admitted_evidence_family_count: int = Field(ge=0)
+    evidence_portfolio: VenueEvidencePortfolioAssessment
     single_result_is_insufficient: Literal[True] = True
     acceptance_prediction_made: Literal[False] = False
     oral_prediction_made: Literal[False] = False
@@ -342,6 +367,7 @@ def assess_venue_gap(
         and item.headline_eligible
         and item.direction is EvidenceDirection.SUPPORTING
     }
+    portfolio = _assess_evidence_portfolio(manifest)
     paper_hours = _paper_deadline_hours(deadline)
     ranked = _rank_actions(manifest, assessments, paper_hours)
     rejection_reasons = tuple(
@@ -369,11 +395,101 @@ def assess_venue_gap(
         criteria=assessments,
         unresolved_dimensions=unresolved,
         admitted_evidence_family_count=len(admitted_families),
+        evidence_portfolio=portfolio,
         single_result_is_insufficient=True,
         acceptance_prediction_made=False,
         oral_prediction_made=False,
         next_actions=ranked,
         strongest_rejection_reasons=rejection_reasons,
+    )
+
+
+def _assess_evidence_portfolio(
+    manifest: VenueGapManifest,
+) -> VenueEvidencePortfolioAssessment:
+    empirical_dimensions = {
+        item
+        for item in VenueGapDimension
+        if item
+        not in {
+            VenueGapDimension.INNOVATION,
+            VenueGapDimension.NARRATIVE_CONTRIBUTION,
+        }
+    }
+    empirical = tuple(
+        item
+        for item in manifest.evidence
+        if item.dimension in empirical_dimensions
+        and (item.objective_measurement or item.held_out)
+    )
+    admitted = tuple(
+        item
+        for item in empirical
+        if item.maturity is EvidenceMaturity.ADMITTED and item.headline_eligible
+    )
+    supporting_families = {
+        item.family_id
+        for item in admitted
+        if item.direction is EvidenceDirection.SUPPORTING
+    }
+    contradicting_families = {
+        item.family_id
+        for item in admitted
+        if item.direction is EvidenceDirection.CONTRADICTING
+    }
+    admitted_families = {item.family_id for item in admitted}
+    development_families = {
+        item.family_id
+        for item in empirical
+        if item.maturity is EvidenceMaturity.DEVELOPMENT_ONLY
+    }
+    component_floor = min(
+        len(item.reported_evidence) for item in manifest.nearest_neighbours
+    )
+    below_floor = len(admitted_families) < component_floor
+    if not admitted_families:
+        diagnosis = (
+            "No held-out or objective empirical evidence family is admitted; prose, "
+            "tests, and development tables cannot establish top-venue readiness."
+        )
+    elif contradicting_families and not supporting_families:
+        diagnosis = (
+            "The only admitted empirical portfolio is contradicting; additional tables "
+            "cannot repair the central claim without a changed mechanism and new population."
+        )
+    elif below_floor:
+        diagnosis = (
+            "The admitted empirical portfolio is narrower than every accepted-neighbour "
+            "evidence summary; one controlled family is not a complete paper argument."
+        )
+    else:
+        diagnosis = (
+            "Empirical breadth reaches the accepted-neighbour component floor, but claim "
+            "validity, effect direction, and reviewer dimensions remain separately binding."
+        )
+    method_kinds = {AcceptedPaperKind.METHOD, AcceptedPaperKind.METHOD_AND_BENCHMARK}
+    benchmark_kinds = {
+        AcceptedPaperKind.BENCHMARK,
+        AcceptedPaperKind.METHOD_AND_BENCHMARK,
+    }
+    return VenueEvidencePortfolioAssessment(
+        accepted_neighbour_count=len(manifest.nearest_neighbours),
+        accepted_method_neighbour_count=sum(
+            item.paper_kind in method_kinds for item in manifest.nearest_neighbours
+        ),
+        accepted_benchmark_neighbour_count=sum(
+            item.paper_kind in benchmark_kinds for item in manifest.nearest_neighbours
+        ),
+        accepted_neighbour_reported_component_floor=component_floor,
+        admitted_empirical_family_count=len(admitted_families),
+        supporting_empirical_family_count=len(supporting_families),
+        contradicting_empirical_family_count=len(contradicting_families),
+        development_empirical_family_count=len(development_families),
+        admitted_empirical_dimensions=tuple(
+            sorted({item.dimension for item in admitted}, key=lambda item: item.value)
+        ),
+        below_neighbour_reported_component_floor=below_floor,
+        diagnosis=diagnosis,
     )
 
 
@@ -601,6 +717,7 @@ __all__ = [
     "VenueCriterionAssessment",
     "VenueCriterionStatus",
     "VenueEvidenceCriterion",
+    "VenueEvidencePortfolioAssessment",
     "VenueEvidenceSignal",
     "VenueGapAction",
     "VenueGapActionKind",

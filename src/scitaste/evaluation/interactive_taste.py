@@ -330,6 +330,16 @@ class TasteControllerInteractiveGuidanceProvider:
             action_type=selected.type.value,
             instruction=instruction,
             decision_sha256=content_sha256(selected),
+            # The lifecycle controller owns the high-level action.  Constrain the
+            # structured research agent at decoding time instead of asking it to
+            # repeat that decision and terminating the trajectory when it drifts.
+            # NewtonBench exposes experiments (not an executable code budget), so
+            # every evidence-development action concretises to an experiment call.
+            allowed_agent_actions=(
+                ("submit_hypothesis",)
+                if selected.type.value == "STOP"
+                else ("run_experiments",)
+            ),
         )
         return InteractiveGuidanceEnvelope.create(
             guidance=visible,

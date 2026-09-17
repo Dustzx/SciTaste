@@ -1,0 +1,100 @@
+schema_version: "1.0"
+program_id: newtonbench-taste-formal-v2
+project_id: scitaste-self-development
+status: frozen-before-any-formal-task-execution
+frozen_at: 2026-09-17T16:20:00+08:00
+
+scientific_question: >-
+  Under the same research model, hidden environment, tool budget, and scorer,
+  does the frozen outcome-updated Scientific Taste policy improve autonomous
+  scientific-law discovery over the identical Native controller with the
+  learned policy weight set to zero?
+
+repair_from_v1:
+  v1_result: outputs/projects/scitaste-self-development/evaluations/newtonbench-policy-v12-formal-v1/COHORT_RESULT_REANALYSIS_V2.json
+  v1_effect_claim_allowed: false
+  defects:
+    - controller-selected actions were not constrained in the agent decoding schema
+    - an unpriced independent judge conflicted with required cost telemetry after scoring
+  repairs:
+    - constrain each model response to the controller-selected executable action family
+    - match arms by token, turn, experiment, and call ceilings; disclose judge cost as unknown
+  no_v1_task_or_seed_reuse: true
+
+estimand:
+  unit: one-NewtonBench-physics-domain
+  population: all-twelve-public-NewtonBench-physics-modules
+  treatment: full-scitaste-learned-policy
+  control: native-base-without-learned-taste
+  primary_endpoint: symbolic_accuracy
+  metric_direction: higher
+  secondary_endpoints: [rmsle, experiments, model-tokens, selected-action-trajectory]
+  primary_contrast: paired-native-minus-base-across-task-domains
+  failure_policy: retain-genuine-agent-tool-or-budget-failures-at-symbolic-accuracy-zero
+
+task_freeze:
+  selection_rule: exactly-one-new-unobserved-seed-from-each-of-the-twelve-benchmark-modules
+  seed_rule: consecutive-9500-through-9511-assigned-in-module-order-before-execution
+  prior_result_observation: false
+  tasks:
+    - configs/evaluation/newtonbench/formal_task_gravity_v2.json
+    - configs/evaluation/newtonbench/formal_task_coulomb_v2.json
+    - configs/evaluation/newtonbench/formal_task_magnetic_v2.json
+    - configs/evaluation/newtonbench/formal_task_fourier_v2.json
+    - configs/evaluation/newtonbench/formal_task_snell_v2.json
+    - configs/evaluation/newtonbench/formal_task_radioactive_v2.json
+    - configs/evaluation/newtonbench/formal_task_underdamped_v2.json
+    - configs/evaluation/newtonbench/formal_task_malus_v2.json
+    - configs/evaluation/newtonbench/formal_task_sound_v2.json
+    - configs/evaluation/newtonbench/formal_task_hooke_v2.json
+    - configs/evaluation/newtonbench/formal_task_be_distribution_v2.json
+    - configs/evaluation/newtonbench/formal_task_heat_v2.json
+
+frozen_system:
+  taste_policy: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-v12-refresh/POLICY.json
+  taste_policy_sha256: 3fd5a3c640ca7a0fdd4cecd36665119a4adfa9d30dce673611e05f6b1a8cac73
+  decision_family: adaptive-allocation
+  research_agent:
+    provider: deepseek
+    model: deepseek-flash
+    config: configs/model_nodes/deepseek_v41flash.interactive_live_20260917.yaml
+  symbolic_judge:
+    provider: zhipu-direct
+    model: glm-5.3-flash
+    config: configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v5.yaml
+    generator_disjoint: true
+    pricing_telemetry_required: false
+  benchmark:
+    repository: https://github.com/HKUST-KnowComp/NewtonBench.git
+    commit: 912a4ba5f4356ddd06acc16e44460ca30be4abc2
+  exact_same_backbone_between_treatment_and_control: true
+  exact_same_agent_seed_within_each_pair: true
+  exact_same_hidden_environment_within_each_pair: true
+
+resource_ceiling:
+  paired_trajectories: 12
+  total_arms: 24
+  turns_per_arm: 8
+  experiments_per_arm: 24
+  provider_retries: 0
+  maximum_total_tokens_per_arm: 120000
+  priced_research_agent_cost_ceiling_usd_per_arm: 1
+  independent_judge_cost: unknown-and-disclosed
+  gpu_hours: 0
+
+analysis:
+  report_all_tasks_and_failures: true
+  primary_summary: paired-mean-risk-difference
+  uncertainty: task-paired-exact-sign-test-and-bootstrap-interval
+  descriptive_breakdowns: [difficulty, system, behavioral-activation, terminal-status]
+  multiplicity: one-confirmatory-primary-endpoint-secondary-endpoints-descriptive
+  scale_out_rule: use-observed-paired-variance-and-discordance-never-drop-failed-tasks
+
+claim_boundary:
+  supports_if_positive: downstream-causal-utility-across-NewtonBench-domains
+  does_not_establish:
+    - complete-idea-to-paper-superiority
+    - human-expert-validity
+    - superiority-to-accepted-external-autoresearch-methods
+    - ICLR-acceptance-or-oral-readiness
+
