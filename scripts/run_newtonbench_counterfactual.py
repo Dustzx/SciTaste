@@ -159,6 +159,8 @@ def run(args: argparse.Namespace) -> CounterfactualActionSetResult:
         receipts=tuple(receipts),
         interventions=tuple(interventions),
         primary_metric=args.primary_metric,
+        source_metric=args.source_metric,
+        metric_transform=args.metric_transform,
         metric_direction=args.metric_direction,
         failure_value=args.failure_value,
         practical_equivalence_tolerance=args.practical_equivalence_tolerance,
@@ -221,6 +223,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--judge-prompt-version", default="newtonbench-symbolic-equivalence-v1")
     parser.add_argument("--judge-seed", type=int, default=0)
     parser.add_argument("--primary-metric", default="symbolic_accuracy")
+    parser.add_argument("--source-metric", default=None)
+    parser.add_argument(
+        "--metric-transform",
+        choices=("identity", "exp-negative"),
+        default="identity",
+    )
     parser.add_argument("--metric-direction", choices=("higher", "lower"), default="higher")
     parser.add_argument("--failure-value", type=float, default=0.0)
     parser.add_argument("--practical-equivalence-tolerance", type=float, default=0.0)

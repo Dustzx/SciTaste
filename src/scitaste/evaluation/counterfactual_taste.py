@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from enum import StrEnum
 from pathlib import Path
@@ -342,6 +343,14 @@ class CounterfactualActionSetResult(BaseModel):
     environment_sha256: str = Field(pattern=_SHA256)
     prefix_sha256: str = Field(pattern=_SHA256)
     primary_metric: str
+    source_metric: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    metric_transform: Literal["identity", "exp-negative"] = Field(
+        default="identity",
+        exclude_if=lambda value: value == "identity",
+    )
     metric_direction: Literal["higher", "lower"]
     failure_value: float = Field(allow_inf_nan=False)
     practical_equivalence_tolerance: float = Field(
@@ -360,6 +369,13 @@ class CounterfactualActionSetResult(BaseModel):
         validate_entry_id(self.study_id, field_name="counterfactual study_id")
         validate_project_id(self.project_id)
         validate_entry_id(self.task_id, field_name="counterfactual task_id")
+        if self.metric_transform == "identity" and self.source_metric is not None:
+            raise ValueError("identity counterfactual metric cannot name a source metric")
+        if self.metric_transform == "exp-negative":
+            if self.source_metric is None:
+                raise ValueError("exp-negative counterfactual metric requires a source metric")
+            if self.metric_direction != "higher" or self.failure_value != 0.0:
+                raise ValueError("exp-negative counterfactual metric requires higher/zero failure")
         actions = tuple(item.action for item in self.outcomes)
         if actions != tuple(sorted(set(actions), key=lambda item: item.value)):
             raise ValueError("counterfactual branch actions must be sorted and unique")
@@ -399,6 +415,8 @@ class CounterfactualActionSetResult(BaseModel):
         receipts: tuple[InteractiveResearchRunReceipt, ...],
         interventions: tuple[CounterfactualActionIntervention, ...] | None = None,
         primary_metric: str,
+        source_metric: str | None = None,
+        metric_transform: Literal["identity", "exp-negative"] = "identity",
         metric_direction: Literal["higher", "lower"],
         failure_value: float,
         practical_equivalence_tolerance: float = 0.0,
@@ -445,16 +463,22 @@ class CounterfactualActionSetResult(BaseModel):
             ):
                 raise ValueError("counterfactual intervention targets another prefix")
             score = receipt.objective_score
+            observed_metric = primary_metric if metric_transform == "identity" else source_metric
             observed = (
                 receipt.status == "completed"
                 and score is not None
-                and primary_metric in score.metrics
+                and observed_metric is not None
+                and observed_metric in score.metrics
             )
-            value = (
-                score.metrics[primary_metric]
-                if observed and score is not None
-                else failure_value
-            )
+            if observed and score is not None and observed_metric is not None:
+                raw_value = score.metrics[observed_metric]
+                value = (
+                    raw_value
+                    if metric_transform == "identity"
+                    else math.exp(-raw_value)
+                )
+            else:
+                value = failure_value
             outcomes.append(
                 CounterfactualBranchOutcome(
                     action=intervention.forced_action,
@@ -495,6 +519,8 @@ class CounterfactualActionSetResult(BaseModel):
             "environment_sha256": prefix.environment_sha256,
             "prefix_sha256": prefix.prefix_sha256,
             "primary_metric": primary_metric,
+            "source_metric": source_metric,
+            "metric_transform": metric_transform,
             "metric_direction": metric_direction,
             "failure_value": failure_value,
             "practical_equivalence_tolerance": practical_equivalence_tolerance,

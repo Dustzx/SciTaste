@@ -231,3 +231,18 @@ def test_prefix_matched_branches_produce_objective_action_preference() -> None:
         failure_value=2.0,
     )
     assert secondary.preferred_actions == (CounterfactualResearchAction.REFINE,)
+
+    bounded = CounterfactualActionSetResult.from_receipts(
+        study_id="counterfactual-study",
+        prefix=prefix,
+        receipts=tuple(receipts),
+        interventions=tuple(interventions),
+        primary_metric="exp-neg-error",
+        source_metric="error",
+        metric_transform="exp-negative",
+        metric_direction="higher",
+        failure_value=0.0,
+    )
+    assert bounded.preferred_actions == (CounterfactualResearchAction.REFINE,)
+    assert bounded.outcomes[0].objective_value == 0.0
+    assert bounded.outcomes[1].objective_value == 1.0
