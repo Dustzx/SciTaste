@@ -366,9 +366,7 @@ def test_deliberation_cannot_override_deterministic_hard_applicability(
     )
     candidates = list(input_data.candidates)
     candidates[blocked_index] = blocked
-    constrained_input = input_data.model_copy(
-        update={"candidates": tuple(candidates)}
-    )
+    constrained_input = input_data.model_copy(update={"candidates": tuple(candidates)})
 
     findings = validate_taste_deliberation(constrained_input, _proposal(constrained_input))
 
@@ -448,9 +446,12 @@ def test_deliberation_node_accepts_only_fact_grounded_closed_pool(
         expected_selected = ()
         assert result.proposal.recommended_action_id is None
     assert result.proposal.selected_case_ids == expected_selected
-    assert next(
-        item for item in result.proposal.assessments if item.case_id == unsupported_case_id
-    ).verdict is TasteTransferVerdict.UNCERTAIN
+    assert (
+        next(
+            item for item in result.proposal.assessments if item.case_id == unsupported_case_id
+        ).verdict
+        is TasteTransferVerdict.UNCERTAIN
+    )
     assert result.advisory_only is True
     assert taste_node_types()["taste-deliberation"].output_type is TasteDeliberationProposal
 

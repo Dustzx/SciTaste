@@ -108,8 +108,7 @@ def _analyze(
         for order in orders
     }
     base_accuracy = {
-        order: sum(base_by_order[order][case_id]["correct"] for case_id in cases)
-        / len(cases)
+        order: sum(base_by_order[order][case_id]["correct"] for case_id in cases) / len(cases)
         for order in orders
     }
     changes = {
@@ -167,9 +166,7 @@ def _analyze(
         },
         "full_policy_order_consistent_accuracy": order_consistent_accuracy,
         "base_order_consistent_accuracy": base_order_consistent_accuracy,
-        "behavior_change_count_by_order": {
-            order: len(changes[order]) for order in orders
-        },
+        "behavior_change_count_by_order": {order: len(changes[order]) for order in orders},
         "improvement_count_by_order": improvements,
         "regression_count_by_order": regressions,
         "selected_action_type_counts": dict(
@@ -311,8 +308,7 @@ def parse_args() -> argparse.Namespace:
         "--base-declared",
         type=Path,
         default=(
-            root
-            / "scitastebench-natural-contrastive-confirmation-v2/deepseek-declared/"
+            root / "scitastebench-natural-contrastive-confirmation-v2/deepseek-declared/"
             "benchmark_report.json"
         ),
     )
@@ -320,8 +316,7 @@ def parse_args() -> argparse.Namespace:
         "--base-reversed",
         type=Path,
         default=(
-            root
-            / "scitastebench-natural-contrastive-confirmation-v2/deepseek-reversed/"
+            root / "scitastebench-natural-contrastive-confirmation-v2/deepseek-reversed/"
             "benchmark_report.json"
         ),
     )

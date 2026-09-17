@@ -77,8 +77,7 @@ def _load_card_responses(
 ) -> dict[str, ContrastiveTasteCard]:
     cards: dict[str, ContrastiveTasteCard] = {}
     batches = [
-        ordered_ids[index : index + batch_size]
-        for index in range(0, len(ordered_ids), batch_size)
+        ordered_ids[index : index + batch_size] for index in range(0, len(ordered_ids), batch_size)
     ]
     for ordinal, candidate_batch in enumerate(batches, 1):
         response_path = response_root / f"{ordinal:02d}" / "response.json"
@@ -196,18 +195,14 @@ def _lexical_scores(
             )
         )
         scores = embedding_backend.similarity_scores(query_text, tuple(document_texts))
-        return {
-            candidate_id: score
-            for candidate_id, score in zip(cards, scores, strict=True)
-        }
+        return {candidate_id: score for candidate_id, score in zip(cards, scores, strict=True)}
     document_count = len(documents)
     frequencies = Counter(token for value in documents.values() for token in value)
     scores: dict[str, float] = {}
     for candidate_id, document in documents.items():
         overlap = query & document
         weighted = math.fsum(
-            math.log((document_count + 1) / (frequencies[token] + 1)) + 1.0
-            for token in overlap
+            math.log((document_count + 1) / (frequencies[token] + 1)) + 1.0 for token in overlap
         )
         normalization = math.sqrt(max(1, len(query)) * max(1, len(document)))
         scores[candidate_id] = weighted / normalization
@@ -419,9 +414,7 @@ def _analyze(
                 same_family += 1
     source_count = len(selected_sources)
     base_order_accuracy = {
-        order: sum(
-            base_results[(order, case_id)]["correct"] for case_id in case_by_id
-        )
+        order: sum(base_results[(order, case_id)]["correct"] for case_id in case_by_id)
         / len(case_by_id)
         for order in orders
     }
@@ -492,9 +485,7 @@ def _analyze(
         "invalid_invocation_count": len(terminal) - len(accepted),
         "selector_validity_rate": selector_validity_rate,
         "recommendation_coverage_by_order": {
-            order: sum(
-                recommendations[(order, case_id)] is not None for case_id in case_by_id
-            )
+            order: sum(recommendations[(order, case_id)] is not None for case_id in case_by_id)
             / len(case_by_id)
             for order in orders
         },
@@ -505,29 +496,19 @@ def _analyze(
                     for case_id, case in case_by_id.items()
                     if recommendations[(order, case_id)] is not None
                 )
-                / sum(
-                    recommendations[(order, case_id)] is not None
-                    for case_id in case_by_id
-                )
-                if any(
-                    recommendations[(order, case_id)] is not None
-                    for case_id in case_by_id
-                )
+                / sum(recommendations[(order, case_id)] is not None for case_id in case_by_id)
+                if any(recommendations[(order, case_id)] is not None for case_id in case_by_id)
                 else None
             )
             for order in orders
         },
         "full_policy_accuracy_by_order": correct_by_order,
-        "full_policy_order_consistency_rate": (
-            order_consistent_recommendation / len(case_by_id)
-        ),
+        "full_policy_order_consistency_rate": (order_consistent_recommendation / len(case_by_id)),
         "full_policy_order_consistent_accuracy": order_consistent_correct / len(case_by_id),
         "base_accuracy_by_order": base_order_accuracy,
         "base_order_consistency_rate": base_order_consistency,
         "base_order_consistent_accuracy": base_consistent,
-        "behavior_change_count_by_order": {
-            order: len(behavior_changes[order]) for order in orders
-        },
+        "behavior_change_count_by_order": {order: len(behavior_changes[order]) for order in orders},
         "behavior_change_rate_by_order": {
             order: len(behavior_changes[order]) / len(case_by_id) for order in orders
         },
@@ -564,9 +545,7 @@ def run(args: argparse.Namespace) -> None:
         else target_suite.cases
     )
     source_suite = load_benchmark_suite(args.source_suite)
-    source_cases = {
-        item.case_id.removeprefix("natural-"): item for item in source_suite.cases
-    }
+    source_cases = {item.case_id.removeprefix("natural-"): item for item in source_suite.cases}
     cards = _load_cards(args, target_suite)
     if not set(cards).issubset(source_cases):
         raise ValueError("card corpus includes precedents absent from the source suite")
@@ -628,9 +607,7 @@ def run(args: argparse.Namespace) -> None:
         for index, case in enumerate(target_cases, 1):
             invocation_root = args.output / order / f"{index:03d}-{case.case_id}"
             if args.analyze_existing:
-                record = json.loads(
-                    (invocation_root / "RESULT.json").read_text(encoding="utf-8")
-                )
+                record = json.loads((invocation_root / "RESULT.json").read_text(encoding="utf-8"))
                 records[(order, case.case_id)] = record
                 continue
             input_data = _input(
@@ -664,9 +641,7 @@ def run(args: argparse.Namespace) -> None:
                     _write_json(shard_root / "INPUT.json", shard_input.model_dump(mode="json"))
                     payload = _call(
                         backend=backend,
-                        request_id=(
-                            f"{args.run_id}-{order}-{index:03d}-shard-{shard_index:02d}"
-                        ),
+                        request_id=(f"{args.run_id}-{order}-{index:03d}-shard-{shard_index:02d}"),
                         node_name=TASTE_APPLICABILITY_NODE,
                         instruction=(
                             TasteApplicabilityNode.system_instruction
@@ -675,15 +650,9 @@ def run(args: argparse.Namespace) -> None:
                             "case ID and no duplicate or additional assessment."
                         ),
                         payload=shard_input.model_dump(mode="json"),
-                        schema=TasteApplicabilityProposal.model_json_schema(
-                            mode="serialization"
-                        ),
+                        schema=TasteApplicabilityProposal.model_json_schema(mode="serialization"),
                         output_dir=shard_root / "runtime",
-                        seed=(
-                            args.seed
-                            + index
-                            + shard_index * 1_000
-                        ),
+                        seed=(args.seed + index + shard_index * 1_000),
                     )
                     proposal, aliases = _proposal(payload, shard_input)
                     findings = validate_taste_applicability(shard_input, proposal)
@@ -721,9 +690,7 @@ def run(args: argparse.Namespace) -> None:
         "declared": json.loads(args.base_declared.read_text(encoding="utf-8")),
         "reversed": json.loads(args.base_reversed.read_text(encoding="utf-8")),
     }
-    if any(
-        item["suite_sha256"] != target_suite.sha256 for item in base_reports.values()
-    ):
+    if any(item["suite_sha256"] != target_suite.sha256 for item in base_reports.values()):
         raise ValueError("base reports differ from the deliberative target suite")
     report = _analyze(
         target_cases=target_cases,
@@ -765,18 +732,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--new-card-responses",
         type=Path,
-        default=(
-            root
-            / "scitastebench-natural-contrastive-confirmation-v2/card-construction"
-        ),
+        default=(root / "scitastebench-natural-contrastive-confirmation-v2/card-construction"),
     )
     parser.add_argument("--new-card-batch-size", type=int, default=6)
     parser.add_argument(
         "--base-declared",
         type=Path,
         default=(
-            root
-            / "scitastebench-natural-contrastive-confirmation-v2/deepseek-declared/"
+            root / "scitastebench-natural-contrastive-confirmation-v2/deepseek-declared/"
             "benchmark_report.json"
         ),
     )
@@ -784,8 +747,7 @@ def parse_args() -> argparse.Namespace:
         "--base-reversed",
         type=Path,
         default=(
-            root
-            / "scitastebench-natural-contrastive-confirmation-v2/deepseek-reversed/"
+            root / "scitastebench-natural-contrastive-confirmation-v2/deepseek-reversed/"
             "benchmark_report.json"
         ),
     )

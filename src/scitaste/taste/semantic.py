@@ -289,9 +289,7 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
         normalized["decision_id"] = input_data.decision_id
         if normalized.get("type") == "json_object":
             normalized.pop("type")
-        if normalized.get("schema_version") == "1.1" and not normalized.get(
-            "selected_case_ids"
-        ):
+        if normalized.get("schema_version") == "1.1" and not normalized.get("selected_case_ids"):
             # A state-only action suggestion is outside this Taste intervention.
             # Delete it rather than turning an abstention into ungrounded policy advice.
             normalized["recommended_action_id"] = None

@@ -587,8 +587,7 @@ def merge_taste_deliberation_proposals(
             key=lambda action_id: (-action_scores[action_id], action_id),
         )
         if not any(
-            recommended_action_id
-            in assessment_by_id[candidate.case_id].aligned_current_action_ids
+            recommended_action_id in assessment_by_id[candidate.case_id].aligned_current_action_ids
             for candidate in selected
         ):
             selected = []
@@ -639,9 +638,7 @@ def merge_taste_applicability_proposals(
                 assessments=proposal.assessments,
                 selected_case_ids=(),
                 recommended_action_id=None,
-                selection_rationale=(
-                    "Applicability-only shard; controller selection is pending."
-                ),
+                selection_rationale=("Applicability-only shard; controller selection is pending."),
             )
         )
     return merge_taste_deliberation_proposals(

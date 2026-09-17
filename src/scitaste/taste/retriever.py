@@ -127,11 +127,15 @@ class LocalTransformerTextEmbedder:
             trust_remote_code=False,
             padding_side="left" if pooling == "last-token" else "right",
         )
-        self._model = AutoModel.from_pretrained(
-            path,
-            local_files_only=True,
-            trust_remote_code=False,
-        ).to(self.device).eval()
+        self._model = (
+            AutoModel.from_pretrained(
+                path,
+                local_files_only=True,
+                trust_remote_code=False,
+            )
+            .to(self.device)
+            .eval()
+        )
         self._document_cache: dict[str, tuple[float, ...]] = {}
 
     @property
