@@ -112,6 +112,24 @@ class CounterfactualDeliberationResourceLock(BaseModel):
     gpu_hours: Literal[0] = 0
 
 
+class CounterfactualDeliberationExecutionLock(BaseModel):
+    """Provider and research-loop identities frozen before target outcomes exist."""
+
+    model_config = _CONFIG
+
+    limits: str
+    limits_sha256: str = Field(pattern=_SHA256)
+    research_agent_config: str
+    research_agent_config_sha256: str = Field(pattern=_SHA256)
+    terminal_judge_config: str
+    terminal_judge_config_sha256: str = Field(pattern=_SHA256)
+    research_agent_policy_id: str
+    research_agent_prompt_version: str
+    terminal_judge_prompt_version: str
+    research_agent_seeds: dict[str, int]
+    terminal_judge_seeds: dict[str, int]
+
+
 class CounterfactualDeliberationConfirmationProtocol(BaseModel):
     """Complete pre-outcome lock for one selector confirmation."""
 
@@ -133,6 +151,7 @@ class CounterfactualDeliberationConfirmationProtocol(BaseModel):
     studies: tuple[CounterfactualDeliberationConfirmationStudy, ...] = Field(min_length=4)
     forced_actions: tuple[CounterfactualResearchAction, ...] = Field(min_length=7, max_length=7)
     selector: CounterfactualDeliberationSelectorLock
+    execution: CounterfactualDeliberationExecutionLock
     endpoint: CounterfactualDeliberationEndpointLock
     success: CounterfactualDeliberationSuccessLock
     resources: CounterfactualDeliberationResourceLock
@@ -163,6 +182,11 @@ class CounterfactualDeliberationConfirmationProtocol(BaseModel):
             self.forced_actions
         ):
             raise ValueError("confirmation branch ceiling differs from the frozen population")
+        task_ids = {item.task_id for item in self.studies}
+        if set(self.execution.research_agent_seeds) != task_ids:
+            raise ValueError("research-agent seeds must cover every and only confirmation task")
+        if set(self.execution.terminal_judge_seeds) != task_ids:
+            raise ValueError("terminal-judge seeds must cover every and only confirmation task")
         return self
 
 
@@ -367,6 +391,15 @@ def load_counterfactual_deliberation_confirmation_protocol(
     _verify_file(protocol.development_report, protocol.development_report_sha256)
     _verify_file(protocol.selector.profile_set, protocol.selector.profile_set_sha256)
     _verify_file(protocol.selector.backend_config, protocol.selector.backend_config_sha256)
+    _verify_file(protocol.execution.limits, protocol.execution.limits_sha256)
+    _verify_file(
+        protocol.execution.research_agent_config,
+        protocol.execution.research_agent_config_sha256,
+    )
+    _verify_file(
+        protocol.execution.terminal_judge_config,
+        protocol.execution.terminal_judge_config_sha256,
+    )
     for study in protocol.studies:
         _verify_file(study.task_config, study.task_config_sha256)
     return protocol, protocol_sha256
