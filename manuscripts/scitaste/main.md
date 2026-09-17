@@ -119,6 +119,16 @@ case studies \citep{turcan2026tusoai}. These works do not test outcome-learned
 scientific preferences, but they define the breadth, objective validation, and
 baseline strength that a full SciTaste claim must eventually meet.
 
+Two accepted suites provide complementary external endpoints for the present
+claim. MLRC-Bench measures proposed and implemented methods with objective
+competition metrics across seven research tasks; its strongest reported agent
+closes only 9.3\% of the baseline-to-top-human gap. MLR-Bench instead evaluates
+201 open-ended research briefs stagewise and end to end, and explicitly counts
+fabricated or invalid experimental results \citep{zhang2025mlrcbench,chen2025mlrbench}.
+SciTaste uses the former to test objective research progress and the latter to
+test evidence-valid idea-to-paper completion; neither substitutes for the
+mechanism controls in SciTasteBench.
+
 Reasoning-and-acting methods such as ReAct, Reflexion, and Tree of Thoughts
 interleave thought, action, search, and feedback
 \citep{yao2023react,shinn2023reflexion,yao2023tree}. Their traces can contain
@@ -251,8 +261,9 @@ $$
 $$
 
 where $A_c^+$ and $A_c^-$ are the assessor's fact-grounded aligned and opposed
-action sets. The packet records the cited facts, source and abstraction hashes,
-per-action support and opposition, and the deterministic adjustment. It
+action sets. The packet records the complete feasible action semantics, cited
+facts, source and abstraction hashes, per-action support and opposition, and the
+deterministic adjustment. It
 intervenes only when one action has a unique positive adjustment; ties,
 non-positive margins, or no eligible precedent produce explicit abstention.
 
@@ -260,7 +271,9 @@ A deterministic controller ranks feasible actions by
 $U_0(a,S)+\lambda\Delta_T(a\mid S)$. A model-backed controller receives the same
 packet as bounded structured context, while hard feasibility remains outside the
 model. This packet is also the treatment interface used by SciTasteBench and by
-external research trajectories. Consequently, a text card that helps a model
+external research trajectories. For executable tasks, its recommendation is
+compiled into a hashed action directive that the code-generating agent must
+implement rather than reinterpret. Consequently, a text card that helps a model
 but cannot produce a fact-bound action adjustment is not counted as the SciTaste
 method. Delayed outcomes update the eligible precedent corpus and its signed
 credit; they earn a learning claim only if the resulting packet later changes an

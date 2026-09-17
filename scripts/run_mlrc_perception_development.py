@@ -121,16 +121,13 @@ def main() -> int:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path(
-            "configs/evaluation/task_runtime/"
-            "mlrc_perception_temporal_action_loc_v2.yaml"
-        ),
+        default=Path("configs/evaluation/task_runtime/mlrc_perception_temporal_action_loc_v3.yaml"),
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--condition",
         required=True,
-        choices=("upstream-base", "native-base", "raw-context", "full"),
+        choices=("upstream-base", "native-base", "raw-context", "full", "taste-packet"),
     )
     parser.add_argument("--cuda-device", type=int, default=0)
     parser.add_argument("--timeout-seconds", type=int, default=7200)
@@ -140,10 +137,27 @@ def main() -> int:
         default=None,
         help="Optional prepared env tree for a research arm; defaults to the upstream source.",
     )
+    parser.add_argument(
+        "--checkpoint-source",
+        type=Path,
+        default=None,
+        help=(
+            "Checkpoint tree from a failed development run. Training is skipped and only "
+            "objective scoring resumes; use only for a scoring-path-only repair."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-receipt",
+        type=Path,
+        default=None,
+        help="Failed development RESULT.json that owns --checkpoint-source.",
+    )
     parser.add_argument("--allow-execution", action="store_true")
     args = parser.parse_args()
     if not args.allow_execution:
         raise ValueError("real MLRC development execution requires --allow-execution")
+    if (args.checkpoint_source is None) != (args.checkpoint_receipt is None):
+        raise ValueError("checkpoint resume requires both source and owning receipt")
 
     repository = Path.cwd().resolve(strict=True)
     output = args.output if args.output.is_absolute() else repository / args.output
@@ -178,7 +192,39 @@ def main() -> int:
     workspace = output / "workspace"
     shutil.copytree(editable_source, workspace, symlinks=False)
     _hardlink_tree(development_data, workspace / "data")
-    (workspace / "ckpt").mkdir()
+    checkpoint_source = (
+        args.checkpoint_source.resolve(strict=True) if args.checkpoint_source is not None else None
+    )
+    checkpoint_source_bytes = 0
+    checkpoint_source_manifest_sha256 = None
+    checkpoint_receipt = None
+    checkpoint_receipt_path = None
+    if checkpoint_source is None:
+        (workspace / "ckpt").mkdir()
+    else:
+        if not checkpoint_source.is_dir():
+            raise ValueError("checkpoint source must be a directory")
+        checkpoint_source_manifest, checkpoint_source_bytes = _tree_manifest(checkpoint_source)
+        checkpoint_source_manifest_sha256 = hashlib.sha256(
+            json.dumps(
+                checkpoint_source_manifest,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+        assert args.checkpoint_receipt is not None
+        checkpoint_receipt_path = args.checkpoint_receipt.resolve(strict=True)
+        checkpoint_receipt = json.loads(checkpoint_receipt_path.read_bytes())
+        if (
+            checkpoint_receipt.get("status") != "failed"
+            or checkpoint_receipt.get("condition") != args.condition
+            or checkpoint_receipt.get("objective") is not None
+            or checkpoint_receipt.get("formal_evidence_eligible") is not False
+        ):
+            raise ValueError("checkpoint receipt is not a failed matching development run")
+        if checkpoint_receipt.get("checkpoint_manifest") != checkpoint_source_manifest:
+            raise ValueError("checkpoint tree differs from its failed-run receipt")
+        _hardlink_tree(checkpoint_source, workspace / "ckpt")
     (workspace / "output").mkdir()
 
     source_manifest, source_bytes = _tree_manifest(editable_source)
@@ -206,6 +252,8 @@ def main() -> int:
         "--phase",
         "dev",
     ]
+    if checkpoint_source is not None:
+        command.append("--skip-training")
     environment = {
         "CUDA_DEVICE_ORDER": "PCI_BUS_ID",
         "CUDA_VISIBLE_DEVICES": str(args.cuda_device),
@@ -272,6 +320,18 @@ def main() -> int:
         "source_file_count": len(source_manifest),
         "source_bytes": source_bytes,
         "source_manifest_sha256": source_manifest_sha256,
+        "training_skipped": checkpoint_source is not None,
+        "checkpoint_source": (
+            checkpoint_source.as_posix() if checkpoint_source is not None else None
+        ),
+        "checkpoint_source_bytes": checkpoint_source_bytes,
+        "checkpoint_source_manifest_sha256": checkpoint_source_manifest_sha256,
+        "checkpoint_receipt": (
+            checkpoint_receipt_path.as_posix() if checkpoint_receipt_path is not None else None
+        ),
+        "checkpoint_receipt_sha256": (
+            _sha256(checkpoint_receipt_path) if checkpoint_receipt_path is not None else None
+        ),
         "development_view_sha256": manifest.development_view_sha256,
         "heldout_opened": False,
         "started_at": started_at.isoformat(),
@@ -284,9 +344,7 @@ def main() -> int:
         "error": error,
         "objective": objective,
         "gpu_before": selected_gpu,
-        "gpu_after": next(
-            item for item in _gpu_snapshot() if item["index"] == args.cuda_device
-        ),
+        "gpu_after": next(item for item in _gpu_snapshot() if item["index"] == args.cuda_device),
         "artifact_manifest": artifact_manifest,
         "artifact_bytes": artifact_bytes,
         "checkpoint_manifest": checkpoint_manifest,

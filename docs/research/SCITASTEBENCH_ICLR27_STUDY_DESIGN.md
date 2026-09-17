@@ -242,13 +242,17 @@ model calls as independent samples.
 
 The claim-bearing method is the typed `TasteControlPacket`, not an arbitrary
 prompt containing a Taste card. For every decision it binds selected precedents
-to exact current-state facts, maps them onto the frozen action menu, records
-aligned and opposed support, and exposes deterministic per-action adjustments.
+to exact current-state facts, embeds the complete frozen action semantics, maps
+precedents onto those actions, records aligned and opposed support, and exposes
+deterministic per-action adjustments.
 A unique positive adjustment is required for intervention; tied or non-positive
 support abstains. The same packet must be consumed by SciTasteBench decisions and
-external research trajectories. A development arm that receives only a generic
-abstraction or raw source is labelled accordingly and cannot be renamed Full
-SciTaste after its score is observed.
+external research trajectories. On executable tasks the recommendation is
+converted into a self-hashed research-action directive before code generation;
+the downstream model may implement that action but cannot replace it with a
+different high-level intervention. A development arm that receives only a
+generic abstraction or raw source is labelled accordingly and cannot be renamed
+Full SciTaste after its score is observed.
 
 Formal pairs use boundary-pair schema 1.1. Their scalar utility is recomputed
 from a preregistered four-component vector—evidence value, expected information
@@ -344,8 +348,12 @@ The first real MLRC Perception task is also consumed development. Its upstream,
 Native Base, Raw/RAG, and abstraction-guided arms are used to debug the official
 runtime and estimate variance. Because the abstraction-guided arm predates the
 shared `TasteControlPacket` treatment, it is not Full SciTaste regardless of its
-score. Formal MLRC comparisons begin only after one packet-producing method is
-frozen across all conditions and tasks.
+score. The later packet-directed arm completed the objective at 0.239387 after
+one full training run and a scoring-only repair. It beat upstream and Raw but
+not the same-runtime Native Base (0.241669), so this consumed task closes the
+treatment-to-score loop without passing the method gate. Formal MLRC comparisons
+begin only after a revised packet-producing method is frozen across all
+conditions and tasks.
 
 Evidence moves through four irreversible states:
 

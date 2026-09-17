@@ -30,12 +30,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--method", default="my_method")
     parser.add_argument("--result-task-id", required=True)
     parser.add_argument("--phase", required=True, choices=("dev", "test"))
+    parser.add_argument(
+        "--skip-training",
+        action="store_true",
+        help="Resume development scoring from an existing checkpoint after a scoring-only failure.",
+    )
     args = parser.parse_args(argv)
+    if args.skip_training and (
+        args.task != "perception_temporal_action_loc" or args.phase != "dev"
+    ):
+        raise ValueError("checkpoint resume is supported only for Perception development scoring")
     workspace = Path.cwd().resolve(strict=True)
     sys.path.insert(0, str(workspace))
     started = perf_counter()
     if args.task == "perception_temporal_action_loc":
-        score = _perception_score(args.method, args.phase)
+        score = _perception_score(
+            args.method,
+            args.phase,
+            skip_training=args.skip_training,
+        )
     else:
         score = _meta_learning_score(workspace, args.method, args.phase)
     elapsed = max(0.0, perf_counter() - started)
@@ -49,12 +62,13 @@ def main(argv: list[str] | None = None) -> int:
         "score": score,
         "elapsed_seconds": elapsed,
         "secondary_llm_judge_invoked": False,
+        "training_skipped": args.skip_training,
     }
     print(_MARKER + json.dumps(payload, sort_keys=True, separators=(",", ":")))
     return 0
 
 
-def _perception_score(method_name: str, phase: str) -> float:
+def _perception_score(method_name: str, phase: str, *, skip_training: bool = False) -> float:
     training = importlib.import_module("train")
     evaluation = importlib.import_module("evaluation")
     methods = importlib.import_module("methods")
@@ -62,7 +76,7 @@ def _perception_score(method_name: str, phase: str) -> float:
     if method_name not in handlers:
         raise ValueError(f"unknown perception method: {method_name}")
     method = handlers[method_name](method_name)
-    if phase == "dev":
+    if phase == "dev" and not skip_training:
         training.train_model(method)
     evaluation.evaluate_model(method, phase)
     return float(evaluation.get_score(method, phase))

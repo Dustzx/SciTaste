@@ -1,6 +1,7 @@
 # SciTaste lifecycle evidence program v2
 
-Status: **current scientific-design authority; no execution authorized**.
+Status: **current scientific-design authority; consumed development execution is
+active, while formal/held-out execution remains closed**.
 
 The machine-readable contract is
 [`iclr2027_scitaste_lifecycle_evidence_program_v2.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml).
@@ -16,6 +17,45 @@ The self-development/GAC projection is the independent
 [`lifecycle campaign dossier`](../../configs/evaluation/campaigns/iclr2027_self_development_lifecycle_v2.yaml).
 It compresses the scientific contract into seven user-facing phases without
 turning phase count or a planned cell count into evidence.
+
+## 2026-09-18 packet-defined external intervention
+
+The claim-bearing treatment is now a state-conditioned `TasteControlPacket`,
+not the historical H4 factorized policy and not a prompt containing a generic
+Taste paragraph. A packet freezes the feasible action semantics, exact current
+facts, admitted outcome-grounded precedents, applicability and failure-boundary
+support, per-action adjustments, recommendation or abstention, and its content
+hash. The selected action is projected into the existing bounded
+research-action-to-patch interface; the downstream patch model cannot replace
+the high-level intervention.
+
+The first real MLRC Perception development packet was built from two official
+competition records. It selected a bounded quality-aware classification loss
+and rejected a higher-scoring multi-model fusion precedent because the latter
+did not fit the single-run resource envelope. Raw source outcomes and rank cues
+were removed from the selector projection. A semantic audit rejected an earlier
+model judgment that confused available audio/video modalities with the number
+of separately trainable model variants. All of these artifacts are consumed
+development evidence; the held-out split remains unopened.
+
+The packet-directed arm has now completed the official development objective.
+It trained once, retained three earlier pre-training implementation failures,
+then failed during scoring because the generated inference branch used an
+invalid `F.pad` keyword. A model-generated one-token scoring-path repair was
+verified not to change the training path, and the exact 5.26 GB checkpoint was
+reused rather than spending another full training run. The resumed score was
+0.239387. This is above the official upstream arm (0.233919) and equal-source
+Raw arm (0.235708), but below the same-runtime Native Base (0.241669). The
+packet therefore closes the source -> Taste -> action -> code -> objective
+score loop, while **failing the development effectiveness gate**. It does not
+authorize hidden confirmation or support the paper title. The complete lineage
+is in `mlrc-perception-packet-arm-development-v1/REPORT.json` under the ignored
+self-development evaluation outputs.
+
+The old lifecycle-policy H4 comparison remains useful diagnostic history, but
+it is not the treatment named Full SciTaste in the current paper. Formal H4 is
+superseded only after the packet-producing provider is wired into every selected
+external task under the same action and failure-accounting contract.
 
 ## Why v2 exists
 
@@ -110,28 +150,23 @@ approve the exact manifest hash. All four execution flags in the v2 program are
 
 ## Current blockers
 
-The contract is scientifically coherent against the v9 resource corpus, but it
-is not experiment-ready. Its exact existing proposal bindings are ready for
-owner scope review, while external actions remain closed. SciTasteBench has a
-real 273-candidate construction pool across 81 source groups and three observed
-domain or publisher-subject strata, but zero formally admitted cases: independent
-domain, quality, privacy, grounded-abstraction, attribution, and decision-episode
-integrity admission is incomplete. Outcome-blind ARIES and F1000 review packages
-cover the source pool; their review work is assigned to identity-distinct AI
-panels under the active finality protocol. A fixed dual-agent screen exposed
-material decision-family disagreement and a public-attribution versus
-de-identification ambiguity; this is process calibration and not human validity.
-One
-MLRC-Bench task has exact development
-and scorer-held-out bytes, but its
-environment/scorer and a source-group-disjoint task population are not qualified.
-InnovatorBench is deferred because its official archive exceeds the current
-resource envelope and one upstream task identity is defective. Agent Laboratory
-and DeepScientist remain the two active accepted-method candidates; AI-Researcher
-is reference-only while its repository lacks a code license. The remaining
-scientific critical path is therefore to admit natural SciTasteBench cases,
-reproduce the MLRC environment/scorer, qualify the external adapters, freeze
-task/source groups, select a primary model by a task-excluded conformance pilot,
-complete power analysis, and register exact AI-panel and objective-title
-authority bindings. These are
-evidence-production gaps, not reasons to add more product features.
+The design is scientifically coherent, but no formal result exists.
+SciTasteBench's earlier candidates and 13 boundary pairs are consumed
+development because independent construct review found contradictions,
+compound interventions, forced actions, and shortcut cues. A new source-disjoint
+population must pass the schema-1.1 utility and construct-audit contract.
+
+One MLRC-Bench task now has an executable official development objective and
+real Native, Raw, legacy abstraction-guided, and packet-directed results. This
+consumes that task for method repair; it is not a formal estimate. The packet
+arm binds a real research action to a generated code patch and retains every
+failed implementation attempt, but it is 0.002282 below Native Base. Held-out
+execution is therefore still closed. Paired seeds, the official MLAB comparator,
+and the remaining task runtimes are not yet qualified.
+
+The remaining scientific critical path is to replace the consumed
+SciTasteBench pairs, qualify packet execution and official comparators on a
+hardware/rights-defined MLRC task population, freeze source groups and budgets,
+estimate paired-seed count from development variance, and execute one unchanged
+confirmation protocol. These are evidence-production gaps, not reasons to add
+more product features.

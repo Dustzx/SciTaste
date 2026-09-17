@@ -19,6 +19,8 @@ from scitaste.model_nodes.models import NodeContext, NodePolicy
 from scitaste.model_nodes.nodes import ModelNode
 from scitaste.model_nodes.runtime import ModelNodeRegistration
 from scitaste.project.models import content_sha256
+from scitaste.schema.actions import MetaAction
+from scitaste.taste.deliberation import TasteControlPacket
 
 BENCHMARK_PATCH_NODE = "benchmark-research-patch"
 _MAX_REPLACEMENT_CHARS = 1_048_576
@@ -59,7 +61,7 @@ class BenchmarkPatchGenerationInput(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     task_id: str = Field(min_length=1, max_length=200)
     research_problem: str = Field(min_length=1, max_length=16_000)
     primary_metric: str = Field(min_length=1, max_length=128)
@@ -77,6 +79,15 @@ class BenchmarkPatchGenerationInput(BaseModel):
     taste_guidance: tuple[str, ...] = Field(default=(), max_length=32)
     critic_guidance: tuple[str, ...] = Field(default=(), max_length=32)
     research_action: BenchmarkResearchActionDirective | None = None
+    taste_control_packet_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+        exclude_if=lambda value: value is None,
+    )
+    taste_control_packet_abstained: bool | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
     constraints: tuple[str, ...] = Field(min_length=1, max_length=64)
 
     @field_validator(
@@ -97,10 +108,31 @@ class BenchmarkPatchGenerationInput(BaseModel):
 
     @model_validator(mode="after")
     def scores_and_budget_are_coherent(self) -> BenchmarkPatchGenerationInput:
-        if (self.schema_version == "1.1") != (self.research_action is not None):
+        if self.schema_version == "1.0" and (
+            self.research_action is not None
+            or self.taste_control_packet_sha256 is not None
+            or self.taste_control_packet_abstained is not None
+        ):
+            raise ValueError("benchmark patch schema 1.0 cannot carry action control")
+        if self.schema_version == "1.1" and (
+            self.research_action is None
+            or self.taste_control_packet_sha256 is not None
+            or self.taste_control_packet_abstained is not None
+        ):
             raise ValueError(
-                "benchmark patch schema 1.1 requires exactly one research-action directive"
+                "benchmark patch schema 1.1 requires a directive without a Taste packet"
             )
+        if self.schema_version == "1.2":
+            if (
+                self.taste_control_packet_sha256 is None
+                or self.taste_control_packet_abstained is None
+            ):
+                raise ValueError("benchmark patch schema 1.2 requires Taste packet provenance")
+            if self.taste_control_packet_abstained == (self.research_action is not None):
+                raise ValueError(
+                    "an active Taste packet requires a directive and an abstaining packet "
+                    "forbids it"
+                )
         for score in (self.baseline_development_score, self.current_development_score):
             if score is not None and not math.isfinite(score):
                 raise ValueError("benchmark development scores must be finite")
@@ -109,6 +141,40 @@ class BenchmarkPatchGenerationInput(BaseModel):
         ):
             raise ValueError("best benchmark development score must be finite")
         return self
+
+
+def benchmark_directive_from_taste_packet(
+    packet: TasteControlPacket,
+) -> BenchmarkResearchActionDirective | None:
+    """Project one packet recommendation into the bounded patch-generator interface."""
+
+    if packet.abstained:
+        return None
+    if packet.recommended_action_id is None:
+        raise ValueError("active Taste packet lacks a recommended action")
+    selected = next(
+        (item for item in packet.action_menu if item.action_id == packet.recommended_action_id),
+        None,
+    )
+    if selected is None:
+        raise ValueError("Taste packet recommendation is absent from its frozen action menu")
+    if selected.type is MetaAction.STOP:
+        raise ValueError("STOP must terminate the research loop before patch generation")
+    allowed = {
+        MetaAction.PROBE,
+        MetaAction.PILOT,
+        MetaAction.EXPERIMENT,
+        MetaAction.ANALYZE,
+        MetaAction.REFINE,
+        MetaAction.PIVOT,
+    }
+    if selected.type not in allowed:
+        raise ValueError("Taste packet selected an action outside the patch directive ontology")
+    return BenchmarkResearchActionDirective.create(
+        action_id=selected.action_id,
+        action_type=selected.type.value,
+        instruction=selected.description,
+    )
 
 
 class BenchmarkPatchGenerationEdit(BaseModel):
@@ -261,6 +327,7 @@ __all__ = [
     "BenchmarkPatchGenerationNode",
     "BenchmarkPatchGenerationOutput",
     "BenchmarkResearchActionDirective",
+    "benchmark_directive_from_taste_packet",
     "benchmark_patch_node_types",
     "materialize_benchmark_patch_proposal",
 ]

@@ -8,6 +8,7 @@ import pytest
 from scitaste.backends.base import Usage
 from scitaste.data.models import ProvenanceRecord, TasteCase
 from scitaste.data.store import TasteLibrary
+from scitaste.evaluation.task_patch_generation import benchmark_directive_from_taste_packet
 from scitaste.model_nodes import (
     CumulativeProjectBudget,
     ModelNodeProfile,
@@ -26,6 +27,7 @@ from scitaste.state.research_state import ResearchState
 from scitaste.taste.controller import TasteController, TasteMode
 from scitaste.taste.deliberation import (
     TasteApplicabilityProposal,
+    TasteControlPacket,
     TasteCounterfactualStatus,
     TasteDeliberationInput,
     TasteDeliberationProposal,
@@ -286,13 +288,29 @@ def test_control_packet_binds_applicability_to_current_facts_and_actions(
 
     packet = build_taste_control_packet(input_data, proposal)
     rendered = render_taste_control_packet(packet)
+    directive = benchmark_directive_from_taste_packet(packet)
 
     assert packet.abstained is False
     assert packet.recommended_action_id == proposal.recommended_action_id
+    assert packet.action_menu == input_data.current_actions
+    assert directive is not None
+    assert directive.action_id == packet.recommended_action_id
+    assert directive.instruction == next(
+        item.description
+        for item in packet.action_menu
+        if item.action_id == packet.recommended_action_id
+    )
     assert {item.case_id for item in packet.selected_precedents} == set(proposal.selected_case_ids)
     assert all(item.net_adjustment != 0 for item in packet.action_adjustments)
     assert "Current-state applicability:" in rendered
+    assert "Frozen feasible actions:" in rendered
     assert f"Recommended feasible action: {proposal.recommended_action_id}" in rendered
+
+    legacy_payload = packet.model_dump(mode="json", exclude={"action_menu"})
+    legacy_payload["schema_version"] = "1.0"
+    legacy_packet = TasteControlPacket.model_validate(legacy_payload)
+    with pytest.raises(ValueError, match="absent from its frozen action menu"):
+        benchmark_directive_from_taste_packet(legacy_packet)
 
 
 def test_applicability_shards_merge_into_order_stable_controller_decision(

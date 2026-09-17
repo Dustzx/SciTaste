@@ -28,6 +28,7 @@ from scitaste.evaluation.task_patch import (
 from scitaste.evaluation.task_patch_generation import (
     BenchmarkPatchGenerationInput,
     BenchmarkPatchGenerationNode,
+    benchmark_directive_from_taste_packet,
     materialize_benchmark_patch_proposal,
 )
 from scitaste.model_nodes.models import NodeContext, NodePolicy, NodeResultStatus
@@ -37,6 +38,7 @@ from scitaste.model_nodes.openai_compatible import (
 )
 from scitaste.model_nodes.profiles import load_model_node_profile
 from scitaste.project.models import content_sha256
+from scitaste.taste.deliberation import TasteControlPacket, render_taste_control_packet
 
 _DEFAULT_SOURCE = Path(
     "outputs/projects/scitaste-self-development/evaluations/acquisitions/"
@@ -94,6 +96,11 @@ def _taste_guidance(path: Path) -> tuple[str, ...]:
     if any(len(item) > 2_000 for item in values):
         raise ValueError("Taste capsule exceeds the patch guidance channel")
     return values
+
+
+def _taste_packet(path: Path) -> TasteControlPacket:
+    packet = TasteControlPacket.model_validate_json(path.read_bytes())
+    return packet
 
 
 def _snapshot(source: Path) -> BenchmarkPatchContext:
@@ -159,7 +166,7 @@ def main() -> int:
     parser.add_argument(
         "--condition",
         required=True,
-        choices=("native-base", "raw-context", "full"),
+        choices=("native-base", "raw-context", "full", "taste-packet"),
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--source", type=Path, default=_DEFAULT_SOURCE)
@@ -173,6 +180,7 @@ def main() -> int:
     parser.add_argument("--iteration", type=int, default=1)
     parser.add_argument("--baseline-score", type=float, required=True)
     parser.add_argument("--taste-capsule", type=Path)
+    parser.add_argument("--taste-packet", type=Path)
     parser.add_argument(
         "--backend",
         type=Path,
@@ -188,7 +196,9 @@ def main() -> int:
     if not args.allow_api:
         raise ValueError("live research-arm preparation requires --allow-api")
     if (args.condition == "full") != (args.taste_capsule is not None):
-        raise ValueError("only the full condition requires --taste-capsule")
+        raise ValueError("only the legacy full condition requires --taste-capsule")
+    if (args.condition == "taste-packet") != (args.taste_packet is not None):
+        raise ValueError("only the taste-packet condition requires --taste-packet")
 
     repository = Path.cwd().resolve(strict=True)
     output = args.output if args.output.is_absolute() else repository / args.output
@@ -201,9 +211,7 @@ def main() -> int:
         if args.editable_env is not None
         else (task_root / "env").resolve(strict=True)
     )
-    research_problem = (task_root / "scripts" / "research_problem.txt").read_text(
-        encoding="utf-8"
-    )
+    research_problem = (task_root / "scripts" / "research_problem.txt").read_text(encoding="utf-8")
     background = (task_root / "scripts" / "background.txt").read_text(encoding="utf-8")
     context = _snapshot(env_source)
     patch_policy = BenchmarkPatchPolicy(
@@ -217,13 +225,24 @@ def main() -> int:
         if args.taste_capsule is not None
         else ()
     )
+    control_packet = (
+        _taste_packet(args.taste_packet.resolve(strict=True))
+        if args.taste_packet is not None
+        else None
+    )
+    action_directive = (
+        benchmark_directive_from_taste_packet(control_packet)
+        if control_packet is not None
+        else None
+    )
+    if control_packet is not None:
+        taste_guidance = _guidance_chunks(render_taste_control_packet(control_packet))
     experiment_feedback = tuple(
-        feedback_path.resolve(strict=True).read_text(
-            encoding="utf-8", errors="replace"
-        )[-2_000:]
+        feedback_path.resolve(strict=True).read_text(encoding="utf-8", errors="replace")[-2_000:]
         for feedback_path in args.experiment_feedback_file
     )
     input_data = BenchmarkPatchGenerationInput(
+        schema_version="1.2" if control_packet is not None else "1.0",
         task_id="perception-temporal-action-loc",
         research_problem=research_problem,
         primary_metric="mean_average_precision",
@@ -238,6 +257,13 @@ def main() -> int:
         experiment_feedback=experiment_feedback,
         knowledge_guidance=knowledge_guidance,
         taste_guidance=taste_guidance,
+        research_action=action_directive,
+        taste_control_packet_sha256=(
+            control_packet.fingerprint if control_packet is not None else None
+        ),
+        taste_control_packet_abstained=(
+            control_packet.abstained if control_packet is not None else None
+        ),
         constraints=(
             "Use only the supplied training and development data; never use held-out labels.",
             "Keep the official training schedule, data paths, metric, and evaluation code "
@@ -312,6 +338,18 @@ def main() -> int:
         "model": result.response.model,
         "usage": result.response.usage.model_dump(mode="json"),
         "edited_paths": [item.path for item in proposal.edits],
+        "taste_control_packet_sha256": (
+            control_packet.fingerprint if control_packet is not None else None
+        ),
+        "taste_control_packet_abstained": (
+            control_packet.abstained if control_packet is not None else None
+        ),
+        "selected_research_action_id": (
+            action_directive.action_id if action_directive is not None else None
+        ),
+        "research_action_directive_sha256": (
+            action_directive.directive_sha256 if action_directive is not None else None
+        ),
         "heldout_opened": False,
         "experiment_executed": False,
     }

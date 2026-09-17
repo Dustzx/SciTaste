@@ -318,10 +318,11 @@ class TasteControlPacket(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     decision_id: str = Field(pattern=_ID)
     state_snapshot_id: str = Field(min_length=1)
     proposal_sha256: str = Field(pattern=_SHA256)
+    action_menu: tuple[ResearchAction, ...] = Field(default_factory=tuple, max_length=12)
     cited_decision_facts: tuple[TasteDecisionFact, ...] = Field(max_length=80)
     selected_precedents: tuple[TasteControlPrecedent, ...] = Field(max_length=5)
     action_adjustments: tuple[TasteActionAdjustment, ...] = Field(min_length=2, max_length=12)
@@ -331,9 +332,16 @@ class TasteControlPacket(BaseModel):
 
     @model_validator(mode="after")
     def intervention_is_internally_consistent(self) -> TasteControlPacket:
+        menu_action_ids = [item.action_id for item in self.action_menu]
+        if len(menu_action_ids) != len(set(menu_action_ids)):
+            raise ValueError("Taste control packet action-menu identities must be unique")
+        if self.schema_version == "1.1" and len(menu_action_ids) < 2:
+            raise ValueError("Taste control packet schema 1.1 requires a frozen action menu")
         action_ids = [item.action_id for item in self.action_adjustments]
         if len(action_ids) != len(set(action_ids)):
             raise ValueError("Taste control packet action adjustments must be unique")
+        if menu_action_ids and set(action_ids) != set(menu_action_ids):
+            raise ValueError("Taste control packet adjustments must cover its frozen action menu")
         fact_ids = [item.fact_id for item in self.cited_decision_facts]
         if len(fact_ids) != len(set(fact_ids)):
             raise ValueError("Taste control packet cited facts must be unique")
@@ -660,6 +668,7 @@ def build_taste_control_packet(
         decision_id=input_data.decision_id,
         state_snapshot_id=input_data.state_snapshot_id,
         proposal_sha256=proposal.fingerprint,
+        action_menu=input_data.current_actions,
         cited_decision_facts=tuple(fact_by_id[item] for item in sorted(cited_fact_ids)),
         selected_precedents=tuple(precedents),
         action_adjustments=adjustments,
@@ -683,7 +692,12 @@ def render_taste_control_packet(packet: TasteControlPacket) -> str:
     lines = [
         "SCITASTE STATE-CONDITIONED CONTROL PACKET",
         f"Decision: {packet.decision_id}",
+        "Frozen feasible actions:",
     ]
+    lines.extend(
+        f"- {action.action_id} [{action.type.value}]: {action.description}"
+        for action in packet.action_menu
+    )
     if packet.abstained:
         lines.extend(("Controller status: ABSTAIN", f"Reason: {packet.abstention_reason}"))
     else:
