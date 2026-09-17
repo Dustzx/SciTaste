@@ -3,30 +3,29 @@ SciTaste: Improving Autonomous Research through Scientific Taste
 
 # Abstract
 
-Autonomous research systems increasingly know *how* to search, code, experiment,
-and write, but still lack a persistent account of *which* scientific move is
-worth making next. We study this missing capability as **scientific taste**: a
-contextual preference over consequential research decisions, learned from what
-was known when a decision was made and what happened afterward. We introduce
-**SciTaste**, an autonomous-research system that reconstructs high-quality
-scientific records into grounded decision episodes. Each episode preserves the
-decision state, feasible alternatives, supporting evidence, delayed outcome,
-and conditions under which the lesson should transfer or reverse. An
-outcome-updated policy aggregates these episodes across source groups and
-changes a base research controller only when its support and uncertainty gates
-permit; otherwise it abstains. This representation separates scientific taste
-from topical retrieval, final-paper scoring, and free-form self-reflection.
-SciTaste integrates the policy into one persistent loop from problem selection
-through experiments, evidence synthesis, paper construction, review, and
-revision. We introduce SciTasteBench to evaluate held-out decision quality and
-pair it with objective research tasks that measure whether better decisions
-translate into better experimental outcomes. A completed live development pair
-already exposes a useful failure mode: both matched arms executed 24
-experiments, but the learned policy abstained at all five decision points and
-both obtained zero task score. This null result validates the execution and
-measurement path while rejecting an effectiveness claim for the current policy.
-The resulting method makes scientific judgment an explicit, learnable, and
-falsifiable component of autonomous research.
+Autonomous research agents can search, code, experiment, and write, yet these
+capabilities do not determine *which* scientific move is worth making next. We
+study this missing capability as **scientific taste**: a contextual preference
+over consequential research decisions, learned from the information available
+at the time of a choice and evidence observed afterward. We introduce
+**SciTaste**, which reconstructs high-quality scientific records into decision
+episodes containing the state, feasible alternatives, contemporaneous evidence,
+delayed outcome, and boundary of a transferable lesson. Signed outcomes update
+a source-balanced preference model; at inference time it perturbs an existing
+research controller only when the relevant preference is sufficiently supported,
+and otherwise abstains. This makes scientific taste distinct from retrieving a
+similar passage, scoring a finished paper, or asking a model to reflect on its
+own trace. We evaluate taste first as a held-out decision policy and then as an
+intervention in objective research tasks and complete idea-to-revision
+trajectories. An eight-task source-disjoint execution study exposes an important
+failure mode: although the learned policy had passed its nominal support rule,
+it abstained at every eligible decision. The resulting 16 trajectories and 358
+experiments are valid system outcomes but not an estimate of a Taste effect.
+We use that failure to revise a redundant uncertainty rule without adding the
+evaluation outcomes to training. In a subsequent development trajectory the
+revised policy changes two of five decisions and reduces RMSLE from 12.51 to
+5.60, while both arms still fail exact symbolic recovery. These results show a
+closed outcome-to-policy loop, not yet a general effectiveness claim.
 
 # Introduction
 
@@ -84,26 +83,15 @@ outcomes. A complete-system study measures the full path from idea to a
 reviewed-and-revised paper; it is complementary to, not a substitute for, the
 causal policy comparison.
 
-This paper makes three contributions:
-
-1. We formulate scientific taste as an outcome-updated policy over
-   consequential decisions across a research lifecycle, rather than as a
-   paper-level score or retrieved passage.
-2. We develop a source-to-policy method that reconstructs alternatives and
-   delayed outcomes, abstracts transferable lessons, assigns signed credit, and
-   applies them through an uncertainty-aware controller.
-3. We introduce an evaluation that connects held-out decision quality to
-   objective experimental progress and complete idea-to-paper performance under
-   matched resources.
-
-The current live evidence is intentionally diagnostic. A matched training-free
-development pair completed the experiment and hidden-scoring path, but the
-policy abstained at every exposed decision and neither arm solved the task. The
-result demonstrates a working causal interface while showing that an inactive
-treatment cannot support the headline claim. We retain this failure because it
-clarifies the empirical burden of scientific taste: recording precedents is not
-enough; the learned preference must actually change a defensible decision and
-survive objective evaluation.
+The contribution is a source-to-policy account of scientific judgment. It
+defines a supervision unit that preserves rejected alternatives and delayed
+outcomes; derives a signed, source-balanced preference estimator with explicit
+transfer and abstention; and connects decision-level evaluation to objective
+experimental progress under a matched intervention. SciTasteBench is the
+measurement instrument for the first link, while complete research trajectories
+test whether the same mechanism remains useful in an ecologically realistic
+system. This separation is essential: a better paper is not evidence for better
+taste unless the decision intervention itself was active.
 
 ![SciTaste turns scientific records and endogenous research outcomes into grounded decision episodes. The learned policy changes a feasible action ranking only when the precedent matches the current state and its uncertainty is sufficiently small. Execution, evidence admission, and review remain separate from the learned preference.](assets/fig1-scitaste-control.pdf)
 
@@ -259,19 +247,66 @@ harmful credit records losses. Features describe the decision family, lifecycle
 stage, action type, domain, venue, state regime, and abstract tags. Run-local
 identifiers remain provenance and are never treated as transferable features.
 
-We estimate Beta posteriors over pairwise feature preferences. Source-group
-weighting prevents many correlated decisions from one paper or trajectory from
-dominating the policy. The score of an action is a fixed combination of matched
-posterior log odds. Because those features are correlated, uncertainty is
-bounded by the most conservative matched posterior rather than treating every
-feature as an independent observation.
+Let $g(i)$ be the source group of episode $i$ and let $n_g$ be the number of
+admitted training episodes from that group. Episode $i$ receives weight
+$w_i=q_i/n_{g(i)}$, where $q_i\in[0,1]$ is its reviewed attribution weight. Thus
+one prolific paper or trajectory cannot contribute more total mass merely by
+exposing more intermediate decisions. For a semantic feature $f$---for example
+a stage--action pair, domain--action pair, or abstract decision-state tag---the
+weighted beneficial and harmful counts are
 
-The policy changes the controller only when both candidates have sufficient
-support, the relevant lifecycle stage is represented, the Idea and domain match,
-the pairwise probability crosses its threshold, and a conservative credible
-margin is positive. Otherwise it abstains and exposes the failed gate. This
-behavior is central rather than defensive boilerplate: a scientific-taste system
-that always expresses a preference cannot distinguish judgment from confident
+$$
+W_f=\sum_i w_i\,\mathbb{1}[f\text{ wins in }i],\qquad
+L_f=\sum_i w_i\,\mathbb{1}[f\text{ loses in }i].
+$$
+
+A closed alternative set is treated as one correlated observation: a feature is
+credited at most once per episode, regardless of how many losing alternatives
+were enumerated. With a $\mathrm{Beta}(\alpha_0,\beta_0)$ prior, the posterior is
+$\mathrm{Beta}(\alpha_f,\beta_f)$ with $\alpha_f=\alpha_0+W_f$ and
+$\beta_f=\beta_0+L_f$. We use its log odds
+$\ell_f=\log\frac{\alpha_f}{\beta_f}$ and delta-method variance
+
+$$
+v_f=\frac{\alpha_f\beta_f}
+{(\alpha_f+\beta_f)^2(\alpha_f+\beta_f+1)}
+\left[\frac{1}{p_f(1-p_f)}\right]^2,
+\quad p_f=\frac{\alpha_f}{\alpha_f+\beta_f}.
+$$
+
+For action $a$, matched features $F(S,a)$ are combined with fixed semantic
+weights $\omega_f$,
+
+$$
+s(a\mid S)=\frac{\sum_{f\in F(S,a)}\omega_f\ell_f}
+{\sum_{f\in F(S,a)}\omega_f},\qquad
+V(a\mid S)=\max_{f\in F(S,a)}v_f.
+$$
+
+The maximum in $V$ is deliberately conservative: features derived from one
+episode are correlated and must not manufacture sample size. For the two
+highest-scoring actions $a_1,a_2$, SciTaste computes margin
+$m=s(a_1)-s(a_2)$ and uncertainty
+$\sigma=\sqrt{V(a_1)}+\sqrt{V(a_2)}$. We approximate their pairwise posterior
+preference as
+
+$$
+P(a_1\succ a_2\mid S)\approx
+\operatorname{sigmoid}\!\left(
+\frac{m}{\sqrt{1+\pi\sigma^2/8}}
+\right).
+$$
+
+The deployed rule applies a centered, bounded adjustment only if both actions
+meet minimum support, the stage and domain are covered, and this probability
+exceeds a frozen threshold. Otherwise every adjustment is zero and the
+controller exposes the failed condition. We also record the more conservative
+diagnostic $m-z\sigma$. An earlier implementation required both conditions;
+the source-disjoint development cohort below showed that this made the
+probability threshold redundant and prevented every intervention even after the
+support criterion was met. We therefore version the decision rule rather than
+silently changing old policies. Abstention remains essential: a system that
+always voices a preference cannot distinguish learned judgment from confident
 language generation.
 
 ## One lifecycle, multiple decision families
@@ -294,32 +329,27 @@ lifecycle policy rather than constituting separate scientific contributions.
 
 # Evaluation
 
-Our evaluation asks four questions.
+The evaluation follows the causal path implied by the method. At the local
+level, held-out choices test whether grounded episodes outperform no precedent,
+same-source raw retrieval, pointwise language-model judging, unstructured
+reflection, and a mismatched-precedent placebo. Outcome-update controls replace
+signed credit with no update, shuffled credit, success-only credit, or
+failure-only credit. These comparisons separate learning from representation
+and expose survivorship bias.
 
-**Decision quality.** Does a grounded Taste episode improve held-out action
-selection over no precedent, same-source raw retrieval, and an unstructured
-reflection? Does it outperform a deliberately mismatched precedent while
-abstaining when none applies?
+At the downstream level, only the lifecycle-policy weight changes. Model,
+tools, data, initialization, action set, and resource budget remain fixed while
+a hidden scorer measures the final task outcome. Training-free law-discovery
+tasks exercise sequential hypothesis and experiment choices; training-based ML
+tasks measure progress on a frozen hidden objective. They are workload regimes
+for the same SciTaste policy, not separate versions of the system.
 
-**Learning from outcomes.** Does reviewed delayed credit improve future
-decisions beyond a static episode library? We compare outcome-updated credit
-with no update, shuffled credit, success-only updates, and failure-only updates.
-This isolates learning from representation and diagnoses survivorship bias.
-
-**Objective research progress.** When only the lifecycle-policy weight changes,
-does SciTaste improve a scorer-owned task outcome under the same model, tools,
-data, initialization, and resource budget? Training-free law-discovery tasks
-exercise sequential hypothesis and experiment choices. Training-based ML tasks
-measure whether those choices improve a frozen hidden objective. These are two
-workload types for one SciTaste system, not different product variants.
-
-**Complete-system performance.** Can SciTaste carry a research problem through
-idea selection, experimentation, evidence synthesis, paper generation,
-independent review, and review-driven revision? We compare evidence-valid
-completion, objective progress, paper quality, unresolved reviewer obligations,
-cost, and wall time against a direct-tool-agent baseline and reproducible
-unchanged external systems. This ecological study measures practical capability;
-it does not by itself identify the effect of Taste.
+Complete research trajectories then connect idea selection, experimentation,
+evidence synthesis, paper construction, review, and review-driven revision.
+Evidence-valid completion, objective progress, paper quality, unresolved review
+obligations, cost, and wall time are compared with a direct-tool-agent baseline
+and reproducible external systems. This ecological study tests practical scope;
+it cannot replace the matched policy intervention.
 
 ## SciTasteBench
 
@@ -359,56 +389,70 @@ effect claim.
 
 # Results
 
-## Development evidence
+## Source-disjoint research trajectories
 
-The present artifact contains one completed live matched development pair on a
-training-free NewtonBench task. Both arms used DeepSeek V4.1 Flash as the
-research agent, executed five decision turns, and completed 24 experiments. The
-combined recorded API cost was USD 0.0131. The learned-policy arm abstained at
-all five decisions, so its controller scores and chosen actions were identical
-to the no-policy behavior. Both trajectories received a symbolic task score of
-zero.
+We executed a frozen cohort of eight NewtonBench physics families that were
+disjoint from the source groups used to fit the policy: Bose--Einstein
+distribution, Coulomb force, gravity, Hooke's law, magnetic force, Malus' law,
+Snell's law, and sound propagation. DeepSeek V4.1 Flash acted as the research
+agent. For each family, the policy-on and policy-off arms shared the hidden
+environment, action set, model, tools, initialization, and resource ceiling;
+only the policy weight changed. Failures were retained without replacement.
 
-| Condition | Decisions with nonzero Taste adjustment | Experiments | Task score |
-|---|---:|---:|---:|
-| Learned policy on | 0 / 5 | 24 | 0 |
-| Learned policy off | 0 / 5 | 24 | 0 |
+The cohort executed 16 trajectories, 358 physical experiments, and 321,898
+model tokens at a recorded API cost of USD 0.1313. Twelve arms reached a scored
+submission and four terminated for agent noncompliance. Counting every failed
+arm as score zero, policy-on solved 0/8 tasks and policy-off solved 2/8, an
+intention-to-treat difference of $-0.25$. This numerical difference is *not* a
+Taste-effect estimate: the policy made zero nonzero adjustments in all eight
+pairs, and selected-action sequences were identical for every overlapping
+decision. The two arms therefore differed only through ordinary model sampling
+after an experimentally inactive treatment.
 
-This result closes the execution, telemetry, and hidden-scoring path, but it is
-not evidence that Taste helps or hurts. The manipulation check failed: the
-nominal treatment never became active. Treating the zero difference as a causal
-estimate would therefore confuse a software condition label with a behavioral
-intervention.
+| Cohort statistic | Observed value |
+|---|---:|
+| Source-disjoint task pairs | 8 |
+| Completed arms | 12 / 16 |
+| Physical experiments | 358 |
+| Taste-active pairs | 0 / 8 |
+| Policy-on solved | 0 / 8 |
+| Policy-off solved | 2 / 8 |
+| Recorded model tokens | 321,898 |
 
-## What the null run teaches us
+The failure is scientifically informative because it contradicts the weaker
+assumption that passing a support-count threshold is sufficient for a usable
+preference policy. The fitted action posterior preferred refinement, yet the
+credible pairwise margin remained negative at every state. More repetitions of
+the same inactive comparison cannot resolve the question.
 
-The policy had accumulated support for adaptive-allocation decisions, but its
-posterior top-action margin still crossed zero in the target state. This is a
-scientifically useful diagnosis. Simply adding more retrieved episodes or
-lowering the uncertainty threshold would manufacture activity without
-establishing that the preference is reliable. The next evaluation must acquire
-independent, naturally varying decisions whose outcomes sharpen the relevant
-comparison, then rerun the same manipulation check without changing the frozen
-formal threshold.
+## Closing the outcome-to-policy loop
 
-The run also changes the order of work. It is unnecessary to repeat route
-qualification or add a wider decorative grid. The immediate empirical program
-is: complete the natural SciTasteBench decision set, estimate the decision-level
-effect against raw retrieval and pointwise judging, and then execute the matched
-objective pair once the policy is behaviorally active. Complete-system
-experiments can proceed in parallel because they answer a different question
-and do not require a positive policy effect to exercise the lifecycle.
+Inspection of the frozen decision rule revealed that it required both a
+pairwise posterior probability above 0.60 and a one-sided 95% lower margin above
+zero. The second condition strictly dominated the first in this regime. We
+materialized a new policy version from the *same eight training episodes*: no
+task outcome from the source-disjoint cohort entered its corpus. The revised
+rule uses a single posterior-probability threshold of 0.75 together with the
+unchanged support and scope requirements; the conservative margin remains a
+reported diagnostic.
 
-## Claims not yet supported
+We then executed a matched follow-up on the previously used Heat task. This is
+a development loop-closure case, not a new held-out result. The revised policy
+made nonzero adjustments at all four nonterminal decisions and changed the
+selected action on two of five turns: the policy-on trajectory chose
+`REFINE--REFINE--REFINE--REFINE--STOP`, whereas the zero-weight control chose
+`REFINE--PILOT--PILOT--REFINE--STOP`. Both arms ran 24 experiments and failed
+exact symbolic recovery. The policy-on hypothesis nevertheless obtained RMSLE
+5.60 versus 12.51 for the control, using 36,265 total model tokens and USD
+0.0138 in API cost.
 
-No current result shows that SciTaste improves held-out scientific decisions,
-objective research progress, or idea-to-paper quality. No human-expert study
-validates the scientific-taste construct. The title states the target claim;
-retaining it as an empirical conclusion requires the planned held-out decision
-and objective-progress results. If those results remain absent or null, the
-appropriate scientific conclusion is a grounded method with an unresolved or
-negative effectiveness result, not a success claim inferred from system
-complexity.
+This follow-up establishes the functional sequence that the inactive cohort
+could not: observed failure led to an explicit algorithm revision, the revised
+policy altered later research decisions, and those decisions changed the final
+hypothesis and continuous error. It does not establish average improvement.
+The task was a previously used development task, the sample contains one pair,
+and the primary metric remains tied at zero. A new source-disjoint prospective
+population is still required for an effectiveness estimate.
 
 # Limitations
 
@@ -450,16 +494,16 @@ alternatives, evidence, delayed result, signed credit, and boundary of a
 scientific choice. A source-group-aware posterior then modifies a fixed
 controller only when the lesson is supported and applicable.
 
-This formulation turns an appealing but vague property of researchers into an
-intervention that can fail. The first live matched run did fail its manipulation
-check: the policy abstained throughout and neither arm solved the task. That
-failure rules out a premature improvement claim while confirming that the
-necessary causal interface and objective measurement path execute. The decisive
-next evidence is not another software test or a larger configuration matrix; it
-is held-out decision quality, active matched-policy effects on objective tasks,
-and complete reviewed research trajectories. Those experiments determine
-whether scientific taste becomes a genuine capability of autonomous research
-rather than another name for retrieval or reflection.
+The formulation turns an appealing but vague property into a testable learning
+problem. Its success condition is demanding by design: high-quality source
+content must yield a grounded preference, that preference must transfer to the
+right new state, and the resulting decision must improve evidence gathered under
+a matched budget. Development executions currently establish the path but not
+the effect. The decisive evidence is therefore held-out decision quality,
+active matched-policy effects on objective tasks, and complete reviewed research
+trajectories. Together they determine whether scientific taste is a genuine
+capability of autonomous research rather than another name for retrieval or
+reflection.
 
 # AI Use Statement
 

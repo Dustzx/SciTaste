@@ -1,0 +1,36 @@
+schema_version: "1.0"
+policy_id: scitaste-self-development-policy-v12-base
+update_mode: outcome-updated
+idea_revision:
+  schema_version: "1.0"
+  project_id: scitaste-self-development
+  observed_project_revision: 800
+  observed_project_snapshot_sha256: 53adf9effb5e0fcca6339b4daa54587aace52a60486b610e6a3753f59011aa8b
+  revision_id: outcome-calibrated-scientific-taste-policy-v2
+  status: accepted
+  record_locator: runs/2026-09-15__scitaste-native__outcome-calibrated-taste-idea-v2__seed-00/idea_refinement/REVISION.json
+  record_sha256: 4b592572eb58236def8d273329995472b9f05ce0435fa16b7b551d758b13a765
+  artifact_sha256: 4a98350a57b82a0007eb4f90b68a0791b65d4f809a3f37984cd8308e39683947
+  selected_for_paper: false
+  paper_claim_authority: false
+  binding_sha256: 5d988a74a6fe9935648b5a67f190922dcd56a7e8c7247de6819209a09a2dbb66
+prior_alpha: 1.0
+prior_beta: 1.0
+minimum_feature_support: 3.0
+credible_z: 1.6448536269514722
+minimum_pairwise_probability: 0.75
+application_rule: posterior-probability
+maximum_absolute_adjustment: 1.0
+require_stage_support: true
+allow_cross_domain: true
+shuffle_seed: 0
+eligible_outcome_families:
+  - hypothesis
+  - design
+  - adaptation
+  - claim
+  - review
+  - communication
+training_partitions:
+  - development
+  - calibration

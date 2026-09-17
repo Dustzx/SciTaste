@@ -1,0 +1,54 @@
+schema_version: "1.0"
+cohort_id: newtonbench-source-disjoint-transfer-v1
+project_id: scitaste-self-development
+frozen_before_execution: true
+selection_rule: one previously unexecuted seed from each available held-out physics family
+selection_depends_on_policy_activation: false
+selection_depends_on_outcome: false
+workload: training-free scientific law discovery
+research_agent:
+  provider: deepseek
+  model: deepseek-flash
+  backend: configs/model_nodes/deepseek_v41flash.interactive_live_20260917.yaml
+policy:
+  locator: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-v11-refresh/POLICY.json
+  sha256: d5805e51435151fe98f5611c85a9dcba94b7e75ed3efb5dceaef1dcc38c726c5
+  decision_family: adaptive-allocation
+conditions:
+  - full-scitaste-learned-policy
+  - native-base-without-learned-taste
+matched_factors:
+  - task
+  - hidden_environment
+  - action_menu
+  - research_agent
+  - tools
+  - token_and_experiment_limits
+changed_factor: lifecycle_policy_weight
+tasks:
+  - configs/evaluation/newtonbench/development_task_coulomb_v3.json
+  - configs/evaluation/newtonbench/development_task_gravity_v4.json
+  - configs/evaluation/newtonbench/development_task_hooke_v3.json
+  - configs/evaluation/newtonbench/development_task_magnetic_v3.json
+  - configs/evaluation/newtonbench/development_task_malus_v3.json
+  - configs/evaluation/newtonbench/development_task_snell_v3.json
+  - configs/evaluation/newtonbench/development_task_sound_v3.json
+  - configs/evaluation/newtonbench/development_task_be_distribution_v3.json
+primary_endpoint: symbolic_accuracy
+secondary_endpoints:
+  - rmsle
+  - policy_activation_rate
+  - action_change_rate
+  - experiment_count
+  - tokens
+  - api_cost_usd
+analysis:
+  unit: task
+  estimand: intention-to-treat paired difference
+  manipulation_check: at least one nonzero Taste adjustment
+  retain_inactive_pairs: true
+  replacement_tasks: forbidden
+claim_boundary:
+  evidence_tier: development
+  formal_effect_claim_allowed: false
+  human_validity_claim_allowed: false

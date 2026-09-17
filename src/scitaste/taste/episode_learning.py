@@ -929,6 +929,9 @@ class LifecycleTastePolicyConfig(BaseModel):
     minimum_feature_support: float = Field(default=3.0, ge=0.0, le=10_000.0)
     credible_z: float = Field(default=1.6448536269514722, ge=0.0, le=5.0)
     minimum_pairwise_probability: float = Field(default=0.6, ge=0.5, le=0.99)
+    application_rule: Literal["credible-margin", "posterior-probability"] = (
+        "credible-margin"
+    )
     maximum_absolute_adjustment: float = Field(default=1.0, gt=0.0, le=10.0)
     require_stage_support: bool = True
     allow_cross_domain: bool = False
@@ -1652,7 +1655,9 @@ def assess_lifecycle_taste_policy(
             reason_codes.append("missing-stage-support")
         if probability is None or probability < model.config.minimum_pairwise_probability:
             reason_codes.append("uncertain-pairwise-probability")
-        if lower is None or lower <= 0:
+        if model.config.application_rule == "credible-margin" and (
+            lower is None or lower <= 0
+        ):
             reason_codes.append("credible-margin-crosses-zero")
         if not reason_codes:
             recommended = first[0].action_id
