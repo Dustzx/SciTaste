@@ -135,6 +135,14 @@ class VenueGapActionKind(StrEnum):
     LITERATURE = "literature"
 
 
+class VenueEvidenceProgramMode(StrEnum):
+    """What the evidence controller must do before more paper-level claims."""
+
+    REPAIR_CONTRADICTED_CORE = "repair-contradicted-core-claim"
+    BUILD_ACCEPTED_COMPARABLE_PORTFOLIO = "build-accepted-comparable-portfolio"
+    COMPLETE_FOR_REVIEW = "evidence-program-complete-for-review"
+
+
 class VenueEvidenceScaleMetric(StrEnum):
     """Comparable counts that describe how much evidence a paper actually carries."""
 
@@ -390,6 +398,7 @@ class VenueGapAction(BaseModel):
     kind: VenueGapActionKind
     closes_dimensions: tuple[VenueGapDimension, ...] = Field(min_length=1, max_length=11)
     produces_evidence_types: tuple[str, ...] = Field(min_length=1, max_length=30)
+    produces_components: tuple[VenueEvidenceComponent, ...] = Field(default=(), max_length=10)
     estimated_hours: float = Field(gt=0.0, le=10_000, allow_inf_nan=False)
     expected_information_gain: float = Field(ge=0.0, le=1.0)
     feasibility: float = Field(ge=0.0, le=1.0)
@@ -405,6 +414,10 @@ class VenueGapAction(BaseModel):
             raise ValueError("action dimensions must be sorted and unique")
         if self.produces_evidence_types != tuple(sorted(set(self.produces_evidence_types))):
             raise ValueError("action evidence types must be sorted and unique")
+        if self.produces_components != tuple(
+            sorted(set(self.produces_components), key=lambda item: item.value)
+        ):
+            raise ValueError("action evidence components must be sorted and unique")
         return self
 
 
@@ -473,12 +486,36 @@ class RankedVenueGapAction(BaseModel):
     model_config = _CONFIG
 
     action_id: str
+    action_kind: VenueGapActionKind
     priority_rank: int = Field(ge=1)
     deadline_adjusted_utility: float = Field(ge=0.0, allow_inf_nan=False)
     closes_unresolved_dimensions: tuple[VenueGapDimension, ...]
+    closes_accepted_components: tuple[VenueEvidenceComponent, ...]
+    comparable_accepted_paper_ids: tuple[str, ...]
     fits_before_paper_deadline: bool
     estimated_hours: float = Field(gt=0.0, allow_inf_nan=False)
     reason: str
+
+
+class VenueEvidenceProgramDecision(BaseModel):
+    """Controller decision produced from claims and accepted-paper evidence gaps.
+
+    The decision is intentionally stricter than an assessment: when a central claim is
+    contradicted it directs the next scientific action and blocks paper-polish work from
+    being mistaken for progress on the evidence program.
+    """
+
+    model_config = _CONFIG
+
+    mode: VenueEvidenceProgramMode
+    next_action_id: str | None
+    paper_polish_is_next_action: bool
+    paper_level_claims_authorized: bool
+    blocking_central_claim_ids: tuple[str, ...]
+    missing_accepted_components: tuple[VenueEvidenceComponent, ...]
+    scale_shortfall_metrics: tuple[VenueEvidenceScaleMetric, ...]
+    comparison_paper_ids: tuple[str, ...]
+    rationale: str
 
 
 class VenueEvidencePortfolioAssessment(BaseModel):
@@ -666,6 +703,7 @@ class VenueGapAssessment(BaseModel):
     admitted_evidence_family_count: int = Field(ge=0)
     evidence_portfolio: VenueEvidencePortfolioAssessment
     venue_comparison: VenueComparisonAssessment | None = None
+    evidence_program_decision: VenueEvidenceProgramDecision
     single_result_is_insufficient: Literal[True] = True
     acceptance_prediction_made: Literal[False] = False
     oral_prediction_made: Literal[False] = False
@@ -750,7 +788,8 @@ def assess_venue_gap(
     }
     portfolio = _assess_evidence_portfolio(manifest)
     paper_hours = _paper_deadline_hours(deadline)
-    ranked = _rank_actions(manifest, assessments, paper_hours)
+    ranked = _rank_actions(manifest, assessments, paper_hours, comparison)
+    program_decision = _decide_evidence_program(position, comparison, ranked)
     criterion_rejection_reasons = tuple(
         item.diagnosis
         for item in sorted(
@@ -793,6 +832,7 @@ def assess_venue_gap(
         admitted_evidence_family_count=len(admitted_families),
         evidence_portfolio=portfolio,
         venue_comparison=comparison,
+        evidence_program_decision=program_decision,
         single_result_is_insufficient=True,
         acceptance_prediction_made=False,
         oral_prediction_made=False,
@@ -1574,6 +1614,7 @@ def _rank_actions(
     manifest: VenueGapManifest,
     assessments: tuple[VenueCriterionAssessment, ...],
     paper_deadline_hours: float | None,
+    comparison: VenueComparisonAssessment | None,
 ) -> tuple[RankedVenueGapAction, ...]:
     criterion_by_dimension = {item.dimension: item for item in manifest.criteria}
     unresolved = {
@@ -1581,7 +1622,27 @@ def _rank_actions(
         for item in assessments
         if item.status is not VenueCriterionStatus.SUFFICIENT_FOR_REVIEW
     }
-    candidates: list[tuple[VenueGapAction, tuple[VenueGapDimension, ...], float, bool]] = []
+    missing_accepted_components = (
+        set()
+        if comparison is None
+        else set(comparison.missing_or_unadmitted_target_components)
+        | set(comparison.missing_or_unadmitted_accepted_majority_components)
+    )
+    accepted_papers_by_component: dict[VenueEvidenceComponent, set[str]] = defaultdict(set)
+    if comparison is not None:
+        for neighbour in comparison.accepted_neighbour_gaps:
+            for component in neighbour.missing_or_unadmitted_components:
+                accepted_papers_by_component[component].add(neighbour.paper_id)
+    candidates: list[
+        tuple[
+            VenueGapAction,
+            tuple[VenueGapDimension, ...],
+            tuple[VenueEvidenceComponent, ...],
+            tuple[str, ...],
+            float,
+            bool,
+        ]
+    ] = []
     gap_weights = {
         VenueCriterionStatus.MISSING: 1.5,
         VenueCriterionStatus.DEVELOPMENT_ONLY: 0.5,
@@ -1615,6 +1676,22 @@ def _rank_actions(
             * action.feasibility
             / sqrt(action.estimated_hours)
         )
+        closes_components = tuple(
+            item for item in action.produces_components if item in missing_accepted_components
+        )
+        comparable_papers = tuple(
+            sorted(
+                {
+                    paper_id
+                    for component in closes_components
+                    for paper_id in accepted_papers_by_component[component]
+                }
+            )
+        )
+        if closes_components:
+            # A modest multiplier makes the accepted-paper comparison operational while
+            # preserving scientific importance, rejection risk, cost, and feasibility.
+            utility *= 1.0 + min(0.5, 0.1 * len(closes_components))
         if empirical_core_is_open and action.kind in {
             VenueGapActionKind.WRITING,
             VenueGapActionKind.LITERATURE,
@@ -1623,23 +1700,128 @@ def _rank_actions(
         fits = paper_deadline_hours is None or action.estimated_hours <= paper_deadline_hours
         if not fits:
             utility *= 0.05
-        candidates.append((action, closes, utility, fits))
-    candidates.sort(key=lambda item: (-item[2], item[0].action_id))
+        candidates.append(
+            (action, closes, closes_components, comparable_papers, utility, fits)
+        )
+    candidates.sort(key=lambda item: (-item[4], item[0].action_id))
     return tuple(
         RankedVenueGapAction(
             action_id=action.action_id,
+            action_kind=action.kind,
             priority_rank=index,
             deadline_adjusted_utility=round(utility, 8),
             closes_unresolved_dimensions=closes,
+            closes_accepted_components=closes_components,
+            comparable_accepted_paper_ids=comparable_papers,
             fits_before_paper_deadline=fits,
             estimated_hours=action.estimated_hours,
             reason=(
-                "highest deadline-adjusted breadth and importance of unresolved claim closure"
+                "closes reviewer-critical dimensions and accepted-paper evidence components "
+                "under the remaining deadline"
+                if closes_components and fits
+                else "highest deadline-adjusted breadth and importance of unresolved claim closure"
                 if fits
                 else "scientifically relevant but does not fit before the paper deadline"
             ),
         )
-        for index, (action, closes, utility, fits) in enumerate(candidates, start=1)
+        for index, (
+            action,
+            closes,
+            closes_components,
+            comparable_papers,
+            utility,
+            fits,
+        ) in enumerate(candidates, start=1)
+    )
+
+
+def _decide_evidence_program(
+    position: SubmissionEvidencePosition,
+    comparison: VenueComparisonAssessment | None,
+    ranked: tuple[RankedVenueGapAction, ...],
+) -> VenueEvidenceProgramDecision:
+    blocking_claims = (
+        ()
+        if comparison is None
+        else tuple(
+            item.claim_id
+            for item in comparison.claim_arguments
+            if item.centrality is VenueClaimCentrality.CENTRAL and not item.complete_for_review
+        )
+    )
+    missing_components = (
+        ()
+        if comparison is None
+        else tuple(
+            sorted(
+                set(comparison.missing_or_unadmitted_target_components)
+                | set(comparison.missing_or_unadmitted_accepted_majority_components),
+                key=lambda item: item.value,
+            )
+        )
+    )
+    scale_shortfalls = (
+        ()
+        if comparison is None
+        else tuple(
+            sorted(
+                {
+                    gap.metric
+                    for neighbour in comparison.accepted_neighbour_gaps
+                    for gap in neighbour.scale_gaps
+                    if gap.status is not VenueEvidenceScaleStatus.MEETS_OR_EXCEEDS_REFERENCE
+                },
+                key=lambda item: item.value,
+            )
+        )
+    )
+    comparison_papers = (
+        ()
+        if comparison is None
+        else tuple(item.paper_id for item in comparison.accepted_neighbour_gaps)
+    )
+    next_action = next((item for item in ranked if item.fits_before_paper_deadline), None)
+    if position is SubmissionEvidencePosition.CONTRADICTED:
+        mode = VenueEvidenceProgramMode.REPAIR_CONTRADICTED_CORE
+        rationale = (
+            "Admitted evidence contradicts at least one core claim. Execute the highest-value "
+            "mechanism or causal experiment before broadening evaluation or polishing prose."
+        )
+    elif (
+        comparison is None
+        or position is not SubmissionEvidencePosition.EVIDENCE_PROGRAM_COMPLETE_FOR_REVIEW
+        or not comparison.evidence_shape_complete_for_review
+    ):
+        mode = VenueEvidenceProgramMode.BUILD_ACCEPTED_COMPARABLE_PORTFOLIO
+        rationale = (
+            "No accepted-paper comparison profile is attached; paper-level claims remain "
+            "unauthorized until a source-bound comparison is compiled."
+            if comparison is None
+            else "The current evidence shape is narrower than accepted nearest neighbours. "
+            "Execute the next ranked action that closes reviewer-critical and "
+            "paper-comparable gaps."
+        )
+    else:
+        mode = VenueEvidenceProgramMode.COMPLETE_FOR_REVIEW
+        rationale = (
+            "The declared evidence program is complete for review; this authorizes paper-level "
+            "synthesis but does not predict acceptance or oral selection."
+        )
+    authorized = mode is VenueEvidenceProgramMode.COMPLETE_FOR_REVIEW
+    return VenueEvidenceProgramDecision(
+        mode=mode,
+        next_action_id=None if next_action is None else next_action.action_id,
+        paper_polish_is_next_action=(
+            authorized
+            and next_action is not None
+            and next_action.action_kind is VenueGapActionKind.WRITING
+        ),
+        paper_level_claims_authorized=authorized,
+        blocking_central_claim_ids=blocking_claims,
+        missing_accepted_components=missing_components,
+        scale_shortfall_metrics=scale_shortfalls,
+        comparison_paper_ids=comparison_papers,
+        rationale=rationale,
     )
 
 
@@ -1724,6 +1906,8 @@ __all__ = [
     "VenueEvidenceComponentAssessment",
     "VenueEvidenceCriterion",
     "VenueEvidencePortfolioAssessment",
+    "VenueEvidenceProgramDecision",
+    "VenueEvidenceProgramMode",
     "VenueEvidenceScaleFact",
     "VenueEvidenceScaleGapAssessment",
     "VenueEvidenceScaleMetric",

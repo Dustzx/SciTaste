@@ -60,6 +60,10 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
             kind=VenueGapActionKind.EXPERIMENT,
             closes_dimensions=empirical,
             produces_evidence_types=("result",),
+            produces_components=(
+                VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+                VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+            ),
             estimated_hours=24,
             expected_information_gain=0.9,
             feasibility=0.8,
@@ -221,6 +225,31 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert "No held-out" in assessment.evidence_portfolio.diagnosis
     assert len(assessment.unresolved_dimensions) == len(VenueGapDimension)
     assert assessment.next_actions[0].action_id == "broad-experiment"
+    assert assessment.next_actions[0].closes_accepted_components == (
+        VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+        VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+    )
+    assert assessment.next_actions[0].comparable_accepted_paper_ids == (
+        "accepted-neighbour-1",
+        "accepted-neighbour-2",
+    )
+    assert assessment.evidence_program_decision.mode.value == (
+        "build-accepted-comparable-portfolio"
+    )
+    assert assessment.evidence_program_decision.next_action_id == "broad-experiment"
+    assert assessment.evidence_program_decision.paper_level_claims_authorized is False
+    assert assessment.evidence_program_decision.paper_polish_is_next_action is False
+    assert assessment.evidence_program_decision.blocking_central_claim_ids == (
+        "conditional-scientific-policy",
+    )
+    assert assessment.evidence_program_decision.missing_accepted_components == (
+        VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+        VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+    )
+    assert assessment.evidence_program_decision.scale_shortfall_metrics == (
+        VenueEvidenceScaleMetric.AUTHENTIC_RESEARCH_TASKS,
+        VenueEvidenceScaleMetric.COMPETITIVE_SYSTEMS,
+    )
     assert assessment.acceptance_prediction_made is False
     assert assessment.venue_comparison is not None
     assert assessment.venue_comparison.current_admitted_family_count == 0
@@ -276,6 +305,9 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     )
 
     assert contradicted.submission_position is SubmissionEvidencePosition.CONTRADICTED
+    assert contradicted.evidence_program_decision.mode.value == (
+        "repair-contradicted-core-claim"
+    )
     assert contradicted.evidence_portfolio.admitted_empirical_family_count == 1
     assert contradicted.evidence_portfolio.contradicting_empirical_family_count == 1
     assert contradicted.venue_comparison is not None

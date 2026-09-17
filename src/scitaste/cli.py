@@ -8078,6 +8078,9 @@ def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
                 ),
                 "strongest_rejection_reasons": (assessment.strongest_rejection_reasons),
                 "single_result_is_insufficient": True,
+                "evidence_program_decision": (
+                    assessment.evidence_program_decision.model_dump(mode="json")
+                ),
                 "venue_comparison": (
                     None
                     if assessment.venue_comparison is None

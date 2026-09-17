@@ -81,7 +81,7 @@ The current project-owned manifest and generated assessment are:
 
 - `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V8.yaml`
 - `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V7.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V15.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V16.json`
 
 The comparison set contains ICLR main-track method, evaluation, and benchmark
 papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
@@ -250,3 +250,15 @@ systems, zero experts, one discipline, one seed per task/domain, two admitted ne
 families, and zero real-world discovery cases. These counts do not prescribe an ICLR minimum, but
 they make it impossible to mistake the current controlled NewtonBench table for comparable
 paper-level evidence.
+
+V16 makes the comparison an experiment-controller decision. Candidate actions now declare
+which accepted-paper evidence components they can produce; their ranking records the exact
+missing components and accepted papers made more comparable by that action. The compiler also
+emits a single `evidence_program_decision` with a mode, next action, blocking central claims,
+scale shortfalls, and an explicit paper-level-claim authorization bit. Under the current
+admitted contradictions it selects `repair-contradicted-core-claim`, routes to
+`learn-content-conditioned-taste-policy`, and sets
+`paper_level_claims_authorized=false`. The subsequent matched end-to-end action is separately
+linked to the three majority gaps: end-to-end trajectories, human/expert validation, and strong
+system baselines. Thus accepted-paper comparison now changes resource allocation; it is not a
+post-hoc paragraph appended to the paper.
