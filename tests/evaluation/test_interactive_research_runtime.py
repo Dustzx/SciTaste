@@ -234,8 +234,8 @@ def test_terminal_scientific_credit_preserves_success_and_failure_sign() -> None
         failure,
         is_submission=False,
     ) == (
-        interactive_development_module.TasteOutcomePolarity.MIXED,
-        interactive_development_module.TasteCreditDirection.BENEFICIAL,
+        interactive_development_module.TasteOutcomePolarity.CHALLENGES,
+        interactive_development_module.TasteCreditDirection.HARMFUL,
     )
 
 

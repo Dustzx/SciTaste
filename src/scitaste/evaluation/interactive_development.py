@@ -713,10 +713,12 @@ def finalize_interactive_development_episodes(
                 remaining_experiments=_remaining_experiment_bucket(
                     protocol.max_experiments - int(state.resource_usage.experiments)
                 ),
-                failure_count="zero",
-                no_improvement_streak="zero",
-                score_trend="unknown",
-                best_vs_baseline="unknown",
+                failure_count=state.executor_context.get("failure_count", "unknown"),
+                no_improvement_streak=state.executor_context.get(
+                    "no_improvement_streak", "unknown"
+                ),
+                score_trend=state.executor_context.get("score_trend", "unknown"),
+                best_vs_baseline=state.executor_context.get("best_vs_baseline", "unknown"),
             ),
             decision_principle=projection.completed_decision.rationale,
             why_preferred=(
@@ -1076,9 +1078,19 @@ def refine_interactive_development_candidate(
         )
         if is_submission
         else (
-            "Proposed benefit is limited to producing the retained observation and enabling the "
-            "documented successor update. It does not assign the shared terminal score to this "
-            "turn or claim that later decisions were caused by the controller alone."
+            (
+                "Proposed benefit is limited to producing the retained observation and enabling "
+                "the documented successor update on a trajectory that passed the retained "
+                "objective scorer. It does not assign the shared terminal score to this turn or "
+                "claim that later decisions were caused by the controller alone."
+            )
+            if credit_direction is TasteCreditDirection.BENEFICIAL
+            else (
+                "Proposed harm is limited to spending this bounded allocation without a "
+                "terminally correct result. It does not claim that the action alone caused the "
+                "failure; independent review must decide whether the immediate observation and "
+                "successor update justify this opportunity-cost credit."
+            )
         )
     )
     applicability_primary = (
@@ -1144,7 +1156,14 @@ def refine_interactive_development_candidate(
                         else "the submitted hypothesis passes the retained objective scorer"
                     )
                     if is_submission
-                    else "the successor update is unsupported by the immediate observation"
+                    else (
+                        "the successor update is unsupported by the immediate observation"
+                        if credit_direction is TasteCreditDirection.BENEFICIAL
+                        else (
+                            "the immediate observation supports a correct successor update and "
+                            "the retained trajectory passes objective scoring"
+                        )
+                    )
                 ),
                 (
                     "another experiment has material expected information value under the "
@@ -1208,8 +1227,8 @@ def refine_interactive_development_candidate(
                     "Did the evidence-state and coverage gate justify STOP before scorer access?"
                     if is_submission
                     else (
-                        "Do the retained observation and successor rationale support beneficial "
-                        "local credit?"
+                        "Do the retained observation, successor rationale, and terminal result "
+                        f"support {credit_direction.value} local allocation credit?"
                     )
                 ),
                 (
@@ -1320,16 +1339,13 @@ def _scientific_credit_orientation(
         and receipt.objective_score is not None
         and receipt.objective_score.primary_value > 0
     )
-    if is_submission:
+    if is_submission or not objective_supported:
         return (
             (TasteOutcomePolarity.SUPPORTS, TasteCreditDirection.BENEFICIAL)
             if objective_supported
             else (TasteOutcomePolarity.CHALLENGES, TasteCreditDirection.HARMFUL)
         )
-    return (
-        TasteOutcomePolarity.SUPPORTS if objective_supported else TasteOutcomePolarity.MIXED,
-        TasteCreditDirection.BENEFICIAL,
-    )
+    return TasteOutcomePolarity.SUPPORTS, TasteCreditDirection.BENEFICIAL
 
 
 def save_interactive_taste_development_protocol(

@@ -203,8 +203,8 @@ class TasteEpisodeDecisionContext(BaseModel):
     model_config = _CONFIG
 
     remaining_experiments: Literal["zero", "one", "two-to-three", "four-plus"]
-    failure_count: Literal["zero", "one", "two-plus"]
-    no_improvement_streak: Literal["zero", "one", "two-plus"]
+    failure_count: Literal["unknown", "zero", "one", "two-plus"]
+    no_improvement_streak: Literal["unknown", "zero", "one", "two-plus"]
     score_trend: Literal["unknown", "declining", "flat", "improving"]
     best_vs_baseline: Literal["unknown", "below", "equal", "above"]
 
