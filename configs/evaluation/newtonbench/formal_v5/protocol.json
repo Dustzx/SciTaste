@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "counterfactual-taste-deliberation-confirmation-formal-v5",
+  "project_id": "scitaste-self-development",
+  "target_venue": "ICLR 2027",
+  "frozen_implementation_commit": "0b4bccce5e382f8eddd72d5a9b3aa30c97d7ff83",
+  "benchmark_name": "NewtonBench",
+  "benchmark_repository_commit": "912a4ba5f4356ddd06acc16e44460ca30be4abc2",
+  "benchmark_checkout": "outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout",
+  "source_precedent_root": "outputs/projects/scitaste-self-development/evaluations/counterfactual-taste-policy-v2-expanded-precedents-v5-temporal-safe",
+  "source_manifest_sha256": "5f17ff28be4795d995a90d58974135072dd837df60bd0f8699c9c470067dcc70",
+  "source_library_sha256": "ebfe7eead33ff0d09f6a4560314cc72a9c2fd75ac91821de59cf3c216d1fda8b",
+  "development_report": "outputs/projects/scitaste-self-development/evaluations/counterfactual-taste-policy-v2-expanded-direct-action-development-v4/REPORT.json",
+  "development_report_sha256": "6d79588e6fa3a6c75dedeafd857257fe2c2b7c7ca317b83c36160bd077d2226a",
+  "studies": [
+    {
+      "study_id": "counterfactual-taste-formal-v5-fourier-early",
+      "task_id": "newtonbench-m3-fourier-law-medium-simple-system-v1-seed-9903",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_fourier.json",
+      "task_config_sha256": "e4b74388ca7b4c8533609808c2f98be924e6c5dd43947f099620809edb0ca4d8",
+      "prefix_turn_count": 1
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-fourier-middle",
+      "task_id": "newtonbench-m3-fourier-law-medium-simple-system-v1-seed-9903",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_fourier.json",
+      "task_config_sha256": "e4b74388ca7b4c8533609808c2f98be924e6c5dd43947f099620809edb0ca4d8",
+      "prefix_turn_count": 2
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-fourier-late",
+      "task_id": "newtonbench-m3-fourier-law-medium-simple-system-v1-seed-9903",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_fourier.json",
+      "task_config_sha256": "e4b74388ca7b4c8533609808c2f98be924e6c5dd43947f099620809edb0ca4d8",
+      "prefix_turn_count": 3
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-malus-early",
+      "task_id": "newtonbench-m7-malus-law-hard-complex-system-v1-seed-9907",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_malus.json",
+      "task_config_sha256": "6963354138b7419a724e99f0ecf82d87c3bf2b2b6fef83d5c72fb31cd5f7e16e",
+      "prefix_turn_count": 1
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-malus-middle",
+      "task_id": "newtonbench-m7-malus-law-hard-complex-system-v1-seed-9907",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_malus.json",
+      "task_config_sha256": "6963354138b7419a724e99f0ecf82d87c3bf2b2b6fef83d5c72fb31cd5f7e16e",
+      "prefix_turn_count": 2
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-malus-late",
+      "task_id": "newtonbench-m7-malus-law-hard-complex-system-v1-seed-9907",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_malus.json",
+      "task_config_sha256": "6963354138b7419a724e99f0ecf82d87c3bf2b2b6fef83d5c72fb31cd5f7e16e",
+      "prefix_turn_count": 3
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-sound-early",
+      "task_id": "newtonbench-m8-sound-speed-easy-vanilla-equation-v0-seed-9908",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_sound.json",
+      "task_config_sha256": "b86086f3ee95797011d8fb8916f56356b92bf91b0ee7cde9c74840d29bdd302c",
+      "prefix_turn_count": 1
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-sound-middle",
+      "task_id": "newtonbench-m8-sound-speed-easy-vanilla-equation-v0-seed-9908",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_sound.json",
+      "task_config_sha256": "b86086f3ee95797011d8fb8916f56356b92bf91b0ee7cde9c74840d29bdd302c",
+      "prefix_turn_count": 2
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-sound-late",
+      "task_id": "newtonbench-m8-sound-speed-easy-vanilla-equation-v0-seed-9908",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_sound.json",
+      "task_config_sha256": "b86086f3ee95797011d8fb8916f56356b92bf91b0ee7cde9c74840d29bdd302c",
+      "prefix_turn_count": 3
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-be-distribution-early",
+      "task_id": "newtonbench-m10-be-distribution-hard-complex-system-v2-seed-9910",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_be_distribution.json",
+      "task_config_sha256": "ee4e8567858e08af712fe74194e5d05b83ef89ac7d6d7dcddfa9f3d3fd91e2c7",
+      "prefix_turn_count": 1
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-be-distribution-middle",
+      "task_id": "newtonbench-m10-be-distribution-hard-complex-system-v2-seed-9910",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_be_distribution.json",
+      "task_config_sha256": "ee4e8567858e08af712fe74194e5d05b83ef89ac7d6d7dcddfa9f3d3fd91e2c7",
+      "prefix_turn_count": 2
+    },
+    {
+      "study_id": "counterfactual-taste-formal-v5-be-distribution-late",
+      "task_id": "newtonbench-m10-be-distribution-hard-complex-system-v2-seed-9910",
+      "task_config": "configs/evaluation/newtonbench/formal_v5/task_be_distribution.json",
+      "task_config_sha256": "ee4e8567858e08af712fe74194e5d05b83ef89ac7d6d7dcddfa9f3d3fd91e2c7",
+      "prefix_turn_count": 3
+    }
+  ],
+  "forced_actions": [
+    "ANALYZE",
+    "EXPERIMENT",
+    "PILOT",
+    "PIVOT",
+    "PROBE",
+    "REFINE",
+    "STOP"
+  ],
+  "selector": {
+    "profile_set": "configs/model_nodes/runtime_profiles.taste_deliberation_v1.yaml",
+    "profile_set_sha256": "8775ec346f5584639356f33e047d886e02734d615161dbfa0adbe5f2cfb94120",
+    "profile_id": "deepseek-v41flash-taste-deliberation",
+    "backend_config": "configs/model_nodes/deepseek_v41flash.interactive_live_20260917.yaml",
+    "backend_config_sha256": "82a681041d037ee86152f4c5e50db0588b9c5ec73c1486716f8f4cacfa42c54c",
+    "maximum_candidate_cases": 3,
+    "maximum_selected_cases": 3,
+    "selection_rule": "direct-deliberated-action-v1"
+  },
+  "execution": {
+    "limits": "configs/evaluation/newtonbench/formal_limits_v2.json",
+    "limits_sha256": "9698c2ef0e7ac309b7811934f6fbe089dae4e2fc49c347ea47e9c51456927245",
+    "research_agent_config": "configs/model_nodes/deepseek_v41flash.interactive_live_20260917.yaml",
+    "research_agent_config_sha256": "82a681041d037ee86152f4c5e50db0588b9c5ec73c1486716f8f4cacfa42c54c",
+    "terminal_judge_config": "configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v5.yaml",
+    "terminal_judge_config_sha256": "246a49ea12aedca85a4b6d3fe998eafb250eda681b136d768e3bf24d62e0ce3a",
+    "research_agent_policy_id": "newtonbench-research-agent-v1",
+    "research_agent_prompt_version": "newtonbench-agent-v1",
+    "terminal_judge_prompt_version": "newtonbench-symbolic-equivalence-v1",
+    "research_agent_seeds": {
+      "newtonbench-m3-fourier-law-medium-simple-system-v1-seed-9903": 59903,
+      "newtonbench-m7-malus-law-hard-complex-system-v1-seed-9907": 59907,
+      "newtonbench-m8-sound-speed-easy-vanilla-equation-v0-seed-9908": 59908,
+      "newtonbench-m10-be-distribution-hard-complex-system-v2-seed-9910": 59910
+    },
+    "terminal_judge_seeds": {
+      "newtonbench-m3-fourier-law-medium-simple-system-v1-seed-9903": 69903,
+      "newtonbench-m7-malus-law-hard-complex-system-v1-seed-9907": 69907,
+      "newtonbench-m8-sound-speed-easy-vanilla-equation-v0-seed-9908": 69908,
+      "newtonbench-m10-be-distribution-hard-complex-system-v2-seed-9910": 69910
+    }
+  },
+  "endpoint": {
+    "primary_metric": "exp-neg-rmsle",
+    "source_metric": "rmsle",
+    "metric_transform": "exp-negative",
+    "direction": "higher",
+    "failure_value": 0,
+    "practical_equivalence_tolerance": 0.001
+  },
+  "success": {
+    "expected_state_count": 12,
+    "expected_task_cluster_count": 4,
+    "minimum_objective_observation_rate": 0.85,
+    "minimum_selected_action_types": 3,
+    "maximum_selected_action_share": 0.75,
+    "minimum_mean_margin_over_strongest_static": 0.02,
+    "require_positive_task_cluster_interval_lower_bound": true,
+    "require_failure_noninferiority": true
+  },
+  "resources": {
+    "maximum_source_trajectories": 4,
+    "maximum_branch_trajectories": 84,
+    "maximum_selector_invocations": 12,
+    "gpu_hours": 0
+  },
+  "evidence_scope": "mechanism-confirmation-only"
+}
