@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="720" viewBox="0 0 1440 720" role="img" aria-labelledby="title desc">
+  <title id="title">SciTasteBench and external evidence portfolio</title>
+  <desc id="desc">A horizontal diagram separating benchmark construction, mechanism evaluation, and external autonomous-research validation.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#314158"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#172033" flood-opacity="0.13"/>
+    </filter>
+    <style>
+      .bg { fill: #f7f8fb; }
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #162238; }
+      .subtitle { font: 400 16px Inter, Arial, sans-serif; fill: #536176; }
+      .lane-title { font: 700 18px Inter, Arial, sans-serif; fill: #1c2940; }
+      .box-title { font: 700 16px Inter, Arial, sans-serif; fill: #17243a; }
+      .body { font: 400 13px Inter, Arial, sans-serif; fill: #4a5870; }
+      .small { font: 600 12px Inter, Arial, sans-serif; fill: #647189; letter-spacing: .5px; }
+      .arrow { stroke: #314158; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #75839a; stroke-width: 1.8; fill: none; stroke-dasharray: 7 6; marker-end: url(#arrow); }
+      .gate { fill: #fff4df; stroke: #e6a33b; stroke-width: 2; }
+      .data { fill: #eaf2ff; stroke: #4f7dc9; stroke-width: 1.8; }
+      .taste { fill: #edf8f2; stroke: #3e9470; stroke-width: 1.8; }
+      .external { fill: #f3edff; stroke: #7f61b5; stroke-width: 1.8; }
+      .neutral { fill: #ffffff; stroke: #a8b2c3; stroke-width: 1.5; }
+      .negative { fill: #fff0f0; stroke: #d45b5b; stroke-width: 1.8; }
+    </style>
+  </defs>
+  <rect class="bg" width="1440" height="720"/>
+  <text class="title" x="60" y="56">SciTaste evidence portfolio</text>
+  <text class="subtitle" x="60" y="84">Mechanism validity, benchmark validity, and autonomous-research utility are separate claims.</text>
+
+  <text class="lane-title" x="60" y="137">A · Construct a scientific-decision instrument</text>
+  <rect class="data" filter="url(#shadow)" x="60" y="158" rx="14" width="225" height="112"/>
+  <text class="box-title" x="82" y="190">Natural decision record</text>
+  <text class="body" x="82" y="216">pre-decision state · alternatives</text>
+  <text class="body" x="82" y="238">later response / revision isolated</text>
+
+  <path class="arrow" d="M285 214 H340"/>
+  <rect class="data" filter="url(#shadow)" x="340" y="158" rx="14" width="225" height="112"/>
+  <text class="box-title" x="362" y="190">Outcome firewall</text>
+  <text class="body" x="362" y="216">actions frozen outcome-blind</text>
+  <text class="body" x="362" y="238">source identity and split bound</text>
+
+  <path class="arrow" d="M565 214 H620"/>
+  <rect class="data" filter="url(#shadow)" x="620" y="158" rx="14" width="225" height="112"/>
+  <text class="box-title" x="642" y="190">Independent labels</text>
+  <text class="body" x="642" y="216">raw disagreement retained</text>
+  <text class="body" x="642" y="238">construct audit · contamination</text>
+
+  <path class="arrow" d="M845 214 H900"/>
+  <rect class="gate" filter="url(#shadow)" x="900" y="158" rx="14" width="225" height="112"/>
+  <text class="box-title" x="922" y="190">Benchmark gate</text>
+  <text class="body" x="922" y="216">coverage · reliability · rights</text>
+  <text class="body" x="922" y="238">dev / validation / hidden test</text>
+
+  <path class="arrow" d="M1125 214 H1180"/>
+  <rect class="neutral" filter="url(#shadow)" x="1180" y="158" rx="14" width="200" height="112"/>
+  <text class="box-title" x="1202" y="190">Release package</text>
+  <text class="body" x="1202" y="216">datasheet · scorer · audit</text>
+  <text class="body" x="1202" y="238">no paper claim before gate</text>
+
+  <text class="lane-title" x="60" y="328">B · Isolate what Scientific Taste contributes</text>
+  <rect class="taste" filter="url(#shadow)" x="60" y="350" rx="14" width="245" height="118"/>
+  <text class="box-title" x="82" y="382">Grounded Taste corpus</text>
+  <text class="body" x="82" y="408">preference · applies when</text>
+  <text class="body" x="82" y="430">reverse when · failure boundary</text>
+
+  <path class="arrow" d="M305 409 H365"/>
+  <rect class="taste" filter="url(#shadow)" x="365" y="350" rx="14" width="260" height="118"/>
+  <text class="box-title" x="387" y="382">Content-conditioned selector</text>
+  <text class="body" x="387" y="408">target-visible applicability</text>
+  <text class="body" x="387" y="430">uncertainty-aware abstention</text>
+
+  <path class="arrow" d="M625 409 H685"/>
+  <rect class="neutral" filter="url(#shadow)" x="685" y="330" rx="14" width="310" height="158"/>
+  <text class="small" x="707" y="358">CONTROLLED ARMS · SAME MODEL AND BUDGET</text>
+  <text class="body" x="707" y="386">Base · no reference</text>
+  <text class="body" x="707" y="410">Raw · equal-token source bytes</text>
+  <text class="body" x="707" y="434">Matched · applicable Taste</text>
+  <text class="body" x="707" y="458">Mismatched · equally strong, inapplicable Taste</text>
+
+  <path class="arrow" d="M995 409 H1055"/>
+  <rect class="gate" filter="url(#shadow)" x="1055" y="350" rx="14" width="325" height="118"/>
+  <text class="box-title" x="1077" y="382">Mechanism admission</text>
+  <text class="body" x="1077" y="408">structure &gt; bytes · matched &gt; mismatched</text>
+  <text class="body" x="1077" y="430">independent split · order robust · no collapse</text>
+
+  <text class="lane-title" x="60" y="530">C · Test whether better decisions improve autonomous research</text>
+  <rect class="external" filter="url(#shadow)" x="60" y="552" rx="14" width="270" height="112"/>
+  <text class="box-title" x="82" y="584">MLRC / objective task</text>
+  <text class="body" x="82" y="610">training-based progress</text>
+  <text class="body" x="82" y="632">Full vs same-backbone Base</text>
+
+  <rect class="external" filter="url(#shadow)" x="365" y="552" rx="14" width="270" height="112"/>
+  <text class="box-title" x="387" y="584">EXP-Bench</text>
+  <text class="body" x="387" y="610">hypothesis → conclusion success</text>
+  <text class="body" x="387" y="632">official runnable agent baseline</text>
+
+  <rect class="external" filter="url(#shadow)" x="670" y="552" rx="14" width="270" height="112"/>
+  <text class="box-title" x="692" y="584">Idea-to-paper task</text>
+  <text class="body" x="692" y="610">evidence-valid reviewed package</text>
+  <text class="body" x="692" y="632">strong external system comparison</text>
+
+  <path class="dash" d="M940 608 H1010"/>
+  <rect class="gate" filter="url(#shadow)" x="1010" y="542" rx="14" width="370" height="132"/>
+  <text class="box-title" x="1032" y="576">Submission claim gate</text>
+  <text class="body" x="1032" y="602">mechanism + construct validity + external utility</text>
+  <text class="body" x="1032" y="626">development results remain in the evidence ledger</text>
+  <text class="body" x="1032" y="650">only admitted evidence enters the main manuscript</text>
+
+  <rect class="negative" x="1090" y="101" rx="10" width="290" height="38"/>
+  <text class="small" x="1110" y="125">CURRENT: ALL THREE GATES ARE STILL OPEN</text>
+</svg>

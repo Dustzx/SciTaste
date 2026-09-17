@@ -89,8 +89,10 @@ mechanistic hypotheses:
    ordinary retrieval or context packing.
 2. **Applicability over generic advice.** Matched Taste should outperform an
    equally high-quality, equal-token, source-disjoint but inapplicable Taste
-   abstraction. Otherwise the representation may contain only generic research
-   maxims.
+   abstraction. "Matched" requires a frozen target-content applicability selector;
+   sharing only a broad judgment-family label is not matching. Otherwise the
+   representation may contain only generic research maxims or the comparison may
+   test an arbitrary precedent assignment.
 3. **Selective value at consequential decisions.** Regret reduction should be
    largest for outcome-blind states registered as high-ambiguity or
    high-leverage, and should not be manufactured by always continuing, always
@@ -172,6 +174,17 @@ The existing 24-target Track-A pilot is not silently promoted: it covers only
 four legacy families and includes Visual cases, so it cannot satisfy this
 development release. Its sources and results remain consumed development
 evidence.
+
+The 28-case natural confirmation reserve executed on 2026-09-17 is also consumed.
+It independently rejected the development card assignment: matched Taste was
+10.7 points below token-matched raw evidence and 21.4 points below mismatched Taste
+under the order-consistent endpoint. The latter contrast had six regressions, no
+improvements, and a two-sided exact paired p-value of 0.03125. Because the assigned
+"match" used only a shared judgment family plus stable hash ordering, this result
+falsifies that assignment policy rather than all possible Taste representations.
+It does prohibit reusing the same 28 targets to confirm a revised selector. A new
+selector must bind target-visible content, applicability and reversal conditions,
+uncertainty, and abstention before a new untouched split is opened.
 
 ## Full-process evaluation
 

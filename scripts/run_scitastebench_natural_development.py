@@ -265,6 +265,18 @@ def _precedent_for(
     return min(candidates)[2]
 
 
+def _manifest_release_ids(path: Path) -> tuple[str, ...]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    values = payload.get("release_case_ids")
+    if not isinstance(values, list) or not values or not all(
+        isinstance(item, str) and item for item in values
+    ):
+        raise ValueError(f"release manifest {path} has no valid release_case_ids")
+    if len(values) != len(set(values)):
+        raise ValueError(f"release manifest {path} repeats case IDs")
+    return tuple(values)
+
+
 def run(args: argparse.Namespace) -> None:
     root = args.locator_root.resolve(strict=True)
     output = args.output
@@ -496,12 +508,59 @@ def run(args: argparse.Namespace) -> None:
         ]
         >= 2
     ]
-    if len(precedent_capable) < args.release_size:
-        raise ValueError(
-            f"only {len(precedent_capable)} precedent-capable dual-AI agreements are available "
-            f"for {args.release_size} cases"
-        )
-    release = _select_release(precedent_capable, records, release_size=args.release_size)
+    excluded_release: tuple[str, ...] = ()
+    excluded_manifest_sha256: str | None = None
+    if args.exclude_release_manifest is not None:
+        excluded_path = root / args.exclude_release_manifest
+        excluded_release = _manifest_release_ids(excluded_path)
+        excluded_manifest_sha256 = _sha(excluded_path)
+
+    fixed_precedents: tuple[str, ...] = ()
+    fixed_precedent_manifest_sha256: str | None = None
+    if args.fixed_precedent_manifest is not None:
+        precedent_path = root / args.fixed_precedent_manifest
+        fixed_precedents = _manifest_release_ids(precedent_path)
+        fixed_precedent_manifest_sha256 = _sha(precedent_path)
+        unknown = sorted(set(fixed_precedents) - set(agreed))
+        if unknown:
+            raise ValueError("fixed precedents are not dual-AI agreements: " + ",".join(unknown))
+    precedent_pool = list(fixed_precedents) if fixed_precedents else precedent_capable
+
+    if args.release_policy == "coverage":
+        if len(precedent_capable) < args.release_size:
+            raise ValueError(
+                f"only {len(precedent_capable)} precedent-capable dual-AI agreements are "
+                f"available for {args.release_size} cases"
+            )
+        release = _select_release(precedent_capable, records, release_size=args.release_size)
+        unsupported_confirmation_ids: list[str] = []
+    else:
+        excluded = set(excluded_release)
+        eligible_remaining = [item for item in agreed if item not in excluded]
+        supported_families = {
+            records[item].final_decision.taste_judgment_family
+            for item in precedent_pool
+            if records[item].final_decision is not None
+        }
+        release = [
+            item
+            for item in eligible_remaining
+            if records[item].final_decision is not None
+            and records[item].final_decision.taste_judgment_family in supported_families
+        ]
+        unsupported_confirmation_ids = sorted(set(eligible_remaining) - set(release))
+        release = sorted(release, key=lambda value: _rank("confirmation-order", value))
+        if args.release_size and len(release) != args.release_size:
+            raise ValueError(
+                f"remaining-agreements produced {len(release)} cases, expected "
+                f"{args.release_size}"
+            )
+
+    release_source_groups = {records[item].source_group_id for item in release}
+    precedent_source_groups = {records[item].source_group_id for item in precedent_pool}
+    source_group_overlap = sorted(release_source_groups & precedent_source_groups)
+    if source_group_overlap:
+        raise ValueError("target and precedent source groups overlap")
 
     annotation_payload = {
         "run_id": args.run_id,
@@ -516,6 +575,13 @@ def run(args: argparse.Namespace) -> None:
         "reviewer_kind": "ai",
         "not_human_review": True,
         "human_validity_claim_allowed": False,
+        "release_policy": args.release_policy,
+        "excluded_release_manifest_sha256": excluded_manifest_sha256,
+        "fixed_precedent_manifest_sha256": fixed_precedent_manifest_sha256,
+        "fixed_precedent_case_count": len(fixed_precedents),
+        "target_precedent_source_group_overlap_count": len(source_group_overlap),
+        "unsupported_confirmation_case_ids": unsupported_confirmation_ids,
+        "labels_frozen_before_confirmation_split_opened": bool(excluded_release),
     }
     annotation_hash = content_sha256(annotation_payload)
     _write_json(
@@ -532,8 +598,8 @@ def run(args: argparse.Namespace) -> None:
         pair = actions[candidate_id]
         label_a = labels_a[candidate_id]
         label_b = labels_b[candidate_id]
-        matched_id = _precedent_for(candidate_id, precedent_capable, records, matched=True)
-        mismatched_id = _precedent_for(candidate_id, precedent_capable, records, matched=False)
+        matched_id = _precedent_for(candidate_id, precedent_pool, records, matched=True)
+        mismatched_id = _precedent_for(candidate_id, precedent_pool, records, matched=False)
         matched_screen = screens[matched_id]
         matched_outcome = outcomes[matched_id]
         preferred_option = label_a.preferred_option
@@ -621,11 +687,11 @@ def run(args: argparse.Namespace) -> None:
             )
         )
     suite = BenchmarkSuite(
-        suite_id="scitastebench-natural-development-v1",
+        suite_id=args.suite_id,
         version="2.0",
         description=(
-            "Natural source-group-disjoint development decisions with dual-AI proxy labels; "
-            "unbalanced and not formal effectiveness evidence."
+            "Natural source-group-disjoint scientific decisions with dual-AI proxy labels; "
+            f"split policy={args.release_policy}; not formal effectiveness evidence."
         ),
         evidence_tier=BenchmarkEvidenceTier.NATURAL_PILOT,
         annotation_manifest_sha256=annotation_hash,
@@ -684,6 +750,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--locator-root", type=Path, default=Path("."))
     parser.add_argument("--run-id", default="scitastebench-natural-development-v1")
+    parser.add_argument("--suite-id", default="scitastebench-natural-development-v1")
     parser.add_argument(
         "--screening-items",
         type=Path,
@@ -733,6 +800,13 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--release-size", type=int, default=36)
+    parser.add_argument(
+        "--release-policy",
+        choices=("coverage", "remaining-agreements"),
+        default="coverage",
+    )
+    parser.add_argument("--exclude-release-manifest", type=Path, default=None)
+    parser.add_argument("--fixed-precedent-manifest", type=Path, default=None)
     parser.add_argument("--action-batch-size", type=int, default=8)
     parser.add_argument("--reuse-action-output", type=Path, default=None)
     parser.add_argument("--reuse-action-batch-size", type=int, default=8)

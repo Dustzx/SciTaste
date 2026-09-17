@@ -316,9 +316,60 @@ def run(args: argparse.Namespace) -> None:
     )
     ordered_ids = sorted(precedent_ids)
     cards: dict[str, ContrastiveTasteCard] = {}
+    reused_card_count = 0
+    if args.reuse_card_suite is not None or args.reuse_card_output is not None:
+        if args.reuse_card_suite is None or args.reuse_card_output is None:
+            raise ValueError("card reuse requires both its source suite and output directory")
+        reused_suite = load_benchmark_suite(args.reuse_card_suite)
+        reused_principles: dict[str, str] = {}
+        reused_ids: set[str] = set()
+        for case in reused_suite.cases:
+            for candidate_id, principle in (
+                (
+                    case.taste_precedent_ids[0].removeprefix("taste-"),
+                    case.taste_principle,
+                ),
+                (
+                    case.placebo_precedent_ids[0].removeprefix("taste-"),
+                    case.placebo_taste_principle,
+                ),
+            ):
+                reused_ids.add(candidate_id)
+                prior = reused_principles.get(candidate_id)
+                if prior is not None and prior != principle:
+                    raise ValueError(
+                        f"reused precedent {candidate_id!r} has inconsistent principles"
+                    )
+                reused_principles[candidate_id] = principle
+        reused_ordered = sorted(reused_ids)
+        for ordinal, candidate_batch in enumerate(
+            [
+                reused_ordered[index : index + args.reuse_card_batch_size]
+                for index in range(0, len(reused_ordered), args.reuse_card_batch_size)
+            ],
+            1,
+        ):
+            response_path = args.reuse_card_output / f"{ordinal:02d}" / "response.json"
+            response = json.loads(response_path.read_text(encoding="utf-8"))
+            result = ContrastiveCardBatch.model_validate(response["output_payload"])
+            positions = [card.position for card in result.cards]
+            if sorted(positions) != list(range(1, len(candidate_batch) + 1)):
+                raise ValueError("reused contrastive-card batch positions differ")
+            for card in result.cards:
+                candidate_id = candidate_batch[card.position - 1]
+                if candidate_id not in precedent_ids:
+                    continue
+                if reused_principles[candidate_id] != principles[candidate_id]:
+                    raise ValueError(
+                        f"reused precedent {candidate_id!r} changed its grounded principle"
+                    )
+                cards[candidate_id] = card
+                reused_card_count += 1
+
+    pending_ids = [item for item in ordered_ids if item not in cards]
     batches = [
-        ordered_ids[index : index + args.batch_size]
-        for index in range(0, len(ordered_ids), args.batch_size)
+        pending_ids[index : index + args.batch_size]
+        for index in range(0, len(pending_ids), args.batch_size)
     ]
     for ordinal, candidate_batch in enumerate(batches, 1):
         batch_id = f"{args.run_id}-cards-{ordinal:02d}"
@@ -420,11 +471,11 @@ def run(args: argparse.Namespace) -> None:
         ),
     )
     new_suite = BenchmarkSuite(
-        suite_id="scitastebench-natural-contrastive-development-v1",
+        suite_id=args.suite_id,
         version="3.0",
         description=(
-            "Token-matched contrastive Taste-card development study on the same 36 "
-            "natural dual-AI-proxy decisions; not formal effectiveness evidence."
+            "Token-matched contrastive Taste-card study on natural dual-AI-proxy "
+            "decisions; not formal effectiveness evidence."
         ),
         evidence_tier=suite.evidence_tier,
         annotation_manifest_sha256=suite.annotation_manifest_sha256,
@@ -461,6 +512,8 @@ def run(args: argparse.Namespace) -> None:
         "suite_sha256": new_suite.sha256,
         "case_count": len(new_cases),
         "unique_precedent_count": len(cards),
+        "reused_card_count": reused_card_count,
+        "new_card_count": len(cards) - reused_card_count,
         "token_budget_per_treatment": args.token_budget,
         "card_backend": backend.name,
         "card_model": backend.model,
@@ -509,6 +562,10 @@ def parse_args() -> argparse.Namespace:
         default=root / "scitastebench-natural-contrastive-development-v1",
     )
     parser.add_argument("--run-id", default="scitastebench-natural-contrastive-development-v1")
+    parser.add_argument("--suite-id", default="scitastebench-natural-contrastive-development-v1")
+    parser.add_argument("--reuse-card-suite", type=Path, default=None)
+    parser.add_argument("--reuse-card-output", type=Path, default=None)
+    parser.add_argument("--reuse-card-batch-size", type=int, default=6)
     parser.add_argument("--batch-size", type=int, default=6)
     parser.add_argument("--token-budget", type=int, default=256)
     parser.add_argument("--seed", type=int, default=6027)

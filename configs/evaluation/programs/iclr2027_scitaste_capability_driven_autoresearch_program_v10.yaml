@@ -25,6 +25,20 @@ paper_contract:
     claim-evidence-linked paper is assembled, two independent AI reviews are
     resolved, the paper is revised, and a final reviewed package is frozen.
 
+paper_evidence_buffer:
+  stages: [exploratory, development, independent-confirmation, submission-admitted]
+  exploration_and_development_destination: evidence-ledger-and-diagnostic-memo
+  independent_confirmation_destination: evidence-admission-review
+  main_manuscript_effectiveness_results_must_be: submission-admitted
+  negative_formal_results_may_be_admitted: true
+  development_results_may_change_method: true
+  development_results_may_estimate_revised_method_effect: false
+  consumed_split_may_confirm_revised_method: false
+  rule: >-
+    Paper prose may summarize development evidence as motivation or a disclosed
+    failure boundary, but development estimates cannot become headline evidence
+    and cannot be pooled with a later method version.
+
 venue_competitiveness_control:
   target_standard: recent-accepted-same-venue-method-and-benchmark-papers
   comparison_unit: claim-argument-and-evidence-portfolio-not-result-table-count
@@ -41,6 +55,24 @@ venue_competitiveness_control:
   acceptance_probability_prediction_allowed: false
   oral_probability_prediction_allowed: false
   one-controlled-result-may-authorize-paper-assembly: false
+
+external_validity_control:
+  internal_scitastebench_may_replace_external_benchmark: false
+  external_benchmark_may_replace_mechanism_isolation: false
+  title_requires:
+    - independent-scitastebench-mechanism-admission
+    - scorer-owned-external-objective-progress
+    - same-backbone-native-base-causal-control
+    - at-least-one-runnable-strong-external-agent-or-method-baseline
+  current_external_routes:
+    primary: mlrc-bench
+    experiment-chain: exp-bench
+    complete-package: mlr-bench
+  comparison_policy: >-
+    Compare Full and Native Base under the same model and budget to attribute
+    causal value to Taste; report compatible external systems separately for
+    ecological competitiveness rather than treating leaderboard numbers as a
+    substitute for the matched intervention.
 
 model_inventory_binding:
   inventory_id: scitaste-model-role-inventory-20260916-v2
@@ -109,6 +141,9 @@ research_tracks:
     nested_contrasts: [decision-grounded-selector-minus-lexical, reviewed-credit-minus-no-update]
     endpoint: condition-blinded-independent-dual-ai-decision-quality-and-calibration
     title_authority: false
+    current_result: >-
+      28-case independent reserve rejects same-family hash assignment;
+      content-conditioned applicability selection and a new untouched split required
   - study_id: E2
     name: heldout-objective-research-progress
     paradigm: gpu-executed-autonomous-research

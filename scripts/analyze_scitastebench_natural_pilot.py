@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,16 @@ def _cluster_interval(
     ]
     draws.sort()
     return _percentile(draws, 0.025), _percentile(draws, 0.975)
+
+
+def _paired_sign_test(improved: int, regressed: int) -> float:
+    discordant = improved + regressed
+    if discordant == 0:
+        return 1.0
+    tail = sum(
+        math.comb(discordant, index) for index in range(min(improved, regressed) + 1)
+    ) / (2**discordant)
+    return min(1.0, 2.0 * tail)
 
 
 def _index_results(
@@ -197,34 +208,54 @@ def analyze(
             resamples=bootstrap_resamples,
             seed=bootstrap_seed + 100 + contrast_index,
         )
+        consistent_improved = sum(value > 0 for value in per_case_consistent_delta)
+        consistent_regressed = sum(value < 0 for value in per_case_consistent_delta)
+        improved = sum(value > 0 for value in per_case_delta)
+        regressed = sum(value < 0 for value in per_case_delta)
         contrast_summary[contrast_id] = {
             "treatment": treatment,
             "comparator": control,
             "registration": registration,
             "order_consistent_accuracy_delta": sum(per_case_consistent_delta)
             / len(case_ids),
-            "order_consistent_improved_cases": sum(
-                value > 0 for value in per_case_consistent_delta
-            ),
-            "order_consistent_regressed_cases": sum(
-                value < 0 for value in per_case_consistent_delta
-            ),
+            "order_consistent_improved_cases": consistent_improved,
+            "order_consistent_regressed_cases": consistent_regressed,
             "order_consistent_unchanged_cases": sum(
                 value == 0 for value in per_case_consistent_delta
             ),
+            "order_consistent_exact_p_two_sided": _paired_sign_test(
+                consistent_improved, consistent_regressed
+            ),
             "order_averaged_accuracy_delta": sum(per_case_delta) / len(case_ids),
             "case_clustered_95pct_ci": [lower, upper],
-            "improved_cases": sum(value > 0 for value in per_case_delta),
-            "regressed_cases": sum(value < 0 for value in per_case_delta),
+            "improved_cases": improved,
+            "regressed_cases": regressed,
             "unchanged_cases": sum(value == 0 for value in per_case_delta),
+            "order_averaged_exact_sign_p_two_sided": _paired_sign_test(
+                improved, regressed
+            ),
         }
 
     preferred_a = sum(
         case["preferred_action_id"].endswith("-a") for case in suite["cases"]
     )
+    confirmation_reserve = "confirmation" in reports["declared"]["suite_id"]
+    confirmation_supported = bool(
+        confirmation_reserve
+        and contrast_summary
+        and all(
+            item["order_consistent_accuracy_delta"] > 0
+            and item["case_clustered_95pct_ci"][0] > 0
+            for item in contrast_summary.values()
+        )
+    )
     return {
         "schema_version": "1.0",
-        "analysis_scope": "natural_dual_ai_proxy_development_pilot",
+        "analysis_scope": (
+            "natural_dual_ai_proxy_independent_confirmation_reserve"
+            if confirmation_reserve
+            else "natural_dual_ai_proxy_development_pilot"
+        ),
         "suite_id": reports["declared"]["suite_id"],
         "suite_sha256": reports["declared"]["suite_sha256"],
         "case_count": len(case_ids),
@@ -236,6 +267,8 @@ def analyze(
         },
         "conditions": condition_summary,
         "contrasts": contrast_summary,
+        "mechanism_confirmation_supported": confirmation_supported,
+        "formal_evidence_eligible": False,
         "estimator": {
             "primary_metric": "accuracy requiring correctness under both candidate orders",
             "unit": "case",
@@ -245,14 +278,22 @@ def analyze(
             "bootstrap_seed": bootstrap_seed,
         },
         "claim_boundary": (
-            "Development evidence only: labels are agreements between two AI reviewers, "
-            "the 36 cases are unbalanced across decision families, and no independent "
-            "construct-validity study was run. The contrastive suite token-matches raw, "
-            "matched, and mismatched contexts when registered contrasts are present."
-            if registered_contrasts
-            else "Development evidence only: labels are agreements between two AI reviewers, "
-            "the 36 cases are unbalanced across decision families, raw and abstracted "
-            "contexts are not token matched, and no human construct-validity study was run."
+            "Independent source-group-disjoint confirmation reserve, but not a formal "
+            "benchmark release: labels are agreements between two AI reviewers, three "
+            "decision-context families are absent, and no human construct-validity or "
+            "public-release-rights claim is made."
+            if confirmation_reserve
+            else (
+                "Development evidence only: labels are agreements between two AI reviewers, "
+                "the 36 cases are unbalanced across decision families, and no independent "
+                "construct-validity study was run. The contrastive suite token-matches raw, "
+                "matched, and mismatched contexts when registered contrasts are present."
+                if registered_contrasts
+                else "Development evidence only: labels are agreements between two AI "
+                "reviewers, the 36 cases are unbalanced across decision families, raw and "
+                "abstracted contexts are not token matched, and no human construct-validity "
+                "study was run."
+            )
         ),
     }
 

@@ -11,6 +11,43 @@ Taste. It tests whether grounded decision experience improves scientific choices
 external suites such as MLRC-Bench separately test whether those choices produce
 objective research progress. Neither role can substitute for the other.
 
+![SciTasteBench and external evidence portfolio](figures/scitastebench-evidence-design.svg)
+
+The figure is also an evidence-admission rule. SciTasteBench must establish the
+mechanism and the validity of its decision instrument; an external scorer-owned
+benchmark must establish autonomous-research utility. Development runs remain in
+the evidence ledger and may change the method, but they do not enter the main
+submission as effectiveness results. One favorable internal table cannot authorize
+the broad claim in the working title.
+
+## Independent confirmation result and method consequence
+
+The first source-group-disjoint confirmation reserve was executed on 2026-09-17.
+It used 28 previously unreleased dual-AI-agreement decisions from 28 target source
+groups, 36 fixed development precedents, zero target--precedent source-group
+overlap, equal 256-token contexts, and declared plus reversed candidate order.
+One adaptive-allocation item was excluded before execution because the development
+corpus contained no same-family precedent; it was not reassigned to make the
+population look complete.
+
+The development signal did **not** replicate. Order-consistent accuracy was 60.7%
+for Base, 57.1% for token-matched raw evidence, 46.4% for matched Taste, and 67.9%
+for mismatched Taste. Matched minus raw was -10.7 points; matched minus mismatched
+was -21.4 points (six paired regressions, no improvements; two-sided exact paired
+test 0.03125). The order-averaged matched-minus-mismatched estimate was -12.5
+points with a case-resampled 95% interval from -23.2 to -3.6 points. The exact
+analysis is retained under
+`outputs/projects/scitaste-self-development/evaluations/scitastebench-natural-contrastive-confirmation-v2/`.
+
+This result retires deterministic same-family precedent assignment as a Scientific
+Taste mechanism. The old compiler called a precedent "matched" when it shared a
+broad judgment family, then selected it by a stable hash; it did not establish
+target-content applicability. The next mechanism must learn or infer applicability
+from target-visible state, card applicability/reversal conditions, and uncertainty,
+with an abstention option. The 28-case reserve is now consumed failure evidence.
+Any revised selector must be developed elsewhere and evaluated on a new untouched
+split; rerunning these cases cannot become confirmation.
+
 The current ICLR design authority is the
 [`four-layer protocol`](research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md). It
 connects source and abstraction evidence (SA), held-out decisions (D), delayed
@@ -92,6 +129,12 @@ context without yet preserving selective value. The result directs the next
 method iteration toward contrastive applicability boundaries rather than more
 retrieval. Exact local artifacts are under
 `outputs/projects/scitaste-self-development/evaluations/scitastebench-natural-development-v5/`.
+
+That development suite and the consumed 28-case confirmation reserve are not a
+formal SciTasteBench release. They lack complete family coverage, independent
+construct validation, public-release clearance for the exact source text, and a
+hidden test population. Until those gates close, the paper must call them internal
+natural decision sets rather than presenting their case count as a benchmark scale.
 
 The candidates are not benchmark items or gold outcomes. A source enters a
 formal population only after the applicable domain, quality, privacy,
