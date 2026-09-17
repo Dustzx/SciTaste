@@ -187,6 +187,26 @@ and context budget.
 | Matched Taste | a grounded principle whose boundaries fit the target state | value of decision abstraction and transfer |
 | Mismatched Taste | an equally strong principle outside its applicability boundary | generic “good research” advice and context priming |
 
+Equal-token is necessary but insufficient. Raw, Matched, and Mismatched are
+also balanced by source identity, factual propositions, answer polarity,
+explicit action recommendation, lexical overlap, and formatting. Mismatched is
+chosen by a frozen minimum-distance matching rule subject to a verified boundary
+violation; it is never hand-picked after observing a model answer. Each state is
+run under two candidate orders and two meaning-preserving nuisance paraphrases.
+These four calls are repeated measurements and are averaged before pair-level
+analysis.
+
+The utility contract is a four-component vector: evidence value, expected
+information gain, resource cost, and claim risk. Reviewers score anchored
+components before system outputs are observed. Components are normalized within
+the pair's frozen feasible action set, then aggregated with preregistered
+context-family weights. The component vector, equal-weight sensitivity, and
+Pareto-dominance violations are always reported. A result whose sign changes
+under a reasonable registered aggregation is labelled utility-sensitive rather
+than a win. Policy abstention (setting the Taste adjustment to zero) and a
+scientific abstention action are separate events and receive separate coverage
+and regret accounting.
+
 The primary decision signature is not accuracy alone. It requires all of:
 
 - lower decision regret for Matched than Base and equal-token raw;
@@ -200,10 +220,14 @@ The primary endpoint is mean **budgeted decision regret per boundary pair**,
 averaging the base and twin utilities before aggregation. The co-primary
 mechanism endpoint is pair success: both states correct, the required reversal
 present, and both decisions order-consistent. Secondary endpoints are
-Matched-minus-Mismatched specificity, abstention risk--coverage, nuisance
-paraphrase invariance, and cost. Exact paired intervals or a source-group
-bootstrap operate on pairs; the analysis never treats individual model calls as
-independent samples.
+Matched-minus-Mismatched specificity, intervention coverage and precision,
+abstention risk--coverage, Brier score, log loss, calibration error,
+candidate-order disagreement, nuisance-paraphrase invariance, and cost. A paired
+randomization test and source-group bootstrap operate on pairs; Holm correction
+covers the three registered Matched contrasts. The smallest effect of interest
+and required hidden population are frozen from development/validation pair
+variance before hidden test is opened. The analysis never treats individual
+model calls as independent samples.
 
 The earlier family-plus-hash matcher failed the independent 28-case reserve:
 Matched underperformed Mismatched. That is retained as a falsification of the old
@@ -229,16 +253,16 @@ endpoints:
 
 | Evaluation | Endpoint | Primary comparison | Role |
 |---|---|---|---|
-| MLRC-Bench (NeurIPS 2025 D&B) | objective competition-score improvement and progress per GPU/API budget | Full SciTaste, same-backbone Native Base, official MLAB scaffold under the same research-agent model | accepted external benchmark, executable research, and competitiveness |
-| MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, official MLR-Agent | accepted external idea-to-paper evaluation |
+| MLRC-Bench (NeurIPS 2025 D&B) | objective competition-score improvement and progress per GPU/API budget | Full SciTaste, same-backbone Native Base, equal-context Raw/RAG, official MLAB scaffold under the same research-agent model | accepted external benchmark, executable research, causal context control, and competitiveness |
+| MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, Raw/generic memory, official MLR-Agent | accepted external idea-to-paper evaluation |
 | SciTasteBench | paired regret, correct boundary reversal, abstention, and delayed-credit learning | Base, equal-token raw, Matched Taste, Mismatched Taste | internal mechanism attribution rather than external competitiveness |
 
-EXP-Bench (ICLR 2026) and ScienceAgentBench (ICLR 2025) are useful reserve routes,
-not prerequisites once MLRC-Bench and MLR-Bench are run correctly. EXP-Bench
-enters only if an unchanged official runnable subset is qualified in time; its
-experiment-integrity scorer must not be imitated locally. ScienceAgentBench tests
-scientific-program generation rather than open-ended research improvement, so it
-is less aligned with the headline claim than MLRC-Bench.
+EXP-Bench (ICLR 2026) is the preferred scope check outside ML research. It enters
+only through an unchanged official runnable subset; its experiment-integrity
+scorer must not be imitated locally. If that route cannot be qualified, the
+title and claims are narrowed to ML research agents. ScienceAgentBench (ICLR
+2025) remains a reserve because it tests scientific-program generation rather
+than open-ended research improvement.
 
 MLRC-Bench is the immediate objective route because its competition score directly
 measures improvement over a supplied baseline under a compute limit.  Its own
@@ -254,15 +278,25 @@ an effect to Taste. Agent Laboratory, MLR-Agent, or another accepted runnable
 system establishes competitiveness. A best-native external comparison is useful
 but model-confounded and is labelled accordingly.
 
-Consequently the smallest defensible external comparison contains three roles,
-not a large Cartesian grid: Full SciTaste, same-model Native Base, and the
-benchmark's real runnable method. The formal MLRC endpoint covers all seven
-official tasks; the first Temporal Action Localisation pair is development-only
-and cannot select a favourable task subset. Two independent agent seeds are the
-formal floor, with further repetitions added only when the development pair
-shows variance large enough to change the conclusion. Benchmark adapters may
+Consequently the all-task MLRC comparison contains four roles rather than a
+large Cartesian grid: Full SciTaste, same-model Native Base, equal-context
+Raw/RAG, and the benchmark's real runnable MLAB method. A three-task mechanism
+subset additionally includes shuffled-credit/no-boundary Taste and a generic
+reflection-memory baseline. The formal endpoint covers all seven official tasks;
+the first Temporal Action Localisation task is consumed development and cannot
+select a favourable task subset. The task is the generalization unit. At least
+three paired agent seeds are run unless a development-derived power calculation
+requires more; seed-level calls never inflate task count. Benchmark adapters may
 translate files and telemetry, but may not reimplement a blocked method or
 substitute a new scorer.
+
+MLRC reports the official endpoint, normalized improvement over its supplied
+baseline, best-so-far score versus cumulative GPU/API cost, invalid-run rate,
+wall time, and tokens. It also reports Taste intervention rate, action-divergence
+rate, and a trace from intervention to executed patch and score. Failures remain
+in an intention-to-treat analysis. MLR-Bench reports stagewise and final-package
+quality, evidence validity, fabrication and invalid-result rates, repeated
+blinded judging, and cost.
 
 ## Evidence buffer
 
@@ -298,15 +332,16 @@ self-validating. The smallest defensible external portfolio is:
 
 | Question | External route | Conditions | Primary evidence |
 |---|---|---|---|
-| Does Taste improve executable research on an accepted external benchmark? | all seven official MLRC-Bench tasks after one development task | Full SciTaste, same-backbone Native Base, official MLAB under the same agent model; two formal seeds | objective score gain and gain per GPU/API budget |
-| Does the complete research product improve on an accepted external benchmark? | ten frozen, source-disjoint MLR-Bench briefs | Full, Native Base, official MLR-Agent | stagewise and final-package review with invalid-result accounting |
-| Where does experiment integrity fail? | unchanged official EXP-Bench subset, only if its runtime and scorer qualify | Full, Native Base, official agent baseline | conjunctive hypothesis-to-conclusion success; secondary diagnostic only |
+| Does Taste improve executable research on an accepted external benchmark? | all seven official MLRC-Bench tasks after one development task | Full, same-backbone Native Base, equal-context Raw/RAG, official MLAB; at least three paired seeds | objective score gain, cost curve, failures, and active-intervention mediation |
+| Does the complete research product improve on an accepted external benchmark? | ten frozen, source-disjoint MLR-Bench briefs | Full, Native Base, Raw/generic memory, official MLR-Agent | stagewise and final-package review with invalid-result accounting |
+| Does the broad claim transfer beyond ML research? | unchanged official EXP-Bench subset, only if its runtime and scorer qualify | Full, Native Base, official agent baseline | conjunctive hypothesis-to-conclusion success and failure accounting |
 
 The same-backbone Full/Base pair identifies the effect of Taste. The external
 system establishes competitiveness. EXP-Bench is not replaced by a local
-imitation if its official runtime is unavailable. Start with one paired seed;
-repetitions expand only when the observed stochastic variance could change the
-conclusion.
+imitation if its official runtime is unavailable. The broad title is retained
+only if that external scope check runs; otherwise the paper is explicitly about
+ML research agents. Seed count is frozen from development variance before the
+formal run, with three paired seeds as the minimum.
 
 ## Required paper figures and tables
 

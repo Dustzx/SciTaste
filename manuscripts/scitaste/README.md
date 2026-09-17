@@ -14,7 +14,7 @@ The reader-facing Markdown, generated TeX, compiled PDF, bibliography, build
 record, and manuscript assessment are registered as a versioned paper bundle
 inside `outputs/projects/scitaste-self-development/papers/`. Generated files are
 not committed. The current artifact is a research working draft, not a
-publication-ready or empirically accepted paper. It reports the completed live
-training-free development pair as a null manipulation check; held-out decision
-effects, the matched objective study, ecological comparison, and independent
-construct validation remain open.
+publication-ready or empirically accepted paper. Development and engineering
+effects are quarantined from the rendered claim-bearing results; held-out
+SciTasteBench confirmation, accepted external benchmark comparisons, and
+independent construct validation remain open.

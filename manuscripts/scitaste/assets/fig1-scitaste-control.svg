@@ -105,7 +105,7 @@
     <rect x="358" y="271" width="348" height="50" rx="12" fill="#a65d2e" />
     <path d="M358 307 H706 V321 H358 Z" fill="#a65d2e" />
     <text x="380" y="302" class="serif heading" fill="#ffffff">Taste Controller + π</text>
-    <text x="680" y="300" text-anchor="end" class="sans micro" fill="#f6e8dc">BOUNDED POLICY</text>
+    <text x="680" y="315" text-anchor="end" class="sans micro" fill="#f6e8dc">BOUNDED POLICY</text>
 
     <g class="sans micro">
       <rect x="380" y="338" width="142" height="27" rx="13.5" fill="#edf1f2" />
@@ -119,7 +119,7 @@
       <text x="380" y="416">Idea + domain + stage support</text><circle cx="557" cy="412" r="2.5" fill="#a65d2e" />
       <text x="570" y="416">source weight</text>
       <text x="380" y="437">pairwise probability</text><circle cx="502" cy="433" r="2.5" fill="#a65d2e" />
-      <text x="515" y="437">positive credible margin</text>
+      <text x="515" y="437">boundary-qualified support</text>
     </g>
     <rect x="380" y="451" width="304" height="26" rx="5" fill="#f7f3ed" />
     <text x="532" y="469" text-anchor="middle" class="serif body ink">a_t = arg max [ U₀(a) + Δπ(a | S_t) ] · else Δπ = 0</text>

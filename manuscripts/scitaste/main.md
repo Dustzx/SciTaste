@@ -19,9 +19,10 @@ learned boundary, and abstain outside support. We make this hypothesis testable
 with SciTasteBench, a source-grounded collection of natural decisions paired
 with single-fact counterfactual twins. We evaluate downstream utility separately
 on the accepted MLRC-Bench and MLR-Bench suites, comparing SciTaste with the same
-backbone and tools but no Taste intervention, as well as a runnable research
-agent baseline. This separation distinguishes learning scientific judgment from
-adding context, generating fluent rationales, or using a stronger executor.
+backbone and tools but no Taste intervention, an equal-context Raw/RAG control,
+and a runnable research-agent baseline. This separation distinguishes learning
+scientific judgment from adding context, generating fluent rationales, or using
+a stronger executor.
 
 # Introduction
 
@@ -268,10 +269,9 @@ $$
 
 The policy applies a bounded adjustment only with sufficient support, covered
 stage and domain, and posterior probability above a frozen threshold; otherwise
-it abstains and exposes the failed condition. A conservative margin remains a
-diagnostic. The source-disjoint cohort below revealed that requiring this margin
-as a second gate suppressed every intervention, motivating an explicit policy
-revision rather than a post-hoc change to old runs.
+it abstains and exposes the failed condition. A conservative margin is reported
+as a diagnostic but is not a second intervention gate. All thresholds and
+feature weights are frozen before a confirmation split is opened.
 
 ## One lifecycle, multiple decision families
 
@@ -319,6 +319,16 @@ be correct, the registered reversal to occur, and both choices to be robust to
 candidate order. Matched-minus-mismatched specificity, selective risk, nuisance
 paraphrase invariance, and cost are secondary.
 
+Utilities are elicited before system evaluation on four anchored components:
+evidence value, expected information gain, resource cost, and claim risk. Each
+component is normalized within a pair using the frozen action menu; the primary
+scalar uses preregistered context-specific weights, while the component vector
+and every conclusion that changes under equal-weight or Pareto-respecting
+aggregation are reported. Policy abstention (no Taste adjustment) is evaluated
+separately from an explicit scientific abstention action in the menu. This
+prevents a system that never intervenes from receiving credit for choosing to
+defer.
+
 Construction results pass through an irreversible evidence buffer: engineering,
 consumed development, frozen validation, and hidden confirmation. Method changes
 consume a split, and only hidden confirmation can populate the main result
@@ -335,21 +345,19 @@ that must remain feasible in both. Independent construct reviewers see randomly
 named states and the original record, but not the constructor's preferred
 actions, utilities, state roles, rationale, or observed outcome.
 
-The first consumed construction pass illustrates why this separation is needed.
-Three proposal runs yielded 26 unique candidate pairs; requiring two independent
-model reviewers to accept the construct, recover the natural state, and
-independently reproduce the registered action flip retained only 13. These span
-all six contexts and three domains, but only one hypothesis and one resource
-pair survived. This attrition guides targeted reconstruction and expert review;
-it is not an effectiveness result and does not enter the result table.
-
 Every formal target is paired with source-group-disjoint precedents. The Base
 condition receives no precedent, equal-token raw receives the underlying source
 record, Matched Taste receives the outcome-grounded decision abstraction whose
 boundary fits the target, and Mismatched Taste receives an equally formatted
 abstraction outside that boundary. All conditions share the generator, action
-menu, visible state, and context budget. The analysis operates on independent
-pairs and reports raw disagreements rather than filtering them from the sample.
+menu, visible state, and context budget. Raw and abstracted conditions are
+additionally matched for factual content, answer polarity, explicit action
+recommendation, lexical overlap, and source identity; the mismatched condition
+is selected by a frozen matching rule, not constructor judgment. The analysis
+operates on independent pairs and reports raw disagreements rather than filtering
+them from the sample. Two action-order permutations and two nuisance paraphrases
+are repeated measurements inside each pair and are averaged before pair-level
+inference.
 
 ## Objective research trajectories
 
@@ -380,10 +388,11 @@ The submission result boundary is intentionally empty until frozen evidence is
 available. Three result blocks are required: (i) SciTasteBench hidden boundary
 judgment, including matched--mismatched specificity and abstention; (ii)
 MLRC-Bench objective progress for Full SciTaste, the same-backbone Native Base,
-and the official MLAB scaffold under the same research-agent model across all
-seven tasks; and (iii) MLR-Bench stagewise and final-package quality for Full,
-Native Base, and official MLR-Agent, with invalid or fabricated results retained.
-Development effects are not substituted for any block.
+equal-context Raw/RAG, and the official MLAB scaffold under the same
+research-agent model across all seven tasks; and (iii) MLR-Bench stagewise and
+final-package quality for Full, Native Base, Raw/generic memory, and official
+MLR-Agent, with invalid or fabricated results retained. Development effects are
+not substituted for any block.
 
 | Claim-bearing block | Independent unit | Primary endpoint | Current status |
 |---|---|---|---|

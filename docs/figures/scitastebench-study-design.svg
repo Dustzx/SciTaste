@@ -81,7 +81,7 @@
   <text class="body" x="80" y="690">MLRC-Bench: objective training-task progress and progress per GPU/API budget</text>
   <text class="body" x="80" y="720">MLR-Bench: idea-to-paper package quality under blinded, evidence-aware review</text>
   <text class="body" x="80" y="750">EXP-Bench: hypothesis → implementation → execution → conclusion integrity, when runtime assets qualify</text>
-  <text class="small" x="80" y="776">FULL SCITASTE vs SAME-BACKBONE NATIVE BASE · DIRECT AGENT · RUNNABLE EXTERNAL SYSTEM</text>
+  <text class="small" x="80" y="776">FULL vs NATIVE BASE · RAW/RAG · OFFICIAL MLAB / MLR-AGENT · SAME MODEL AND BUDGET</text>
 
   <path class="arrow" d="M990 705 H1040"/>
   <rect class="gate" filter="url(#shadow)" x="1040" y="620" rx="16" width="405" height="170"/>
