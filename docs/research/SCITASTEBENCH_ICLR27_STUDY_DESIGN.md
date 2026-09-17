@@ -24,6 +24,65 @@ SciTasteBench answers the first two questions and tests feedback learning. Publi
 Auto Research tasks answer the third. A positive result in either evaluation is
 insufficient without the other.
 
+## The released unit is a boundary pair, not a question
+
+![Anatomy of one SciTasteBench boundary pair](../figures/scitastebench-case-anatomy.svg)
+
+The independent unit is one natural decision plus one **single-fact
+counterfactual twin**. Topic, action menu, budget, writing style, and all
+registered invariant facts remain fixed. Exactly one decision-relevant fact
+changes, and that fact must reverse the preferred action or change action into
+abstention. A pair is rejected when both states still reward the same generic
+action. This directly tests the central claim that Taste is conditional rather
+than a globally useful piece of advice.
+
+Each released pair contains the following machine-checkable objects:
+
+| Object | Required content | Why it exists |
+|---|---|---|
+| Natural source | attributable locator, content hash, license, source-group identity | provenance, release rights, split integrity |
+| Frozen decision | outcome-hidden state, visible budget, 2--5 feasible actions | the actual judgment to be made |
+| Boundary twin | one changed fact, all invariant facts, unchanged action identifiers | intervention on applicability rather than topic |
+| Utility contract | per-action outcome, information, cost, and claim-risk rationale | regret rather than majority-label accuracy alone |
+| Construct judgments | two independent raw judgments plus adjudication only on disagreement | validity and uncertainty without agreement filtering |
+| Audit record | contamination probe, construction manifest, content hash, split | reproducible release and leakage analysis |
+
+The schema and fail-closed readiness checks live in
+`scitaste.benchmark.boundary_pairs`. They are separate from legacy development
+suites so adding this design cannot silently change an old suite hash.
+
+### Population and splits
+
+The formal floor is **120 independent boundary pairs (240 decision states)**:
+20 pairs in each of the six decision contexts, at least three scientific
+domains, and at most one pair per source group. The planned split is 24
+development, 24 validation, and 72 hidden-test pairs, stratified by decision
+context and domain. Development is used for prompt and policy construction;
+validation can choose one frozen method version; hidden test is opened once.
+No candidate-order, paraphrase, condition, or model repetition counts as a new
+independent item.
+
+The 120-pair floor is not a post-hoc power claim. Before opening hidden test, the
+minimum detectable paired-regret improvement is recomputed from development and
+validation variance. If the resulting precision is inadequate, more
+source-group-disjoint pairs are added without inspecting hidden-test outcomes.
+
+### Two benchmark tracks
+
+The release has two related but non-interchangeable tracks:
+
+1. **Boundary Judgment.** Choose or abstain on base and twin states. It measures
+   regret, correct reversal, selective risk, and invariance to action order and
+   nuisance paraphrase.
+2. **Outcome Learning.** Observe reviewed delayed credit from earlier source
+   groups, update the Taste policy, and decide on later source-disjoint pairs.
+   The reviewed update must beat both no-update and shuffled-credit controls.
+
+Boundary Judgment establishes whether the representation and selector express
+conditional scientific judgment. Outcome Learning establishes whether real
+outcomes improve that judgment. Neither track claims that an autonomous research
+project improved; external tasks own that endpoint.
+
 ## Paper type and evidence boundary
 
 The target submission is a **method paper with a new diagnostic instrument**, not
@@ -60,9 +119,7 @@ Each case is one natural, outcome-hidden research fork:
 
 The six contexts are problem value, hypothesis falsifiability, experiment and
 confounds, evidence interpretation, resource/pivot/stopping, and claim/review
-response. The formal floor is 120 cases, 20 per context, across at least three
-domains, after a separate 36-case development set. One source group contributes
-at most one formal case.
+response. One source group contributes at most one formal pair.
 
 The action menu must be diagnostic. A population in which almost every item asks
 the system to “perform more analysis” cannot distinguish scientific taste from a
@@ -115,6 +172,15 @@ The primary decision signature is not accuracy alone. It requires all of:
 - a correct action flip on counterfactual twins that change a decisive boundary
   fact while preserving topic and wording style;
 - invariance to action presentation order.
+
+The primary endpoint is mean **budgeted decision regret per boundary pair**,
+averaging the base and twin utilities before aggregation. The co-primary
+mechanism endpoint is pair success: both states correct, the required reversal
+present, and both decisions order-consistent. Secondary endpoints are
+Matched-minus-Mismatched specificity, abstention risk--coverage, nuisance
+paraphrase invariance, and cost. Exact paired intervals or a source-group
+bootstrap operate on pairs; the analysis never treats individual model calls as
+independent samples.
 
 The earlier family-plus-hash matcher failed the independent 28-case reserve:
 Matched underperformed Mismatched. That is retained as a falsification of the old
@@ -179,6 +245,52 @@ This buffer is why the current negative 28-case result is useful without becomin
 the paper's headline: it falsifies family-plus-hash matching and forces a
 content-conditioned selector, while reserving a new population for the first
 valid estimate of that revised selector.
+
+Evidence moves through four irreversible states:
+
+| State | May change code or protocol? | May select a method? | May enter a main paper result? |
+|---|---:|---:|---:|
+| engineering / smoke | yes | no | no |
+| consumed development | yes | yes, provisionally | no |
+| frozen validation | no for that population | once | appendix/design only |
+| hidden confirmation | no | no | yes, including null and failed runs |
+
+This is the required buffer between system development and manuscript evidence.
+An engineering score is never upgraded merely because it is favorable.
+
+## Minimum external portfolio for the method claim
+
+SciTasteBench is necessary but cannot be the only comparison. The method and
+the measuring instrument share assumptions, so an internal win alone is
+self-validating. The smallest defensible external portfolio is:
+
+| Question | External route | Conditions | Primary evidence |
+|---|---|---|---|
+| Does Taste improve executable research? | at least three MLRC-Bench tasks | Full SciTaste, same-backbone Native Base, one runnable research-agent baseline; two seeds initially | objective score gain and gain per GPU/API budget |
+| Does the complete research product improve? | source-disjoint MLR-Bench briefs | the same three system roles | blinded artifact-aware review with invalid-result accounting |
+| Does the experiment chain remain sound? | an unchanged official EXP-Bench subset, only if its runtime/scorer qualifies | Full, Native Base, official agent baseline | conjunctive design-to-conclusion success |
+
+The same-backbone Full/Base pair identifies the effect of Taste. The external
+system establishes competitiveness. EXP-Bench is not replaced by a local
+imitation if its official runtime is unavailable. Repetitions expand only when
+the first paired runs show enough stochastic variance to change the conclusion.
+
+## Required paper figures and tables
+
+The benchmark contribution is not visually complete until the manuscript shows:
+
+1. the source-to-boundary-pair anatomy and outcome firewall;
+2. population coverage by context, domain, action transition, and label
+   disagreement, with split and contamination audit;
+3. a paired base-to-twin plot showing correct flips, failure modes, and
+   abstentions for every method;
+4. a risk--coverage curve and paired-regret interval for Boundary Judgment;
+5. an outcome-learning curve against no-update and shuffled-credit; and
+6. a separate external task table/plot with objective outcome, failures, cost,
+   and behavior-change mediation.
+
+The first item is a design figure. Items 2--6 are generated only from frozen
+artifacts and remain blank rather than being populated with development scores.
 
 ## What belongs in the manuscript
 

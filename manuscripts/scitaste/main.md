@@ -302,6 +302,34 @@ separate questions. A good local choice does not guarantee downstream progress,
 and a better downstream score cannot be attributed to Taste when the policy did
 not intervene.
 
+## SciTasteBench: boundary-conditioned scientific decisions
+
+The benchmark unit is not an isolated multiple-choice question. It is a natural,
+outcome-hidden decision and a counterfactual twin in which exactly one decisive
+fact changes. The scientific setting, action identifiers, budget, topic, style,
+and registered invariant facts remain fixed. A valid pair must change the
+preferred action or change action into abstention. This rules out populations in
+which generic caution or “run another analysis” succeeds in every state.
+
+![One SciTasteBench boundary pair holds the scientific setting and feasible action menu fixed while a single registered fact crosses an applicability boundary. The independent unit is the pair; development results never enter the main result table.](assets/fig2-scitastebench-case-anatomy.png)
+
+Each formal pair binds its source license and content hash, outcome firewall,
+utility contract, raw independent judgments, counterfactual construction record,
+contamination probe, and immutable split. We use 24 development pairs, 24
+validation pairs, and 72 hidden-test pairs, stratified to give 20 independent
+pairs in each of six scientific decision contexts across at least three domains.
+The primary endpoint is pair-level budgeted decision regret, averaging base and
+twin before aggregation. A co-primary mechanism endpoint requires both states to
+be correct, the registered reversal to occur, and both choices to be robust to
+candidate order. Matched-minus-mismatched specificity, selective risk, nuisance
+paraphrase invariance, and cost are secondary.
+
+This is the formal design, not a description of the current 36-case pilot. The
+pilot below is an AI-proxy development instrument without genuine boundary
+twins, transfer cases, or abstention cases. It can falsify an implementation and
+guide the next method version, but it cannot validate SciTasteBench or populate
+the confirmatory table.
+
 ## Natural scientific decisions
 
 We construct a development population from natural paper reviews and subsequent
