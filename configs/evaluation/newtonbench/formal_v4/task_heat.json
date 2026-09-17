@@ -1,0 +1,10 @@
+{
+  "module": "m11_heat_transfer",
+  "difficulty": "hard",
+  "system": "complex_system",
+  "law_version": "v2",
+  "noise_level": 0,
+  "environment_seed": 9811,
+  "score_seed": 9811,
+  "code_assisted": false
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "counterfactual-taste-confirmation-formal-v3",
+  "status": "invalidated-before-completion",
+  "reason_code": "unbounded-primary-metric-failure-value-nondominance",
+  "reason": "RMSLE is unbounded, but the frozen failure value was 10. Valid heat and magnetic submissions produced RMSLE above 10, so failed or unscored arms could rank above observed outcomes.",
+  "observed_trigger": {
+    "heat_analyze_rmsle": 12.337374989407746,
+    "magnetic_analyze_rmsle": 11.1078748327043,
+    "failure_value": 10.0
+  },
+  "executed_states": [
+    "coulomb-early",
+    "heat-early",
+    "magnetic-early",
+    "snell-early"
+  ],
+  "unexecuted_state_count": 8,
+  "results_admissible_for_claims": false,
+  "policy_changed": false,
+  "replacement_rule": "Use exp(-RMSLE), which is bounded in [0,1], with terminal failure fixed at 0, under new tasks and seeds."
+}

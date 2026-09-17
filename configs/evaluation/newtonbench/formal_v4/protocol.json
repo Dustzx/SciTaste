@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "counterfactual-taste-confirmation-formal-v4",
+  "project_id": "scitaste-self-development",
+  "target_venue": "ICLR 2027",
+  "supersedes_invalid_protocol": "counterfactual-taste-confirmation-formal-v3",
+  "frozen_implementation_commit": "cd64ecbe6eb44360247e2e5dc324bc847087a3d5",
+  "benchmark": {
+    "name": "NewtonBench",
+    "repository_commit": "912a4ba5f4356ddd06acc16e44460ca30be4abc2",
+    "checkout": "outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout"
+  },
+  "policy_lock": "configs/evaluation/newtonbench/formal_v3/policy_lock.json",
+  "tasks": [
+    "configs/evaluation/newtonbench/formal_v4/task_coulomb.json",
+    "configs/evaluation/newtonbench/formal_v4/task_heat.json",
+    "configs/evaluation/newtonbench/formal_v4/task_magnetic.json",
+    "configs/evaluation/newtonbench/formal_v4/task_snell.json"
+  ],
+  "prefix_turn_counts": [1, 2, 3],
+  "forced_actions": [
+    "ANALYZE",
+    "EXPERIMENT",
+    "PILOT",
+    "PIVOT",
+    "PROBE",
+    "REFINE",
+    "STOP"
+  ],
+  "primary_endpoint": {
+    "metric": "exp-neg-rmsle",
+    "source_metric": "rmsle",
+    "transform": "exp-negative",
+    "range": [0.0, 1.0],
+    "direction": "higher",
+    "failure_value": 0.0,
+    "practical_equivalence_tolerance": 0.001
+  },
+  "conditions": [
+    "frozen-taste-policy-v1",
+    "static-probe",
+    "static-experiment",
+    "static-stop",
+    "per-state-oracle"
+  ],
+  "development_static_policy_selection": {
+    "selected_action": "PROBE",
+    "mean_exp_neg_rmsle": 0.9915008954974628,
+    "selection_population_sha256": "e4288fb008486b2410088b1402cd335a32629124181876b4b7794107f1830b70"
+  },
+  "analysis": {
+    "unit": "prefix-matched-task-state",
+    "state_count": 12,
+    "primary_contrast": "frozen-taste-policy-v1-minus-static-probe",
+    "secondary_contrasts": [
+      "frozen-taste-policy-v1-minus-static-experiment",
+      "frozen-taste-policy-v1-minus-static-stop"
+    ],
+    "report": [
+      "paired-mean-quality-difference",
+      "paired-bootstrap-interval",
+      "exact-win-loss-test",
+      "terminal-failure-rate",
+      "oracle-regret",
+      "api-tokens-and-cost"
+    ],
+    "no_posthoc_rule_changes": true
+  },
+  "admission": {
+    "minimum_state_count": 12,
+    "minimum_objective_observation_rate": 0.85,
+    "require_all_declared_tasks": true,
+    "require_all_declared_actions": true,
+    "development_results_forbidden": true,
+    "invalid_v3_results_forbidden": true,
+    "single_benchmark_cannot_establish_venue_readiness": true
+  },
+  "models": {
+    "research_agent": {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "requested_model": "DeepSeek-V4.1-Flash",
+      "config": "configs/model_nodes/deepseek_v41flash.interactive_live_20260917.yaml",
+      "config_sha256": "82a681041d037ee86152f4c5e50db0588b9c5ec73c1486716f8f4cacfa42c54c"
+    },
+    "terminal_judge": {
+      "provider": "zhipu-direct",
+      "model": "glm-5.3-flash",
+      "config": "configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v5.yaml",
+      "config_sha256": "246a49ea12aedca85a4b6d3fe998eafb250eda681b136d768e3bf24d62e0ce3a"
+    }
+  },
+  "execution_seeds": {
+    "coulomb": {"research_agent": 59801, "terminal_judge": 69801},
+    "heat": {"research_agent": 59811, "terminal_judge": 69811},
+    "magnetic": {"research_agent": 59802, "terminal_judge": 69802},
+    "snell": {"research_agent": 59804, "terminal_judge": 69804}
+  },
+  "resource_ceiling": {
+    "gpu_hours": 0,
+    "maximum_source_trajectories": 4,
+    "maximum_branch_trajectories": 84,
+    "maximum_api_trajectories": 88
+  },
+  "evidence_scope": "mechanism-confirmation-only"
+}
