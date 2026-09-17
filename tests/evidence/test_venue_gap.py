@@ -186,6 +186,7 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert assessment.venue_comparison is not None
     assert assessment.venue_comparison.current_admitted_family_count == 0
     assert assessment.venue_comparison.current_admitted_component_count == 0
+    assert assessment.venue_comparison.evidence_shape_complete_for_review is False
     assert assessment.venue_comparison.innovation_claims[0].evidence_status is (
         VenueInnovationEvidenceStatus.DEVELOPMENT_ONLY
     )

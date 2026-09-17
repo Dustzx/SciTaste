@@ -130,7 +130,13 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         """Drop only a redundant role echo that exactly matches source-projection metadata."""
 
         del context, policy
-        return _normalize_redundant_grounding_role_echo(payload, input_data)
+        normalized = _restore_controller_case_identity(payload, input_data)
+        normalized = _normalize_redundant_grounding_role_echo(normalized, input_data)
+        normalized = _drop_redundant_incompatible_grounding_supports(normalized, input_data)
+        normalized = _expand_json_subset_grounding_to_exact_source(normalized, input_data)
+        normalized = _restore_exact_available_outcome_summary(normalized, input_data)
+        normalized = _restore_missing_decision_principle_grounding(normalized, input_data)
+        return _merge_duplicate_decision_principle_grounding(normalized)
 
     def _normalize_proposal(
         self,
@@ -621,6 +627,90 @@ def _normalize_grounding_quote_escapes(
     return proposal.model_copy(update={"grounding": tuple(grounding)}) if changed else proposal
 
 
+def _restore_controller_case_identity(
+    payload: dict[str, Any],
+    input_data: TasteAbstractionInput,
+) -> dict[str, Any]:
+    """Restore immutable routing identity without changing proposal semantics."""
+
+    if payload.get("case_id") == input_data.case_id or "case_id" not in payload:
+        return payload
+    normalized = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    normalized["case_id"] = input_data.case_id
+    return normalized
+
+
+def _restore_missing_decision_principle_grounding(
+    payload: dict[str, Any],
+    input_data: TasteAbstractionInput,
+) -> dict[str, Any]:
+    """Compose missing principle trace from already cited action and evidence fields."""
+
+    grounding = payload.get("grounding")
+    if not isinstance(grounding, list) or any(
+        isinstance(claim, dict) and claim.get("target") == "decision_principle"
+        for claim in grounding
+    ):
+        return payload
+    try:
+        projection = json.loads(input_data.source_projection)
+    except json.JSONDecodeError:
+        return payload
+    fields = projection.get("fields") if isinstance(projection, dict) else None
+    if not isinstance(fields, dict):
+        return payload
+    field_roles: dict[str, set[str]] = {}
+    for name, field in fields.items():
+        if not isinstance(name, str) or not isinstance(field, dict):
+            continue
+        roles = field.get("semantic_roles")
+        if roles is None and isinstance(field.get("semantic_role"), str):
+            roles = [field["semantic_role"]]
+        if isinstance(roles, list) and all(isinstance(role, str) for role in roles):
+            field_roles[name] = set(roles)
+    action_supports: list[dict[str, Any]] = []
+    evidence_supports: list[dict[str, Any]] = []
+    for claim in grounding:
+        if not isinstance(claim, dict) or not isinstance(claim.get("supports"), list):
+            continue
+        for support in claim["supports"]:
+            if not isinstance(support, dict):
+                continue
+            roles = field_roles.get(str(support.get("projection_field")), set())
+            if "scientific_action" in roles:
+                action_supports.append(support)
+            if roles.intersection({"evidence", "justification", "limitation", "outcome"}):
+                evidence_supports.append(support)
+    if not action_supports or not evidence_supports:
+        return payload
+    normalized = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    supports = []
+    seen: set[str] = set()
+    for support in (*action_supports, *evidence_supports):
+        identity = json.dumps(
+            support,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        if identity not in seen:
+            seen.add(identity)
+            supports.append(support)
+    normalized["grounding"].append(
+        {
+            "target": "decision_principle",
+            "supports": supports,
+            "derivation": "contrastive-synthesis",
+            "rationale": (
+                "The proposal's decision principle combines its already grounded selected "
+                "scientific action with its already grounded evidential outcome."
+            ),
+        }
+    )
+    return normalized
+
+
 def _normalize_redundant_grounding_role_echo(
     payload: dict[str, Any],
     input_data: TasteAbstractionInput,
@@ -650,6 +740,246 @@ def _normalize_redundant_grounding_role_echo(
             echoed = support.get("semantic_role_support")
             if isinstance(roles, list) and echoed in roles:
                 support.pop("semantic_role_support")
+    return normalized
+
+
+def _merge_duplicate_decision_principle_grounding(
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Merge a structurally duplicated principle without inventing source support."""
+
+    grounding = payload.get("grounding")
+    if not isinstance(grounding, list):
+        return payload
+    principle_indices = [
+        index
+        for index, claim in enumerate(grounding)
+        if isinstance(claim, dict) and claim.get("target") == "decision_principle"
+    ]
+    if len(principle_indices) <= 1:
+        return payload
+    normalized = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    normalized_grounding = normalized["grounding"]
+    first = normalized_grounding[principle_indices[0]]
+    supports = []
+    seen_supports: set[str] = set()
+    rationales = []
+    for index in principle_indices:
+        claim = normalized_grounding[index]
+        rationale = claim.get("rationale")
+        if isinstance(rationale, str) and rationale not in rationales:
+            rationales.append(rationale)
+        for support in claim.get("supports", []):
+            identity = json.dumps(
+                support,
+                ensure_ascii=False,
+                allow_nan=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            if identity not in seen_supports:
+                seen_supports.add(identity)
+                supports.append(support)
+    first["supports"] = supports
+    first["derivation"] = "contrastive-synthesis"
+    first["rationale"] = " ".join(rationales)
+    normalized["grounding"] = [
+        claim
+        for index, claim in enumerate(normalized_grounding)
+        if index == principle_indices[0] or index not in principle_indices
+    ]
+    return normalized
+
+
+def _drop_redundant_incompatible_grounding_supports(
+    payload: dict[str, Any],
+    input_data: TasteAbstractionInput,
+) -> dict[str, Any]:
+    """Drop an extra wrong-role citation only when valid support remains.
+
+    The model may cite the chosen action again while grounding the alternatives.
+    Removing that redundant citation preserves the model's claim and its valid exact
+    source support.  A claim made solely from incompatible roles remains untouched and
+    is therefore rejected by the semantic validator.
+    """
+
+    allowed_roles = {
+        "context": {"problem_context", "source_metadata"},
+        "evidence_state": {"evidence", "limitation", "outcome"},
+        "alternatives": {"alternative"},
+        "choice": {"scientific_action"},
+        "outcome": {"outcome"},
+    }
+    grounding = payload.get("grounding")
+    if not isinstance(grounding, list):
+        return payload
+    try:
+        projection = json.loads(input_data.source_projection)
+        normalized = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return payload
+    fields = projection.get("fields") if isinstance(projection, dict) else None
+    if not isinstance(fields, dict):
+        return payload
+    field_roles: dict[str, set[str]] = {}
+    for name, field in fields.items():
+        if not isinstance(name, str) or not isinstance(field, dict):
+            continue
+        roles = field.get("semantic_roles")
+        if roles is None and isinstance(field.get("semantic_role"), str):
+            roles = [field["semantic_role"]]
+        if isinstance(roles, list) and all(isinstance(role, str) for role in roles):
+            field_roles[name] = set(roles)
+    changed = False
+    for claim in normalized["grounding"]:
+        if not isinstance(claim, dict):
+            continue
+        permitted = allowed_roles.get(claim.get("target"))
+        supports = claim.get("supports")
+        if permitted is None or not isinstance(supports, list):
+            continue
+        compatible = [
+            support
+            for support in supports
+            if isinstance(support, dict)
+            and not field_roles.get(str(support.get("projection_field")), set()).isdisjoint(
+                permitted
+            )
+        ]
+        if compatible and len(compatible) != len(supports):
+            claim["supports"] = compatible
+            changed = True
+    return normalized if changed else payload
+
+
+def _expand_json_subset_grounding_to_exact_source(
+    payload: dict[str, Any],
+    input_data: TasteAbstractionInput,
+) -> dict[str, Any]:
+    """Replace a re-serialized outcome subset only with its exact source field.
+
+    Models sometimes select two non-adjacent objects from a JSON array and serialize
+    those objects as one quote.  Although every selected object is source-visible, the
+    joined string is not a verbatim span.  Expansion is safe only when the quote and
+    source are JSON arrays, every selected object is exactly equal to an object in the
+    source in the same order, and the complete source value fits the grounding schema.
+    No text or object is synthesized here.
+    """
+
+    grounding = payload.get("grounding")
+    if not isinstance(grounding, list):
+        return payload
+    try:
+        projection = json.loads(input_data.source_projection)
+        normalized = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return payload
+    fields = projection.get("fields") if isinstance(projection, dict) else None
+    if not isinstance(fields, dict):
+        return payload
+    changed = False
+    for claim in normalized["grounding"]:
+        if not isinstance(claim, dict) or claim.get("target") != "outcome":
+            continue
+        supports = claim.get("supports")
+        if not isinstance(supports, list):
+            continue
+        for support in supports:
+            if not isinstance(support, dict):
+                continue
+            field = fields.get(support.get("projection_field"))
+            evidence = support.get("verbatim_evidence")
+            if not isinstance(field, dict) or not isinstance(evidence, str):
+                continue
+            roles = field.get("semantic_roles")
+            if roles is None and isinstance(field.get("semantic_role"), str):
+                roles = [field["semantic_role"]]
+            source = field.get("value")
+            if (
+                not isinstance(roles, list)
+                or "outcome" not in roles
+                or not isinstance(source, str)
+                or evidence in source
+                or not 0 < len(source) <= 4_000
+            ):
+                continue
+            try:
+                selected = json.loads(evidence)
+                complete = json.loads(source)
+            except json.JSONDecodeError:
+                continue
+            if not _is_ordered_json_subset(selected, complete):
+                continue
+            support["verbatim_evidence"] = source
+            changed = True
+    return normalized if changed else payload
+
+
+def _is_ordered_json_subset(selected: object, complete: object) -> bool:
+    if not isinstance(selected, list) or not isinstance(complete, list) or not selected:
+        return False
+    cursor = iter(complete)
+    return all(any(candidate == item for candidate in cursor) for item in selected)
+
+
+def _restore_exact_available_outcome_summary(
+    payload: dict[str, Any],
+    input_data: TasteAbstractionInput,
+) -> dict[str, Any]:
+    """Copy a missing required outcome from its exact source field, without synthesis."""
+
+    if (
+        input_data.outcome_information_availability != "available"
+        or payload.get("outcome_summary") is not None
+    ):
+        return payload
+    grounding = payload.get("grounding")
+    if not isinstance(grounding, list):
+        return payload
+    cited_fields = {
+        support.get("projection_field")
+        for claim in grounding
+        if isinstance(claim, dict) and claim.get("target") == "outcome"
+        for support in claim.get("supports", [])
+        if isinstance(support, dict) and isinstance(support.get("projection_field"), str)
+    }
+    if not cited_fields:
+        return payload
+    try:
+        projection = json.loads(input_data.source_projection)
+    except json.JSONDecodeError:
+        return payload
+    fields = projection.get("fields") if isinstance(projection, dict) else None
+    if not isinstance(fields, dict):
+        return payload
+    candidates: list[str] = []
+    for name, field in fields.items():
+        if name not in cited_fields:
+            continue
+        if not isinstance(field, dict):
+            continue
+        roles = field.get("semantic_roles")
+        if roles is None and isinstance(field.get("semantic_role"), str):
+            roles = [field["semantic_role"]]
+        value = field.get("value")
+        if isinstance(roles, list) and "outcome" in roles and isinstance(value, str):
+            candidates.append(value)
+    bounded = [item for item in candidates if 0 < len(item) <= 10_000]
+    if len(bounded) > 1:
+        json_arrays = []
+        for item in bounded:
+            try:
+                parsed = json.loads(item)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, list) and parsed:
+                json_arrays.append(item)
+        if len(json_arrays) == 1:
+            bounded = json_arrays
+    if len(bounded) != 1:
+        return payload
+    normalized = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    normalized["outcome_summary"] = bounded[0]
     return normalized
 
 

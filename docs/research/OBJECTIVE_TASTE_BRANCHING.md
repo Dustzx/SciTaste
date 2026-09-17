@@ -141,6 +141,31 @@ frozen policy and protocol hashes, every state-level potential outcome, task-clu
 uncertainty, practical win/loss counts, failures, tokens, partial provider cost, and a
 claim gate that keeps `headline_eligible=false` and `venue_ready=false`.
 
+## Content-conditioned representation development
+
+Formal v4 is now locked as confirmation evidence for the failed status-only policy and
+is reused only as development material for a different representation. SciTaste
+projected every one of its 12 states into an exact-source record containing the visible
+research context, decision history, evidence state, all seven objective action
+outcomes, the resource-aware local choice, measurement contract, and explicit transfer
+limitations. DeepSeek-V4.1-Flash then proposed grounded contrastive precedents through
+the normal bounded model-node runtime. The model had no tools or execution authority.
+
+All 12 state abstractions were accepted after source-preserving structural
+normalization and verified as one hash-chained project run. Nineteen ledger entries
+include seven zero-cost replays of recorded responses; cumulative telemetry reports
+124,038 input tokens, 39,197 output tokens, and USD 0.0525069. Replays repaired only
+controller identity, redundant wrong-role citations, exact JSON source spans, a
+missing exact outcome copy, or a missing principle trace composed from already cited
+action and outcome fields. They did not change a preferred action, objective outcome,
+transfer condition, or scientific rationale.
+
+These precedents remain `development-only-grounded-counterfactual-taste-precedents`.
+The next implementation step is to compile them into a content- and applicability-
+conditioned selector, then evaluate that frozen selector on a new disjoint task
+population. Reusing formal-v4 states as confirmation would leak objective outcomes and
+is prohibited.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

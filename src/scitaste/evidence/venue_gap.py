@@ -471,6 +471,8 @@ class VenueComparisonAssessment(BaseModel):
     current_admitted_contradicting_component_count: int = Field(ge=0)
     current_admitted_family_count: int = Field(ge=0)
     missing_or_unadmitted_accepted_majority_components: tuple[VenueEvidenceComponent, ...]
+    independent_empirical_family_floor: Literal[2] = 2
+    evidence_shape_complete_for_review: bool
     one_controlled_family_cannot_establish_venue_competitiveness: Literal[True] = True
     diagnosis: str
     comparison_sha256: str
@@ -577,12 +579,15 @@ def assess_venue_gap(
         item.evidence_status is not VenueInnovationEvidenceStatus.ADMITTED_SUPPORT
         for item in comparison.innovation_claims
     )
+    comparison_shape_incomplete = (
+        comparison is not None and not comparison.evidence_shape_complete_for_review
+    )
     if (
         any(item.status is VenueCriterionStatus.CONTRADICTED for item in assessments)
         or comparison_contradicted
     ):
         position = SubmissionEvidencePosition.CONTRADICTED
-    elif unresolved or comparison_unresolved:
+    elif unresolved or comparison_unresolved or comparison_shape_incomplete:
         position = SubmissionEvidencePosition.NOT_YET_COMPETITIVE
     else:
         position = SubmissionEvidencePosition.EVIDENCE_PROGRAM_COMPLETE_FOR_REVIEW
@@ -728,6 +733,12 @@ def _assess_venue_comparison(
         item.evidence_status is VenueInnovationEvidenceStatus.CONTRADICTED
         for item in innovation_claims
     )
+    evidence_shape_complete = (
+        not contradicted_innovations
+        and contradicting_count == 0
+        and len(admitted_family_ids) >= 2
+        and not missing_majority
+    )
     if contradicted_innovations:
         diagnosis = (
             f"{contradicted_innovations} declared innovation claim(s) are contradicted by "
@@ -762,6 +773,8 @@ def _assess_venue_comparison(
         current_admitted_contradicting_component_count=contradicting_count,
         current_admitted_family_count=len(admitted_family_ids),
         missing_or_unadmitted_accepted_majority_components=missing_majority,
+        independent_empirical_family_floor=2,
+        evidence_shape_complete_for_review=evidence_shape_complete,
         one_controlled_family_cannot_establish_venue_competitiveness=True,
         diagnosis=diagnosis,
     )

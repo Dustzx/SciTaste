@@ -81,7 +81,7 @@ The current project-owned manifest and generated assessment are:
 
 - `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V5.yaml`
 - `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V2.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V8.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V9.json`
 
 The comparison set contains ICLR main-track method, evaluation, and benchmark
 papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
@@ -114,11 +114,13 @@ experiment, and trajectory phase, so the next policy can learn a selective
 mapping instead of another global action prior. Historical formal-v2 remains a
 valid negative result; it is not retroactively reclassified as support.
 
-Only one objective empirical family is currently admitted, below the four
+Two objective empirical families are currently admitted, below the four
 reported evidence components in every registered accepted neighbour. The
 framework consequently forbids venue-readiness language and exposes the missing
 construct-validity, mechanism, end-to-end, strong-baseline, failure-boundary,
-and narrative evidence separately. The next iteration must change and diagnose
+and narrative evidence separately. Both admitted families contain contradicting
+evidence for central positive claims, so additional breadth cannot reverse their
+direction. The next iteration must change and diagnose
 the Taste mechanism on development data before any new independent confirmation;
 adding another presentation table would not close the scientific gap.
 
@@ -166,8 +168,17 @@ into venue readiness. The next scientific action is representation revision foll
 by a new disjoint confirmation—not manuscript polish or another view of the same
 table.
 
-The v8 assessment now routes the project to
+The v9 assessment now routes the project to
 `learn-content-conditioned-taste-policy`, replacing the already completed generic
 counterfactual-study action. Valid negative evidence is admitted as a contradiction
 even when it is not eligible to support a positive headline claim; otherwise a system
 could hide a failed formal result merely by setting `headline_eligible=false`.
+
+The comparison is now a binding gate rather than a warning string. A portfolio cannot
+reach `evidence-program-complete-for-review` unless it contains at least two independent
+admitted empirical families, has no contradicting admitted component, and covers every
+evidence component reported by a majority of its registered accepted neighbours. The
+current comparison still lacks admitted end-to-end trajectories, human or expert
+validation, and strong system baselines. This guard prevents one controlled study from
+being relabeled across several claims or table columns to simulate an ICLR-level
+argument; it remains a necessary condition, never an acceptance or oral prediction.

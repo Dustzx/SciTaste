@@ -328,6 +328,185 @@ def test_grounded_abstraction_requires_traceable_contrast_and_transfer_boundary(
     assert taste_node_types()["grounded-taste-abstraction"].output_type is type(result.proposal)
 
 
+def test_grounded_abstraction_merges_duplicate_principle_grounding() -> None:
+    payload = _grounded_proposal()
+    payload["grounding"].append(  # type: ignore[union-attr]
+        {
+            "target": "decision_principle",
+            "supports": [
+                {
+                    "projection_field": "action",
+                    "verbatim_evidence": "diagnostic probe before scaling",
+                }
+            ],
+            "derivation": "contrastive-synthesis",
+            "rationale": "The source action also bounds the principle.",
+        }
+    )
+
+    result = _grounded_run(_grounded_input(), payload)
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    assert len(result.proposal.grounding) == 6
+
+
+def test_grounded_abstraction_restores_one_exact_available_outcome() -> None:
+    payload = _grounded_proposal()
+    payload["outcome_summary"] = None
+
+    result = _grounded_run(_grounded_input(), payload)
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    assert result.proposal.outcome_summary == "The diagnostic rejected one mechanism."
+
+
+def test_grounded_abstraction_expands_only_an_exact_ordered_json_outcome_subset() -> None:
+    input_data = _grounded_input()
+    projection = json.loads(input_data.source_projection)
+    complete_outcomes = [
+        {"action": "probe", "score": 0.8},
+        {"action": "scale", "score": 0.4},
+        {"action": "stop", "score": 0.1},
+    ]
+    projection["fields"]["outcome"]["value"] = json.dumps(
+        complete_outcomes,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    serialized = json.dumps(
+        projection,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    input_data = input_data.model_copy(
+        update={
+            "source_projection": serialized,
+            "source_projection_sha256": hashlib.sha256(serialized.encode()).hexdigest(),
+        }
+    )
+    payload = _grounded_proposal()
+    outcome_claim = next(
+        item for item in payload["grounding"] if item["target"] == "outcome"  # type: ignore[index]
+    )
+    outcome_claim["supports"][0]["verbatim_evidence"] = json.dumps(
+        [complete_outcomes[0], complete_outcomes[2]],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
+    result = _grounded_run(input_data, payload)
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    normalized_outcome = next(
+        item for item in result.proposal.grounding if item.target.value == "outcome"
+    )
+    assert normalized_outcome.supports[0].verbatim_evidence == projection["fields"][
+        "outcome"
+    ]["value"]
+
+
+def test_grounded_abstraction_drops_only_redundant_wrong_role_support() -> None:
+    payload = _grounded_proposal()
+    alternatives = next(
+        item for item in payload["grounding"] if item["target"] == "alternatives"  # type: ignore[index]
+    )
+    alternatives["supports"].append(
+        {
+            "projection_field": "action",
+            "verbatim_evidence": "ran the diagnostic probe before scaling",
+        }
+    )
+
+    result = _grounded_run(_grounded_input(), payload)
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    normalized = next(
+        item for item in result.proposal.grounding if item.target.value == "alternatives"
+    )
+    assert [item.projection_field for item in normalized.supports] == ["alternatives"]
+
+
+def test_grounded_abstraction_restores_immutable_controller_case_identity() -> None:
+    payload = _grounded_proposal()
+    payload["case_id"] = "model-invented-case"
+
+    result = _grounded_run(_grounded_input(), payload)
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    assert result.proposal.case_id == "case-one"
+
+
+def test_grounded_abstraction_restores_principle_trace_from_existing_citations() -> None:
+    payload = _grounded_proposal()
+    payload["grounding"] = [
+        item
+        for item in payload["grounding"]  # type: ignore[assignment]
+        if item["target"] != "decision_principle"
+    ]
+
+    result = _grounded_run(_grounded_input(), payload)
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    principle = next(
+        item for item in result.proposal.grounding if item.target.value == "decision_principle"
+    )
+    assert {item.projection_field for item in principle.supports} == {
+        "action",
+        "evidence",
+        "outcome",
+    }
+
+
+def test_grounded_abstraction_restores_json_outcome_over_measurement_metadata() -> None:
+    input_data = _grounded_input()
+    projection = json.loads(input_data.source_projection)
+    projection["fields"]["outcome"]["value"] = '[{"action":"probe","score":0.8}]'
+    projection["fields"]["measurement"] = {
+        "semantic_roles": ["source_metadata", "outcome"],
+        "value": "metric=score; direction=higher",
+    }
+    serialized = json.dumps(
+        projection,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    input_data = input_data.model_copy(
+        update={
+            "source_projection": serialized,
+            "source_projection_sha256": hashlib.sha256(serialized.encode()).hexdigest(),
+        }
+    )
+    payload = _grounded_proposal()
+    payload["outcome_summary"] = None
+    outcome = next(
+        item for item in payload["grounding"] if item["target"] == "outcome"  # type: ignore[index]
+    )
+    outcome["supports"] = [
+        {
+            "projection_field": "outcome",
+            "verbatim_evidence": '[{"action":"probe","score":0.8}]',
+        },
+        {
+            "projection_field": "measurement",
+            "verbatim_evidence": "metric=score; direction=higher",
+        },
+    ]
+
+    result = _grounded_run(input_data, payload)
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    assert result.proposal.outcome_summary == '[{"action":"probe","score":0.8}]'
+
+
 def test_grounded_abstraction_accepts_multi_role_observed_experiment_projection() -> None:
     input_data = _grounded_input()
     projection = json.loads(input_data.source_projection)
