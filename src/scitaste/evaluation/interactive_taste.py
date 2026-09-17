@@ -14,6 +14,11 @@ from scitaste.evaluation.interactive_research import (
     InteractiveGuidanceEnvelope,
     InteractiveResearchContext,
 )
+from scitaste.evaluation.research_action_semantics import (
+    ResearchActionSemanticsProfile,
+    research_action_instruction,
+    research_action_semantics_sha256,
+)
 from scitaste.evaluation.research_workload import (
     ResearchWorkloadContract,
     ResearchWorkloadParadigm,
@@ -320,10 +325,14 @@ class TasteControllerInteractiveGuidanceProvider:
             intervention_contract=contract,
         )
         selected = decision.selected_action
-        instruction = (
-            "Stop experimentation and submit the strongest currently supported hypothesis."
-            if selected.type.value == "STOP"
-            else selected.description
+        semantics_profile = (
+            ResearchActionSemanticsProfile.HIDDEN_LAW_DISCOVERY
+            if self.protocol.benchmark_id.casefold() == "newtonbench"
+            else ResearchActionSemanticsProfile.GENERIC_RESEARCH
+        )
+        instruction = research_action_instruction(
+            semantics_profile,
+            selected.type.value,
         )
         visible = InteractiveGuidance(
             action_id=selected.action_id,
@@ -348,6 +357,10 @@ class TasteControllerInteractiveGuidanceProvider:
                 "protocol_sha256": self.protocol.protocol_sha256,
                 "intervention_contract": contract.model_dump(mode="json"),
                 "controller_decision": decision.model_dump(mode="json"),
+                "action_semantics_profile": semantics_profile.value,
+                "action_semantics_sha256": research_action_semantics_sha256(
+                    semantics_profile
+                ),
             },
         )
 

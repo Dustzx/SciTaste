@@ -110,9 +110,9 @@ class InteractiveGuidance(BaseModel):
     action_type: str
     instruction: str = Field(min_length=1, max_length=2_000)
     decision_sha256: str = Field(pattern=_SHA256)
-    allowed_agent_actions: tuple[
-        Literal["run_experiments", "run_code", "submit_hypothesis"], ...
-    ] | None = Field(
+    allowed_agent_actions: (
+        tuple[Literal["run_experiments", "run_code", "submit_hypothesis"], ...] | None
+    ) = Field(
         default=None,
         min_length=1,
         max_length=3,
@@ -292,6 +292,17 @@ class InteractiveResearchRunReceipt(BaseModel):
     condition_id: str
     task_id: str
     environment_sha256: str | None = Field(default=None, pattern=_SHA256)
+    prefix_sha256: str | None = Field(
+        default=None,
+        pattern=_SHA256,
+        exclude_if=lambda value: value is None,
+    )
+    prefix_turn_count: int = Field(
+        default=0,
+        ge=0,
+        le=49,
+        exclude_if=lambda value: value == 0,
+    )
     status: Literal[
         "completed",
         "turn_budget_exhausted",
@@ -322,6 +333,10 @@ class InteractiveResearchRunReceipt(BaseModel):
         validate_entry_id(self.run_id, field_name="interactive run_id")
         validate_entry_id(self.condition_id, field_name="interactive condition_id")
         validate_entry_id(self.task_id, field_name="interactive task_id")
+        if (self.prefix_sha256 is None) != (self.prefix_turn_count == 0):
+            raise ValueError("interactive prefix hash and turn count must be paired")
+        if self.prefix_turn_count > len(self.turns):
+            raise ValueError("interactive prefix turn count exceeds receipt turns")
         if self.status == "completed":
             if self.submission is None or self.objective_score is None or self.terminal_error:
                 raise ValueError(
@@ -361,6 +376,135 @@ class InteractiveResearchRunReceipt(BaseModel):
             **payload,
             receipt_sha256=content_sha256(
                 unsigned.model_dump(mode="json", exclude={"receipt_sha256"})
+            ),
+        )
+
+
+class InteractiveResearchPrefix(BaseModel):
+    """Replay-safe observed state shared by counterfactual action branches.
+
+    Version 1 deliberately accepts only experiment observations that can be
+    replayed from a fresh deterministic toolbox. Code execution may mutate an
+    external workspace and therefore cannot be reconstructed from a receipt alone.
+    """
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str
+    source_run_id: str
+    source_condition_id: str
+    source_receipt_sha256: str = Field(pattern=_SHA256)
+    task_id: str
+    task_sha256: str = Field(pattern=_SHA256)
+    environment_sha256: str = Field(pattern=_SHA256)
+    toolbox_sha256: str = Field(pattern=_SHA256)
+    resource_envelope_sha256: str = Field(pattern=_SHA256)
+    research_agent_sha256: str = Field(pattern=_SHA256)
+    replay_mode: Literal["deterministic-tool-replay"] = "deterministic-tool-replay"
+    turns: tuple[InteractiveTurnRecord, ...] = Field(min_length=1, max_length=49)
+    experiment_count: int = Field(ge=1)
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    api_cost_usd: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    prefix_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def prefix_is_closed(self) -> InteractiveResearchPrefix:
+        validate_project_id(self.project_id)
+        validate_entry_id(self.source_run_id, field_name="interactive prefix source_run_id")
+        validate_entry_id(
+            self.source_condition_id,
+            field_name="interactive prefix source_condition_id",
+        )
+        validate_entry_id(self.task_id, field_name="interactive prefix task_id")
+        expected_turns = tuple(range(1, len(self.turns) + 1))
+        if tuple(item.turn for item in self.turns) != expected_turns:
+            raise ValueError("interactive prefix turns must be contiguous from turn one")
+        if any(
+            item.observation is None or item.decision.proposal.action != "run_experiments"
+            for item in self.turns
+        ):
+            raise ValueError("interactive prefix v1 requires executed experiment observations only")
+        experiments = sum(len(item.decision.proposal.experiments) for item in self.turns)
+        if experiments != self.experiment_count:
+            raise ValueError("interactive prefix experiment count mismatch")
+        if sum(item.decision.usage.input_tokens for item in self.turns) != self.input_tokens:
+            raise ValueError("interactive prefix input-token count mismatch")
+        if sum(item.decision.usage.output_tokens for item in self.turns) != self.output_tokens:
+            raise ValueError("interactive prefix output-token count mismatch")
+        costs = tuple(item.decision.usage.cost_usd for item in self.turns)
+        expected_cost = None if any(item is None for item in costs) else math.fsum(costs)  # type: ignore[arg-type]
+        if self.api_cost_usd != expected_cost:
+            raise ValueError("interactive prefix API cost mismatch")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"prefix_sha256"}))
+        if self.prefix_sha256 != expected:
+            raise ValueError("interactive research prefix hash mismatch")
+        return self
+
+    @property
+    def turn_count(self) -> int:
+        return len(self.turns)
+
+    @property
+    def history(self) -> tuple[dict[str, JsonValue], ...]:
+        return tuple(
+            {
+                "turn": item.turn,
+                "high_level_action": item.guidance.guidance.action_type,
+                "model_action": item.decision.proposal.model_dump(mode="json"),
+                "observation": item.observation,
+            }
+            for item in self.turns
+        )
+
+    @classmethod
+    def from_receipt(
+        cls,
+        receipt: InteractiveResearchRunReceipt,
+        *,
+        turn_count: int,
+        task_sha256: str,
+        toolbox_sha256: str,
+        resource_envelope_sha256: str,
+        research_agent_sha256: str,
+    ) -> InteractiveResearchPrefix:
+        if receipt.environment_sha256 is None:
+            raise ValueError("interactive prefix requires an environment-bound source receipt")
+        if not 1 <= turn_count < len(receipt.turns):
+            raise ValueError(
+                "interactive prefix must retain at least one observed turn and one later decision"
+            )
+        turns = receipt.turns[:turn_count]
+        experiments = sum(len(item.decision.proposal.experiments) for item in turns)
+        input_tokens = sum(item.decision.usage.input_tokens for item in turns)
+        output_tokens = sum(item.decision.usage.output_tokens for item in turns)
+        costs = tuple(item.decision.usage.cost_usd for item in turns)
+        api_cost = None if any(item is None for item in costs) else math.fsum(costs)  # type: ignore[arg-type]
+        payload = {
+            "schema_version": "1.0",
+            "project_id": receipt.project_id,
+            "source_run_id": receipt.run_id,
+            "source_condition_id": receipt.condition_id,
+            "source_receipt_sha256": receipt.receipt_sha256,
+            "task_id": receipt.task_id,
+            "task_sha256": task_sha256,
+            "environment_sha256": receipt.environment_sha256,
+            "toolbox_sha256": toolbox_sha256,
+            "resource_envelope_sha256": resource_envelope_sha256,
+            "research_agent_sha256": research_agent_sha256,
+            "replay_mode": "deterministic-tool-replay",
+            "turns": turns,
+            "experiment_count": experiments,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "api_cost_usd": api_cost,
+        }
+        unsigned = cls.model_construct(prefix_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            prefix_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"prefix_sha256"})
             ),
         )
 
@@ -699,16 +843,19 @@ class InteractiveResearchLoop:
         project_id: str,
         run_id: str,
         condition_id: str,
+        prefix: InteractiveResearchPrefix | None = None,
     ) -> InteractiveResearchRunReceipt:
-        records: list[InteractiveTurnRecord] = []
-        history: list[dict[str, JsonValue]] = []
-        experiment_count = 0
+        self._validate_prefix(prefix, project_id=project_id)
+        records = [] if prefix is None else list(prefix.turns)
+        history = [] if prefix is None else list(prefix.history)
+        experiment_count = 0 if prefix is None else prefix.experiment_count
         code_call_count = 0
-        input_tokens = 0
-        output_tokens = 0
-        total_cost: float | None = 0.0
+        input_tokens = 0 if prefix is None else prefix.input_tokens
+        output_tokens = 0 if prefix is None else prefix.output_tokens
+        total_cost: float | None = 0.0 if prefix is None else prefix.api_cost_usd
+        first_turn = 1 if prefix is None else prefix.turn_count + 1
 
-        for turn in range(1, self.limits.max_turns + 1):
+        for turn in range(first_turn, self.limits.max_turns + 1):
             context = InteractiveResearchContext(
                 project_id=project_id,
                 run_id=run_id,
@@ -747,6 +894,7 @@ class InteractiveResearchLoop:
                     input_tokens,
                     output_tokens,
                     None,
+                    prefix=prefix,
                     terminal_error=f"{type(exc).__name__}: {exc}",
                 )
             input_tokens += decision.usage.input_tokens
@@ -776,6 +924,7 @@ class InteractiveResearchLoop:
                     input_tokens,
                     output_tokens,
                     total_cost,
+                    prefix=prefix,
                     terminal_error="model decision exceeded the fixed resource envelope",
                 )
 
@@ -811,6 +960,7 @@ class InteractiveResearchLoop:
                         input_tokens,
                         output_tokens,
                         total_cost,
+                        prefix=prefix,
                         terminal_error=f"{type(exc).__name__}: {exc}",
                     )
                 complied = guidance_action_complied(
@@ -832,6 +982,7 @@ class InteractiveResearchLoop:
                     input_tokens,
                     output_tokens,
                     total_cost,
+                    prefix=prefix,
                     terminal_error=(
                         f"model action {proposal.action!r} is incompatible with locked "
                         f"Taste action {guidance.guidance.action_type!r}"
@@ -855,6 +1006,7 @@ class InteractiveResearchLoop:
                         input_tokens,
                         output_tokens,
                         total_cost,
+                        prefix=prefix,
                         terminal_error="experiment request exceeded the fixed resource envelope",
                     )
                 try:
@@ -875,6 +1027,7 @@ class InteractiveResearchLoop:
                         input_tokens,
                         output_tokens,
                         total_cost,
+                        prefix=prefix,
                         terminal_error=f"{type(exc).__name__}: {exc}",
                     )
                 experiment_count += len(proposal.experiments)
@@ -894,6 +1047,7 @@ class InteractiveResearchLoop:
                         input_tokens,
                         output_tokens,
                         total_cost,
+                        prefix=prefix,
                         terminal_error="code request exceeded the fixed resource envelope",
                     )
                 try:
@@ -914,6 +1068,7 @@ class InteractiveResearchLoop:
                         input_tokens,
                         output_tokens,
                         total_cost,
+                        prefix=prefix,
                         terminal_error=f"{type(exc).__name__}: {exc}",
                     )
                 code_call_count += 1
@@ -936,6 +1091,7 @@ class InteractiveResearchLoop:
                         input_tokens,
                         output_tokens,
                         total_cost,
+                        prefix=prefix,
                         submission=submission,
                         terminal_error=f"{type(exc).__name__}: {exc}",
                     )
@@ -965,6 +1121,7 @@ class InteractiveResearchLoop:
                         input_tokens,
                         output_tokens,
                         total_cost,
+                        prefix=prefix,
                         submission=submission,
                         objective_score=score,
                         terminal_error="objective scoring exceeded the fixed resource envelope",
@@ -980,6 +1137,7 @@ class InteractiveResearchLoop:
                     input_tokens,
                     output_tokens,
                     total_cost,
+                    prefix=prefix,
                     submission=submission,
                     objective_score=score,
                 )
@@ -1012,8 +1170,42 @@ class InteractiveResearchLoop:
             input_tokens,
             output_tokens,
             total_cost,
+            prefix=prefix,
             terminal_error="no final hypothesis was submitted within the fixed turn budget",
         )
+
+    def _validate_prefix(
+        self,
+        prefix: InteractiveResearchPrefix | None,
+        *,
+        project_id: str,
+    ) -> None:
+        if prefix is None:
+            return
+        commitments = {
+            "project": (prefix.project_id, project_id),
+            "task": (prefix.task_id, self.toolbox.task_id),
+            "task content": (prefix.task_sha256, self.toolbox.task_sha256),
+            "environment": (prefix.environment_sha256, self.toolbox.environment_sha256),
+            "toolbox": (prefix.toolbox_sha256, self.toolbox.fingerprint),
+            "resource envelope": (
+                prefix.resource_envelope_sha256,
+                self.limits.fingerprint,
+            ),
+            "research agent": (prefix.research_agent_sha256, self.agent.fingerprint),
+        }
+        for label, (observed, expected) in commitments.items():
+            if observed != expected:
+                raise ValueError(f"interactive prefix {label} commitment differs")
+        if prefix.turn_count >= self.limits.max_turns:
+            raise ValueError("interactive prefix leaves no branch decision turn")
+        if prefix.experiment_count >= self.limits.max_experiments:
+            raise ValueError("interactive prefix leaves no branch experiment budget")
+        for record in prefix.turns:
+            replayed = self.toolbox.run_experiments(record.decision.proposal.experiments)
+            self._validate_observation(replayed)
+            if content_sha256(replayed) != record.observation_sha256:
+                raise ValueError("interactive prefix replay differs from the recorded observation")
 
     def _resource_status(
         self,
@@ -1055,6 +1247,7 @@ class InteractiveResearchLoop:
         output_tokens: int,
         api_cost_usd: float | None,
         *,
+        prefix: InteractiveResearchPrefix | None = None,
         submission: str | None = None,
         objective_score: InteractiveObjectiveScore | None = None,
         terminal_error: str | None = None,
@@ -1065,6 +1258,8 @@ class InteractiveResearchLoop:
             condition_id=condition_id,
             task_id=self.toolbox.task_id,
             environment_sha256=self.toolbox.environment_sha256,
+            prefix_sha256=None if prefix is None else prefix.prefix_sha256,
+            prefix_turn_count=0 if prefix is None else prefix.turn_count,
             status=status,
             turns=tuple(records),
             submission=submission,
@@ -1178,6 +1373,21 @@ def save_interactive_research_run_receipt(
     return target
 
 
+def save_interactive_research_prefix(
+    prefix: InteractiveResearchPrefix,
+    path: str | Path,
+) -> Path:
+    target = Path(path)
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("xb") as handle:
+        handle.write((prefix.model_dump_json(indent=2) + "\n").encode())
+        handle.flush()
+        os.fsync(handle.fileno())
+    return target
+
+
 def load_interactive_research_run_receipt(
     path: str | Path,
 ) -> InteractiveResearchRunReceipt:
@@ -1187,6 +1397,15 @@ def load_interactive_research_run_receipt(
     if not 1 <= source.stat().st_size <= _MAX_RECEIPT_BYTES:
         raise ValueError("interactive run receipt exceeds its byte ceiling")
     return InteractiveResearchRunReceipt.model_validate_json(source.read_bytes(), strict=True)
+
+
+def load_interactive_research_prefix(path: str | Path) -> InteractiveResearchPrefix:
+    source = Path(path)
+    if source.is_symlink() or not source.is_file():
+        raise ValueError("interactive research prefix must be a regular file")
+    if not 1 <= source.stat().st_size <= _MAX_RECEIPT_BYTES:
+        raise ValueError("interactive research prefix exceeds its byte ceiling")
+    return InteractiveResearchPrefix.model_validate_json(source.read_bytes(), strict=True)
 
 
 def _receipt_protocol_sha256(receipt: InteractiveResearchRunReceipt) -> str:
@@ -1225,13 +1444,16 @@ __all__ = [
     "InteractiveResearchContext",
     "InteractiveResearchLimits",
     "InteractiveResearchLoop",
+    "InteractiveResearchPrefix",
     "InteractiveResearchRunReceipt",
     "InteractiveResearchToolbox",
     "InteractiveSubmissionAdjudicator",
     "InteractiveTurnRecord",
     "StructuredInteractiveResearchAgent",
     "guidance_action_complied",
+    "load_interactive_research_prefix",
     "load_interactive_research_run_receipt",
     "raw_response_sha256",
+    "save_interactive_research_prefix",
     "save_interactive_research_run_receipt",
 ]

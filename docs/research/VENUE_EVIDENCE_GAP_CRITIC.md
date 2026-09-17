@@ -139,3 +139,15 @@ This assessment is deliberately dynamic. Each admitted result updates the same
 manifest and recompiles the matrix, so completed work disappears from the next
 action queue and a local success cannot hide gaps elsewhere in the evidence
 program.
+
+The first objective counterfactual development run is documented in
+`docs/research/OBJECTIVE_TASTE_BRANCHING.md`. Correcting the action semantics changed
+the local outcome ranking: at one shared NewtonBench prefix, forced `PIVOT` reached
+RMSLE 0.0000533 while forced `EXPERIMENT` reached 4.22049. Five other arms did not
+expose that endpoint. SciTaste therefore records a local development signal and an
+endpoint-coverage problem, not support for the paper's conditional-policy claim. The
+counterfactual runner now emits a machine-readable adequacy assessment that always
+blocks headline, generalization, and state-conditional-policy claims for a single
+prefix. This is the intended interaction between experiment execution and the venue
+critic: an interesting result changes the next experiment without automatically
+changing the paper's evidence position.
