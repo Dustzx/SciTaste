@@ -27,7 +27,9 @@ from scitaste.taste.controller import TasteController, TasteMode
 from scitaste.taste.deliberation import (
     TasteDeliberationInput,
     TasteDeliberationProposal,
+    TasteTransferVerdict,
     VerifiedTasteDeliberation,
+    select_deliberated_taste_cases,
     validate_taste_deliberation,
 )
 from scitaste.taste.retriever import TasteRetriever
@@ -209,6 +211,44 @@ def test_deliberation_rejects_one_sided_selection_when_action_tension_exists(
     )
 
 
+def test_deliberation_can_abstain_when_no_precedent_is_applicable(
+    tmp_path, research_state: ResearchState
+) -> None:
+    controller = _controller(tmp_path)
+    input_data = controller.prepare_taste_deliberation(
+        state=research_state,
+        candidate_actions=_actions(),
+    )
+    assessments = tuple(
+        item.model_copy(
+            update={
+                "verdict": TasteTransferVerdict.UNCERTAIN,
+                "applicability_supports": (),
+                "triggered_failure_supports": (),
+                "aligned_current_action_ids": (),
+                "opposed_current_action_ids": (),
+            }
+        )
+        for item in _proposal(input_data).assessments
+    )
+    proposal = TasteDeliberationProposal(
+        decision_id=input_data.decision_id,
+        assessments=assessments,
+        selected_case_ids=(),
+        selection_rationale="No precedent has grounded applicability support.",
+    )
+
+    assert validate_taste_deliberation(input_data, proposal) == ()
+    assert (
+        select_deliberated_taste_cases(
+            input_data=input_data,
+            proposal=proposal,
+            broad_candidates=[],
+        )
+        == []
+    )
+
+
 def test_deliberation_node_accepts_only_fact_grounded_closed_pool(
     tmp_path, research_state: ResearchState
 ) -> None:
@@ -219,6 +259,17 @@ def test_deliberation_node_accepts_only_fact_grounded_closed_pool(
         candidate_actions=actions,
     )
     proposal = _proposal(input_data)
+    provider_payload = proposal.model_dump(mode="json", exclude={"fingerprint"})
+    provider_payload["decision_id"] = proposal.decision_id + "-provider-echo"
+    provider_payload["type"] = "json_object"
+    unsupported_case_id = provider_payload["assessments"][1]["case_id"]
+    provider_payload["assessments"][1].update(
+        {
+            "verdict": "uncertain",
+            "applicability_supports": [],
+            "aligned_current_action_ids": [],
+        }
+    )
     context = NodeContext(
         project_id=research_state.project_id,
         stage=input_data.stage,
@@ -243,7 +294,7 @@ def test_deliberation_node_accepts_only_fact_grounded_closed_pool(
         model="scripted-v1",
         replies={
             "deliberate-one": ScriptedStructuredReply(
-                output_payload=proposal.model_dump(mode="json", exclude={"fingerprint"}),
+                output_payload=provider_payload,
                 usage=Usage(input_tokens=500, output_tokens=300, cost_usd=0),
             )
         },
@@ -258,7 +309,14 @@ def test_deliberation_node_accepts_only_fact_grounded_closed_pool(
     )
 
     assert result.status is NodeResultStatus.ACCEPTED
-    assert result.proposal == proposal
+    assert result.proposal is not None
+    assert result.proposal.decision_id == input_data.decision_id
+    assert result.proposal.selected_case_ids == tuple(
+        item for item in proposal.selected_case_ids if item != unsupported_case_id
+    )
+    assert next(
+        item for item in result.proposal.assessments if item.case_id == unsupported_case_id
+    ).verdict is TasteTransferVerdict.UNCERTAIN
     assert result.advisory_only is True
     assert taste_node_types()["taste-deliberation"].output_type is TasteDeliberationProposal
 

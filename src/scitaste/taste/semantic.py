@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import tempfile
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ from scitaste.taste.deliberation import (
     TASTE_DELIBERATION_NODE,
     TasteDeliberationInput,
     TasteDeliberationProposal,
+    TasteTransferVerdict,
     VerifiedTasteDeliberation,
     validate_taste_deliberation,
 )
@@ -198,6 +200,45 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
     )
     input_model = TasteDeliberationInput
     output_model = TasteDeliberationProposal
+
+    def _normalize_output_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        input_data: TasteDeliberationInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> dict[str, Any]:
+        """Restore only the controller-issued identity; never alter scientific judgments."""
+
+        del context, policy
+        normalized = deepcopy(payload)
+        normalized["decision_id"] = input_data.decision_id
+        if normalized.get("type") == "json_object":
+            normalized.pop("type")
+        return normalized
+
+    def _normalize_proposal(
+        self,
+        proposal: TasteDeliberationProposal,
+        *,
+        input_data: TasteDeliberationInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> TasteDeliberationProposal:
+        """Fail closed by deleting selections the model itself marked unsupported."""
+
+        del input_data, context, policy
+        eligible = {
+            item.case_id
+            for item in proposal.assessments
+            if item.verdict is TasteTransferVerdict.APPLICABLE
+            and len(item.applicability_supports) >= 2
+            and not item.triggered_failure_supports
+            and item.aligned_current_action_ids
+        }
+        selected = tuple(item for item in proposal.selected_case_ids if item in eligible)
+        return proposal.model_copy(update={"selected_case_ids": selected})
 
     def _proposal_rejections(
         self,
@@ -388,7 +429,7 @@ def taste_deliberation_from_ledger(
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("Taste deliberation ledger entry is not accepted")
     if not is_verified_model_generation_entry(entry):
-        raise ValueError("decision-aware Taste selection requires a verified model invocation")
+        _verify_recorded_model_generation_replay(entry, evidence_root=evidence_root)
     input_data = TasteDeliberationInput.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
         strict=True,
@@ -408,6 +449,41 @@ def taste_deliberation_from_ledger(
         input=input_data,
         proposal=result.proposal,
     )
+
+
+def _verify_recorded_model_generation_replay(
+    entry: RuntimeLedgerEntry,
+    *,
+    evidence_root: str | Path,
+) -> None:
+    """Admit a replay only when it revalidates one exact recorded live/local response."""
+
+    if entry.intent.backend_mode is not RuntimeBackendMode.REPLAY:
+        raise ValueError("decision-aware Taste selection requires a verified model invocation")
+    source_invocation_id = entry.intent.replay_source_invocation_id
+    if source_invocation_id is None:
+        raise ValueError("Taste deliberation replay has no source invocation")
+    from scitaste.model_nodes.registry import first_party_node_types
+
+    source = ModelNodeRuntime(
+        ProjectRuntime(evidence_root),
+        node_types=first_party_node_types(),
+    ).entry(
+        project_id=entry.intent.project_id,
+        run_id=entry.intent.run_id,
+        invocation_id=source_invocation_id,
+    )
+    if not is_verified_model_generation_entry(source):
+        raise ValueError("Taste deliberation replay source is not a verified model generation")
+    if source.recording_sha256 is None or source.recording_sha256 != entry.recording_sha256:
+        raise ValueError("Taste deliberation replay recording differs from its model source")
+    if (
+        source.request_fingerprint is None
+        or source.request_fingerprint != entry.request_fingerprint
+    ):
+        raise ValueError("Taste deliberation replay request differs from its model source")
+    if not entry.cached or not entry.replayed or entry.token_effect != 0:
+        raise ValueError("Taste deliberation replay telemetry is not source-preserving")
 
 
 def reference_mining_from_ledger(

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from scitaste.evaluation.counterfactual_deliberation_policy import (
+    CounterfactualDeliberationRetrievalRecord,
     CounterfactualDeliberationTarget,
     prepare_counterfactual_deliberation_inputs,
 )
@@ -23,6 +24,7 @@ def test_real_precedents_prepare_cross_task_outcome_hidden_inputs(tmp_path: Path
         state_root=base,
         precedent_root=precedent_root,
         output_root=tmp_path / "deliberations",
+        maximum_candidate_cases=3,
     )
 
     assert len(outputs) == 12
@@ -33,8 +35,17 @@ def test_real_precedents_prepare_cross_task_outcome_hidden_inputs(tmp_path: Path
         target = CounterfactualDeliberationTarget.model_validate_json(
             (output / "TARGET.json").read_bytes(), strict=True
         )
+        retrieval = CounterfactualDeliberationRetrievalRecord.model_validate_json(
+            (output / "RETRIEVAL.json").read_bytes(), strict=True
+        )
         serialized = json.dumps(input_data.model_dump(mode="json"))
-        assert len(input_data.candidates) == 9
+        assert len(input_data.candidates) == 3
+        assert len(retrieval.population_scores) == 9
+        assert retrieval.selected_case_ids == tuple(
+            item.case_id for item in input_data.candidates
+        )
+        assert len({item.preferred_action for item in input_data.candidates}) == 3
+        assert retrieval.selector_input_sha256 == input_data.fingerprint
         assert not set(target.excluded_same_cluster_case_ids) & {
             item.case_id for item in input_data.candidates
         }

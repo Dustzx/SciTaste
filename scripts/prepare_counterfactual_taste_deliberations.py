@@ -18,6 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--precedent-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--maximum-selected-cases", type=int, default=3)
+    parser.add_argument("--maximum-candidate-cases", type=int, default=None)
     return parser
 
 
@@ -29,6 +30,7 @@ def main() -> None:
         precedent_root=args.precedent_root,
         output_root=args.output_root,
         maximum_selected_cases=args.maximum_selected_cases,
+        maximum_candidate_cases=args.maximum_candidate_cases,
     ):
         print(path)
 

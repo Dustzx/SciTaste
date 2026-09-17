@@ -108,6 +108,65 @@ class CounterfactualDeliberationTarget(BaseModel):
         )
 
 
+class CounterfactualDeliberationRetrievalRecord(BaseModel):
+    """Outcome-hidden record of the deterministic broad-retrieval stage."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    study_id: str
+    task_cluster_id: str
+    retrieval_rule_id: Literal["outcome-hidden-lexical-action-diverse-top-k-v1"]
+    maximum_candidate_cases: int = Field(ge=2, le=20)
+    population_scores: dict[str, float] = Field(min_length=2, max_length=20)
+    population_preferred_actions: dict[str, str] = Field(min_length=2, max_length=20)
+    selected_case_ids: tuple[str, ...] = Field(min_length=2, max_length=20)
+    selector_input_sha256: str = Field(pattern=_SHA256)
+    source_outcomes_hidden: Literal[True] = True
+    target_outcomes_hidden: Literal[True] = True
+    retrieval_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def retrieval_is_closed(self) -> CounterfactualDeliberationRetrievalRecord:
+        validate_entry_id(self.study_id, field_name="counterfactual retrieval study_id")
+        population = set(self.population_scores)
+        if set(self.population_preferred_actions) != population:
+            raise ValueError("retrieval score and preferred-action populations differ")
+        if set(self.selected_case_ids) - population:
+            raise ValueError("retrieval selected an unknown precedent")
+        if len(self.selected_case_ids) != min(self.maximum_candidate_cases, len(population)):
+            raise ValueError("retrieval selected-case count differs from the frozen top-k rule")
+        ranked = _action_diverse_top_k_ids(
+            self.population_scores,
+            self.population_preferred_actions,
+            maximum_candidate_cases=self.maximum_candidate_cases,
+        )
+        if self.selected_case_ids != ranked:
+            raise ValueError("retrieval selection differs from outcome-hidden lexical top-k")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"retrieval_sha256"}))
+        if self.retrieval_sha256 != expected:
+            raise ValueError("counterfactual retrieval record hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> CounterfactualDeliberationRetrievalRecord:
+        payload = {
+            "schema_version": "1.0",
+            "retrieval_rule_id": "outcome-hidden-lexical-action-diverse-top-k-v1",
+            "source_outcomes_hidden": True,
+            "target_outcomes_hidden": True,
+            **values,
+        }
+        payload.pop("retrieval_sha256", None)
+        unsigned = cls.model_construct(retrieval_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            retrieval_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"retrieval_sha256"})
+            ),
+        )
+
+
 def prepare_counterfactual_deliberation_inputs(
     *,
     project_id: str,
@@ -115,10 +174,13 @@ def prepare_counterfactual_deliberation_inputs(
     precedent_root: str | Path,
     output_root: str | Path,
     maximum_selected_cases: int = 3,
+    maximum_candidate_cases: int | None = None,
 ) -> tuple[Path, ...]:
     """Build leave-one-task-cluster-out selector inputs without objective outcomes."""
 
     validate_project_id(project_id)
+    if maximum_candidate_cases is not None and not 2 <= maximum_candidate_cases <= 20:
+        raise ValueError("maximum_candidate_cases must be between 2 and 20")
     state_base = Path(state_root).resolve(strict=True)
     precedent_base = Path(precedent_root).resolve(strict=True)
     target_base = Path(output_root).expanduser()
@@ -164,11 +226,12 @@ def prepare_counterfactual_deliberation_inputs(
         )
         if len(eligible) < 2:
             raise ValueError("cross-cluster deliberation requires two or more precedents")
-        deliberation_input = _deliberation_input(
+        deliberation_input, population = _deliberation_input(
             project_id=project_id,
             prefix=prefix,
             cases=eligible,
             maximum_selected_cases=maximum_selected_cases,
+            maximum_candidate_cases=maximum_candidate_cases,
         )
         serialized_input = deliberation_input.model_dump_json(indent=2) + "\n"
         if "objective_value" in serialized_input or "outcome_summary" in serialized_input:
@@ -194,12 +257,35 @@ def prepare_counterfactual_deliberation_inputs(
             },
             selector_input_sha256=deliberation_input.fingerprint,
         )
+        retrieval = CounterfactualDeliberationRetrievalRecord.create(
+            study_id=result.study_id,
+            task_cluster_id=binding.task_cluster_id,
+            maximum_candidate_cases=(
+                len(population)
+                if maximum_candidate_cases is None
+                else maximum_candidate_cases
+            ),
+            population_scores={
+                item.case_id: item.broad_retrieval_score
+                for item in sorted(population, key=lambda item: item.case_id)
+            },
+            population_preferred_actions={
+                item.case_id: item.preferred_action
+                for item in sorted(population, key=lambda item: item.case_id)
+            },
+            selected_case_ids=tuple(item.case_id for item in deliberation_input.candidates),
+            selector_input_sha256=deliberation_input.fingerprint,
+        )
         destination = target_base / result.study_id
         destination.mkdir()
         _write_new(destination / "INPUT.json", serialized_input.encode())
         _write_new(
             destination / "TARGET.json",
             (target.model_dump_json(indent=2) + "\n").encode(),
+        )
+        _write_new(
+            destination / "RETRIEVAL.json",
+            (retrieval.model_dump_json(indent=2) + "\n").encode(),
         )
         outputs.append(destination)
     return tuple(outputs)
@@ -211,7 +297,8 @@ def _deliberation_input(
     prefix: InteractiveResearchPrefix,
     cases: tuple[TasteCase, ...],
     maximum_selected_cases: int,
-) -> TasteDeliberationInput:
+    maximum_candidate_cases: int | None,
+) -> tuple[TasteDeliberationInput, tuple[TasteDeliberationCandidate, ...]]:
     latest = prefix.turns[-1].decision.proposal
     facts = [
         TasteDecisionFact(
@@ -272,10 +359,19 @@ def _deliberation_input(
         for action in CounterfactualResearchAction
     )
     current_text = " ".join(item.text for item in facts)
-    candidates = tuple(
+    population = tuple(
         _candidate(case, current_text=current_text)
         for case in sorted(cases, key=lambda item: item.case_id)
     )
+    population_by_id = {item.case_id: item for item in population}
+    candidate_ids = _action_diverse_top_k_ids(
+        {item.case_id: item.broad_retrieval_score for item in population},
+        {item.case_id: item.preferred_action for item in population},
+        maximum_candidate_cases=(
+            len(population) if maximum_candidate_cases is None else maximum_candidate_cases
+        ),
+    )
+    candidates = tuple(population_by_id[item] for item in candidate_ids)
     state_identity = content_sha256(
         {
             "project_id": project_id,
@@ -284,7 +380,7 @@ def _deliberation_input(
             "candidate_case_ids": [item.case_id for item in candidates],
         }
     )
-    return TasteDeliberationInput(
+    deliberation_input = TasteDeliberationInput(
         decision_id=f"counterfactual-taste-{state_identity[:20]}",
         state_snapshot_id=state_identity,
         stage="interactive-experiment",
@@ -293,6 +389,34 @@ def _deliberation_input(
         candidates=candidates,
         maximum_selected_cases=min(maximum_selected_cases, len(candidates)),
     )
+    return deliberation_input, population
+
+
+def _action_diverse_top_k_ids(
+    scores: dict[str, float],
+    preferred_actions: dict[str, str],
+    *,
+    maximum_candidate_cases: int,
+) -> tuple[str, ...]:
+    """Rank by outcome-hidden similarity while preserving available action tension."""
+
+    ranked = sorted(scores, key=lambda case_id: (-scores[case_id], case_id))
+    selected: list[str] = []
+    covered_actions: set[str] = set()
+    for case_id in ranked:
+        action = preferred_actions[case_id]
+        if action in covered_actions:
+            continue
+        selected.append(case_id)
+        covered_actions.add(action)
+        if len(selected) == maximum_candidate_cases:
+            return tuple(selected)
+    for case_id in ranked:
+        if case_id not in selected:
+            selected.append(case_id)
+        if len(selected) == maximum_candidate_cases:
+            break
+    return tuple(selected)
 
 
 def _candidate(case: TasteCase, *, current_text: str) -> TasteDeliberationCandidate:
@@ -375,6 +499,7 @@ def _write_new(path: Path, content: bytes) -> None:
 
 
 __all__ = [
+    "CounterfactualDeliberationRetrievalRecord",
     "CounterfactualDeliberationTarget",
     "prepare_counterfactual_deliberation_inputs",
 ]

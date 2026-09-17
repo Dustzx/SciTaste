@@ -204,7 +204,7 @@ class TasteDeliberationProposal(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     decision_id: str = Field(pattern=_ID)
     assessments: tuple[TasteCaseTransferAssessment, ...] = Field(min_length=2, max_length=20)
-    selected_case_ids: tuple[str, ...] = Field(min_length=1, max_length=5)
+    selected_case_ids: tuple[str, ...] = Field(max_length=5)
     selection_rationale: str = Field(min_length=1, max_length=10_000)
 
     @model_validator(mode="after")

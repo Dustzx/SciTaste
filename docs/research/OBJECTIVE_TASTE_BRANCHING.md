@@ -161,10 +161,8 @@ action and outcome fields. They did not change a preferred action, objective out
 transfer condition, or scientific rationale.
 
 These precedents remain `development-only-grounded-counterfactual-taste-precedents`.
-The next implementation step is to compile them into a content- and applicability-
-conditioned selector, then evaluate that frozen selector on a new disjoint task
-population. Reusing formal-v4 states as confirmation would leak objective outcomes and
-is prohibited.
+Reusing formal-v4 states as confirmation would leak objective outcomes and is
+prohibited.
 
 The first selector gate did not pass. Each target excluded all three precedents from
 its own task cluster and exposed the other nine without source or target outcomes.
@@ -175,11 +173,30 @@ incomplete closed-pool coverage. Both runs stopped at the first post-repair or s
 failure. Missing assessments were not synthesized, and target outcomes were not used
 to repair the selection.
 
-There is therefore no formal-v5 confirmation. The next representation change is an
-outcome-hidden retrieval stage that reduces the cross-task population to a small,
-explicitly recorded candidate set before complete deliberation. That change must pass
-this same development-only gate; it is not a prompt retry and cannot reuse formal-v4
-as confirmation.
+SciTaste then implemented outcome-hidden, action-diverse retrieval before
+deliberation. For every state, lexical similarity ranked all nine cross-cluster
+precedents; the retriever selected three while preserving three distinct source
+actions. Full population scores, source action labels, selection order, and input
+hashes are recorded independently. The selector was also changed to permit explicit
+abstention and to delete, but never add, cases that the model itself marked uncertain
+or inapplicable. All 12 states subsequently produced accepted proposals. The
+hash-chained run contains 17 entries, including the original rejected responses and
+four source-preserving replays, at USD 0.043437336 recorded cost.
+
+This two-stage mechanism fixes behavioral collapse but still fails scientific utility.
+It selects five action types with entropy 1.896 bits, a maximum action share of 0.50,
+and three abstentions. The full precedent population contains an objective-preferred
+action for 11/12 states; top-three retrieval retains one for 10/12, and final selection
+chooses one for 8/12. Mean bounded objective is 0.2755, below the strongest static
+`EXPERIMENT` baseline at 0.3850 and the prior status policy at 0.2885. Failure rate is
+tied with the strongest static baseline at 1/12. Large errors arise when post-outcome
+resource conditions are treated as if they were current applicability facts and when
+the cross-cluster source population lacks the target action.
+
+There is therefore still no formal-v5 confirmation. The next representation must
+separate pre-decision observable applicability predicates from post-outcome labels and
+expand source-cluster/action coverage. Another prompt, table, or larger held-out run
+would not repair either defect.
 
 ## What would count as paper evidence
 
