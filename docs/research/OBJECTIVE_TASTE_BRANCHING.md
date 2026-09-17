@@ -39,6 +39,14 @@ seven branches expose the continuous endpoint. The result is a useful developmen
 signal and a measurement diagnosis, not paper evidence for a state-conditional Taste
 policy.
 
+Inspection identified an adapter-level cause for part of that missingness. The public
+NewtonBench prompt requires a function enclosed in `<final_law>` tags, while its
+execution path passes the whole tagged string to Python. SciTaste now translates one
+well-formed benchmark-native envelope to executable source at the adapter boundary,
+rejects malformed or mixed-prose envelopes, and records the normalization version in
+the toolbox and scorer commitments. Existing receipts are not rewritten; a future
+population using the corrected commitment is a new study.
+
 The machine-readable adequacy record makes that distinction explicit. A single-state
 action set can never claim generalization, a learned policy advantage, or headline
 eligibility. It reports metric coverage, action-space coverage, local separation, and

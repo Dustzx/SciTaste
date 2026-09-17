@@ -21,7 +21,11 @@ from scitaste.evaluation.interactive_research import (
     InteractiveResearchLoop,
     guidance_action_complied,
 )
-from scitaste.evaluation.newtonbench_runtime import NewtonBenchTask, NewtonBenchToolbox
+from scitaste.evaluation.newtonbench_runtime import (
+    NewtonBenchTask,
+    NewtonBenchToolbox,
+    _normalize_newtonbench_submission,
+)
 from scitaste.evaluation.research_workload import (
     ResearchWorkloadContract,
     ResearchWorkloadParadigm,
@@ -434,6 +438,18 @@ def test_newtonbench_measurements_are_seeded_replayable_and_rng_isolated() -> No
     assert observed_numpy == expected_numpy
     assert first["environment_sha256"] == _random_toolbox(17).environment_sha256
     assert first["environment_sha256"] != _random_toolbox(18).environment_sha256
+
+
+def test_newtonbench_submission_normalizes_the_required_final_law_envelope() -> None:
+    source = "def discovered_law(x):\n    return x"
+
+    assert _normalize_newtonbench_submission(source) == source
+    assert (
+        _normalize_newtonbench_submission(f"<final_law>\n{source}\n</final_law>")
+        == source
+    )
+    with pytest.raises(ValueError, match="malformed final-law envelope"):
+        _normalize_newtonbench_submission(f"analysis\n<final_law>{source}</final_law>")
 
 
 def test_workload_training_is_separate_from_scitaste_taste_adaptation() -> None:

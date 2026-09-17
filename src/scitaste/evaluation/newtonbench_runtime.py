@@ -35,6 +35,7 @@ _COMMIT = r"^[0-9a-f]{40}$"
 _MODULE = r"^m[0-9]+_[a-z0-9_]+$"
 _IMPORT_LOCK = threading.RLock()
 _RNG_LOCK = threading.RLock()
+_SUBMISSION_NORMALIZATION = "newtonbench-final-law-envelope-v1"
 
 
 class NewtonBenchTask(BaseModel):
@@ -179,11 +180,12 @@ class NewtonBenchToolbox:
     def fingerprint(self) -> str:
         return content_sha256(
             {
-                "implementation": "scitaste-newtonbench-toolbox-v2",
+                "implementation": "scitaste-newtonbench-toolbox-v3",
                 "task_sha256": self.task_sha256,
                 "environment_sha256": self.environment_sha256,
                 "task_prompt_sha256": content_sha256(self.task_prompt),
                 "evaluation_sha256": self._evaluation_sha256,
+                "submission_normalization": _SUBMISSION_NORMALIZATION,
                 "symbolic_judge_sha256": self.symbolic_judge.fingerprint,
                 "code_runner_sha256": (
                     self.code_runner.fingerprint if self.code_runner is not None else None
@@ -229,6 +231,7 @@ class NewtonBenchToolbox:
         common_evaluation = importlib.import_module("modules.common.evaluation")
         original_judge = common_evaluation.llm_symbolic_equivalence_judge
         started = perf_counter()
+        normalized_submission = _normalize_newtonbench_submission(submission)
 
         def bound_judge(
             llm_formula_str: str,
@@ -247,7 +250,7 @@ class NewtonBenchToolbox:
                 with _isolated_random_state(self.task.score_seed):
                     common_evaluation.llm_symbolic_equivalence_judge = bound_judge
                     raw = self.module.evaluate_law(
-                        submission,
+                        normalized_submission,
                         self.module.PARAM_DESCRIPTION,
                         difficulty=self.task.difficulty,
                         law_version=self.task.law_version,
@@ -274,6 +277,7 @@ class NewtonBenchToolbox:
                 "module_sha256": self._module_sha256,
                 "task": self.task.model_dump(mode="json"),
                 "environment_sha256": self.environment_sha256,
+                "submission_normalization": _SUBMISSION_NORMALIZATION,
                 "judge_fingerprint": self.symbolic_judge.fingerprint,
             }
         )
@@ -292,6 +296,29 @@ class NewtonBenchToolbox:
             usage=self.symbolic_judge.last_usage,
             latency_ms=latency_ms,
         )
+
+
+def _normalize_newtonbench_submission(submission: str) -> str:
+    """Translate NewtonBench's required final-law envelope to executable source.
+
+    The benchmark prompt requires ``<final_law>`` tags, while its evaluator executes
+    the submitted string directly. Accept the benchmark-native envelope or bare source
+    and reject mixed prose or multiple envelopes instead of silently editing content.
+    """
+
+    stripped = submission.strip()
+    envelope = re.fullmatch(
+        r"<final_law>\s*(?P<source>.*?)\s*</final_law>",
+        stripped,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    if envelope is not None:
+        stripped = envelope.group("source").strip()
+    elif "<final_law" in stripped.casefold() or "</final_law>" in stripped.casefold():
+        raise ValueError("NewtonBench submission contains a malformed final-law envelope")
+    if not stripped:
+        raise ValueError("NewtonBench submission does not contain executable source")
+    return stripped
 
 
 def _derive_experiment_seed(
