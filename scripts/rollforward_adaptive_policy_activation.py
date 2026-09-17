@@ -109,6 +109,12 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
     predecessor_config = LifecycleTastePolicyConfig.model_validate_json(
         _bound_path(workspace, base.policy_config.locator).read_bytes(), strict=True
     )
+    if args.development_credible_z is not None and not (
+        0.0 <= args.development_credible_z < predecessor_config.credible_z
+    ):
+        raise ValueError(
+            "development credible-z must be nonnegative and lower than the frozen predecessor"
+        )
     episode_paths = [project_root / item.admission_locator for item in predecessor_corpus.episodes]
     assignment_paths = [
         project_root / item.assignment_locator for item in predecessor_corpus.episodes
@@ -137,14 +143,15 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
         expected_project_revision=snapshot.revision,
     )
     save_project_taste_policy_corpus(corpus, corpus_path)
-    config = predecessor_config.model_copy(
-        update={
-            "policy_id": f"{successor_id}-base",
-            "idea_revision": idea,
-            "minimum_feature_support": manifest.policy_refresh.minimum_feature_support,
-            "allow_cross_domain": manifest.policy_refresh.allow_cross_domain,
-        }
-    )
+    config_updates: dict[str, object] = {
+        "policy_id": f"{successor_id}-base",
+        "idea_revision": idea,
+        "minimum_feature_support": manifest.policy_refresh.minimum_feature_support,
+        "allow_cross_domain": manifest.policy_refresh.allow_cross_domain,
+    }
+    if args.development_credible_z is not None:
+        config_updates["credible_z"] = args.development_credible_z
+    config = predecessor_config.model_copy(update=config_updates)
     config = LifecycleTastePolicyConfig.model_validate(config.model_dump(mode="python"))
     save_adaptive_policy_activation_artifact(config, config_path)
     materialize_project_taste_policy_refresh(
@@ -283,6 +290,8 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
         "no_model_calls_performed": True,
         "no_api_calls_performed": True,
         "no_gpu_work_performed": True,
+        "development_only_credible_z": args.development_credible_z,
+        "formal_effect_claim_eligible": False,
     }
     receipt_payload["receipt_sha256"] = content_sha256(receipt_payload)
     _write_json(receipt_payload, output_dir / "ROLLFORWARD.json")
@@ -364,6 +373,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--successor-policy-id", required=True)
     parser.add_argument("--successor-manifest-id", default=None)
     parser.add_argument("--implementation-commit", required=True)
+    parser.add_argument(
+        "--development-credible-z",
+        type=float,
+        default=None,
+        help=(
+            "Explicitly lower the confidence boundary for a development-only plumbing run; "
+            "the resulting receipt is never formal-effect eligible"
+        ),
+    )
     parser.add_argument("--output-directory", type=Path, required=True)
     parser.add_argument("--e2-output-directory", type=Path, required=True)
     parser.add_argument("--workspace-root", type=Path, default=Path("."))
