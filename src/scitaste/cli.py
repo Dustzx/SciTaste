@@ -8104,6 +8104,17 @@ def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
                                     item.missing_or_unadmitted_components
                                 ),
                                 "component_shape_matched": item.component_shape_matched,
+                                "scale_reference_matched": item.scale_reference_matched,
+                                "scale_gaps": [
+                                    {
+                                        "metric": gap.metric,
+                                        "accepted_value": gap.accepted_value,
+                                        "current_value": gap.current_value,
+                                        "status": gap.status,
+                                        "diagnosis": gap.diagnosis,
+                                    }
+                                    for gap in item.scale_gaps
+                                ],
                                 "diagnosis": item.diagnosis,
                             }
                             for item in assessment.venue_comparison.accepted_neighbour_gaps

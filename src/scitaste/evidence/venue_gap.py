@@ -135,6 +135,25 @@ class VenueGapActionKind(StrEnum):
     LITERATURE = "literature"
 
 
+class VenueEvidenceScaleMetric(StrEnum):
+    """Comparable counts that describe how much evidence a paper actually carries."""
+
+    AUTHENTIC_RESEARCH_TASKS = "authentic-research-task-count"
+    SCIENTIFIC_DISCIPLINES = "scientific-discipline-count"
+    SOURCE_PUBLICATIONS = "source-publication-count"
+    COMPETITIVE_SYSTEMS = "competitive-system-count"
+    EXPERT_EVALUATORS = "expert-evaluator-count"
+    RANDOM_SEEDS = "random-seed-count"
+    MECHANISM_ABLATIONS = "mechanism-ablation-count"
+    REAL_WORLD_CASES = "real-world-case-count"
+
+
+class VenueEvidenceScaleStatus(StrEnum):
+    CURRENT_MISSING = "current-missing"
+    BELOW_ACCEPTED_REFERENCE = "below-accepted-reference"
+    MEETS_OR_EXCEEDS_REFERENCE = "meets-or-exceeds-reference"
+
+
 class SubmissionEvidencePosition(StrEnum):
     CONTRADICTED = "core-claim-contradicted"
     NOT_YET_COMPETITIVE = "not-yet-competitive"
@@ -214,6 +233,17 @@ class VenueInnovationClaim(BaseModel):
         return self
 
 
+class VenueEvidenceScaleFact(BaseModel):
+    """One source-interpretable count, never an acceptance threshold by itself."""
+
+    model_config = _CONFIG
+
+    metric: VenueEvidenceScaleMetric
+    value: int = Field(ge=0, le=1_000_000_000)
+    scope: str = Field(min_length=1, max_length=1_000)
+    source_basis: str = Field(min_length=1, max_length=2_000)
+
+
 class AcceptedNeighbourEvidenceProfile(BaseModel):
     """Structured evidence footprint reported by one accepted neighbour."""
 
@@ -221,11 +251,15 @@ class AcceptedNeighbourEvidenceProfile(BaseModel):
 
     paper_id: str
     components: tuple[VenueEvidenceComponent, ...] = Field(min_length=1, max_length=20)
+    scale_facts: tuple[VenueEvidenceScaleFact, ...] = Field(default=(), max_length=20)
 
     @model_validator(mode="after")
     def profile_is_canonical(self) -> AcceptedNeighbourEvidenceProfile:
         if self.components != tuple(sorted(set(self.components), key=lambda item: item.value)):
             raise ValueError("accepted-neighbour evidence components must be sorted and unique")
+        metrics = [item.metric for item in self.scale_facts]
+        if metrics != sorted(set(metrics), key=lambda item: item.value):
+            raise ValueError("accepted-neighbour scale facts must be metric ordered and unique")
         return self
 
 
@@ -283,6 +317,7 @@ class VenueComparisonProfile(BaseModel):
     current_evidence_components: tuple[CurrentEvidenceComponentBinding, ...] = Field(
         default=(), max_length=30
     )
+    current_scale_facts: tuple[VenueEvidenceScaleFact, ...] = Field(default=(), max_length=20)
     claim_evidence_contracts: tuple[VenueClaimEvidenceContract, ...] = Field(
         default=(), max_length=30
     )
@@ -307,6 +342,9 @@ class VenueComparisonProfile(BaseModel):
         components = [item.component for item in self.current_evidence_components]
         if len(components) != len(set(components)):
             raise ValueError("venue comparison current evidence components must be unique")
+        scale_metrics = [item.metric for item in self.current_scale_facts]
+        if scale_metrics != sorted(set(scale_metrics), key=lambda item: item.value):
+            raise ValueError("current scale facts must be metric ordered and unique")
         contract_claim_ids = [item.claim_id for item in self.claim_evidence_contracts]
         if len(contract_claim_ids) != len(set(contract_claim_ids)):
             raise ValueError("venue comparison claim-evidence contracts must be unique")
@@ -512,6 +550,21 @@ class VenueClaimArgumentAssessment(BaseModel):
     diagnosis: str
 
 
+class VenueEvidenceScaleGapAssessment(BaseModel):
+    """Count-level contrast with one accepted neighbour, without quality equivalence."""
+
+    model_config = _CONFIG
+
+    metric: VenueEvidenceScaleMetric
+    accepted_value: int = Field(ge=0)
+    accepted_scope: str
+    accepted_source_basis: str
+    current_value: int | None = Field(default=None, ge=0)
+    current_scope: str | None = None
+    status: VenueEvidenceScaleStatus
+    diagnosis: str
+
+
 class AcceptedNeighbourGapAssessment(BaseModel):
     """Direct evidence-shape comparison with one accepted nearest neighbour.
 
@@ -530,6 +583,8 @@ class AcceptedNeighbourGapAssessment(BaseModel):
     missing_or_unadmitted_components: tuple[VenueEvidenceComponent, ...]
     comparable_supporting_family_ids: tuple[str, ...]
     component_shape_matched: bool
+    scale_gaps: tuple[VenueEvidenceScaleGapAssessment, ...]
+    scale_reference_matched: bool
     quality_equivalence_claimed: Literal[False] = False
     diagnosis: str
 
@@ -801,6 +856,9 @@ def _assess_venue_comparison(
             matrix_by_component=matrix_by_component,
             current_by_component=current_by_component,
             evidence_by_id=evidence_by_id,
+            current_scale_by_metric={
+                item.metric: item for item in profile.current_scale_facts
+            },
         )
         for neighbour in sorted(
             profile.accepted_evidence_profiles,
@@ -1013,6 +1071,7 @@ def _assess_accepted_neighbour_gap(
     matrix_by_component: dict[VenueEvidenceComponent, VenueEvidenceComponentAssessment],
     current_by_component: dict[VenueEvidenceComponent, tuple[str, ...]],
     evidence_by_id: dict[str, VenueEvidenceSignal],
+    current_scale_by_metric: dict[VenueEvidenceScaleMetric, VenueEvidenceScaleFact],
 ) -> AcceptedNeighbourGapAssessment:
     """Expose what the current paper lacks relative to one accepted paper."""
 
@@ -1042,6 +1101,14 @@ def _assess_accepted_neighbour_gap(
             )
     component_shape_matched = (
         not missing and not contradicting and len(supporting_families) >= 2
+    )
+    scale_gaps = tuple(
+        _assess_evidence_scale_gap(item, current_scale_by_metric.get(item.metric))
+        for item in profile.scale_facts
+    )
+    scale_reference_matched = bool(scale_gaps) and all(
+        item.status is VenueEvidenceScaleStatus.MEETS_OR_EXCEEDS_REFERENCE
+        for item in scale_gaps
     )
     if missing:
         diagnosis = (
@@ -1074,8 +1141,51 @@ def _assess_accepted_neighbour_gap(
         missing_or_unadmitted_components=tuple(missing),
         comparable_supporting_family_ids=tuple(sorted(supporting_families)),
         component_shape_matched=component_shape_matched,
+        scale_gaps=scale_gaps,
+        scale_reference_matched=scale_reference_matched,
         quality_equivalence_claimed=False,
         diagnosis=diagnosis,
+    )
+
+
+def _assess_evidence_scale_gap(
+    accepted: VenueEvidenceScaleFact,
+    current: VenueEvidenceScaleFact | None,
+) -> VenueEvidenceScaleGapAssessment:
+    if current is None:
+        return VenueEvidenceScaleGapAssessment(
+            metric=accepted.metric,
+            accepted_value=accepted.value,
+            accepted_scope=accepted.scope,
+            accepted_source_basis=accepted.source_basis,
+            current_value=None,
+            current_scope=None,
+            status=VenueEvidenceScaleStatus.CURRENT_MISSING,
+            diagnosis=(
+                f"The accepted paper reports {accepted.value} for {accepted.metric.value}; "
+                "the current project has no comparable registered count."
+            ),
+        )
+    meets = current.value >= accepted.value
+    return VenueEvidenceScaleGapAssessment(
+        metric=accepted.metric,
+        accepted_value=accepted.value,
+        accepted_scope=accepted.scope,
+        accepted_source_basis=accepted.source_basis,
+        current_value=current.value,
+        current_scope=current.scope,
+        status=(
+            VenueEvidenceScaleStatus.MEETS_OR_EXCEEDS_REFERENCE
+            if meets
+            else VenueEvidenceScaleStatus.BELOW_ACCEPTED_REFERENCE
+        ),
+        diagnosis=(
+            f"The current registered count ({current.value}) "
+            + ("meets or exceeds" if meets else "is below")
+            + f" this accepted-paper reference ({accepted.value}) for "
+            f"{accepted.metric.value}. Scope still differs: current={current.scope}; "
+            f"accepted={accepted.scope}. Count parity never establishes quality equivalence."
+        ),
     )
 
 
@@ -1614,6 +1724,10 @@ __all__ = [
     "VenueEvidenceComponentAssessment",
     "VenueEvidenceCriterion",
     "VenueEvidencePortfolioAssessment",
+    "VenueEvidenceScaleFact",
+    "VenueEvidenceScaleGapAssessment",
+    "VenueEvidenceScaleMetric",
+    "VenueEvidenceScaleStatus",
     "VenueEvidenceSignal",
     "VenueGapAction",
     "VenueGapActionKind",

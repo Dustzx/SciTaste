@@ -80,8 +80,8 @@ strong baselines, ablations, objective or external validation, and case studies.
 The current project-owned manifest and generated assessment are:
 
 - `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V8.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V6.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V14.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V7.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V15.json`
 
 The comparison set contains ICLR main-track method, evaluation, and benchmark
 papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
@@ -232,3 +232,21 @@ margin. The result is therefore useful mechanism diagnosis but remains contradic
 development-only evidence. All five central claim arguments remain incomplete, and the same
 three portfolio-level gaps remain: admitted end-to-end trajectories, human/expert validation,
 and strong system baselines.
+
+V15 adds evidence-strength references instead of treating component names as equal proof. Every
+accepted-paper row may bind source-reported counts for authentic tasks, source publications,
+competitive systems, expert evaluators, scientific disciplines, mechanism ablations, random
+seeds, and real-world cases. The compiler contrasts them with registered current-project counts
+and emits `current-missing`, `below-accepted-reference`, or
+`meets-or-exceeds-reference`. Count parity is explicitly diagnostic and never claims equal quality.
+
+The present scale gap is large. EXP-Bench reports 461 authentic experiment tasks from 51 papers;
+ScienceAgentBench reports 102 tasks from 44 publications, four disciplines, nine subject-matter
+experts, and fifteen model--framework configurations; HeurekaBench contains 100 main questions,
+compares three scientific agents, and validates its judge with eleven experts; TusoAI evaluates
+eleven scientific applications, four mechanism ablations, three random seeds, and two real-world
+cases. SciTaste currently registers zero peer-reviewed-workflow tasks, zero competitive external
+systems, zero experts, one discipline, one seed per task/domain, two admitted negative mechanism
+families, and zero real-world discovery cases. These counts do not prescribe an ICLR minimum, but
+they make it impossible to mistake the current controlled NewtonBench table for comparable
+paper-level evidence.

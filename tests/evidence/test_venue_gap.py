@@ -14,6 +14,9 @@ from scitaste.evidence.venue_gap import (
     VenueContributionAxis,
     VenueEvidenceComponent,
     VenueEvidenceCriterion,
+    VenueEvidenceScaleFact,
+    VenueEvidenceScaleMetric,
+    VenueEvidenceScaleStatus,
     VenueEvidenceSignal,
     VenueGapAction,
     VenueGapActionKind,
@@ -158,6 +161,20 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
                     VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
                     VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
                 ),
+                scale_facts=(
+                    VenueEvidenceScaleFact(
+                        metric=VenueEvidenceScaleMetric.AUTHENTIC_RESEARCH_TASKS,
+                        value=100,
+                        scope="peer-reviewed research workflows",
+                        source_basis="reported benchmark task count",
+                    ),
+                    VenueEvidenceScaleFact(
+                        metric=VenueEvidenceScaleMetric.COMPETITIVE_SYSTEMS,
+                        value=5,
+                        scope="matched research-agent systems",
+                        source_basis="reported system comparison",
+                    ),
+                ),
             ),
             AcceptedNeighbourEvidenceProfile(
                 paper_id="accepted-neighbour-2",
@@ -172,6 +189,14 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
             CurrentEvidenceComponentBinding(
                 component=VenueEvidenceComponent.MECHANISM_ABLATION,
                 evidence_ids=("one-local-table",),
+            ),
+        ),
+        current_scale_facts=(
+            VenueEvidenceScaleFact(
+                metric=VenueEvidenceScaleMetric.AUTHENTIC_RESEARCH_TASKS,
+                value=12,
+                scope="synthetic held-out task states",
+                source_basis="registered objective evaluation",
             ),
         ),
         claim_evidence_contracts=(
@@ -211,6 +236,11 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert first_neighbour_gap.paper_id == "accepted-neighbour-1"
     assert first_neighbour_gap.component_shape_matched is False
     assert first_neighbour_gap.quality_equivalence_claimed is False
+    assert first_neighbour_gap.scale_reference_matched is False
+    assert tuple(item.status for item in first_neighbour_gap.scale_gaps) == (
+        VenueEvidenceScaleStatus.BELOW_ACCEPTED_REFERENCE,
+        VenueEvidenceScaleStatus.CURRENT_MISSING,
+    )
     assert first_neighbour_gap.missing_or_unadmitted_components == (
         VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
         VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
