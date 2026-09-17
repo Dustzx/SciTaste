@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "counterfactual-taste-balanced-development-v6",
+  "project_id": "scitaste-self-development",
+  "target_venue": "ICLR 2027",
+  "frozen_implementation_commit": "ae6741a3ec612997c28887efe00448caf439f041",
+  "benchmark_name": "NewtonBench",
+  "benchmark_repository_commit": "912a4ba5f4356ddd06acc16e44460ca30be4abc2",
+  "benchmark_checkout": "outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout",
+  "formal_v5_outcomes_excluded": true,
+  "selection_rule": {
+    "stage": "interactive-experiment",
+    "prefix_turn_count": 2,
+    "required_evidence_status": "candidate-untested",
+    "selection_uses_terminal_outcomes": false,
+    "reason": "Fill an observable-state coverage gap at four-to-eight experiments without selecting tasks from branch outcomes."
+  },
+  "execution": {
+    "limits": "configs/evaluation/newtonbench/development_v6/limits_four_per_turn.json",
+    "limits_sha256": "fcf1f47836d08869f857d997f058dd84eac0fc2976da946cb92ee8f42138f253",
+    "research_agent_config": "configs/model_nodes/deepseek_v41flash.interactive_live_20260917.yaml",
+    "research_agent_config_sha256": "82a681041d037ee86152f4c5e50db0588b9c5ec73c1486716f8f4cacfa42c54c",
+    "terminal_judge_config": "configs/model_nodes/zhipu_glm53_flash.newtonbench_development_v5.yaml",
+    "terminal_judge_config_sha256": "246a49ea12aedca85a4b6d3fe998eafb250eda681b136d768e3bf24d62e0ce3a",
+    "primary_metric": "exp-neg-rmsle",
+    "source_metric": "rmsle",
+    "metric_transform": "exp-negative",
+    "direction": "higher",
+    "failure_value": 0,
+    "practical_equivalence_tolerance": 0.001
+  },
+  "source_population": [
+    {
+      "task": "gravity",
+      "task_id": "newtonbench-m0-gravity-easy-vanilla-equation-v0-seed-10000",
+      "source_receipt_sha256": "10e11a39741c637daef46fe118d816bcb5906eeb96209b85f46c33f4d36359ed",
+      "turn_two_status": "candidate-untested",
+      "selected_for_branching": true
+    },
+    {
+      "task": "coulomb",
+      "task_id": "newtonbench-m1-coulomb-force-easy-vanilla-equation-v1-seed-10001",
+      "source_receipt_sha256": "6ab63124f38174ee632d7faa5cc534b1c062043965f15024a9422731fc9d5e29",
+      "turn_two_status": "candidate-untested",
+      "selected_for_branching": true
+    },
+    {
+      "task": "magnetic",
+      "task_id": "newtonbench-m2-magnetic-force-medium-simple-system-v2-seed-10002",
+      "source_receipt_sha256": "37bd792dbb7ed09c34f04ef518d1ebc19d6afeada75892c65c65350db96d93d2",
+      "turn_two_status": "candidate-untested",
+      "selected_for_branching": true
+    },
+    {
+      "task": "snell",
+      "task_id": "newtonbench-m4-snell-law-hard-complex-system-v0-seed-10004",
+      "source_receipt_sha256": "e22ce8da55c5d30532e42b759be8f5f166e457957b012ca59f70cddd96fe1837",
+      "turn_two_status": "candidate-untested",
+      "selected_for_branching": true
+    },
+    {
+      "task": "radioactive",
+      "task_id": "newtonbench-m5-radioactive-decay-easy-vanilla-equation-v2-seed-10005",
+      "source_receipt_sha256": "efa90a782ebd1b8a9794965cd1f69d8f2aaf21f5defe7b6bde2795e53c2a8f10",
+      "turn_two_status": "candidate-supported",
+      "selected_for_branching": false
+    },
+    {
+      "task": "underdamped",
+      "task_id": "newtonbench-m6-underdamped-harmonic-medium-simple-system-v0-seed-10006",
+      "source_receipt_sha256": "72ba2d89bb6132612d11f086bd2dfcccd407cc2948ddc42b26af981b4aec00e9",
+      "turn_two_status": "candidate-untested",
+      "selected_for_branching": true
+    },
+    {
+      "task": "hooke",
+      "task_id": "newtonbench-m9-hooke-law-medium-simple-system-v1-seed-10009",
+      "source_receipt_sha256": "e3d2a83b3deb86dff778b4b6ddeb1bf93674c3fe630f7f4e9d9c6ea5975c1779",
+      "turn_two_status": "candidate-untested",
+      "selected_for_branching": true
+    },
+    {
+      "task": "heat",
+      "task_id": "newtonbench-m11-heat-transfer-hard-complex-system-v2-seed-10011",
+      "source_receipt_sha256": "1f8bfcac2242ddf205b9431284de51ec34998cd514f8e4071eba8ffe55e0f7f4",
+      "turn_two_status": "no-candidate",
+      "selected_for_branching": false
+    }
+  ],
+  "forced_actions": [
+    "ANALYZE",
+    "EXPERIMENT",
+    "PILOT",
+    "PIVOT",
+    "PROBE",
+    "REFINE",
+    "STOP"
+  ],
+  "maximum_branch_trajectories": 42,
+  "evidence_scope": "development-only",
+  "formal_confirmation_authorized": false
+}
