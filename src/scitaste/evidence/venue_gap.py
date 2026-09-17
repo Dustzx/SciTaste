@@ -9,6 +9,7 @@ project's real venue deadline to rank the next claim-closing action.
 from __future__ import annotations
 
 import os
+import re
 import stat
 from collections import defaultdict
 from enum import StrEnum
@@ -511,6 +512,28 @@ class VenueClaimArgumentAssessment(BaseModel):
     diagnosis: str
 
 
+class AcceptedNeighbourGapAssessment(BaseModel):
+    """Direct evidence-shape comparison with one accepted nearest neighbour.
+
+    This is intentionally a gap record, not a score.  Matching the named
+    components of an accepted paper does not establish equal scientific quality,
+    while a missing component is a concrete warning against paper-level claims.
+    """
+
+    model_config = _CONFIG
+
+    paper_id: str
+    paper_kind: AcceptedPaperKind
+    accepted_components: tuple[VenueEvidenceComponent, ...]
+    current_admitted_supporting_components: tuple[VenueEvidenceComponent, ...]
+    current_admitted_contradicting_components: tuple[VenueEvidenceComponent, ...]
+    missing_or_unadmitted_components: tuple[VenueEvidenceComponent, ...]
+    comparable_supporting_family_ids: tuple[str, ...]
+    component_shape_matched: bool
+    quality_equivalence_claimed: Literal[False] = False
+    diagnosis: str
+
+
 class VenueComparisonAssessment(BaseModel):
     """No-score comparison of novelty claims and complete evidence shape."""
 
@@ -523,7 +546,12 @@ class VenueComparisonAssessment(BaseModel):
     innovation_claims: tuple[VenueInnovationClaimAssessment, ...]
     claim_arguments: tuple[VenueClaimArgumentAssessment, ...]
     component_matrix: tuple[VenueEvidenceComponentAssessment, ...]
+    accepted_neighbour_gaps: tuple[AcceptedNeighbourGapAssessment, ...]
     accepted_neighbour_count: int = Field(ge=2)
+    same_venue_neighbour_count: int = Field(ge=0)
+    latest_same_venue_year: int | None = Field(default=None, ge=2000, le=2100)
+    same_venue_recency_gap_years: int | None = Field(default=None, ge=0, le=100)
+    same_venue_lineage_present: bool
     accepted_component_union_count: int = Field(ge=1)
     accepted_majority_components: tuple[VenueEvidenceComponent, ...]
     accepted_method_majority_components: tuple[VenueEvidenceComponent, ...]
@@ -763,6 +791,22 @@ def _assess_venue_comparison(
         )
         for component in sorted(VenueEvidenceComponent, key=lambda item: item.value)
     )
+    matrix_by_component = {item.component: item for item in matrix}
+    accepted_neighbour_gaps = tuple(
+        _assess_accepted_neighbour_gap(
+            neighbour,
+            neighbour_kind_by_id={
+                item.paper_id: item.paper_kind for item in manifest.nearest_neighbours
+            },
+            matrix_by_component=matrix_by_component,
+            current_by_component=current_by_component,
+            evidence_by_id=evidence_by_id,
+        )
+        for neighbour in sorted(
+            profile.accepted_evidence_profiles,
+            key=lambda item: item.paper_id,
+        )
+    )
     neighbour_count = len(profile.accepted_evidence_profiles)
     accepted_union = {
         component for component, paper_ids in accepted_by_component.items() if paper_ids
@@ -773,6 +817,25 @@ def _assess_venue_comparison(
         if len(accepted_by_component[component]) * 2 > neighbour_count
     )
     neighbour_kind_by_id = {item.paper_id: item.paper_kind for item in manifest.nearest_neighbours}
+    target_series = _venue_series(manifest.target_venue)
+    same_venue_neighbours = tuple(
+        item
+        for item in manifest.nearest_neighbours
+        if _venue_series(item.venue) == target_series
+    )
+    latest_same_venue_year = (
+        None if not same_venue_neighbours else max(item.year for item in same_venue_neighbours)
+    )
+    target_year = _venue_year(manifest.target_venue)
+    same_venue_recency_gap = (
+        None
+        if target_year is None or latest_same_venue_year is None
+        else max(0, target_year - latest_same_venue_year)
+    )
+    same_venue_lineage_present = (
+        len(same_venue_neighbours) >= 2
+        and (same_venue_recency_gap is None or same_venue_recency_gap <= 2)
+    )
     method_neighbour_ids = {
         paper_id
         for paper_id, kind in neighbour_kind_by_id.items()
@@ -863,6 +926,7 @@ def _assess_venue_comparison(
         and len(admitted_family_ids) >= 2
         and not missing_target
         and central_claim_arguments_complete
+        and same_venue_lineage_present
     )
     if contradicted_innovations:
         diagnosis = (
@@ -891,6 +955,12 @@ def _assess_venue_comparison(
             "family. Accepted neighbours combine multiple independent components, so a single "
             "controlled result cannot establish venue competitiveness."
         )
+    elif not same_venue_lineage_present:
+        diagnosis = (
+            "The comparison set does not contain at least two recent accepted papers from "
+            "the target venue series. Cross-venue analogies cannot replace a current "
+            "same-venue evidence standard."
+        )
     elif missing_target:
         diagnosis = (
             "The current portfolio lacks admitted evidence required by accepted papers of the "
@@ -910,7 +980,12 @@ def _assess_venue_comparison(
         innovation_claims=innovation_claims,
         claim_arguments=claim_arguments,
         component_matrix=matrix,
+        accepted_neighbour_gaps=accepted_neighbour_gaps,
         accepted_neighbour_count=neighbour_count,
+        same_venue_neighbour_count=len(same_venue_neighbours),
+        latest_same_venue_year=latest_same_venue_year,
+        same_venue_recency_gap_years=same_venue_recency_gap,
+        same_venue_lineage_present=same_venue_lineage_present,
         accepted_component_union_count=len(accepted_union),
         accepted_majority_components=accepted_majority,
         accepted_method_majority_components=accepted_method_majority,
@@ -929,6 +1004,90 @@ def _assess_venue_comparison(
         one_controlled_family_cannot_establish_venue_competitiveness=True,
         diagnosis=diagnosis,
     )
+
+
+def _assess_accepted_neighbour_gap(
+    profile: AcceptedNeighbourEvidenceProfile,
+    *,
+    neighbour_kind_by_id: dict[str, AcceptedPaperKind],
+    matrix_by_component: dict[VenueEvidenceComponent, VenueEvidenceComponentAssessment],
+    current_by_component: dict[VenueEvidenceComponent, tuple[str, ...]],
+    evidence_by_id: dict[str, VenueEvidenceSignal],
+) -> AcceptedNeighbourGapAssessment:
+    """Expose what the current paper lacks relative to one accepted paper."""
+
+    accepted = tuple(sorted(profile.components, key=lambda item: item.value))
+    supporting: list[VenueEvidenceComponent] = []
+    contradicting: list[VenueEvidenceComponent] = []
+    missing: list[VenueEvidenceComponent] = []
+    supporting_families: set[str] = set()
+    for component in accepted:
+        assessed = matrix_by_component[component]
+        if assessed.current_maturity is not VenueComponentMaturity.ADMITTED:
+            missing.append(component)
+            continue
+        if assessed.current_direction in {
+            VenueComponentDirection.CONTRADICTING,
+            VenueComponentDirection.MIXED,
+        }:
+            contradicting.append(component)
+        if assessed.current_direction is VenueComponentDirection.SUPPORTING:
+            supporting.append(component)
+            supporting_families.update(
+                evidence_by_id[evidence_id].family_id
+                for evidence_id in current_by_component.get(component, ())
+                if evidence_by_id[evidence_id].maturity is EvidenceMaturity.ADMITTED
+                and evidence_by_id[evidence_id].headline_eligible
+                and evidence_by_id[evidence_id].direction is EvidenceDirection.SUPPORTING
+            )
+    component_shape_matched = (
+        not missing and not contradicting and len(supporting_families) >= 2
+    )
+    if missing:
+        diagnosis = (
+            "Relative to this accepted paper, the current project lacks admitted evidence "
+            "for: " + ", ".join(item.value for item in missing) + "."
+        )
+    elif contradicting:
+        diagnosis = (
+            "The current evidence includes an admitted contradiction in components also used "
+            "by this accepted paper: "
+            + ", ".join(item.value for item in contradicting)
+            + "."
+        )
+    elif len(supporting_families) < 2:
+        diagnosis = (
+            "Comparable components come from fewer than two independent supporting empirical "
+            "families; one controlled result is not an accepted-paper evidence portfolio."
+        )
+    else:
+        diagnosis = (
+            "Named evidence components are present across independent families. This matches "
+            "only the evidence shape and does not claim equal novelty, rigor, scale, or quality."
+        )
+    return AcceptedNeighbourGapAssessment(
+        paper_id=profile.paper_id,
+        paper_kind=neighbour_kind_by_id[profile.paper_id],
+        accepted_components=accepted,
+        current_admitted_supporting_components=tuple(supporting),
+        current_admitted_contradicting_components=tuple(contradicting),
+        missing_or_unadmitted_components=tuple(missing),
+        comparable_supporting_family_ids=tuple(sorted(supporting_families)),
+        component_shape_matched=component_shape_matched,
+        quality_equivalence_claimed=False,
+        diagnosis=diagnosis,
+    )
+
+
+def _venue_series(value: str) -> str:
+    """Normalize a venue name while removing a four-digit edition year."""
+
+    return " ".join(re.sub(r"\b(?:19|20)\d{2}\b", " ", value.casefold()).split())
+
+
+def _venue_year(value: str) -> int | None:
+    match = re.search(r"\b((?:19|20)\d{2})\b", value)
+    return None if match is None else int(match.group(1))
 
 
 def _majority_components(
@@ -1434,6 +1593,7 @@ def _normalize(value: str) -> str:
 __all__ = [
     "AcceptedNearestNeighbour",
     "AcceptedNeighbourEvidenceProfile",
+    "AcceptedNeighbourGapAssessment",
     "AcceptedPaperKind",
     "CurrentEvidenceComponentBinding",
     "EvidenceDirection",

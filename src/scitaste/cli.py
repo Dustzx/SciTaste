@@ -8090,6 +8090,24 @@ def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
                             assessment.venue_comparison.current_admitted_component_count
                         ),
                         "target_paper_kind": assessment.venue_comparison.target_paper_kind,
+                        "same_venue_neighbour_count": (
+                            assessment.venue_comparison.same_venue_neighbour_count
+                        ),
+                        "latest_same_venue_year": (
+                            assessment.venue_comparison.latest_same_venue_year
+                        ),
+                        "accepted_neighbour_gaps": [
+                            {
+                                "paper_id": item.paper_id,
+                                "paper_kind": item.paper_kind,
+                                "missing_or_unadmitted_components": (
+                                    item.missing_or_unadmitted_components
+                                ),
+                                "component_shape_matched": item.component_shape_matched,
+                                "diagnosis": item.diagnosis,
+                            }
+                            for item in assessment.venue_comparison.accepted_neighbour_gaps
+                        ],
                         "central_claim_arguments_complete": (
                             assessment.venue_comparison.central_claim_arguments_complete
                         ),

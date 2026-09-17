@@ -82,6 +82,15 @@ class TasteDeliberationCandidate(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     broad_retrieval_score: float = Field(ge=0.0)
     broad_matched_fields: tuple[str, ...] = Field(default_factory=tuple, max_length=30)
+    hard_applicability_satisfied: bool | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    hard_applicability_mismatches: tuple[str, ...] = Field(
+        default_factory=tuple,
+        max_length=10,
+        exclude_if=lambda value: not value,
+    )
 
     @model_validator(mode="after")
     def identities_and_boundaries_are_unique(self) -> TasteDeliberationCandidate:
@@ -92,6 +101,7 @@ class TasteDeliberationCandidate(BaseModel):
             ("applicability conditions", self.applies_when),
             ("failure conditions", self.fails_when),
             ("broad matched fields", self.broad_matched_fields),
+            ("hard applicability mismatches", self.hard_applicability_mismatches),
         ):
             folded = [item.casefold() for item in values]
             if len(folded) != len(set(folded)):
@@ -101,6 +111,10 @@ class TasteDeliberationCandidate(BaseModel):
         expected_rejected = set(self.candidate_actions) - {self.preferred_action}
         if set(self.rejected_actions) != expected_rejected:
             raise ValueError("Taste deliberation must expose every rejected source action")
+        if self.hard_applicability_satisfied is False and not self.hard_applicability_mismatches:
+            raise ValueError("failed hard applicability requires at least one mismatch")
+        if self.hard_applicability_satisfied is True and self.hard_applicability_mismatches:
+            raise ValueError("satisfied hard applicability cannot carry mismatches")
         return self
 
 
@@ -201,10 +215,15 @@ class TasteDeliberationProposal(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     decision_id: str = Field(pattern=_ID)
     assessments: tuple[TasteCaseTransferAssessment, ...] = Field(min_length=2, max_length=20)
     selected_case_ids: tuple[str, ...] = Field(max_length=5)
+    recommended_action_id: str | None = Field(
+        default=None,
+        max_length=500,
+        exclude_if=lambda value: value is None,
+    )
     selection_rationale: str = Field(min_length=1, max_length=10_000)
 
     @model_validator(mode="after")
@@ -214,6 +233,14 @@ class TasteDeliberationProposal(BaseModel):
             raise ValueError("Taste deliberation assessments must cover unique cases")
         if len(self.selected_case_ids) != len(set(self.selected_case_ids)):
             raise ValueError("Taste deliberation selected cases must be unique")
+        if self.schema_version == "1.0":
+            if self.recommended_action_id is not None:
+                raise ValueError("Taste deliberation schema 1.0 cannot recommend an action")
+        elif bool(self.selected_case_ids) != (self.recommended_action_id is not None):
+            raise ValueError(
+                "Taste deliberation schema 1.1 requires exactly one recommendation when "
+                "precedents are selected and abstention otherwise"
+            )
         return self
 
     @property
@@ -326,16 +353,37 @@ def validate_taste_deliberation(
                     findings.append(f"Taste assessment {case_id!r} cites an unknown decision fact")
         if (
             assessment.verdict is TasteTransferVerdict.APPLICABLE
+            and candidate.hard_applicability_satisfied is not False
             and len(assessment.applicability_supports) >= 2
             and not assessment.triggered_failure_supports
             and assessment.aligned_current_action_ids
         ):
             eligible[case_id] = assessment
+        if (
+            candidate.hard_applicability_satisfied is False
+            and assessment.verdict is TasteTransferVerdict.APPLICABLE
+        ):
+            findings.append(
+                f"Taste assessment {case_id!r} overrode deterministic hard applicability"
+            )
     selected = set(proposal.selected_case_ids)
     if not selected.issubset(candidate_by_id):
         findings.append("Taste deliberation selected a case outside the closed pool")
     if not selected.issubset(eligible):
         findings.append("Taste deliberation selected an inapplicable or unsupported case")
+    if proposal.schema_version == "1.1" and proposal.recommended_action_id is not None:
+        if proposal.recommended_action_id not in action_ids:
+            findings.append("Taste deliberation recommended an unknown current action")
+        supported_recommendations = {
+            action_id
+            for case_id in selected
+            if case_id in eligible
+            for action_id in eligible[case_id].aligned_current_action_ids
+        }
+        if proposal.recommended_action_id not in supported_recommendations:
+            findings.append(
+                "Taste deliberation recommendation lacks selected applicable precedent support"
+            )
 
     selected_candidates = [
         candidate_by_id[item] for item in proposal.selected_case_ids if item in candidate_by_id
@@ -355,7 +403,8 @@ def validate_taste_deliberation(
         for action_id in eligible[case_id].aligned_current_action_ids
     }
     if (
-        len(eligible_action_ids) >= 2
+        proposal.schema_version == "1.0"
+        and len(eligible_action_ids) >= 2
         and input_data.maximum_selected_cases >= 2
         and len(selected_action_ids) < 2
     ):

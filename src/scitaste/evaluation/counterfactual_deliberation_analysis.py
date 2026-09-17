@@ -47,6 +47,10 @@ class CounterfactualDeliberationStateAnalysis(BaseModel):
     candidate_preferred_actions: tuple[str, ...]
     selected_case_ids: tuple[str, ...]
     action_vote_weights: dict[str, float]
+    selection_rule: Literal[
+        "legacy-weighted-precedent-vote-v1",
+        "direct-deliberated-action-v1",
+    ]
     abstained: bool
     fallback_action: Literal["PROBE"] = "PROBE"
     selected_action: str
@@ -149,6 +153,7 @@ class CounterfactualDeliberationDevelopmentReport(BaseModel):
 
 def analyze_counterfactual_deliberations(
     *,
+    study_id: str,
     input_root: str | Path,
     ledger_root: str | Path,
     evidence_root: str | Path,
@@ -214,15 +219,15 @@ def analyze_counterfactual_deliberations(
         if not status
     ]
     diagnosis = (
-        "The outcome-hidden two-stage selector clears the frozen development gate; a new "
+        "The outcome-hidden selector clears the frozen development gate; a new "
         "disjoint confirmation protocol may be frozen, but no effectiveness claim is allowed."
         if passed
-        else "The outcome-hidden two-stage selector fails: "
+        else "The outcome-hidden selector fails: "
         + ", ".join(failed_names)
         + ". Formal confirmation remains unauthorized."
     )
     return CounterfactualDeliberationDevelopmentReport.create(
-        study_id="counterfactual-taste-policy-v2-top3-diverse-development-v1",
+        study_id=study_id,
         state_count=state_count,
         task_cluster_count=len({item.task_cluster_id for item in states}),
         accepted_state_count=len(states),
@@ -337,9 +342,18 @@ def _analyze_state(
         )
         votes[candidate.preferred_action] = votes.get(candidate.preferred_action, 0.0) + weight
     ranked_votes = sorted(votes.items(), key=lambda item: (-item[1], item[0]))
-    tied = len(ranked_votes) >= 2 and abs(ranked_votes[0][1] - ranked_votes[1][1]) <= 1e-12
-    abstained = not ranked_votes or tied
-    selected_action = "PROBE" if abstained else ranked_votes[0][0]
+    if proposal.schema_version == "1.1":
+        selection_rule = "direct-deliberated-action-v1"
+        abstained = proposal.recommended_action_id is None
+        selected_action = "PROBE" if abstained else proposal.recommended_action_id
+    else:
+        selection_rule = "legacy-weighted-precedent-vote-v1"
+        tied = (
+            len(ranked_votes) >= 2
+            and abs(ranked_votes[0][1] - ranked_votes[1][1]) <= 1e-12
+        )
+        abstained = not ranked_votes or tied
+        selected_action = "PROBE" if abstained else ranked_votes[0][0]
     objective_value = target.objective_values[selected_action]
     oracle_value = max(target.objective_values.values())
     preferred = set(target.objective_preferred_actions)
@@ -357,6 +371,7 @@ def _analyze_state(
         ),
         selected_case_ids=proposal.selected_case_ids,
         action_vote_weights={key: round(value, 12) for key, value in sorted(votes.items())},
+        selection_rule=selection_rule,
         abstained=abstained,
         selected_action=selected_action,
         objective_preferred_actions=target.objective_preferred_actions,

@@ -79,9 +79,9 @@ strong baselines, ablations, objective or external validation, and case studies.
 
 The current project-owned manifest and generated assessment are:
 
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V5.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V3.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V10.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V8.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V6.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V14.json`
 
 The comparison set contains ICLR main-track method, evaluation, and benchmark
 papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
@@ -125,8 +125,8 @@ the Taste mechanism on development data before any new independent confirmation;
 adding another presentation table would not close the scientific gap.
 
 The structured accepted-paper comparison reaches the same conclusion more
-sharply. Five evidence components are formally present, but all five come from
-the same NewtonBench family; four of six declared innovation claims are
+sharply. Five evidence components are formally present, but they contain only
+two admitted objective families; four of six declared innovation claims are
 contradicted, the recursive loop is development-only, and the evaluation
 construct is still proposed-only. Strong system baselines, human/expert
 construct validation, and admitted end-to-end trajectories are missing despite
@@ -201,3 +201,34 @@ statistical uncertainty, strong system baselines, and task/domain breadth; the c
 portfolio lacks the first, second, and fifth of these. Thus the framework now reaches the
 same conclusion the paper-level reading demands: several local result tables, including a
 well-controlled one, do not constitute a complete ICLR argument.
+
+V12 makes that comparison paper-specific and same-venue aware. It does not merely compare
+SciTaste with an aggregate checklist: it emits one gap record for every accepted nearest
+neighbour, including the neighbour's contribution type, the components currently supported
+or contradicted, the missing or unadmitted components, and the independent supporting
+families that make the comparison possible. It also requires at least two recent papers from
+the target venue series before the evidence shape can be called complete. For an ICLR 2027
+submission, the current set contains five ICLR 2025--2026 main-track neighbours, with ICLR
+2026 as the latest completed edition.
+
+No current neighbour row is component-shape matched. Relative to EXP-Bench, SciTaste lacks
+admitted end-to-end trajectories, human/expert validation, and strong system baselines;
+relative to HeurekaBench it lacks end-to-end trajectories and strong system baselines;
+relative to the 100+ researcher ideation study it lacks human/expert validation and strong
+system baselines; relative to ScienceAgentBench it additionally lacks admitted resource/cost
+reporting; and relative to TusoAI it lacks end-to-end trajectories, a real-world case study,
+and strong system baselines. Matching a row would still not assert equal novelty, rigor,
+scale, or quality. The compiler records `quality_equivalence_claimed=false` by construction.
+This is the embedded ability required for self-improvement: every new result is judged both
+against the paper's own causal claim graph and against the actual evidence shape of recent
+accepted papers, so a single controlled table cannot silently become a top-venue claim.
+
+V14 also admits the latest direct-action development result without changing that venue
+position. Separating evidence selection from a single recommended action raised mean bounded
+objective utility from 0.2774 to 0.3820, preferred-action hits from 58.3% to 83.3%, and reduced
+selected-action failures from 8.3% to zero. The strongest matched static action still scores
+0.3850, however, and the frozen development contract required a further 0.02 superiority
+margin. The result is therefore useful mechanism diagnosis but remains contradicting,
+development-only evidence. All five central claim arguments remain incomplete, and the same
+three portfolio-level gaps remain: admitted end-to-end trajectories, human/expert validation,
+and strong system baselines.

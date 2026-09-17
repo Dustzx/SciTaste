@@ -175,7 +175,7 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
     """Assess transfer before selecting a diverse set of decision precedents."""
 
     node_name = TASTE_DELIBERATION_NODE
-    prompt_version = "taste-deliberation-v2"
+    prompt_version = "taste-deliberation-v3"
     system_instruction = (
         "Select Scientific Taste precedents for the current research decision, not passages that "
         "merely share vocabulary. Assess every supplied case exactly once. For every "
@@ -188,11 +188,14 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
         "fact, case, or action. A selected case must have verdict=applicable, satisfy at least two "
         "of its stated applicability conditions, have an empty triggered_failure_supports list, "
         "and align to a current action. Never select an uncertain, inapplicable, challenge-only, "
-        "or failure-triggered case merely to preserve diversity. Preserve decision tension only "
-        "within the applicable pool: when that pool supports "
-        "different actions, select source-disjoint precedents covering more than one action; when "
-        "an applicable challenge or boundary case is available, do not return only supportive "
-        "precedents. Source outcomes, held-out task content, relation labels, and external facts "
+        "or failure-triggered case merely to preserve diversity. Keep source-disjoint support, "
+        "challenge, and boundary precedents when applicable, but do not turn evidence diversity "
+        "into an action vote. When one or more precedents are selected, set schema_version=1.1 "
+        "and recommend exactly one current action in recommended_action_id. The recommendation "
+        "must be aligned by at least one selected applicable precedent and must synthesize the "
+        "visible scientific state, strongest matched support, and applicable counterevidence. "
+        "When no precedent is applicable, select no cases and set recommended_action_id to null. "
+        "Source outcomes, held-out task content, relation labels, and external facts "
         "are unavailable and must not be inferred. Before returning JSON, verify exact boundary "
         "copying for every support and verify that every selected case passes all selection rules. "
         "The output is a proposal only: do not execute an action, admit memory, call tools, or "
@@ -216,6 +219,12 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
         normalized["decision_id"] = input_data.decision_id
         if normalized.get("type") == "json_object":
             normalized.pop("type")
+        if normalized.get("schema_version") == "1.1" and not normalized.get(
+            "selected_case_ids"
+        ):
+            # A state-only action suggestion is outside this Taste intervention.
+            # Delete it rather than turning an abstention into ungrounded policy advice.
+            normalized["recommended_action_id"] = None
         return normalized
 
     def _normalize_proposal(
@@ -238,7 +247,28 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
             and item.aligned_current_action_ids
         }
         selected = tuple(item for item in proposal.selected_case_ids if item in eligible)
-        return proposal.model_copy(update={"selected_case_ids": selected})
+        supported_actions = {
+            action_id
+            for case_id in selected
+            for item in proposal.assessments
+            if item.case_id == case_id
+            for action_id in item.aligned_current_action_ids
+        }
+        recommended = (
+            proposal.recommended_action_id
+            if proposal.recommended_action_id in supported_actions
+            else None
+        )
+        if proposal.schema_version == "1.1" and recommended is None:
+            selected = ()
+        if selected == proposal.selected_case_ids and recommended == proposal.recommended_action_id:
+            return proposal
+        return proposal.model_copy(
+            update={
+                "selected_case_ids": selected,
+                "recommended_action_id": recommended,
+            }
+        )
 
     def _proposal_rejections(
         self,

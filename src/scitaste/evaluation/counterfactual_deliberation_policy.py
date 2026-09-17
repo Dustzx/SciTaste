@@ -19,6 +19,11 @@ from scitaste.evaluation.counterfactual_taste import (
     CounterfactualActionSetResult,
     CounterfactualResearchAction,
 )
+from scitaste.evaluation.counterfactual_temporal_precedents import (
+    CounterfactualPreDecisionState,
+    counterfactual_predecision_state,
+    temporal_applicability_mismatches,
+)
 from scitaste.evaluation.interactive_research import (
     InteractiveResearchPrefix,
     load_interactive_research_prefix,
@@ -116,10 +121,19 @@ class CounterfactualDeliberationRetrievalRecord(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     study_id: str
     task_cluster_id: str
-    retrieval_rule_id: Literal["outcome-hidden-lexical-action-diverse-top-k-v1"]
+    retrieval_rule_id: Literal[
+        "outcome-hidden-lexical-action-diverse-top-k-v1",
+        "hard-safe-then-lexical-action-diverse-top-k-v2",
+    ]
     maximum_candidate_cases: int = Field(ge=2, le=20)
     population_scores: dict[str, float] = Field(min_length=2, max_length=20)
     population_preferred_actions: dict[str, str] = Field(min_length=2, max_length=20)
+    population_hard_applicability: dict[str, bool] | None = Field(
+        default=None,
+        min_length=2,
+        max_length=20,
+        exclude_if=lambda value: value is None,
+    )
     selected_case_ids: tuple[str, ...] = Field(min_length=2, max_length=20)
     selector_input_sha256: str = Field(pattern=_SHA256)
     source_outcomes_hidden: Literal[True] = True
@@ -132,6 +146,14 @@ class CounterfactualDeliberationRetrievalRecord(BaseModel):
         population = set(self.population_scores)
         if set(self.population_preferred_actions) != population:
             raise ValueError("retrieval score and preferred-action populations differ")
+        if (
+            self.population_hard_applicability is not None
+            and set(self.population_hard_applicability) != population
+        ):
+            raise ValueError("retrieval hard-applicability population differs")
+        uses_hard_rule = self.retrieval_rule_id.startswith("hard-safe-")
+        if uses_hard_rule != (self.population_hard_applicability is not None):
+            raise ValueError("retrieval rule and hard-applicability evidence differ")
         if set(self.selected_case_ids) - population:
             raise ValueError("retrieval selected an unknown precedent")
         if len(self.selected_case_ids) != min(self.maximum_candidate_cases, len(population)):
@@ -140,6 +162,7 @@ class CounterfactualDeliberationRetrievalRecord(BaseModel):
             self.population_scores,
             self.population_preferred_actions,
             maximum_candidate_cases=self.maximum_candidate_cases,
+            hard_applicability=self.population_hard_applicability,
         )
         if self.selected_case_ids != ranked:
             raise ValueError("retrieval selection differs from outcome-hidden lexical top-k")
@@ -152,11 +175,18 @@ class CounterfactualDeliberationRetrievalRecord(BaseModel):
     def create(cls, **values: object) -> CounterfactualDeliberationRetrievalRecord:
         payload = {
             "schema_version": "1.0",
-            "retrieval_rule_id": "outcome-hidden-lexical-action-diverse-top-k-v1",
             "source_outcomes_hidden": True,
             "target_outcomes_hidden": True,
             **values,
         }
+        payload.setdefault(
+            "retrieval_rule_id",
+            (
+                "outcome-hidden-lexical-action-diverse-top-k-v1"
+                if payload.get("population_hard_applicability") is None
+                else "hard-safe-then-lexical-action-diverse-top-k-v2"
+            ),
+        )
         payload.pop("retrieval_sha256", None)
         unsigned = cls.model_construct(retrieval_sha256="0" * 64, **payload)
         return cls(
@@ -273,6 +303,14 @@ def prepare_counterfactual_deliberation_inputs(
                 item.case_id: item.preferred_action
                 for item in sorted(population, key=lambda item: item.case_id)
             },
+            population_hard_applicability=(
+                {
+                    item.case_id: item.hard_applicability_satisfied
+                    for item in sorted(population, key=lambda item: item.case_id)
+                }
+                if all(item.hard_applicability_satisfied is not None for item in population)
+                else None
+            ),
             selected_case_ids=tuple(item.case_id for item in deliberation_input.candidates),
             selector_input_sha256=deliberation_input.fingerprint,
         )
@@ -359,8 +397,15 @@ def _deliberation_input(
         for action in CounterfactualResearchAction
     )
     current_text = " ".join(item.text for item in facts)
+    target_observable = counterfactual_predecision_state(prefix)
+    available_actions = {item.action_id for item in actions}
     population = tuple(
-        _candidate(case, current_text=current_text)
+        _candidate(
+            case,
+            current_text=current_text,
+            target_observable=target_observable,
+            available_actions=available_actions,
+        )
         for case in sorted(cases, key=lambda item: item.case_id)
     )
     population_by_id = {item.case_id: item for item in population}
@@ -369,6 +414,15 @@ def _deliberation_input(
         {item.case_id: item.preferred_action for item in population},
         maximum_candidate_cases=(
             len(population) if maximum_candidate_cases is None else maximum_candidate_cases
+        ),
+        hard_applicability=(
+            {
+                item.case_id: item.hard_applicability_satisfied
+                for item in population
+                if item.hard_applicability_satisfied is not None
+            }
+            if all(item.hard_applicability_satisfied is not None for item in population)
+            else None
         ),
     )
     candidates = tuple(population_by_id[item] for item in candidate_ids)
@@ -397,29 +451,46 @@ def _action_diverse_top_k_ids(
     preferred_actions: dict[str, str],
     *,
     maximum_candidate_cases: int,
+    hard_applicability: dict[str, bool] | None = None,
 ) -> tuple[str, ...]:
     """Rank by outcome-hidden similarity while preserving available action tension."""
 
     ranked = sorted(scores, key=lambda case_id: (-scores[case_id], case_id))
+    if hard_applicability is not None and set(hard_applicability) != set(scores):
+        raise ValueError("hard-applicability population differs from retrieval scores")
     selected: list[str] = []
     covered_actions: set[str] = set()
-    for case_id in ranked:
-        action = preferred_actions[case_id]
-        if action in covered_actions:
-            continue
-        selected.append(case_id)
-        covered_actions.add(action)
-        if len(selected) == maximum_candidate_cases:
-            return tuple(selected)
-    for case_id in ranked:
-        if case_id not in selected:
+    groups = (
+        (tuple(case_id for case_id in ranked if hard_applicability[case_id]), ranked)
+        if hard_applicability is not None
+        else (ranked,)
+    )
+    for group in groups:
+        for case_id in group:
+            if case_id in selected:
+                continue
+            action = preferred_actions[case_id]
+            if action in covered_actions:
+                continue
             selected.append(case_id)
-        if len(selected) == maximum_candidate_cases:
-            break
+            covered_actions.add(action)
+            if len(selected) == maximum_candidate_cases:
+                return tuple(selected)
+        for case_id in group:
+            if case_id not in selected:
+                selected.append(case_id)
+            if len(selected) == maximum_candidate_cases:
+                return tuple(selected)
     return tuple(selected)
 
 
-def _candidate(case: TasteCase, *, current_text: str) -> TasteDeliberationCandidate:
+def _candidate(
+    case: TasteCase,
+    *,
+    current_text: str,
+    target_observable: CounterfactualPreDecisionState,
+    available_actions: set[str],
+) -> TasteDeliberationCandidate:
     safe_principle = (
         f"Prefer {case.preferred_action} only when the precedent's applicability conditions "
         "match the current visible hypothesis, uncertainty, and resource state; withhold the "
@@ -449,6 +520,11 @@ def _candidate(case: TasteCase, *, current_text: str) -> TasteDeliberationCandid
         )
     )
     similarity = lexical_similarity(current_text, searchable)
+    hard_satisfied, hard_mismatches = _hard_applicability(
+        case,
+        target_observable=target_observable,
+        available_actions=available_actions,
+    )
     return TasteDeliberationCandidate(
         case_id=case.case_id,
         case_sha256=content_sha256(case.model_dump(mode="json")),
@@ -469,7 +545,33 @@ def _candidate(case: TasteCase, *, current_text: str) -> TasteDeliberationCandid
         confidence=case.confidence,
         broad_retrieval_score=round(max(similarity, 0.000001), 6),
         broad_matched_fields=("outcome-hidden-content",),
+        hard_applicability_satisfied=hard_satisfied,
+        hard_applicability_mismatches=hard_mismatches,
     )
+
+
+def _hard_applicability(
+    case: TasteCase,
+    *,
+    target_observable: CounterfactualPreDecisionState,
+    available_actions: set[str],
+) -> tuple[bool | None, tuple[str, ...]]:
+    if case.evidence_state is None:
+        return None, ()
+    try:
+        source = CounterfactualPreDecisionState.model_validate_json(
+            case.evidence_state,
+            strict=True,
+        )
+    except (ValueError, TypeError):
+        return None, ()
+    mismatches = temporal_applicability_mismatches(
+        source,
+        target_observable,
+        preferred_action=case.preferred_action,
+        available_actions=available_actions,
+    )
+    return not mismatches, mismatches
 
 
 def _source_identity(provenance: ProvenanceRecord) -> str:

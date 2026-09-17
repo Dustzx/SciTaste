@@ -175,6 +175,7 @@ def _proposal(input_data: TasteDeliberationInput) -> TasteDeliberationProposal:
         decision_id=input_data.decision_id,
         assessments=tuple(assessments),
         selected_case_ids=("case-probe", "case-experiment"),
+        recommended_action_id="probe",
         selection_rationale="Retain source-disjoint precedents on both live actions.",
     )
 
@@ -204,7 +205,13 @@ def test_deliberation_rejects_one_sided_selection_when_action_tension_exists(
         state=research_state,
         candidate_actions=_actions(),
     )
-    proposal = _proposal(input_data).model_copy(update={"selected_case_ids": ("case-probe",)})
+    proposal = _proposal(input_data).model_copy(
+        update={
+            "schema_version": "1.0",
+            "selected_case_ids": ("case-probe",),
+            "recommended_action_id": None,
+        }
+    )
 
     assert validate_taste_deliberation(input_data, proposal) == (
         "Taste deliberation omitted available current-action tension",
@@ -246,6 +253,39 @@ def test_deliberation_can_abstain_when_no_precedent_is_applicable(
             broad_candidates=[],
         )
         == []
+    )
+
+
+def test_deliberation_cannot_override_deterministic_hard_applicability(
+    tmp_path, research_state: ResearchState
+) -> None:
+    input_data = _controller(tmp_path).prepare_taste_deliberation(
+        state=research_state,
+        candidate_actions=_actions(),
+    )
+    blocked_index = next(
+        index
+        for index, candidate in enumerate(input_data.candidates)
+        if candidate.case_id == "case-probe"
+    )
+    blocked = input_data.candidates[blocked_index].model_copy(
+        update={
+            "hard_applicability_satisfied": False,
+            "hard_applicability_mismatches": ("evidence_status:no-candidate!=candidate-supported",),
+        }
+    )
+    candidates = list(input_data.candidates)
+    candidates[blocked_index] = blocked
+    constrained_input = input_data.model_copy(
+        update={"candidates": tuple(candidates)}
+    )
+
+    findings = validate_taste_deliberation(constrained_input, _proposal(constrained_input))
+
+    assert findings == (
+        "Taste assessment 'case-probe' overrode deterministic hard applicability",
+        "Taste deliberation recommendation lacks selected applicable precedent support",
+        "Taste deliberation selected an inapplicable or unsupported case",
     )
 
 
@@ -311,9 +351,13 @@ def test_deliberation_node_accepts_only_fact_grounded_closed_pool(
     assert result.status is NodeResultStatus.ACCEPTED
     assert result.proposal is not None
     assert result.proposal.decision_id == input_data.decision_id
-    assert result.proposal.selected_case_ids == tuple(
+    expected_selected = tuple(
         item for item in proposal.selected_case_ids if item != unsupported_case_id
     )
+    if proposal.recommended_action_id == "probe" and unsupported_case_id == "case-probe":
+        expected_selected = ()
+        assert result.proposal.recommended_action_id is None
+    assert result.proposal.selected_case_ids == expected_selected
     assert next(
         item for item in result.proposal.assessments if item.case_id == unsupported_case_id
     ).verdict is TasteTransferVerdict.UNCERTAIN

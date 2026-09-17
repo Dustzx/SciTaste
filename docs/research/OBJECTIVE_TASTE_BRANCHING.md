@@ -198,6 +198,34 @@ separate pre-decision observable applicability predicates from post-outcome labe
 expand source-cluster/action coverage. Another prompt, table, or larger held-out run
 would not repair either defect.
 
+## Temporal-safe direct-action development
+
+The next development iteration rebuilt every selector-visible precedent field from the
+pre-decision trajectory prefix. Objective outcomes remain available only as labels outside
+the selector input, while stage and evidence-status predicates are enforced by the
+controller. This removes the post-outcome applicability leakage identified above. The first
+temporal-safe selector still combined selected precedents with a weighted vote: across the
+same 12 development states it obtained 0.2774 mean bounded objective, 58.3% preferred-action
+hits, and an 8.3% failure rate.
+
+SciTaste then separated the roles of precedent deliberation and action choice. The model may
+retain supporting, challenging, and boundary precedents, but must recommend exactly one
+currently available action; the controller rejects a recommendation that lacks at least one
+applicable selected precedent. This direct-action version obtained 0.3820 mean bounded
+objective, 83.3% preferred-action hits, zero failures, and three selected action types. It is
+a substantial mechanism improvement over the weighted selector and the prior status-only
+policy at 0.2885.
+
+The preregistered development gate nevertheless fails. Static `EXPERIMENT` scores 0.3850,
+and the frozen contract requires the learned selector to exceed the strongest static action
+by at least 0.02 before an independent confirmation is authorized. The largest residual
+error is the magnetic-force middle state, where the selector chooses `PILOT` instead of the
+objective-preferred `REFINE`; the next-largest is an early Snell state that falls back to
+`PROBE` instead of `PILOT`. These are missing state--action coverage failures, not a reason
+to weaken the gate or tune on a held-out population. Formal v5 therefore remains blocked;
+the next development population must add temporally valid precedents for those observable
+decision regimes and rerun the unchanged gate.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

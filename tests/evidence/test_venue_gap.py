@@ -202,6 +202,19 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert assessment.venue_comparison.current_admitted_component_count == 0
     assert assessment.venue_comparison.evidence_shape_complete_for_review is False
     assert assessment.venue_comparison.target_paper_kind is AcceptedPaperKind.METHOD
+    assert assessment.venue_comparison.same_venue_neighbour_count == 2
+    assert assessment.venue_comparison.latest_same_venue_year == 2026
+    assert assessment.venue_comparison.same_venue_recency_gap_years == 1
+    assert assessment.venue_comparison.same_venue_lineage_present is True
+    assert len(assessment.venue_comparison.accepted_neighbour_gaps) == 2
+    first_neighbour_gap = assessment.venue_comparison.accepted_neighbour_gaps[0]
+    assert first_neighbour_gap.paper_id == "accepted-neighbour-1"
+    assert first_neighbour_gap.component_shape_matched is False
+    assert first_neighbour_gap.quality_equivalence_claimed is False
+    assert first_neighbour_gap.missing_or_unadmitted_components == (
+        VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+        VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+    )
     assert assessment.venue_comparison.claim_contracts_complete is True
     assert assessment.venue_comparison.central_claim_arguments_complete is False
     assert assessment.venue_comparison.claim_arguments[0].complete_for_review is False

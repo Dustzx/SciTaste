@@ -26,6 +26,7 @@ from scitaste.evidence.routing import EvidenceRoute, EvidenceRouter
 from scitaste.evidence.venue_gap import (
     AcceptedNearestNeighbour,
     AcceptedNeighbourEvidenceProfile,
+    AcceptedNeighbourGapAssessment,
     AcceptedPaperKind,
     CurrentEvidenceComponentBinding,
     EvidenceDirection,
@@ -68,6 +69,7 @@ from scitaste.evidence.workflow import (
 __all__ = [
     "AcceptedNearestNeighbour",
     "AcceptedNeighbourEvidenceProfile",
+    "AcceptedNeighbourGapAssessment",
     "AcceptedPaperKind",
     "ClaimGraph",
     "ClaimRelation",
