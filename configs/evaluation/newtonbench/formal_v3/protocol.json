@@ -81,6 +81,12 @@
       "config_sha256": "246a49ea12aedca85a4b6d3fe998eafb250eda681b136d768e3bf24d62e0ce3a"
     }
   },
+  "execution_seeds": {
+    "coulomb": {"research_agent": 59701, "terminal_judge": 69701},
+    "heat": {"research_agent": 59711, "terminal_judge": 69711},
+    "magnetic": {"research_agent": 59702, "terminal_judge": 69702},
+    "snell": {"research_agent": 59704, "terminal_judge": 69704}
+  },
   "resource_ceiling": {
     "gpu_hours": 0,
     "maximum_source_trajectories": 4,
