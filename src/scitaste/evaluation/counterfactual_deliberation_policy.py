@@ -71,14 +71,19 @@ class CounterfactualDeliberationTarget(BaseModel):
     task_cluster_id: str
     prefix_sha256: str = Field(pattern=_SHA256)
     result_sha256: str = Field(pattern=_SHA256)
-    excluded_same_cluster_case_ids: tuple[str, ...] = Field(min_length=1)
+    excluded_same_cluster_case_ids: tuple[str, ...] = ()
     eligible_cross_cluster_case_ids: tuple[str, ...] = Field(min_length=2)
     objective_preferred_actions: tuple[str, ...] = Field(min_length=1, max_length=7)
     objective_values: dict[str, float]
     objective_observed: dict[str, bool]
     selector_input_sha256: str = Field(pattern=_SHA256)
     source_outcomes_absent_from_selector_input: Literal[True] = True
-    development_only: Literal[True] = True
+    development_only: bool = True
+    confirmation_protocol_sha256: str | None = Field(
+        default=None,
+        pattern=_SHA256,
+        exclude_if=lambda value: value is None,
+    )
     target_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -90,6 +95,10 @@ class CounterfactualDeliberationTarget(BaseModel):
             raise ValueError("counterfactual target preferred action lacks an objective")
         if set(self.excluded_same_cluster_case_ids) & set(self.eligible_cross_cluster_case_ids):
             raise ValueError("counterfactual target cluster partitions overlap")
+        if self.development_only == (self.confirmation_protocol_sha256 is not None):
+            raise ValueError(
+                "confirmation targets require a protocol hash; development targets forbid one"
+            )
         expected = content_sha256(self.model_dump(mode="json", exclude={"target_sha256"}))
         if self.target_sha256 != expected:
             raise ValueError("counterfactual deliberation target hash mismatch")
