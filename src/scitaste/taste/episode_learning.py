@@ -1309,18 +1309,45 @@ class LifecycleTastePolicyModel(BaseModel):
 
     @property
     def h4_adaptive_policy_eligible(self) -> bool:
-        """Require learned decision-state support before an H4 treatment run."""
+        """Require identifiable state-conditional action support for H4.
+
+        Merely duplicating one decision context across several action labels
+        creates ``decision-state-action`` features but cannot identify an
+        adaptive policy.  Eligibility therefore requires both observed state
+        variation and a change in the locally preferred action across those
+        states.  A global action prior is not Scientific Taste.
+        """
 
         adaptive = tuple(
             item
             for item in self.feature_posteriors
             if item.feature_kind == "decision-state-action" and item.support > 0
         )
+        context_actions: dict[tuple[str, str], list[LifecycleTasteFeaturePosterior]] = (
+            defaultdict(list)
+        )
+        values_by_name: dict[str, set[str]] = defaultdict(set)
+        for item in adaptive:
+            parsed = _parse_decision_state_action_feature(item.feature)
+            if parsed is None:
+                continue
+            name, value, _action = parsed
+            context_actions[(name, value)].append(item)
+            values_by_name[name].add(value)
+        preferred_actions = {
+            max(items, key=lambda item: (item.log_odds, item.feature)).feature.rpartition(
+                "::action::"
+            )[2]
+            for items in context_actions.values()
+            if len(items) >= 2
+        }
         return (
             self.schema_version == "1.5"
             and self.intervention_policy_artifact_eligible
             and len({item.feature.rpartition("::action::")[2] for item in adaptive}) >= 2
             and len({item.posterior_mean for item in adaptive}) >= 2
+            and any(len(values) >= 2 for values in values_by_name.values())
+            and len(preferred_actions) >= 2
         )
 
     @classmethod
@@ -2169,7 +2196,33 @@ def _state_decision_context(state: ResearchState) -> tuple[tuple[str, str], ...]
     )
     if any(name not in context for name in required):
         return ()
-    return tuple((name, str(context[name])) for name in required)
+    optional = (
+        "evidence_status",
+        "evidence_confidence",
+        "next_experiment_value",
+        "trajectory_phase",
+    )
+    return tuple(
+        (name, str(context[name]))
+        for name in (*required, *optional)
+        if name in context and str(context[name]) != "unknown"
+    )
+
+
+def _parse_decision_state_action_feature(
+    feature: str,
+) -> tuple[str, str, str] | None:
+    prefix = "decision-state::"
+    marker = "::action::"
+    if not feature.startswith(prefix) or marker not in feature:
+        return None
+    state, action = feature.removeprefix(prefix).rsplit(marker, 1)
+    if "::" not in state or not action:
+        return None
+    name, value = state.split("::", 1)
+    if not name or not value:
+        return None
+    return name, value, action
 
 
 def _posterior(

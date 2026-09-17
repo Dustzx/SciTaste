@@ -84,6 +84,16 @@ Mechanistically, the treatment selected `REFINE` at all 48 nonterminal decisions
 current learned policy is therefore an action prior rather than a conditional
 scientific policy in this environment.
 
+This failure now changes the executable contract. A policy may enter a new H4
+preparation only when its admitted episodes contain variation in observable
+decision state, compare at least two actions within a state, and identify
+different preferred actions in different states. Merely attaching several
+action labels to one repeated context is rejected. Future interactive episodes
+also record evidence status, evidence confidence, expected value of another
+experiment, and trajectory phase, so the next policy can learn a selective
+mapping instead of another global action prior. Historical formal-v2 remains a
+valid negative result; it is not retroactively reclassified as support.
+
 Only one objective empirical family is currently admitted, below the four
 reported evidence components in every registered accepted neighbour. The
 framework consequently forbids venue-readiness language and exposes the missing

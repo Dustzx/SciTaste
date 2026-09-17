@@ -207,6 +207,23 @@ class TasteEpisodeDecisionContext(BaseModel):
     no_improvement_streak: Literal["unknown", "zero", "one", "two-plus"]
     score_trend: Literal["unknown", "declining", "flat", "improving"]
     best_vs_baseline: Literal["unknown", "below", "equal", "above"]
+    evidence_status: Literal[
+        "unknown",
+        "unassessed",
+        "no-candidate",
+        "candidate-untested",
+        "candidate-supported",
+        "candidate-conflicted",
+    ] = Field(default="unknown", exclude_if=lambda value: value == "unknown")
+    evidence_confidence: Literal["unknown", "low", "medium", "high"] = Field(
+        default="unknown", exclude_if=lambda value: value == "unknown"
+    )
+    next_experiment_value: Literal["unknown", "low", "medium", "high"] = Field(
+        default="unknown", exclude_if=lambda value: value == "unknown"
+    )
+    trajectory_phase: Literal["unknown", "early", "middle", "late"] = Field(
+        default="unknown", exclude_if=lambda value: value == "unknown"
+    )
 
 
 class TasteEpisodeCandidate(BaseModel):

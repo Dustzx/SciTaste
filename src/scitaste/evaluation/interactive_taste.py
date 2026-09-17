@@ -357,6 +357,7 @@ class TasteControllerInteractiveGuidanceProvider:
         *,
         used_experiments: int,
     ) -> ResearchState:
+        evidence_context = _interactive_evidence_context(context)
         return ResearchState(
             revision=context.turn - 1,
             project_id=context.project_id,
@@ -387,6 +388,7 @@ class TasteControllerInteractiveGuidanceProvider:
                 "best_vs_baseline": "unknown",
                 "interactive_turn": context.turn,
                 "interactive_history_sha256": content_sha256(context.history),
+                **evidence_context,
             },
         )
 
@@ -399,6 +401,60 @@ def _remaining_experiment_bucket(value: int) -> str:
     if value <= 3:
         return "two-to-three"
     return "four-plus"
+
+
+def _interactive_evidence_context(
+    context: InteractiveResearchContext,
+) -> dict[str, str]:
+    phase = (
+        "early"
+        if context.turn <= 2
+        else ("late" if context.remaining_turns <= 2 else "middle")
+    )
+    if not context.history:
+        return {
+            "evidence_status": "unassessed",
+            "evidence_confidence": "low",
+            "next_experiment_value": "high",
+            "trajectory_phase": phase,
+        }
+    action = context.history[-1].get("model_action")
+    if not isinstance(action, dict):
+        return {
+            "evidence_status": "unassessed",
+            "evidence_confidence": "low",
+            "next_experiment_value": "high",
+            "trajectory_phase": phase,
+        }
+    status = action.get("evidence_status")
+    confidence = action.get("evidence_confidence")
+    next_value = action.get("next_experiment_value")
+    allowed_statuses = {
+        "unassessed",
+        "no-candidate",
+        "candidate-untested",
+        "candidate-supported",
+        "candidate-conflicted",
+    }
+    return {
+        "evidence_status": str(status) if status in allowed_statuses else "unassessed",
+        "evidence_confidence": _unit_interval_bucket(confidence, default="low"),
+        "next_experiment_value": _unit_interval_bucket(next_value, default="high"),
+        "trajectory_phase": phase,
+    }
+
+
+def _unit_interval_bucket(value: object, *, default: str) -> str:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return default
+    numeric = float(value)
+    if not 0.0 <= numeric <= 1.0:
+        return default
+    if numeric < 1.0 / 3.0:
+        return "low"
+    if numeric < 2.0 / 3.0:
+        return "medium"
+    return "high"
 
 
 def save_interactive_taste_execution_protocol(

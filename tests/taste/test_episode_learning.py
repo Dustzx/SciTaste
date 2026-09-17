@@ -1232,6 +1232,18 @@ def test_context_bound_episodes_fit_feedback_adaptive_policy(tmp_path: Path) -> 
     assert policy.schema_version == "1.5"
     assert any(item.feature_kind == "decision-state-action" for item in policy.feature_posteriors)
     assert policy.h4_adaptive_policy_eligible is False
+    provenance_qualified = policy.model_copy(
+        update={
+            "source_review_evidence_kinds": ("ai",),
+            "source_ai_reviewed_episode_count": len(policy.source_episode_ids),
+            "source_legacy_unverified_episode_count": 0,
+            "ai_review_contract_sha256s": ("a" * 64,),
+        }
+    )
+    assert provenance_qualified.intervention_policy_artifact_eligible is True
+    # Every episode above has the same decision context. Different action
+    # labels alone must not masquerade as a state-adaptive policy.
+    assert provenance_qualified.h4_adaptive_policy_eligible is False
 
 
 def test_h4_policy_reproduction_refits_ai_admissions_and_tolerates_project_revision(

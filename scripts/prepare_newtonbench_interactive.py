@@ -109,6 +109,11 @@ def prepare(args: argparse.Namespace) -> InteractiveTasteExecutionProtocol:
     policy = controller.lifecycle_policy
     if policy is None:
         raise ValueError("interactive preparation did not resolve a lifecycle policy")
+    if not policy.h4_adaptive_policy_eligible:
+        raise ValueError(
+            "interactive H4 preparation requires state variation and different "
+            "preferred actions across decision contexts; a global action prior is ineligible"
+        )
     policy_groups = tuple(policy.source_group_ids)
     heldout_groups = (args.heldout_source_group_id,)
     # Held-out benchmark identities must be known canonical registry entries.

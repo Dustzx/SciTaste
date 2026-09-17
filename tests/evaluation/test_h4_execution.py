@@ -158,10 +158,22 @@ def _feedback_adaptive_policy() -> LifecycleTastePolicyModel:
                 losses=0.0,
             ),
             _posterior(
+                "decision-state::score-trend::flat::action::experiment",
+                "decision-state-action",
+                wins=0.0,
+                losses=90.0,
+            ),
+            _posterior(
                 "decision-state::score-trend::improving::action::experiment",
                 "decision-state-action",
                 wins=80.0,
                 losses=0.0,
+            ),
+            _posterior(
+                "decision-state::score-trend::improving::action::refine",
+                "decision-state-action",
+                wins=0.0,
+                losses=80.0,
             ),
         )
     )
