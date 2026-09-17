@@ -28,6 +28,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--maximum-selected-cases", type=int, default=3)
     parser.add_argument("--maximum-candidate-cases", type=int, default=None)
+    parser.add_argument(
+        "--exclude-case-id",
+        action="append",
+        default=[],
+        help=(
+            "Exclude an explicitly superseded case from both the source and target "
+            "populations; repeat as needed."
+        ),
+    )
     return parser
 
 
@@ -41,6 +50,7 @@ def main() -> None:
         output_root=args.output_root,
         maximum_selected_cases=args.maximum_selected_cases,
         maximum_candidate_cases=args.maximum_candidate_cases,
+        excluded_case_ids=tuple(sorted(set(args.exclude_case_id))),
     ):
         print(path)
 

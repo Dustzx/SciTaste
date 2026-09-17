@@ -296,3 +296,13 @@ unauthorized and the overall competitiveness band remains `central-claim-contrad
 the intended behavior of the embedded top-venue critic: a positive development table triggers a
 real independent test, and a failed or inadmissible test moves the project back to mechanism
 development rather than disappearing from the manuscript or being patched post hoc.
+
+V20 adds the subsequent comprehensive development replay and still refuses to interpret more
+reference cases as stronger paper evidence. After endpoint-direction normalization and removal of
+one duplicate observed prefix, the 11-state, seven-task-cluster replay scores 0.5429 bounded
+utility versus 0.6808 for static `PROBE`, with 27.3% versus 9.1% failure. It is registered as a
+development-only contradiction to the decision mechanism and abstraction claims. The paper-level
+diagnosis is unchanged: zero of five central claim arguments is complete, zero of five accepted
+ICLR neighbours is evidence-shape or scale matched, and admitted end-to-end trajectories,
+human/expert validation, and strong system baselines remain missing. A local mechanism repair can
+remove a central contradiction; it cannot by itself make the paper ICLR-comparable.

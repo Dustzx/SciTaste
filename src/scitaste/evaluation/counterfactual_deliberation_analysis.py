@@ -15,6 +15,7 @@ from scitaste.evaluation.counterfactual_deliberation_policy import (
     CounterfactualDeliberationRetrievalRecord,
     CounterfactualDeliberationTarget,
 )
+from scitaste.evaluation.counterfactual_taste import CounterfactualActionSetResult
 from scitaste.model_nodes.runtime import RuntimeLedgerEntry, RuntimeOutcome
 from scitaste.project.models import content_sha256
 from scitaste.taste.deliberation import (
@@ -175,15 +176,31 @@ def analyze_counterfactual_deliberations(
         retrieval = CounterfactualDeliberationRetrievalRecord.model_validate_json(
             (state_dir / "RETRIEVAL.json").read_bytes(), strict=True
         )
+        result = CounterfactualActionSetResult.model_validate_json(
+            (input_base.parent / target.study_id / "RESULT.json").read_bytes(), strict=True
+        )
+        if result.result_sha256 != target.result_sha256:
+            raise ValueError("counterfactual target differs from its objective result")
         if input_data.fingerprint != target.selector_input_sha256:
             raise ValueError("counterfactual target differs from its selector input")
         if retrieval.selector_input_sha256 != input_data.fingerprint:
             raise ValueError("counterfactual retrieval differs from its selector input")
         try:
-            verified = verified_by_input[input_data.fingerprint]
+            candidates = verified_by_input[input_data.fingerprint]
         except KeyError as exc:
             raise ValueError(f"no accepted deliberation for {target.study_id}") from exc
-        states.append(_analyze_state(input_data, target, retrieval, verified))
+        matching = tuple(
+            item
+            for item in candidates
+            if item.invocation_id == target.study_id
+            or item.invocation_id.startswith(f"{target.study_id}-schema-repair-")
+        )
+        if len(matching) != 1:
+            raise ValueError(
+                f"expected exactly one accepted deliberation for {target.study_id}; "
+                f"observed {len(matching)}"
+            )
+        states.append(_analyze_state(input_data, target, retrieval, result, matching[0]))
 
     if not states:
         raise ValueError("counterfactual deliberation population is empty")
@@ -201,7 +218,7 @@ def analyze_counterfactual_deliberations(
     mean_objective = _mean(item.objective_value for item in states)
     failure_rate = _mean(item.objective_failure for item in states)
     maximum_share = max(action_counts.values()) / state_count
-    complete_gate = len(verified_by_input) >= state_count
+    complete_gate = len(states) == state_count
     diversity_gate = len(action_counts) >= 3
     collapse_gate = maximum_share <= 0.75
     utility_gate = mean_objective >= static_means[strongest_static] + 0.02
@@ -307,21 +324,22 @@ def _accepted_deliberations(
     ledger_root: Path,
     *,
     evidence_root: Path,
-) -> dict[str, VerifiedTasteDeliberation]:
-    accepted: dict[str, VerifiedTasteDeliberation] = {}
+) -> dict[str, tuple[VerifiedTasteDeliberation, ...]]:
+    accepted: dict[str, list[VerifiedTasteDeliberation]] = {}
     for path in sorted(ledger_root.glob("*.json")):
         entry = RuntimeLedgerEntry.model_validate_json(path.read_bytes(), strict=True)
         if entry.outcome is not RuntimeOutcome.ACCEPTED:
             continue
         verified = taste_deliberation_from_ledger(path, evidence_root=evidence_root)
-        accepted[verified.input.fingerprint] = verified
-    return accepted
+        accepted.setdefault(verified.input.fingerprint, []).append(verified)
+    return {key: tuple(value) for key, value in accepted.items()}
 
 
 def _analyze_state(
     input_data: TasteDeliberationInput,
     target: CounterfactualDeliberationTarget,
     retrieval: CounterfactualDeliberationRetrievalRecord,
+    result: CounterfactualActionSetResult,
     verified: VerifiedTasteDeliberation,
 ) -> CounterfactualDeliberationStateAnalysis:
     proposal = TasteDeliberationProposal.model_validate(
@@ -354,8 +372,9 @@ def _analyze_state(
         )
         abstained = not ranked_votes or tied
         selected_action = "PROBE" if abstained else ranked_votes[0][0]
-    objective_value = target.objective_values[selected_action]
-    oracle_value = max(target.objective_values.values())
+    utilities = _bounded_utility_values(target, result)
+    objective_value = utilities[selected_action]
+    oracle_value = max(utilities.values())
     preferred = set(target.objective_preferred_actions)
     status_action = _status_policy_action(input_data)
     return CounterfactualDeliberationStateAnalysis(
@@ -388,14 +407,53 @@ def _analyze_state(
         oracle_value=oracle_value,
         regret=max(0.0, oracle_value - objective_value),
         static_objective_values={
-            action: target.objective_values[action] for action in _STATIC_ACTIONS
+            action: utilities[action] for action in _STATIC_ACTIONS
         },
         static_objective_observed={
             action: target.objective_observed[action] for action in _STATIC_ACTIONS
         },
         status_policy_action=status_action,
-        status_policy_objective_value=target.objective_values[status_action],
+        status_policy_objective_value=utilities[status_action],
     )
+
+
+def _bounded_utility_values(
+    target: CounterfactualDeliberationTarget,
+    result: CounterfactualActionSetResult,
+) -> dict[str, float]:
+    """Put heterogeneous objective contracts on the frozen [0, 1] utility scale."""
+
+    outcomes = {item.action.value: item for item in result.outcomes}
+    if set(outcomes) != set(target.objective_values):
+        raise ValueError("counterfactual target and result action spaces differ")
+    utilities: dict[str, float] = {}
+    for action, outcome in outcomes.items():
+        if (
+            target.objective_values[action] != outcome.objective_value
+            or target.objective_observed[action] != outcome.objective_observed
+        ):
+            raise ValueError("counterfactual target objective differs from its result")
+        if not outcome.objective_observed:
+            utilities[action] = 0.0
+            continue
+        value = outcome.objective_value
+        if result.metric_transform == "exp-negative":
+            utility = value
+        elif result.metric_direction == "lower" and result.primary_metric == "rmsle":
+            if value < 0.0:
+                raise ValueError("RMSLE objective cannot be negative")
+            utility = math.exp(-value)
+        elif result.metric_direction == "higher":
+            utility = value
+        else:
+            raise ValueError(
+                "heterogeneous deliberation analysis requires an explicit bounded utility "
+                "transform"
+            )
+        if not 0.0 <= utility <= 1.0:
+            raise ValueError("counterfactual bounded utility is outside [0, 1]")
+        utilities[action] = utility
+    return utilities
 
 
 def _status_policy_action(input_data: TasteDeliberationInput) -> str:

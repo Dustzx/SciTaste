@@ -285,6 +285,30 @@ confirmation. Any new policy must be developed without formal-v5 outcomes and ev
 new population under a separately frozen protocol. The machine-readable report is
 `evaluations/counterfactual-taste-deliberation-confirmation-formal-v5/REPORT.json`.
 
+## Comprehensive pre-v5 development replay
+
+The next development iteration did not inspect formal-v5 target outcomes. It instead abstracted
+all 12 pre-v5 action-set states that had not entered the 17-case source library and merged them
+with the existing temporally safe cases. A duplicate historical sound-speed score was removed
+because it shared exactly the same observed prefix with the later semantics-corrected result;
+counting both would duplicate one decision state under incompatible endpoint contracts. The
+curated replay therefore evaluates 11 states from seven task clusters against a 28-case usable
+source population.
+
+The replay also exposed and repaired an analysis defect: older action sets store raw RMSLE with
+lower-is-better semantics, whereas newer sets store `exp(-RMSLE)` utility. Pooling the raw values
+would reverse the older endpoint and create a meaningless aggregate. The analyzer now resolves
+each target back to its content-addressed result contract, maps observed RMSLE to `exp(-RMSLE)`,
+maps unobserved terminal outcomes to zero, and rejects unbounded heterogeneous objectives.
+
+Under that common bounded-utility contract, the expanded selector does not pass development.
+Across 11 states it reaches mean utility 0.5429 versus 0.6808 for static `PROBE`, with 27.3%
+selected-action failure versus 9.1% for `PROBE`; preferred-action hit rate is 54.5%. More
+precedents therefore do not repair negative transfer. The result blocks another confirmation and
+points to the need for an explicit transfer-value or abstention mechanism, not another source-
+library expansion. The machine-readable report is
+`evaluations/counterfactual-taste-policy-v3-comprehensive-selector-development-v2/REPORT.json`.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

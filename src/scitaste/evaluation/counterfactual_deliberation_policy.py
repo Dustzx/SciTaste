@@ -43,6 +43,7 @@ _CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+_MAX_RETRIEVAL_AUDIT_POPULATION = 10_000
 _SHA256 = r"^[0-9a-f]{64}$"
 
 _ACTION_DESCRIPTIONS = {
@@ -135,12 +136,19 @@ class CounterfactualDeliberationRetrievalRecord(BaseModel):
         "hard-safe-then-lexical-action-diverse-top-k-v2",
     ]
     maximum_candidate_cases: int = Field(ge=2, le=20)
-    population_scores: dict[str, float] = Field(min_length=2, max_length=20)
-    population_preferred_actions: dict[str, str] = Field(min_length=2, max_length=20)
+    # The complete eligible population is retained for leakage and deterministic-
+    # retrieval audits.  Its size must not be coupled to the bounded candidate set
+    # that is actually placed in the model context.
+    population_scores: dict[str, float] = Field(
+        min_length=2, max_length=_MAX_RETRIEVAL_AUDIT_POPULATION
+    )
+    population_preferred_actions: dict[str, str] = Field(
+        min_length=2, max_length=_MAX_RETRIEVAL_AUDIT_POPULATION
+    )
     population_hard_applicability: dict[str, bool] | None = Field(
         default=None,
         min_length=2,
-        max_length=20,
+        max_length=_MAX_RETRIEVAL_AUDIT_POPULATION,
         exclude_if=lambda value: value is None,
     )
     selected_case_ids: tuple[str, ...] = Field(min_length=2, max_length=20)
@@ -215,6 +223,7 @@ def prepare_counterfactual_deliberation_inputs(
     output_root: str | Path,
     maximum_selected_cases: int = 3,
     maximum_candidate_cases: int | None = None,
+    excluded_case_ids: tuple[str, ...] = (),
 ) -> tuple[Path, ...]:
     """Build leave-one-task-cluster-out selector inputs without objective outcomes."""
 
@@ -235,9 +244,23 @@ def prepare_counterfactual_deliberation_inputs(
     if hashlib.sha256(library_path.read_bytes()).hexdigest() != manifest.library_sha256:
         raise ValueError("counterfactual precedent library hash differs from its manifest")
     cases = {item.case_id: item for item in TasteLibrary(library_path).all()}
-    bindings = {item.case_id: item for item in manifest.bindings}
-    if set(cases) != set(bindings):
+    all_bindings = {item.case_id: item for item in manifest.bindings}
+    if set(cases) != set(all_bindings):
         raise ValueError("counterfactual precedent library and manifest populations differ")
+    if excluded_case_ids != tuple(sorted(set(excluded_case_ids))):
+        raise ValueError("excluded counterfactual case IDs must be sorted and unique")
+    unknown_exclusions = set(excluded_case_ids) - set(all_bindings)
+    if unknown_exclusions:
+        raise ValueError(
+            "excluded counterfactual cases are absent from the source library: "
+            + ", ".join(sorted(unknown_exclusions))
+        )
+    bindings = {
+        case_id: binding
+        for case_id, binding in all_bindings.items()
+        if case_id not in excluded_case_ids
+    }
+    cases = {case_id: case for case_id, case in cases.items() if case_id in bindings}
     target_manifest = manifest
     if target_precedent_root is not None:
         target_precedent_base = Path(target_precedent_root).resolve(strict=True)
@@ -247,7 +270,9 @@ def prepare_counterfactual_deliberation_inputs(
         if target_manifest.project_id != project_id:
             raise ValueError("counterfactual target manifest belongs to another project")
         missing_targets = {
-            item.case_id for item in target_manifest.bindings
+            item.case_id
+            for item in target_manifest.bindings
+            if item.case_id not in excluded_case_ids
         } - set(bindings)
         if missing_targets:
             raise ValueError(
@@ -257,7 +282,12 @@ def prepare_counterfactual_deliberation_inputs(
 
     outputs = []
     target_base.mkdir(parents=True)
-    for binding in target_manifest.bindings:
+    target_bindings = tuple(
+        item for item in target_manifest.bindings if item.case_id not in excluded_case_ids
+    )
+    if not target_bindings:
+        raise ValueError("counterfactual target population is empty after exclusions")
+    for binding in target_bindings:
         state_dir = state_base / binding.study_id
         result = CounterfactualActionSetResult.model_validate_json(
             (state_dir / "RESULT.json").read_bytes(), strict=True
@@ -271,13 +301,13 @@ def prepare_counterfactual_deliberation_inputs(
         excluded = tuple(
             sorted(
                 item.case_id
-                for item in manifest.bindings
+                for item in bindings.values()
                 if item.task_cluster_id == binding.task_cluster_id
             )
         )
         eligible = tuple(
             cases[item.case_id]
-            for item in manifest.bindings
+            for item in bindings.values()
             if item.task_cluster_id != binding.task_cluster_id
         )
         if len(eligible) < 2:
