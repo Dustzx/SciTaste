@@ -6,26 +6,30 @@ SciTaste: Improving Autonomous Research through Scientific Taste
 Autonomous research agents can search, code, experiment, and write, yet these
 capabilities do not determine *which* scientific move is worth making next. We
 study this missing capability as **scientific taste**: a contextual preference
-over consequential research decisions, learned from the information available
-at the time of a choice and evidence observed afterward. We introduce
-**SciTaste**, which reconstructs high-quality scientific records into decision
-episodes containing the state, feasible alternatives, contemporaneous evidence,
-delayed outcome, and boundary of a transferable lesson. Signed outcomes update
-a source-balanced preference model; at inference time it perturbs an existing
-research controller only when the relevant preference is sufficiently supported,
-and otherwise abstains. This makes scientific taste distinct from retrieving a
-similar passage, scoring a finished paper, or asking a model to reflect on its
-own trace. We evaluate taste first as a held-out decision policy and then as an
-intervention in objective research tasks and complete idea-to-revision
-trajectories. An eight-task source-disjoint execution study exposes an important
-failure mode: although the learned policy had passed its nominal support rule,
-it abstained at every eligible decision. The resulting 16 trajectories and 358
-experiments are valid system outcomes but not an estimate of a Taste effect.
-We use that failure to revise a redundant uncertainty rule without adding the
-evaluation outcomes to training. In a subsequent development trajectory the
-revised policy changes two of five decisions and reduces RMSLE from 12.51 to
-5.60, while both arms still fail exact symbolic recovery. These results show a
-closed outcome-to-policy loop, not yet a general effectiveness claim.
+over consequential research decisions, learned from what was known when a
+choice was made and what happened afterward. We introduce **SciTaste**, which
+reconstructs scientific records into decision episodes containing the state,
+feasible alternatives, delayed outcome, and boundary of a transferable lesson.
+The resulting preference policy intervenes in an existing research controller
+only when its precedent is supported and applicable. This formulation predicts
+that a useful abstraction must do more than sound scientific: matched Taste
+should outperform both raw precedent and equally polished but mismatched advice.
+We test that prediction on 36 natural review-to-revision decisions with hidden
+dual-model proxy labels, two candidate orders, and 288 model decisions. Base,
+raw-precedent, matched-Taste, and mismatched-Taste accuracy is 58.3%, 66.7%,
+61.1%, and 66.7% when the two orders are averaged. Under the stricter convention
+that a case is correct only when both orders are correct, the corresponding
+scores are 50.0%, 55.6%, 47.2%, and 58.3%. Matched Taste therefore trails Base
+and both controls despite using 3.3 times fewer input tokens than raw precedent.
+The current abstraction compresses experience but does not yet isolate when a
+lesson applies. A separate eight-task execution study finds a second failure:
+the learned policy abstains at every eligible decision, so its 16 trajectories
+cannot estimate a Taste effect. Revising the redundant uncertainty rule makes
+the policy change two of five decisions in a subsequent development trajectory
+and lowers RMSLE from 12.51 to 5.60, although neither arm recovers the target
+law. Together these results close an outcome-to-policy iteration while showing
+that selective transfer, rather than fluent abstraction, is the unresolved
+core of scientific taste.
 
 # Introduction
 
@@ -83,15 +87,18 @@ outcomes. A complete-system study measures the full path from idea to a
 reviewed-and-revised paper; it is complementary to, not a substitute for, the
 causal policy comparison.
 
-The contribution is a source-to-policy account of scientific judgment. It
-defines a supervision unit that preserves rejected alternatives and delayed
-outcomes; derives a signed, source-balanced preference estimator with explicit
-transfer and abstention; and connects decision-level evaluation to objective
-experimental progress under a matched intervention. SciTasteBench is the
-measurement instrument for the first link, while complete research trajectories
-test whether the same mechanism remains useful in an ecologically realistic
-system. This separation is essential: a better paper is not evidence for better
-taste unless the decision intervention itself was active.
+The contribution is a source-to-policy account of scientific judgment and a
+falsifiable test of its central mechanism. We define a supervision unit that
+preserves rejected alternatives and delayed outcomes, derive a signed and
+source-balanced preference estimator with explicit abstention, and connect
+decision-level evaluation to objective experimental progress under a matched
+intervention. The first natural pilot is deliberately diagnostic: it shows that
+an apparently relevant abstraction can be compact without being discriminative.
+SciTasteBench measures that distinction, while complete research trajectories
+test whether an admitted preference remains useful in an ecologically realistic
+system. A better paper or a more fluent rationale is not evidence for better
+taste unless the decision intervention is active and the matched precedent
+beats its mismatched control.
 
 ![SciTaste turns scientific records and endogenous research outcomes into grounded decision episodes. The learned policy changes a feasible action ranking only when the precedent matches the current state and its uncertainty is sufficiently small. Execution, evidence admission, and review remain separate from the learned preference.](assets/fig1-scitaste-control.pdf)
 
@@ -329,65 +336,105 @@ lifecycle policy rather than constituting separate scientific contributions.
 
 # Evaluation
 
-The evaluation follows the causal path implied by the method. At the local
-level, held-out choices test whether grounded episodes outperform no precedent,
-same-source raw retrieval, pointwise language-model judging, unstructured
-reflection, and a mismatched-precedent placebo. Outcome-update controls replace
-signed credit with no update, shuffled credit, success-only credit, or
-failure-only credit. These comparisons separate learning from representation
-and expose survivorship bias.
+The evaluation asks whether an abstracted lesson improves a held-out scientific
+choice, whether an admitted preference changes an actual research trajectory,
+and whether evidence from that trajectory changes the future policy. These are
+separate questions. A good local choice does not guarantee downstream progress,
+and a better downstream score cannot be attributed to Taste when the policy did
+not intervene.
 
-At the downstream level, only the lifecycle-policy weight changes. Model,
-tools, data, initialization, action set, and resource budget remain fixed while
-a hidden scorer measures the final task outcome. Training-free law-discovery
-tasks exercise sequential hypothesis and experiment choices; training-based ML
-tasks measure progress on a frozen hidden objective. They are workload regimes
-for the same SciTaste policy, not separate versions of the system.
+## Natural scientific decisions
 
-Complete research trajectories then connect idea selection, experimentation,
-evidence synthesis, paper construction, review, and review-driven revision.
-Evidence-valid completion, objective progress, paper quality, unresolved review
-obligations, cost, and wall time are compared with a direct-tool-agent baseline
-and reproducible external systems. This ecological study tests practical scope;
-it cannot replace the matched policy intervention.
+We construct a development population from natural paper reviews and subsequent
+author records in computing, ecology, and public health. Each item contains the
+article context and review available before a revision decision; the later
+response is isolated during action construction. Starting from 81 eligible
+records, a model proposes two feasible responses to the review. GLM-5.3-Flash
+and Qwen3.8-Max then independently judge the pair after seeing the hidden later
+record. They agree on 65 pairs. A deterministic coverage rule freezes 36 of
+these agreements spanning six decision contexts and six observed judgment
+families. Resource-allocation decisions remain represented by only one case and
+adaptive-allocation Taste is absent. These are dual-AI proxy labels, not human
+expert judgments.
 
-## SciTasteBench
+Every target is paired with a source-group-disjoint precedent. The raw condition
+receives its abstract, decision context, and later record. The matched-Taste
+condition receives only the transferable principle reconstructed from a
+precedent in the same judgment family, preferentially from another domain. The
+placebo receives an equally formatted principle from a different judgment
+family. Base sees no precedent. This comparison asks whether abstraction adds
+the missing selection signal, rather than whether additional prose can influence
+a model.
 
-SciTasteBench is a collection of source-group-disjoint decision episodes drawn
-from natural research and review records. Each case exposes a pre-decision state,
-a closed alternative set, provenance-bearing evidence, and a hidden outcome and
-attribution. The benchmark samples problem choice, hypothesis refinement,
-experiment design, interpretation, adaptation, review response, and claim
-calibration. Splits are made by source group so that multiple decisions from one
-paper or project cannot cross the train/evaluation boundary.
+DeepSeek V4.1 Flash chooses between the frozen actions under all four conditions.
+We present the actions in both declared and reversed order, yielding 288
+decisions. Following the closest scientific-taste preference protocol, a case is
+correct only if the model selects the preferred action under both orders
+\citep{tong2026scientific}. We report this order-consistent accuracy as the
+primary metric, with per-order accuracy, inconsistency, and token use as
+diagnostics. Raw and abstracted contexts are intentionally faithful but not
+token matched; token efficiency and decision quality must therefore be
+interpreted together.
 
-Primary metrics are closed-set decision accuracy or blinded preference,
-calibration, selective risk under abstention, contextual transfer error, and
-boundary-reversal accuracy. Results are clustered by source group. AI-panel
-labels and natural outcomes are reported separately; neither is presented as
-human-expert construct validity.
+## Objective research trajectories
 
-## Baselines and controls
+For downstream evaluation, only the lifecycle-policy weight changes. Model,
+tools, hidden task, initialization, feasible actions, and resource budget remain
+fixed while an external scorer measures the final result. We retain failed arms
+in the denominator and record whether the policy actually changed a selected
+action. Training-free law-discovery tasks exercise sequential hypotheses and
+experiments; training-based machine-learning tasks will measure progress on a
+frozen hidden objective. These are two workloads for the same policy, not two
+versions of SciTaste.
 
-The mechanism study uses four strong controls: no precedent, raw source
-retrieval, pointwise language-model judging, and unstructured reflection. A
-mismatched-Taste placebo tests whether any polished precedent helps. Credit
-ablations test whether outcome updating matters. The downstream study compares
-the full learned policy with the identical native system at zero policy weight.
-Complete-system experiments add direct-tool-agent and reproducible accepted
-AutoResearch systems, with matched-model and native-best settings reported
-separately.
-
-## Experimental discipline
+Complete research trajectories additionally connect idea selection,
+experimentation, evidence synthesis, paper construction, review, and
+review-driven revision. They evaluate ecological usefulness and cost, but they
+cannot replace either the local mechanism comparison or the matched downstream
+intervention.
 
 All treatment decisions are recorded before execution. Hidden labels remain in
-an isolated scorer until a candidate is frozen. Failures remain in the
-denominator, and formal runs receive no manual repair. API tokens, monetary cost,
-GPU time, wall time, storage, and retry counts are measured for every arm.
-Development runs may reveal interface defects but cannot authorize a formal
-effect claim.
+an isolated scorer until actions are frozen, source groups cannot cross from a
+target to its precedent, and failures remain in the denominator. Development
+runs may change a future algorithm version but cannot be retroactively promoted
+to confirmatory evidence.
 
 # Results
+
+## Abstraction compresses precedent but does not yet select it
+
+The natural pilot does not support the current matched-Taste mechanism. Averaged
+over candidate order, Base selects the proxy-preferred action on 58.3% of cases.
+Raw precedent and the mismatched-Taste placebo both reach 66.7%, while matched
+Taste reaches 61.1%. Requiring correctness in both orders yields the more
+conservative result: 50.0% for Base, 55.6% for raw precedent, 47.2% for matched
+Taste, and 58.3% for the mismatched placebo. Thus matched Taste is 2.8 points
+below Base, 8.3 below raw precedent, and 11.1 below the placebo. Because this is
+an unbalanced 36-case development set, these differences are descriptive rather
+than a confirmatory significance test.
+
+| Information shown with the target decision | Declared | Reversed | Correct in both | Order-inconsistent cases | Input tokens |
+|---|---:|---:|---:|---:|---:|
+| None (Base) | 58.3 | 58.3 | 50.0 | 6 / 36 | 71,700 |
+| Raw matched precedent | 63.9 | 69.4 | 55.6 | 8 / 36 | 247,470 |
+| Matched abstracted Taste | 63.9 | 58.3 | 47.2 | 10 / 36 | 74,902 |
+| Mismatched abstracted Taste | 66.7 | 66.7 | 58.3 | 6 / 36 | 74,820 |
+
+The abstraction is efficient: matched Taste uses 3.3 times fewer input tokens
+than raw precedent. Compression, however, is not the scientific objective. A
+useful Taste representation should preserve the reason a lesson applies and
+reject an equally plausible lesson outside that boundary. Here the matched and
+mismatched principles are statistically indistinguishable, and the mismatched
+condition is numerically better. Matched Taste is also the most order-sensitive
+condition, changing its selected action in 10 of 36 cases when the candidates
+are reversed, compared with 6 for Base, 8 for raw precedent, and 6 for placebo.
+
+This negative result narrows the method hypothesis. A judgment-family match is
+too coarse to establish applicability, and a fluent transferable principle can
+act as generic scientific advice. The next policy version must learn a
+contrastive boundary: not only what succeeded in one record, but which state
+feature makes the preference reverse. Increasing the number of retrieved
+principles would not address the observed failure.
 
 ## Source-disjoint research trajectories
 
@@ -475,6 +522,15 @@ must therefore disclose source coverage, reconstruction confidence, reviewer
 agreement, and contamination risk. AI-panel labels are scalable proxies, not a
 replacement for expert validation.
 
+The natural pilot has only 36 cases and uneven coverage. Its preferred actions
+are more often in the declared first position (23 versus 13), which is why both
+candidate orders are required. GLM and Qwen agreement reduces single-model noise
+but does not establish construct validity. Moreover, the raw precedent contains
+substantially more tokens than either abstracted condition. The study can reject
+the claim that the current matched abstraction is already selective, but it
+cannot determine whether the gap comes from information loss, poor applicability
+matching, or the proxy labels.
+
 End-to-end comparisons introduce model, tool, compute, and implementation
 confounds. We separate matched-model from native-best comparisons and preserve
 unavailable systems rather than imitating them, but ecological results will
@@ -496,14 +552,16 @@ controller only when the lesson is supported and applicable.
 
 The formulation turns an appealing but vague property into a testable learning
 problem. Its success condition is demanding by design: high-quality source
-content must yield a grounded preference, that preference must transfer to the
-right new state, and the resulting decision must improve evidence gathered under
-a matched budget. Development executions currently establish the path but not
-the effect. The decisive evidence is therefore held-out decision quality,
-active matched-policy effects on objective tasks, and complete reviewed research
-trajectories. Together they determine whether scientific taste is a genuine
-capability of autonomous research rather than another name for retrieval or
-reflection.
+content must yield a grounded preference, the representation must distinguish
+where that preference applies from where it does not, and an admitted preference
+must improve evidence gathered under a matched budget. Our present results do
+not satisfy that condition. They show efficient abstraction without selective
+transfer, an inactive first policy, and one development case in which repairing
+that inactivity changes the trajectory. This is precisely the kind of evidence
+an iterative research system must use to revise both its algorithm and its
+paper. The remaining test is whether contrastively learned boundaries improve
+held-out decisions and active objective trajectories, rather than merely making
+the system's advice more persuasive.
 
 # AI Use Statement
 
@@ -524,6 +582,10 @@ remove the need for domain-specific safety review or human responsibility.
 
 The implementation records configuration and source hashes, seeds, model and
 provider identities, action alternatives, decision traces, raw outcomes, token
-and cost telemetry, and failed runs. The reported development pair is retained
-with both treatment arms and its inactive-treatment diagnosis. Formal
-effectiveness results are not yet reported.
+and cost telemetry, and failed runs. The natural pilot retains both candidate
+orders and requires an order-consistent choice for its primary accuracy. A
+case-resampled interval for the order-averaged diagnostic remains available in
+the machine-readable analysis but is not used as the headline metric. The
+reported trajectory pair is retained with both treatment arms and its
+inactive-treatment diagnosis. Human construct validity and formal effectiveness
+results are not yet reported.

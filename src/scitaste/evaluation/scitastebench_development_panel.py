@@ -302,6 +302,75 @@ class DevelopmentPanelSummary(BaseModel):
     formal_split_opened: Literal[False] = False
 
 
+class DevelopmentNormalizedAdjudication(BaseModel):
+    model_config = _CONFIG
+
+    batch_id: str = Field(pattern=_ID)
+    position: int = Field(gt=0, le=12)
+    original_receipt_outcome: Literal["accepted", "rejected"]
+    provider_resolution: AdjudicationResolution
+    canonical_resolution: AdjudicationResolution
+    semantic_echo_correction_count: int = Field(ge=0)
+    ineligible_field_nullification_count: int = Field(ge=0)
+    envelope_field_removal_count: int = Field(ge=0)
+    rationale_truncated: bool
+    decision: DevelopmentAdjudicationDecision
+
+
+class DevelopmentPanelNormalizationManifest(BaseModel):
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    panel_id: str = Field(pattern=_ID)
+    plan_sha256: str = Field(pattern=_SHA256)
+    normalized_at: datetime
+    source_batch_count: int = Field(gt=0)
+    source_accepted_batch_count: int = Field(ge=0)
+    source_rejected_batch_count: int = Field(ge=0)
+    source_input_tokens: int = Field(ge=0)
+    source_output_tokens: int = Field(ge=0)
+    source_cost_usd: float = Field(ge=0, allow_inf_nan=False)
+    normalized_adjudication_count: int = Field(gt=0)
+    final_eligible_count: int = Field(ge=0)
+    semantic_echo_correction_count: int = Field(ge=0)
+    ineligible_field_nullification_count: int = Field(ge=0)
+    envelope_field_removal_count: int = Field(ge=0)
+    rationale_truncation_count: int = Field(ge=0)
+    adjudicator_choice_change_count: Literal[0] = 0
+    context_family_counts: dict[str, int]
+    judgment_family_counts: dict[str, int]
+    domain_counts: dict[str, int]
+    adjudications: ScreenFileBinding
+    decisions: ScreenFileBinding
+    all_batches_normalized: bool
+    ready_for_allocation: bool
+    model_calls_performed: Literal[False] = False
+    target_outcomes_used: Literal[False] = False
+    formal_split_opened: Literal[False] = False
+    manifest_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def normalization_is_consistent(self) -> DevelopmentPanelNormalizationManifest:
+        if self.normalized_at.utcoffset() is None:
+            raise ValueError("development panel normalization time must be timezone-aware")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"manifest_sha256"}))
+        if self.manifest_sha256 != expected:
+            raise ValueError("development panel normalization hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> DevelopmentPanelNormalizationManifest:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("manifest_sha256", None)
+        unsigned = cls.model_construct(manifest_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            manifest_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"manifest_sha256"})
+            ),
+        )
+
+
 def prepare_scitastebench_development_panel(
     *,
     config_path: str | Path,
@@ -551,6 +620,324 @@ def execute_scitastebench_development_panel(
     _validate_budget(_receipt_list(directory, plan=plan), profile=profile)
     _write_json(directory / "SUMMARY.json", summary.model_dump(mode="json"))
     return summary
+
+
+def normalize_scitastebench_development_panel(
+    *,
+    panel_dir: str | Path,
+    locator_root: str | Path,
+    normalized_at: datetime | None = None,
+) -> DevelopmentPanelNormalizationManifest:
+    """Project declared adjudication choices onto frozen primary semantics.
+
+    The provider's resolution is authoritative.  When it selects a primary,
+    repeated semantic fields are redundant and are deterministically replaced
+    by the selected frozen primary record.  No model call or outcome lookup is
+    performed.
+    """
+
+    root = Path(locator_root).resolve(strict=True)
+    directory = _within(root, panel_dir)
+    plan = _load_plan(directory / "PLAN.json")
+    config = DevelopmentPanelConfig.model_validate(
+        yaml.safe_load(_bounded_bytes(_require_binding(root, plan.config)))
+    )
+    visible = _load_visible_items(_require_binding(root, config.screening_items))
+    primary_a, _ = _load_primary(root, config.primary_a)
+    primary_b, _ = _load_primary(root, config.primary_b)
+    target = directory / "normalization"
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(f"development panel normalization already exists: {target}")
+    temporary = Path(tempfile.mkdtemp(prefix=".normalization.", dir=directory))
+    try:
+        normalized: list[DevelopmentNormalizedAdjudication] = []
+        by_candidate: dict[str, DevelopmentAdjudicationDecision] = {}
+        receipts: list[DevelopmentPanelReceipt] = []
+        for batch in plan.batches:
+            receipt = _load_receipt(
+                directory / "receipts" / f"{batch.ordinal:02d}.json",
+                plan=plan,
+                batch=batch,
+            )
+            if receipt.outcome not in {"accepted", "rejected"}:
+                raise ValueError("cannot normalize a provider-failed panel batch")
+            receipts.append(receipt)
+            request = StructuredModelRequest.model_validate_json(
+                _bounded_bytes(directory / PurePosixPath(batch.request.locator))
+            )
+            raw_items = request.input_payload.get("items")
+            if not isinstance(raw_items, list) or len(raw_items) != len(batch.candidate_ids):
+                raise ValueError("development panel request population differs")
+            raw_output = _provider_adjudication_output(
+                directory / "responses" / f"{batch.ordinal:02d}-provider.json"
+            )
+            if raw_output.get("batch_id") != batch.batch_id:
+                raise ValueError("development panel provider response names another batch")
+            if raw_output.get("target_outcomes_used", False) is not False or raw_output.get(
+                "benchmark_admission_claimed", False
+            ) is not False:
+                raise ValueError("development panel provider response exceeds its authority")
+            raw_decisions = raw_output.get("decisions")
+            if not isinstance(raw_decisions, list) or len(raw_decisions) != len(
+                batch.candidate_ids
+            ):
+                raise ValueError("development panel provider response coverage differs")
+            for position, (candidate_id, raw_item, raw_decision) in enumerate(
+                zip(batch.candidate_ids, raw_items, raw_decisions, strict=True), 1
+            ):
+                if not isinstance(raw_item, dict) or not isinstance(raw_decision, dict):
+                    raise ValueError("development panel provider decision is malformed")
+                decision, audit = _normalize_adjudication_decision(
+                    raw_decision,
+                    raw_item=raw_item,
+                    position=position,
+                )
+                if candidate_id in by_candidate:
+                    raise ValueError("development panel normalization repeats a candidate")
+                by_candidate[candidate_id] = decision
+                normalized.append(
+                    DevelopmentNormalizedAdjudication(
+                        batch_id=batch.batch_id,
+                        position=position,
+                        original_receipt_outcome=receipt.outcome,
+                        provider_resolution=audit["provider_resolution"],
+                        canonical_resolution=decision.resolution,
+                        semantic_echo_correction_count=audit[
+                            "semantic_echo_correction_count"
+                        ],
+                        ineligible_field_nullification_count=audit[
+                            "ineligible_field_nullification_count"
+                        ],
+                        envelope_field_removal_count=audit[
+                            "envelope_field_removal_count"
+                        ],
+                        rationale_truncated=audit["rationale_truncated"],
+                        decision=decision,
+                    )
+                )
+        if set(by_candidate) != {
+            candidate_id for batch in plan.batches for candidate_id in batch.candidate_ids
+        }:
+            raise ValueError("development panel normalized population differs")
+
+        records: list[DevelopmentPanelDecisionRecord] = []
+        contexts: Counter[str] = Counter()
+        judgments: Counter[str] = Counter()
+        domains: Counter[str] = Counter()
+        for candidate_id in sorted(primary_a):
+            left = primary_a[candidate_id]
+            right = primary_b[candidate_id]
+            source = visible[candidate_id]
+            if candidate_id in by_candidate:
+                disposition = PanelDecisionDisposition.ADJUDICATED
+                adjudicator = by_candidate[candidate_id]
+                final = _resolve_adjudication(
+                    adjudicator,
+                    candidate_id=candidate_id,
+                    source_group_id=source.source_group_id,
+                    primary_a=left,
+                    primary_b=right,
+                )
+            elif not left.eligible and not right.eligible:
+                disposition = PanelDecisionDisposition.PRIMARY_INELIGIBLE
+                adjudicator = None
+                final = None
+            else:
+                disposition = PanelDecisionDisposition.PRIMARY_AGREEMENT
+                adjudicator = None
+                final = left
+            records.append(
+                DevelopmentPanelDecisionRecord(
+                    intake_candidate_id=candidate_id,
+                    source_group_id=source.source_group_id,
+                    domain=source.domain,
+                    disposition=disposition,
+                    primary_a=left,
+                    primary_b=right,
+                    adjudicator=adjudicator,
+                    final_decision=final,
+                )
+            )
+            if final is not None and final.eligible:
+                assert final.decision_context_family is not None
+                assert final.taste_judgment_family is not None
+                contexts[final.decision_context_family.value] += 1
+                judgments[final.taste_judgment_family.value] += 1
+                domains[source.domain] += 1
+
+        adjudications_path = temporary / "NORMALIZED_ADJUDICATIONS.jsonl"
+        _atomic_write(
+            adjudications_path,
+            "".join(item.model_dump_json() + "\n" for item in normalized),
+        )
+        decisions_path = temporary / "FINAL_DECISIONS.jsonl"
+        _atomic_write(
+            decisions_path,
+            "".join(item.model_dump_json() + "\n" for item in records),
+        )
+        complete = len(normalized) == plan.disputed_count
+        ready = (
+            complete
+            and all(contexts[item.value] >= 6 for item in BenchmarkDecisionContextFamily)
+            and set(judgments) == {item.value for item in ScientificTasteDecisionFamily}
+            and len(domains) >= 3
+        )
+        manifest = DevelopmentPanelNormalizationManifest.create(
+            panel_id=plan.panel_id,
+            plan_sha256=plan.plan_sha256,
+            normalized_at=normalized_at or datetime.now(UTC),
+            source_batch_count=len(receipts),
+            source_accepted_batch_count=sum(
+                item.outcome == "accepted" for item in receipts
+            ),
+            source_rejected_batch_count=sum(
+                item.outcome == "rejected" for item in receipts
+            ),
+            source_input_tokens=sum(item.input_tokens for item in receipts),
+            source_output_tokens=sum(item.output_tokens for item in receipts),
+            source_cost_usd=sum(item.cost_usd or 0.0 for item in receipts),
+            normalized_adjudication_count=len(normalized),
+            final_eligible_count=sum(
+                item.final_decision is not None and item.final_decision.eligible
+                for item in records
+            ),
+            semantic_echo_correction_count=sum(
+                item.semantic_echo_correction_count for item in normalized
+            ),
+            ineligible_field_nullification_count=sum(
+                item.ineligible_field_nullification_count for item in normalized
+            ),
+            envelope_field_removal_count=sum(
+                item.envelope_field_removal_count for item in normalized
+            ),
+            rationale_truncation_count=sum(item.rationale_truncated for item in normalized),
+            context_family_counts=dict(sorted(contexts.items())),
+            judgment_family_counts=dict(sorted(judgments.items())),
+            domain_counts=dict(sorted(domains.items())),
+            adjudications=_binding(adjudications_path, temporary),
+            decisions=_binding(decisions_path, temporary),
+            all_batches_normalized=complete,
+            ready_for_allocation=ready,
+        )
+        _write_json(temporary / "NORMALIZATION.json", manifest.model_dump(mode="json"))
+        os.replace(temporary, target)
+    except BaseException:
+        _cleanup(temporary)
+        raise
+    return manifest
+
+
+def _provider_adjudication_output(path: Path) -> dict[str, object]:
+    payload = json.loads(_bounded_bytes(path))
+    if not isinstance(payload, dict):
+        raise ValueError("development panel provider response root is not an object")
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or len(choices) != 1:
+        raise ValueError("development panel provider response must have one choice")
+    choice = choices[0]
+    if not isinstance(choice, dict) or choice.get("finish_reason") != "stop":
+        raise ValueError("development panel provider response is not final")
+    message = choice.get("message")
+    if not isinstance(message, dict) or not isinstance(message.get("content"), str):
+        raise ValueError("development panel provider response content is not text")
+    output = json.loads(message["content"])
+    if not isinstance(output, dict):
+        raise ValueError("development panel provider content is not an object")
+    return output
+
+
+def _normalize_adjudication_decision(
+    raw: dict[str, object],
+    *,
+    raw_item: dict[str, object],
+    position: int,
+) -> tuple[DevelopmentAdjudicationDecision, dict[str, object]]:
+    permitted = set(DevelopmentAdjudicationDecision.model_fields)
+    unknown = set(raw) - permitted
+    if not unknown <= {"echoes_primary"}:
+        raise ValueError("development panel response contains an unknown semantic field")
+    if raw.get("position") != position:
+        raise ValueError("development panel response positions differ")
+    rationale = raw.get("rationale")
+    if not isinstance(rationale, str) or not rationale.strip():
+        raise ValueError("development panel response lacks an adjudication rationale")
+    rationale = rationale.strip()
+    rationale_truncated = len(rationale) > 700
+    if rationale_truncated:
+        rationale = rationale[:700]
+    resolution = AdjudicationResolution(raw.get("resolution"))
+    semantic_echo_corrections = 0
+    ineligible_nullifications = 0
+
+    if resolution in {AdjudicationResolution.PRIMARY_A, AdjudicationResolution.PRIMARY_B}:
+        key = (
+            "primary_a_decision"
+            if resolution is AdjudicationResolution.PRIMARY_A
+            else "primary_b_decision"
+        )
+        primary = DevelopmentCaseabilityDecision.model_validate(raw_item.get(key))
+        if raw.get("eligible") is not primary.eligible:
+            raise ValueError("development panel selection disagrees with primary eligibility")
+        canonical = primary.model_dump(
+            mode="json",
+            exclude={"intake_candidate_id", "source_group_id", "rationale"},
+        )
+        semantic_echo_corrections = sum(
+            raw.get(field) != value for field, value in canonical.items()
+        )
+        canonical.update(
+            {
+                "position": position,
+                "resolution": (
+                    resolution
+                    if primary.eligible
+                    else AdjudicationResolution.NEITHER_INELIGIBLE
+                ),
+                "rationale": rationale,
+            }
+        )
+        decision = DevelopmentAdjudicationDecision.model_validate(canonical)
+    elif resolution is AdjudicationResolution.NEITHER_INELIGIBLE:
+        normalized = {key: value for key, value in raw.items() if key in permitted}
+        for field in (
+            "decision_context_family",
+            "taste_judgment_family",
+            "atomic_decision_question",
+            "ambiguity",
+            "decision_leverage",
+            "memorization_risk",
+        ):
+            if normalized.get(field) is not None:
+                ineligible_nullifications += 1
+            normalized[field] = None
+        normalized.update(
+            {
+                "position": position,
+                "eligible": False,
+                "resolution": AdjudicationResolution.NEITHER_INELIGIBLE,
+                "rationale": rationale,
+            }
+        )
+        decision = DevelopmentAdjudicationDecision.model_validate(normalized)
+    else:
+        normalized = {key: value for key, value in raw.items() if key in permitted}
+        normalized.update(
+            {
+                "position": position,
+                "eligible": True,
+                "resolution": AdjudicationResolution.NEW_RESOLUTION,
+                "rationale": rationale,
+            }
+        )
+        normalized.setdefault("exclusion_codes", [])
+        decision = DevelopmentAdjudicationDecision.model_validate(normalized)
+    return decision, {
+        "provider_resolution": resolution,
+        "semantic_echo_correction_count": semantic_echo_corrections,
+        "ineligible_field_nullification_count": ineligible_nullifications,
+        "envelope_field_removal_count": len(unknown),
+        "rationale_truncated": rationale_truncated,
+    }
 
 
 def _adjudication_request(
@@ -991,8 +1378,10 @@ def _cleanup(path: Path) -> None:
 
 
 __all__ = [
+    "DevelopmentPanelNormalizationManifest",
     "DevelopmentPanelPlan",
     "DevelopmentPanelSummary",
     "execute_scitastebench_development_panel",
+    "normalize_scitastebench_development_panel",
     "prepare_scitastebench_development_panel",
 ]

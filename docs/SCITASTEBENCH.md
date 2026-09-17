@@ -64,16 +64,34 @@ thin. A third model must adjudicate only disputed or scarce-family candidates;
 the project must not hand-relabel experiment-design cases merely to satisfy the
 six-per-family quota.
 
-The disagreement-only panel is now executable and frozen: 21 cases with exact
-context-and-judgment agreement and 11 jointly excluded cases bypass further
-model judgment, while 69 disputes map to nine fixed DeepSeek-V4.1-Flash
-batches. The request uses ordinal positions rather than generative source-ID
-copying, retains both primary proposals, and still withholds target outcomes.
-The first local launch stopped before transport with zero tokens and zero cost
-because `DEEPSEEK_API_KEY` is not bound in the project environment. Its failed
-receipt is retained locally; it is not a model result, and the batch will not be
-silently retried. A newly versioned panel run may start only after the declared
-third-model credential is available.
+The disagreement-only panel has completed: 21 cases with exact
+context-and-judgment agreement and 11 jointly excluded cases bypassed further
+model judgment, while DeepSeek V4.1 Flash adjudicated 69 disputes in nine fixed
+batches. The calls consumed 118,780 tokens at a recorded USD 0.0481. A
+deterministic normalizer projected the selected primary proposal back onto the
+frozen schema without changing any choice. This produced 81 eligible records,
+but not the intended balanced release: problem selection has four records and
+resource allocation three, below the six-per-family target. The shortage is
+retained rather than repaired by hand relabelling.
+
+The first natural development suite freezes 36 outcome-blind action pairs from
+65 cases on which GLM-5.3-Flash and Qwen3.8-Max independently agree after seeing
+the isolated later record. It spans computing, ecology, and public health, but
+is unbalanced: resource allocation has one case and adaptive allocation is
+absent. The suite is therefore development evidence with
+`not_human_review=true`, not a formal benchmark release.
+
+DeepSeek V4.1 Flash has executed this suite under Base, raw precedent, matched
+abstracted Taste, and mismatched abstracted Taste in both candidate orders. The
+288 decisions yield order-consistent accuracies of 50.0%, 55.6%, 47.2%, and
+58.3%, respectively: a case counts as correct only when both candidate orders
+are correct. Per-order averages and a case-resampled interval remain secondary
+diagnostics in the machine-readable analysis. Matched Taste uses 74,902 input
+tokens across both orders versus 247,470 for raw precedent, so it compresses
+context without yet preserving selective value. The result directs the next
+method iteration toward contrastive applicability boundaries rather than more
+retrieval. Exact local artifacts are under
+`outputs/projects/scitaste-self-development/evaluations/scitastebench-natural-development-v5/`.
 
 The candidates are not benchmark items or gold outcomes. A source enters a
 formal population only after the applicable domain, quality, privacy,

@@ -1,0 +1,13 @@
+provider: deepseek
+base_url: https://api.deepseek.com
+model: deepseek-flash
+api_key_env: DEEPSEEK_API_KEY
+api_style: chat_completions
+timeout_seconds: 600
+max_retries: 1
+json_mode: true
+extra_headers: {}
+extra_body:
+  max_tokens: 4096
+  thinking:
+    type: disabled

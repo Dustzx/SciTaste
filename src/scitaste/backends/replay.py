@@ -86,3 +86,37 @@ class RecordingBackend:
             handle.flush()
             os.fsync(handle.fileno())
         return response
+
+
+class ResumableRecordingBackend:
+    """Replay completed requests and append only missing live responses."""
+
+    name = "resumable-recording"
+
+    def __init__(self, delegate: PreferenceBackend, path: str | Path) -> None:
+        self.delegate = delegate
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.touch(exist_ok=True)
+        self.replay = ReplayBackend(self.path)
+
+    def rank(self, request: PreferenceRequest) -> PreferenceResponse:
+        try:
+            return self.replay.rank(request)
+        except ReplayMissError:
+            response = self.delegate.rank(request)
+            if response.request_fingerprint != request.fingerprint:
+                raise ValueError(
+                    "delegate returned a response for a different request"
+                ) from None
+            record = ReplayRecord(
+                request=request,
+                response=response,
+                recorded_at=datetime.now(UTC),
+            )
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(record.model_dump_json(exclude={"request": {"fingerprint"}}) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            self.replay._records[request.fingerprint] = response
+            return response

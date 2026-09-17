@@ -8,6 +8,7 @@ from scitaste.backends.replay import (
     ReplayBackend,
     ReplayMissError,
     ReplayRecord,
+    ResumableRecordingBackend,
 )
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -48,3 +49,18 @@ def test_replay_rejects_changed_request(tmp_path) -> None:
 
     with pytest.raises(ReplayMissError, match="no exact replay"):
         ReplayBackend(path).rank(request(seed=4))
+
+
+def test_resumable_recording_creates_file_and_replays_completed_request(tmp_path) -> None:
+    path = tmp_path / "nested" / "replay.jsonl"
+    backend = ResumableRecordingBackend(
+        ScriptedPreferenceBackend({"case-1": "probe"}),
+        path,
+    )
+
+    original = backend.rank(request())
+    replayed = backend.rank(request())
+
+    assert original.cached is False
+    assert replayed.cached is True
+    assert len(path.read_text(encoding="utf-8").splitlines()) == 1

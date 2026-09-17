@@ -21,7 +21,12 @@ from scitaste.backends.openai_compatible import (
     OpenAICompatibleConfig,
     load_openai_compatible_config,
 )
-from scitaste.backends.replay import RecordingBackend, ReplayBackend, ReplayMissError
+from scitaste.backends.replay import (
+    RecordingBackend,
+    ReplayBackend,
+    ReplayMissError,
+    ResumableRecordingBackend,
+)
 from scitaste.backends.scripted import ScriptedPreferenceBackend, ScriptedSelection
 
 __all__ = [
@@ -40,6 +45,7 @@ __all__ = [
     "RecordingBackend",
     "ReplayBackend",
     "ReplayMissError",
+    "ResumableRecordingBackend",
     "ScriptedPreferenceBackend",
     "ScriptedSelection",
     "Usage",

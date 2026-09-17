@@ -24,7 +24,7 @@ from scitaste.backends.openai_compatible import (
     OpenAICompatibleBackend,
     load_openai_compatible_config,
 )
-from scitaste.backends.replay import RecordingBackend, ReplayBackend
+from scitaste.backends.replay import RecordingBackend, ReplayBackend, ResumableRecordingBackend
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.benchmark import (
     BenchmarkCondition,
@@ -341,6 +341,7 @@ from scitaste.evaluation.scitastebench_development_intake import (
 )
 from scitaste.evaluation.scitastebench_development_panel import (
     execute_scitastebench_development_panel,
+    normalize_scitastebench_development_panel,
     prepare_scitastebench_development_panel,
 )
 from scitaste.evaluation.scitastebench_development_screening import (
@@ -2130,6 +2131,12 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark_run.add_argument("--replay", type=Path, default=None)
     benchmark_run.add_argument("--record", type=Path, default=None)
     benchmark_run.add_argument(
+        "--resume-record",
+        type=Path,
+        default=None,
+        help="Replay completed requests from a recording and append only missing live responses",
+    )
+    benchmark_run.add_argument(
         "--candidate-order",
         choices=[item.value for item in CandidateOrder],
         default=CandidateOrder.DECLARED.value,
@@ -2465,6 +2472,18 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(development_panel_execute)
     development_panel_execute.set_defaults(
         handler=_handle_evaluation_scitastebench_v4_panel_execute
+    )
+    development_panel_normalize = evaluation_commands.add_parser(
+        "scitastebench-v4-development-panel-normalize",
+        help="Project third-model choices onto frozen primary semantics",
+    )
+    development_panel_normalize.add_argument("--directory", type=Path, required=True)
+    development_panel_normalize.add_argument(
+        "--locator-root", type=Path, default=Path(".")
+    )
+    _add_log_level_option(development_panel_normalize)
+    development_panel_normalize.set_defaults(
+        handler=_handle_evaluation_scitastebench_v4_panel_normalize
     )
     abstraction_review_prepare = evaluation_commands.add_parser(
         "ai-abstraction-review-prepare",
@@ -8103,7 +8122,11 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
         raise ValueError(
             "supported benchmark backends: scripted, replay, openai-compatible, local-transformers"
         )
-    if args.record:
+    if args.resume_record is not None:
+        if args.record is not None or args.backend in {"scripted", "replay"}:
+            raise ValueError("--resume-record requires one live backend and cannot use --record")
+        backend = ResumableRecordingBackend(backend, args.resume_record)
+    elif args.record:
         backend = RecordingBackend(backend, args.record)
     report = SciTasteBenchRunner(
         backend,
@@ -8720,6 +8743,15 @@ def _handle_evaluation_scitastebench_v4_panel_execute(args: argparse.Namespace) 
     )
     print(summary.model_dump_json(indent=2))
     return 0 if summary.complete and summary.ready_for_allocation else 1
+
+
+def _handle_evaluation_scitastebench_v4_panel_normalize(args: argparse.Namespace) -> int:
+    manifest = normalize_scitastebench_development_panel(
+        panel_dir=args.directory,
+        locator_root=args.locator_root,
+    )
+    print(manifest.model_dump_json(indent=2))
+    return 0
 
 
 def _handle_evaluation_ai_abstraction_review_prepare(args: argparse.Namespace) -> int:
