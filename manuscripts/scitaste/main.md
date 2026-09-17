@@ -13,25 +13,15 @@ feasible alternatives, delayed outcome, and boundary of a transferable lesson.
 The resulting preference policy intervenes in an existing research controller
 only when its precedent is supported and applicable. This formulation predicts
 that a useful abstraction must do more than sound scientific: matched Taste
-should outperform both raw precedent and equally polished but mismatched advice.
-We test that prediction on 36 natural review-to-revision decisions with hidden
-dual-model proxy labels and both candidate orders. A first 288-decision study
-finds that a plain matched principle trails raw and mismatched controls. We use
-this failure to derive a contrastive representation that states when the lesson
-applies, when it reverses, and what diagnosis distinguishes the two. With raw,
-matched, and mismatched contexts fixed to 256 lexical tokens, order-consistent
-accuracy is 41.7%, 58.3%, and 50.0%, respectively; Base reaches 44.4%. Thus the
-contrastive card improves 16.7 points over raw precedent and 8.3 over a
-mismatched card, but the latter contrast remains uncertain in this small,
-unbalanced development population. A separate eight-task execution study finds
-a second failure:
-the learned policy abstains at every eligible decision, so its 16 trajectories
-cannot estimate a Taste effect. Revising the redundant uncertainty rule makes
-the policy change two of five decisions in a subsequent development trajectory
-and lowers RMSLE from 12.51 to 5.60, although neither arm recovers the target
-law. Together these results show an outcome-driven method revision and close an
-outcome-to-policy iteration. They provide a provisional selective-transfer
-signal, not evidence that SciTaste yet improves complete research outcomes.
+must outperform both equal-token raw precedent and equally polished but
+mismatched advice, reverse its preference when a decisive fact crosses the
+learned boundary, and abstain outside support. We make this hypothesis testable
+with SciTasteBench, a source-grounded collection of natural decisions paired
+with single-fact counterfactual twins. We evaluate downstream utility separately
+on the accepted MLRC-Bench and MLR-Bench suites, comparing SciTaste with the same
+backbone and tools but no Taste intervention, as well as a runnable research
+agent baseline. This separation distinguishes learning scientific judgment from
+adding context, generating fluent rationales, or using a stronger executor.
 
 # Introduction
 
@@ -94,13 +84,12 @@ falsifiable test of its central mechanism. We define a supervision unit that
 preserves rejected alternatives and delayed outcomes, derive a signed and
 source-balanced preference estimator with explicit abstention, and connect
 decision-level evaluation to objective experimental progress under a matched
-intervention. The first natural pilot is deliberately diagnostic: it shows that
-an apparently relevant abstraction can be compact without being discriminative.
-SciTasteBench measures that distinction, while complete research trajectories
-test whether an admitted preference remains useful in an ecologically realistic
-system. A better paper or a more fluent rationale is not evidence for better
-taste unless the decision intervention is active and the matched precedent
-beats its mismatched control.
+intervention. SciTasteBench measures whether the representation is selective;
+accepted external benchmarks test whether an admitted preference remains useful
+in an ecologically realistic system. A better paper or a more fluent rationale
+is not evidence for better taste unless the decision intervention is active,
+the matched precedent beats its mismatched control, and the changed action
+improves externally scored evidence.
 
 ![SciTaste turns scientific records and endogenous research outcomes into grounded decision episodes. The learned policy changes a feasible action ranking only when the precedent matches the current state and its uncertainty is sufficiently small. Execution, evidence admission, and review remain separate from the learned preference.](assets/fig1-scitaste-control.pdf)
 
@@ -315,63 +304,47 @@ which generic caution or “run another analysis” succeeds in every state.
 
 Each formal pair binds its source license and content hash, outcome firewall,
 utility contract, raw independent judgments, counterfactual construction record,
-contamination probe, and immutable split. We use 24 development pairs, 24
-validation pairs, and 72 hidden-test pairs, stratified to give 20 independent
-pairs in each of six scientific decision contexts across at least three domains.
+contamination probe, and immutable split. The release target contains 24
+development pairs, 24 validation pairs, and 72 hidden-test pairs, stratified to
+give 20 independent pairs in each of six scientific decision contexts across at
+least three domains.
 The primary endpoint is pair-level budgeted decision regret, averaging base and
 twin before aggregation. A co-primary mechanism endpoint requires both states to
 be correct, the registered reversal to occur, and both choices to be robust to
 candidate order. Matched-minus-mismatched specificity, selective risk, nuisance
 paraphrase invariance, and cost are secondary.
 
-This is the formal design, not a description of the current 36-case pilot. The
-pilot below is an AI-proxy development instrument without genuine boundary
-twins, transfer cases, or abstention cases. It can falsify an implementation and
-guide the next method version, but it cannot validate SciTasteBench or populate
-the confirmatory table.
+Construction results pass through an irreversible evidence buffer: engineering,
+consumed development, frozen validation, and hidden confirmation. Method changes
+consume a split, and only hidden confirmation can populate the main result
+table. Candidate-order or paraphrase repetitions are repeated measurements, not
+additional independent pairs.
 
 ## Natural scientific decisions
 
-We construct a development population from natural paper reviews and subsequent
-author records in computing, ecology, and public health. Each item contains the
-article context and review available before a revision decision; the later
-response is isolated during action construction. Starting from 81 eligible
-records, a model proposes two feasible responses to the review. GLM-5.3-Flash
-and Qwen3.8-Max then independently judge the pair after seeing the hidden later
-record. They agree on 65 pairs. A deterministic coverage rule freezes 36 of
-these agreements spanning six decision contexts and six observed judgment
-families. Resource-allocation decisions remain represented by only one case and
-adaptive-allocation Taste is absent. These are dual-AI proxy labels, not human
-expert judgments.
+We reconstruct candidate decisions from natural paper reviews and subsequent
+author records in computing, ecology, and public health. The constructor sees
+only the article and review available before revision; the later response is
+isolated. It proposes a natural state, a hypothetical twin, and one action menu
+that must remain feasible in both. Independent construct reviewers see randomly
+named states and the original record, but not the constructor's preferred
+actions, utilities, state roles, rationale, or observed outcome.
 
-Every target is paired with a source-group-disjoint precedent. In the first
-study, the raw condition receives its abstract, decision context, and later
-record. Matched Taste receives a transferable principle reconstructed from a
-precedent in the same judgment family; the placebo receives an equally formatted
-principle from another family. This study diagnoses whether a plain principle
-retains a selective signal.
+The first consumed construction pass illustrates why this separation is needed.
+Three proposal runs yielded 26 unique candidate pairs; requiring two independent
+model reviewers to accept the construct, recover the natural state, and
+independently reproduce the registered action flip retained only 13. These span
+all six contexts and three domains, but only one hypothesis and one resource
+pair survived. This attrition guides targeted reconstruction and expert review;
+it is not an effectiveness result and does not enter the result table.
 
-We then revise the representation without changing the frozen targets, actions,
-or labels. A contrastive card is constructed from the precedent and its later
-outcome while the target remains hidden. It states a scientific preference,
-two or three applicability conditions, two or three reversal conditions, a
-diagnostic question, and the expected failure when misapplied. The raw
-precedent, matched card, and mismatched card are deterministically truncated or
-padded to 256 whitespace-delimited lexical tokens. Matched and mismatched source
-groups remain disjoint from the target and from one another. This second study
-therefore tests representation and selectivity without the first study's large
-length difference.
-
-DeepSeek V4.1 Flash chooses between the frozen actions under all four conditions.
-We present the actions in both declared and reversed order, yielding 288
-decisions. Following the closest scientific-taste preference protocol, a case is
-correct only if the model selects the preferred action under both orders
-\citep{tong2026scientific}. We report this order-consistent accuracy as the
-primary metric, with per-order accuracy, inconsistency, and token use as
-diagnostics. Raw and abstracted contexts are intentionally faithful but not
-token matched; token efficiency and decision quality must therefore be
-interpreted together in the first study; the contrastive study removes that
-length confound by construction.
+Every formal target is paired with source-group-disjoint precedents. The Base
+condition receives no precedent, equal-token raw receives the underlying source
+record, Matched Taste receives the outcome-grounded decision abstraction whose
+boundary fits the target, and Mismatched Taste receives an equally formatted
+abstraction outside that boundary. All conditions share the generator, action
+menu, visible state, and context budget. The analysis operates on independent
+pairs and reports raw disagreements rather than filtering them from the sample.
 
 ## Objective research trajectories
 
@@ -397,6 +370,30 @@ runs may change a future algorithm version but cannot be retroactively promoted
 to confirmatory evidence.
 
 # Results
+
+The submission result boundary is intentionally empty until frozen evidence is
+available. Three result blocks are required: (i) SciTasteBench hidden boundary
+judgment, including matched--mismatched specificity and abstention; (ii)
+MLRC-Bench objective progress for Full SciTaste, the same-backbone Native Base,
+and a runnable external agent; and (iii) MLR-Bench stagewise and final-package
+quality with invalid or fabricated results retained. Development effects are
+not substituted for any block.
+
+| Claim-bearing block | Independent unit | Primary endpoint | Current status |
+|---|---|---|---|
+| SciTaste mechanism | source-group-disjoint boundary pair | paired decision regret and correct two-state reversal | hidden confirmation not opened |
+| Executable research progress | MLRC-Bench task | objective score gain over supplied baseline per GPU/API budget | matched external run pending |
+| Complete research product | MLR-Bench brief | evidence-valid stage and final-package quality | external-system comparison pending |
+
+A result enters this table only if the method, task population, backbone,
+budget, scorer, and failure policy were frozen before outcomes were opened. Null
+results and failed runs remain in the denominator. If these blocks do not
+support the title, the claim and title are narrowed rather than repaired with
+development evidence.
+
+<!-- DEVELOPMENT EVIDENCE QUARANTINE
+The material below is retained in source control as design history. It is not
+rendered in the submission draft and must not be used as a paper result.
 
 ## Abstraction compresses precedent but does not yet select it
 
@@ -532,6 +529,8 @@ The task was a previously used development task, the sample contains one pair,
 and the primary metric remains tied at zero. A new source-disjoint prospective
 population is still required for an effectiveness estimate.
 
+-->
+
 # Limitations
 
 Outcome attribution is intrinsically difficult. Later success may reflect luck,
@@ -553,14 +552,13 @@ must therefore disclose source coverage, reconstruction confidence, reviewer
 agreement, and contamination risk. AI-panel labels are scalable proxies, not a
 replacement for expert validation.
 
-The natural studies reuse the same 36 cases and have uneven coverage. Their preferred actions
-are more often in the declared first position (23 versus 13), which is why both
-candidate orders are required. GLM and Qwen agreement reduces single-model noise
-but does not establish construct validity. The first study confounds representation
-with context length; the second removes that confound but was designed after
-observing the first failure and is therefore still development evidence. Its
-positive matched--mismatched difference requires an independent frozen
-population, and neither study can establish downstream causal utility.
+The current consumed construction set is small and uneven: only 13 of 26
+generated pairs survived two independent AI-proxy construct reviews, including
+only one hypothesis and one resource-allocation pair. Agreement between model
+reviewers does not establish human construct validity. The formal population
+therefore still requires targeted coverage, expert validation, and an unopened
+source-disjoint confirmation split. Even a replicated decision-level effect
+would not establish downstream causal utility.
 
 End-to-end comparisons introduce model, tool, compute, and implementation
 confounds. We separate matched-model from native-best comparisons and preserve
@@ -585,17 +583,13 @@ The formulation turns an appealing but vague property into a testable learning
 problem. Its success condition is demanding by design: high-quality source
 content must yield a grounded preference, the representation must distinguish
 where that preference applies from where it does not, and an admitted preference
-must improve evidence gathered under a matched budget. A generic abstraction
-fails that first test; adding explicit applicability and reversal conditions
-recovers a provisional +8.3-point selectivity signal on the same development
-population. Separately, an inactive first policy and a repaired single
-trajectory show why treatment activation must precede claims about downstream
-utility. This is precisely the kind of evidence an iterative research system
-must use to revise both its algorithm and its paper. The remaining tests are an
-independent contrastive replication, active objective trajectories, and
-artifact-verifiable idea-to-paper comparisons against strong systems. Until
-those tests are complete, the result is a mechanism hypothesis rather than a
-top-venue effectiveness claim.
+must improve evidence gathered under a matched budget. SciTasteBench tests the
+first two requirements; accepted external benchmarks test the third. The method
+claim requires an independent boundary-pair confirmation, active objective
+trajectories on MLRC-Bench, and artifact-verifiable MLR-Bench comparisons against
+a runnable research agent. Until those tests are complete, this manuscript is a
+method and evaluation design rather than evidence for improved autonomous
+research.
 
 # AI Use Statement
 
@@ -616,12 +610,10 @@ remove the need for domain-specific safety review or human responsibility.
 
 The implementation records configuration and source hashes, seeds, model and
 provider identities, action alternatives, decision traces, raw outcomes, token
-and cost telemetry, and failed runs. Both natural studies retain both candidate
-orders and require an order-consistent choice for primary accuracy. The
-contrastive study additionally fixes raw, matched, and mismatched context to 256
-lexical tokens and isolates every target from its precedent source groups. A
-case-resampled interval for the order-averaged diagnostic remains available in
-the machine-readable analysis but is not used as the headline metric. The
-reported trajectory pair is retained with both treatment arms and its
-inactive-treatment diagnosis. Human construct validity and formal effectiveness
-results are not yet reported.
+and cost telemetry, and failed runs. Boundary judgment retains both candidate
+orders and treats the source-group pair, rather than the model call, as the
+independent unit. Raw, matched, and mismatched conditions receive equal context
+budgets and source-disjoint precedents. Construction requests, independent raw
+reviews, disagreements, rejected cases, and consumed development runs remain in
+the evidence package but outside the submission result table. Human construct
+validity and formal effectiveness results are not yet reported.

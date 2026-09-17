@@ -219,23 +219,23 @@ not credited as learning.
 ## External Auto Research evaluation
 
 At least one **peer-reviewed, community-owned external Auto Research benchmark**
-is mandatory. A local benchmark plus an arXiv-only task cannot support the broad
-title by itself. The minimum defensible ICLR portfolio therefore uses three
-complementary endpoints:
+is mandatory. SciTaste already has two suitable accepted routes: MLRC-Bench and
+MLR-Bench were both accepted to the NeurIPS 2025 Datasets and Benchmarks Track.
+The minimum defensible ICLR portfolio therefore uses three complementary
+endpoints:
 
 | Evaluation | Endpoint | Primary comparison | Role |
 |---|---|---|---|
-| ScienceAgentBench official tasks (ICLR 2025), or an unchanged qualified EXP-Bench subset (ICLR 2026) | official task/scorer success | Full SciTaste, same-backbone Native Base, official/runnable agent baseline | accepted external benchmark and competitiveness |
-| MLRC-Bench | objective task improvement and progress per GPU/API budget | Full SciTaste vs same-backbone Native Base | whether Taste improves executable research |
-| MLR-Bench official briefs | blinded evidence-aware preference over the complete research package | Full, Native Base, direct agent, runnable external system | whether the whole idea-to-paper product is better |
+| MLRC-Bench (NeurIPS 2025 D&B) | objective competition-score improvement and progress per GPU/API budget | Full SciTaste, same-backbone Native Base, official/runnable agent baseline | accepted external benchmark, executable research, and competitiveness |
+| MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, MLR-Agent or another runnable external system | accepted external idea-to-paper evaluation |
+| SciTasteBench | paired regret, correct boundary reversal, abstention, and delayed-credit learning | Base, equal-token raw, Matched Taste, Mismatched Taste | internal mechanism attribution rather than external competitiveness |
 
-ScienceAgentBench is the immediate accepted-benchmark qualification route because
-its ICLR 2025 release defines 102 tasks from 44 papers and evaluates executable
-scientific workflows. EXP-Bench is a valuable experiment-integrity alternative,
-but the locally acquired package currently contains task metadata rather than the
-upstream runtime assets and scorer. It enters only if an unchanged official
-runnable subset is qualified in time; it must not be imitated with a
-SciTaste-authored scorer.
+EXP-Bench (ICLR 2026) and ScienceAgentBench (ICLR 2025) are useful reserve routes,
+not prerequisites once MLRC-Bench and MLR-Bench are run correctly. EXP-Bench
+enters only if an unchanged official runnable subset is qualified in time; its
+experiment-integrity scorer must not be imitated locally. ScienceAgentBench tests
+scientific-program generation rather than open-ended research improvement, so it
+is less aligned with the headline claim than MLRC-Bench.
 
 MLRC-Bench is the immediate objective route because its competition score directly
 measures improvement over a supplied baseline under a compute limit.  Its own
@@ -292,9 +292,9 @@ self-validating. The smallest defensible external portfolio is:
 
 | Question | External route | Conditions | Primary evidence |
 |---|---|---|---|
-| Is SciTaste competitive on an accepted community instrument? | official ScienceAgentBench tasks, or a qualified unchanged EXP-Bench subset | Full SciTaste, same-backbone Native Base, official/runnable agent baseline | official task success, conjunctive failures, and cost |
-| Does Taste improve executable research? | at least three MLRC-Bench tasks | Full SciTaste, same-backbone Native Base, one runnable research-agent baseline; one paired seed first | objective score gain and gain per GPU/API budget |
-| Does the complete research product improve? | source-disjoint MLR-Bench briefs | the same three system roles | blinded artifact-aware review with invalid-result accounting |
+| Does Taste improve executable research on an accepted external benchmark? | at least three MLRC-Bench tasks | Full SciTaste, same-backbone Native Base, one runnable research-agent baseline; one paired seed first | objective score gain and gain per GPU/API budget |
+| Does the complete research product improve on an accepted external benchmark? | source-disjoint MLR-Bench briefs | Full, Native Base, MLR-Agent or another runnable external system | stagewise and final-package review with invalid-result accounting |
+| Where does experiment integrity fail? | unchanged official EXP-Bench subset, only if its runtime and scorer qualify | Full, Native Base, official agent baseline | conjunctive hypothesis-to-conclusion success; secondary diagnostic only |
 
 The same-backbone Full/Base pair identifies the effect of Taste. The external
 system establishes competitiveness. EXP-Bench is not replaced by a local
