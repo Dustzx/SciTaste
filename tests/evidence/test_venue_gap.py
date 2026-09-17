@@ -5,6 +5,7 @@ from scitaste.evidence.venue_gap import (
     AcceptedNeighbourEvidenceProfile,
     AcceptedPaperKind,
     CurrentEvidenceComponentBinding,
+    EvidenceDirection,
     EvidenceMaturity,
     SubmissionEvidencePosition,
     VenueComparisonProfile,
@@ -191,4 +192,27 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert assessment.venue_comparison.missing_or_unadmitted_accepted_majority_components == (
         VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
         VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+    )
+
+    admitted_negative = manifest.evidence[0].model_copy(
+        update={
+            "maturity": EvidenceMaturity.ADMITTED,
+            "direction": EvidenceDirection.CONTRADICTING,
+            "headline_eligible": False,
+            "objective_measurement": True,
+            "held_out": True,
+        }
+    )
+    contradicted = assess_venue_gap(
+        manifest.model_copy(update={"evidence": (admitted_negative,)}),
+        deadline,
+        comparison,
+    )
+
+    assert contradicted.submission_position is SubmissionEvidencePosition.CONTRADICTED
+    assert contradicted.evidence_portfolio.admitted_empirical_family_count == 1
+    assert contradicted.evidence_portfolio.contradicting_empirical_family_count == 1
+    assert contradicted.venue_comparison is not None
+    assert contradicted.venue_comparison.innovation_claims[0].evidence_status is (
+        VenueInnovationEvidenceStatus.CONTRADICTED
     )

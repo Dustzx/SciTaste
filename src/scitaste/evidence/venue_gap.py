@@ -713,7 +713,6 @@ def _assess_venue_comparison(
         for item in admitted_components
         for evidence_id in item.current_evidence_ids
         if evidence_by_id[evidence_id].maturity is EvidenceMaturity.ADMITTED
-        and evidence_by_id[evidence_id].headline_eligible
     }
     supporting_count = sum(
         item.current_direction
@@ -773,18 +772,26 @@ def _assess_innovation_claim(
     evidence_by_id: dict[str, VenueEvidenceSignal],
 ) -> VenueInnovationClaimAssessment:
     evidence = tuple(evidence_by_id[item] for item in claim.effect_evidence_ids)
-    admitted = tuple(
+    admitted_support = tuple(
         item
         for item in evidence
-        if item.maturity is EvidenceMaturity.ADMITTED and item.headline_eligible
+        if item.maturity is EvidenceMaturity.ADMITTED
+        and item.headline_eligible
+        and item.direction is EvidenceDirection.SUPPORTING
     )
-    if any(item.direction is EvidenceDirection.CONTRADICTING for item in admitted):
+    admitted_contradictions = tuple(
+        item
+        for item in evidence
+        if item.maturity is EvidenceMaturity.ADMITTED
+        and item.direction is EvidenceDirection.CONTRADICTING
+    )
+    if admitted_contradictions:
         status = VenueInnovationEvidenceStatus.CONTRADICTED
         diagnosis = (
             f"{claim.axis.value}: the distinction is source-compared, but admitted evidence "
             "contradicts its claimed effect."
         )
-    elif any(item.direction is EvidenceDirection.SUPPORTING for item in admitted):
+    elif admitted_support:
         status = VenueInnovationEvidenceStatus.ADMITTED_SUPPORT
         diagnosis = (
             f"{claim.axis.value}: the source-compared distinction has admitted effect evidence; "
@@ -825,7 +832,7 @@ def _assess_evidence_component(
     admitted = tuple(
         item
         for item in evidence
-        if item.maturity is EvidenceMaturity.ADMITTED and item.headline_eligible
+        if item.maturity is EvidenceMaturity.ADMITTED
     )
     if admitted:
         maturity = VenueComponentMaturity.ADMITTED
@@ -890,10 +897,12 @@ def _assess_evidence_portfolio(
     admitted = tuple(
         item
         for item in empirical
-        if item.maturity is EvidenceMaturity.ADMITTED and item.headline_eligible
+        if item.maturity is EvidenceMaturity.ADMITTED
     )
     supporting_families = {
-        item.family_id for item in admitted if item.direction is EvidenceDirection.SUPPORTING
+        item.family_id
+        for item in admitted
+        if item.direction is EvidenceDirection.SUPPORTING and item.headline_eligible
     }
     contradicting_families = {
         item.family_id for item in admitted if item.direction is EvidenceDirection.CONTRADICTING
@@ -971,7 +980,6 @@ def _assess_criterion(
         for item in related
         if item.direction is EvidenceDirection.CONTRADICTING
         and item.maturity is EvidenceMaturity.ADMITTED
-        and item.headline_eligible
     )
     development_contradictions = tuple(
         item for item in development if item.direction is EvidenceDirection.CONTRADICTING

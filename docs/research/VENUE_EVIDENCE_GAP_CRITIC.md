@@ -79,9 +79,9 @@ strong baselines, ablations, objective or external validation, and case studies.
 
 The current project-owned manifest and generated assessment are:
 
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V4.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V1.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V7.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V5.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V2.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V8.json`
 
 The comparison set contains ICLR main-track method, evaluation, and benchmark
 papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
@@ -151,3 +151,23 @@ blocks headline, generalization, and state-conditional-policy claims for a singl
 prefix. This is the intended interaction between experiment execution and the venue
 critic: an interesting result changes the next experiment without automatically
 changing the paper's evidence position.
+
+The subsequent frozen formal-v4 population makes that feedback loop concrete. It
+evaluated all seven actions at 12 held-out states from four task clusters and passed
+the preregistered endpoint-coverage gate, but did not confirm the evidence-status
+policy. Relative to static `PROBE`, the policy obtained a +0.0232 mean bounded-utility
+difference with a task-cluster interval of [-0.1803, 0.2500] and a practical record of
+one win, two losses, and nine ties. Static `EXPERIMENT` exceeded it by 0.0964 on
+average, while the policy's selected outcome failed three times. The admitted lesson
+is therefore a failure boundary: evidence status by itself is not a sufficient Taste
+representation. This adds an independent, objective mechanism family to the evidence
+portfolio, but its direction is contradicting; it cannot turn greater evidence breadth
+into venue readiness. The next scientific action is representation revision followed
+by a new disjoint confirmation—not manuscript polish or another view of the same
+table.
+
+The v8 assessment now routes the project to
+`learn-content-conditioned-taste-policy`, replacing the already completed generic
+counterfactual-study action. Valid negative evidence is admitted as a contradiction
+even when it is not eligible to support a positive headline claim; otherwise a system
+could hide a failed formal result merely by setting `headline_eligible=false`.

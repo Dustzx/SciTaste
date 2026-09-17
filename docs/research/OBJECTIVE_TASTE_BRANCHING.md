@@ -99,15 +99,56 @@ Project-owned records are:
 This is the first empirically outcome-calibrated state-to-action mapping in the current
 SciTaste implementation. It is not yet evidence that the mapping transfers.
 
+## Independent confirmation result
+
+Formal v4 froze the development policy before evaluating 12 disjoint research states:
+four NewtonBench task domains at prefix turns one, two, and three. Each state contains
+all seven forced actions under a shared prefix and common continuation. DeepSeek-V4.1-
+Flash generated the research decisions, GLM-5.3-Flash judged terminal laws, and the
+hidden benchmark scorer produced `exp(-RMSLE)` in the bounded interval `[0, 1]`.
+Failures remained at zero. No GPU was used.
+
+The population passed its frozen admission rule: 74 of 84 action outcomes (88.1%)
+exposed the objective endpoint. The policy selected `PROBE` in five states and
+`ANALYZE` in seven. Its mean quality was 0.2885, compared with 0.2653 for static
+`PROBE`, 0.3850 for static `EXPERIMENT`, 0.2447 for static `STOP`, and 0.4756 for the
+per-state oracle. Against the preregistered `PROBE` baseline, the paired mean
+difference was +0.0232, but the exhaustive task-cluster interval was
+[-0.1803, 0.2500]. With the frozen 0.001 practical-equivalence threshold, the policy
+won one state, lost two, and tied nine (two-sided exact sign p=1). Its selected action
+failed to expose the endpoint in 25.0% of states versus 8.3% for both `PROBE` and
+`EXPERIMENT`. Static `EXPERIMENT` exceeded the policy by 0.0964 on average.
+
+The valid confirmatory verdict is therefore `not-supported`, not a positive Taste
+result. The small positive mean against `PROBE` is largely attributable to a single
+Coulomb state in which the static `PROBE` branch failed while the selected `ANALYZE`
+branch succeeded; it does not survive task-level uncertainty or the stronger static
+baseline. Only four independent task clusters were evaluated, so the result is also
+too narrow to establish a general failure law.
+
+This negative result gives a concrete representation insight. Evidence status alone
+is too coarse: states with the same `candidate-untested` label required different
+actions across task content, and `ANALYZE` failed or underperformed in held-out heat,
+magnetic-force, and refraction states. The next Taste representation must condition on
+the hypothesis content, diagnostic uncertainty, domain-relevant invariances, and
+applicability of prior experience—not just a categorical phase label. The confirmation
+split is locked against policy refitting; any richer policy must be learned on a new
+development population and confirmed on another disjoint population.
+
+The machine-readable report is
+`evaluations/counterfactual-taste-formal-v4-confirmation/REPORT.json`. It records the
+frozen policy and protocol hashes, every state-level potential outcome, task-clustered
+uncertainty, practical win/loss counts, failures, tokens, partial provider cost, and a
+claim gate that keeps `headline_eligible=false` and `venue_ready=false`.
+
 ## What would count as paper evidence
 
-A formal study must first repair endpoint coverage on development tasks. It should
-then freeze independent prefixes sampled across several hidden-law domains, compare
-the learned SciTaste selector with no-Taste, static critique, retrieval/reference,
-and competitive research-agent policies under matched budgets, and score every arm
-with an objective endpoint. The confirmatory population must remain isolated from
-policy learning. Paired uncertainty, failure rates, cost, and action-state interaction
-are reported together.
+Formal v4 now provides a valid but negative mechanism confirmation. The next iteration
+must change the representation on development data before spending another held-out
+population. Beyond that mechanism study, the system still needs matched comparisons
+with no-Taste, raw-reference/retrieval, and competitive research agents over complete
+trajectories. Paired uncertainty, failure rates, cost, and action-state interaction
+must be reported together.
 
 Even a positive formal counterfactual study would establish only the decision
 mechanism. ICLR-level evidence for the complete SciTaste claim also needs construct
