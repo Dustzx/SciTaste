@@ -334,6 +334,23 @@ needs, and submission readiness—and must calibrate transfer value and abstenti
 outcomes. Its machine-readable report is
 `evaluations/counterfactual-taste-balanced-v6-comprehensive-selector-development-v1/REPORT.json`.
 
+A subsequent construct audit shows that another representation iteration on this population
+would not be scientifically efficient. Only 3/11 states provide a diagnostic action contrast:
+at most half of the seven actions are practically preferred, at least six branch outcomes are
+observed, and bounded-utility spread is at least 0.02. In the remaining states, five to seven
+actions are tied, the utility span is negligible, or several branch outcomes are missing. Those
+states are legitimate failure records, but a selector cannot identify Scientific Taste from
+them; a favorable accuracy could largely reflect broad ties or stochastic branch failure.
+
+The analyzer therefore now exposes an `action_identifiability_gate` in addition to diversity,
+utility, and failure gates. The balanced population reaches 27.3% diagnostic states against an
+80% development requirement and remains ineligible for confirmation. This retires the coarse
+`PROBE/PILOT/...` counterfactual population as a title-bearing mechanism route. It is retained as
+a failure-boundary study, while mechanism confirmation moves to natural, concrete scientific
+decisions with source-hidden later outcomes and explicit raw/matched/mismatched controls. The
+machine-readable audit is
+`evaluations/counterfactual-taste-balanced-v6-identifiability-audit-v2/REPORT.json`.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

@@ -57,6 +57,10 @@ class CounterfactualDeliberationStateAnalysis(BaseModel):
     fallback_action: Literal["PROBE"] = "PROBE"
     selected_action: str
     objective_preferred_actions: tuple[str, ...]
+    objective_preferred_action_count: int = Field(ge=1)
+    observed_action_count: int = Field(ge=0)
+    bounded_utility_spread: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    diagnostic_action_contrast: bool
     preferred_action_hit: bool
     precedent_population_contains_preferred_action: bool
     retrieval_contains_preferred_action: bool
@@ -91,6 +95,9 @@ class CounterfactualDeliberationDevelopmentReport(BaseModel):
     precedent_population_preferred_action_coverage: float = Field(ge=0.0, le=1.0)
     retrieval_preferred_action_coverage: float = Field(ge=0.0, le=1.0)
     preferred_action_hit_rate: float = Field(ge=0.0, le=1.0)
+    diagnostic_action_contrast_count: int = Field(ge=0)
+    diagnostic_action_contrast_rate: float = Field(ge=0.0, le=1.0)
+    minimum_diagnostic_action_contrast_rate: Literal[0.8] = 0.8
     mean_objective_value: float = Field(allow_inf_nan=False)
     objective_failure_rate: float = Field(ge=0.0, le=1.0)
     mean_regret: float = Field(ge=0.0, allow_inf_nan=False)
@@ -104,6 +111,7 @@ class CounterfactualDeliberationDevelopmentReport(BaseModel):
     complete_coverage_gate: bool
     action_diversity_gate: bool
     action_collapse_gate: bool
+    action_identifiability_gate: bool
     objective_utility_gate: bool
     failure_noninferiority_gate: bool
     development_gate_passed: bool
@@ -122,6 +130,7 @@ class CounterfactualDeliberationDevelopmentReport(BaseModel):
                 self.complete_coverage_gate,
                 self.action_diversity_gate,
                 self.action_collapse_gate,
+                self.action_identifiability_gate,
                 self.objective_utility_gate,
                 self.failure_noninferiority_gate,
             )
@@ -141,6 +150,7 @@ class CounterfactualDeliberationDevelopmentReport(BaseModel):
             "same_task_cluster_excluded": True,
             "effectiveness_claim_allowed": False,
             "minimum_required_utility_margin": 0.02,
+            "minimum_diagnostic_action_contrast_rate": 0.8,
             **values,
         }
         payload.pop("report_sha256", None)
@@ -219,19 +229,32 @@ def analyze_counterfactual_deliberations(
     strongest_static = max(_STATIC_ACTIONS, key=lambda action: (static_means[action], action))
     mean_objective = _mean(item.objective_value for item in states)
     failure_rate = _mean(item.objective_failure for item in states)
+    diagnostic_count = sum(item.diagnostic_action_contrast for item in states)
+    diagnostic_rate = diagnostic_count / state_count
     maximum_share = max(action_counts.values()) / state_count
     complete_gate = len(states) == state_count
     diversity_gate = len(action_counts) >= 3
     collapse_gate = maximum_share <= 0.75
+    identifiability_gate = diagnostic_rate >= 0.8
     utility_gate = mean_objective >= static_means[strongest_static] + 0.02
     failure_gate = failure_rate <= static_failures[strongest_static]
-    passed = all((complete_gate, diversity_gate, collapse_gate, utility_gate, failure_gate))
+    passed = all(
+        (
+            complete_gate,
+            diversity_gate,
+            collapse_gate,
+            identifiability_gate,
+            utility_gate,
+            failure_gate,
+        )
+    )
     failed_names = [
         name
         for name, status in (
             ("complete coverage", complete_gate),
             ("action diversity", diversity_gate),
             ("action concentration", collapse_gate),
+            ("action identifiability", identifiability_gate),
             ("objective utility", utility_gate),
             ("failure non-inferiority", failure_gate),
         )
@@ -273,6 +296,8 @@ def analyze_counterfactual_deliberations(
         preferred_action_hit_rate=round(
             _mean(item.preferred_action_hit for item in states), 8
         ),
+        diagnostic_action_contrast_count=diagnostic_count,
+        diagnostic_action_contrast_rate=round(diagnostic_rate, 8),
         mean_objective_value=round(mean_objective, 8),
         objective_failure_rate=round(failure_rate, 8),
         mean_regret=round(_mean(item.regret for item in states), 8),
@@ -291,6 +316,7 @@ def analyze_counterfactual_deliberations(
         complete_coverage_gate=complete_gate,
         action_diversity_gate=diversity_gate,
         action_collapse_gate=collapse_gate,
+        action_identifiability_gate=identifiability_gate,
         objective_utility_gate=utility_gate,
         failure_noninferiority_gate=failure_gate,
         development_gate_passed=passed,
@@ -378,6 +404,7 @@ def _analyze_state(
         abstained = not ranked_votes or tied
         selected_action = "PROBE" if abstained else ranked_votes[0][0]
     utilities = _bounded_utility_values(target, result)
+    diagnostic_action_contrast = _is_diagnostic_action_contrast(target, utilities)
     objective_value = utilities[selected_action]
     oracle_value = max(utilities.values())
     preferred = set(target.objective_preferred_actions)
@@ -399,6 +426,10 @@ def _analyze_state(
         abstained=abstained,
         selected_action=selected_action,
         objective_preferred_actions=target.objective_preferred_actions,
+        objective_preferred_action_count=len(target.objective_preferred_actions),
+        observed_action_count=sum(target.objective_observed.values()),
+        bounded_utility_spread=round(max(utilities.values()) - min(utilities.values()), 8),
+        diagnostic_action_contrast=diagnostic_action_contrast,
         preferred_action_hit=selected_action in preferred,
         precedent_population_contains_preferred_action=bool(
             preferred & set(retrieval.population_preferred_actions.values())
@@ -459,6 +490,32 @@ def _bounded_utility_values(
             raise ValueError("counterfactual bounded utility is outside [0, 1]")
         utilities[action] = utility
     return utilities
+
+
+def _is_diagnostic_action_contrast(
+    target: CounterfactualDeliberationTarget,
+    utilities: dict[str, float],
+) -> bool:
+    """Reject states whose intervention label cannot identify a useful decision.
+
+    This development gate is intentionally about construct validity, not statistical
+    significance.  A state is non-diagnostic when most actions are practically tied,
+    the bounded outcome span is negligible, or more than one of seven branches lacks
+    an objective observation.  Such states may remain valid failure records, but they
+    cannot justify another confirmation run for an action-selection mechanism.
+    """
+
+    if set(utilities) != set(target.objective_values):
+        raise ValueError("diagnostic utility and target action spaces differ")
+    preferred_count = len(target.objective_preferred_actions)
+    maximum_selective_set = max(1, len(utilities) // 2)
+    observed_count = sum(target.objective_observed.values())
+    utility_spread = max(utilities.values()) - min(utilities.values())
+    return (
+        preferred_count <= maximum_selective_set
+        and observed_count >= len(utilities) - 1
+        and utility_spread >= 0.02
+    )
 
 
 def _status_policy_action(input_data: TasteDeliberationInput) -> str:
