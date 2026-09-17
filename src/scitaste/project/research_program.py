@@ -683,7 +683,10 @@ _PHASE_SEMANTIC_VALIDATORS.update(
             "scorer-owned-heldout-measurement-v1",
             "development-only-b0-validation-v1",
         ),
-        "evidence-admission": ("project-evaluation-result-admission-v1",),
+        "evidence-admission": (
+            "project-evaluation-result-admission-v1",
+            "project-evaluation-and-top-venue-admission-v1",
+        ),
         "dual-ai-review": ("registered-independent-dual-ai-review-v1",),
         "ai-adjudication": ("ai-paper-review-disagreement-adjudication-v1",),
         "final-ai-review-and-package-freeze": ("ai-paper-review-operational-finality-v1",),
@@ -1293,6 +1296,50 @@ def _validate_phase_artifacts(
                 or not assessment.scientific_evidence_complete
             ):
                 raise ValueError("evidence admission does not bind its registered assessment")
+            venue_binding = by_id.get("venue-competitiveness-assessment")
+            if venue_binding is not None:
+                from scitaste.evidence.venue_gap import (
+                    SubmissionEvidencePosition,
+                    VenueCompetitivenessBand,
+                    VenueEvidenceProgramMode,
+                    VenueGapAssessment,
+                )
+
+                venue = VenueGapAssessment.model_validate_json(
+                    artifact("venue-competitiveness-assessment").read_text(encoding="utf-8")
+                )
+                snapshot = runtime.open(project_id)
+                if (
+                    venue.project_id != project_id
+                    or venue.project_revision != snapshot.revision
+                    or venue.project_snapshot_sha256 != snapshot.snapshot_sha256
+                    or _normalized_label(venue.target_venue)
+                    != _normalized_label(snapshot.manifest.target_venue)
+                ):
+                    raise ValueError(
+                        "top-venue assessment does not bind the current project snapshot"
+                    )
+                comparison = venue.venue_comparison
+                if (
+                    venue.submission_position
+                    is not SubmissionEvidencePosition.EVIDENCE_PROGRAM_COMPLETE_FOR_REVIEW
+                    or venue.top_venue_comparison.band
+                    is not VenueCompetitivenessBand.DECLARED_REVIEW_COMPARABLE
+                    or not venue.top_venue_comparison.same_venue_comparison_ready
+                    or comparison is None
+                    or not comparison.evidence_shape_complete_for_review
+                    or venue.evidence_program_decision.mode
+                    is not VenueEvidenceProgramMode.COMPLETE_FOR_REVIEW
+                    or not venue.evidence_program_decision.paper_level_claims_authorized
+                    or not venue.evidence_program_decision.paper_polish_is_next_action
+                    or venue.acceptance_prediction_made
+                    or venue.oral_prediction_made
+                ):
+                    raise ValueError(
+                        "same-venue innovation and evidence portfolio is not review-comparable; "
+                        "return to the assessment's evidence-program action before paper assembly"
+                    )
+                return ("project-evaluation-and-top-venue-admission-v1",)
             return ("project-evaluation-result-admission-v1",)
 
         if phase_id == "dual-ai-review":
@@ -1401,6 +1448,8 @@ _V4_REQUIRED_CAPABILITIES = {
     "final-review-and-package-freeze",
 }
 
+_V10_VENUE_CAPABILITY = "same-venue-innovation-and-evidence-portfolio-control"
+
 
 def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> None:
     """Reject v4 plans that regress to a checkpoint-driven partial workflow."""
@@ -1423,6 +1472,9 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
         "scitaste-iclr2027-capability-driven-autoresearch-program-v9": (
             "scitaste-iclr2027-capability-driven-autoresearch-program-v8"
         ),
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v10": (
+            "scitaste-iclr2027-capability-driven-autoresearch-program-v9"
+        ),
     }
     expected_predecessor = predecessor_by_program.get(
         program_id,
@@ -1435,9 +1487,12 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
     if not isinstance(completeness, dict):
         raise ValueError("program v4 lacks the automation completeness contract")
     raw_capabilities = completeness.get("required_capabilities")
+    required_capabilities = set(_V4_REQUIRED_CAPABILITIES)
+    if program_id == "scitaste-iclr2027-capability-driven-autoresearch-program-v10":
+        required_capabilities.add(_V10_VENUE_CAPABILITY)
     if (
         not isinstance(raw_capabilities, list)
-        or set(raw_capabilities) != _V4_REQUIRED_CAPABILITIES
+        or set(raw_capabilities) != required_capabilities
         or completeness.get("success_requires_all_capabilities") is not True
         or completeness.get("partial_pipeline_may_be_reported_as_complete") is not False
     ):
@@ -1494,6 +1549,7 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
         "scitaste-iclr2027-capability-driven-autoresearch-program-v7",
         "scitaste-iclr2027-capability-driven-autoresearch-program-v8",
         "scitaste-iclr2027-capability-driven-autoresearch-program-v9",
+        "scitaste-iclr2027-capability-driven-autoresearch-program-v10",
     }:
         if (
             selection.get("candidate_universe_authority")
@@ -1533,6 +1589,40 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
             or len(agent_loop) < 18
         ):
             raise ValueError("program v7 does not realize the complete executable workflow")
+
+    if program_id == "scitaste-iclr2027-capability-driven-autoresearch-program-v10":
+        venue_control = program_payload.get("venue_competitiveness_control")
+        if (
+            not isinstance(venue_control, dict)
+            or venue_control.get("target_standard")
+            != "recent-accepted-same-venue-method-and-benchmark-papers"
+            or venue_control.get("comparison_unit")
+            != "claim-argument-and-evidence-portfolio-not-result-table-count"
+            or venue_control.get("minimum_recent_same_venue_neighbours") != 2
+            or venue_control.get("pass_band")
+            != "declared-evidence-program-review-comparable"
+            or venue_control.get("failure_route") != "experiment-plan-frozen"
+            or venue_control.get("acceptance_probability_prediction_allowed") is not False
+            or venue_control.get("oral_probability_prediction_allowed") is not False
+            or venue_control.get("one-controlled-result-may-authorize-paper-assembly") is not False
+        ):
+            raise ValueError("program v10 lacks the top-venue competitiveness control")
+        lifecycle = program_payload.get("lifecycle_state_machine")
+        raw_states = lifecycle.get("states") if isinstance(lifecycle, dict) else None
+        if not isinstance(raw_states, list):
+            raise ValueError("program v10 lacks the complete lifecycle state list")
+        states = {
+            item.get("state_id"): item
+            for item in raw_states
+            if isinstance(item, dict)
+        }
+        evidence_artifacts = states.get("evidence-admission", {}).get(
+            "required_artifacts", []
+        )
+        if "venue-competitiveness-assessment" not in evidence_artifacts:
+            raise ValueError(
+                "program v10 must gate paper assembly on a venue competitiveness assessment"
+            )
 
 
 def _compile_contract(
@@ -1699,6 +1789,10 @@ def _phase(
     phase_id: ResearchProgramPhaseId,
 ) -> ResearchProgramPhaseContract:
     return next(item for item in contract.phases if item.phase_id == phase_id)
+
+
+def _normalized_label(value: str) -> str:
+    return "".join(character for character in value.casefold() if character.isalnum())
 
 
 def _load_yaml_bytes(path: Path, label: str) -> tuple[bytes, dict[str, object]]:

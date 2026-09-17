@@ -79,9 +79,9 @@ strong baselines, ablations, objective or external validation, and case studies.
 
 The current project-owned manifest and generated assessment are:
 
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V8.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V7.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V16.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V12.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V11.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V22.json`
 
 The comparison set contains ICLR main-track method, evaluation, and benchmark
 papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
@@ -322,3 +322,14 @@ remain end-to-end trajectories, human or expert validation, and strong system ba
 the top-venue critic changes the experiment controller before paper writing: one controlled
 family, whether positive or negative, is explicitly incapable of authorizing an ICLR-level
 claim.
+
+The capability-driven research program v10 makes this decision a lifecycle gate rather than
+an optional report. Its `evidence-admission` phase now requires the exact
+`venue-competitiveness-assessment` alongside registered claim--result links, validity findings,
+retained failures, and contradictions. The runtime accepts that phase only when the assessment
+binds the current project snapshot, uses a recent same-venue comparison set, closes every
+central claim argument, reports no admitted contradiction, matches the declared accepted-paper
+evidence obligations, and emits `declared-evidence-program-review-comparable`. Otherwise paper
+assembly is blocked and the project returns to the assessment's experiment or analysis action.
+The gate deliberately does not predict acceptance or oral selection: it establishes that the
+paper has a reviewable evidence program, not that reviewers must accept it.

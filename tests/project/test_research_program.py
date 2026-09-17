@@ -25,7 +25,7 @@ MODEL_INVENTORY = ROOT / "configs/resources/assets/model_role_inventory_v1.yaml"
 CURRENT_CAPABILITY_PROGRAM = (
     ROOT
     / "configs/evaluation/programs/"
-    / "iclr2027_scitaste_capability_driven_autoresearch_program_v9.yaml"
+    / "iclr2027_scitaste_capability_driven_autoresearch_program_v10.yaml"
 )
 CURRENT_MODEL_INVENTORY = ROOT / "configs/resources/assets/model_role_inventory_v2.yaml"
 
@@ -149,20 +149,29 @@ def test_initialize_binds_capability_driven_v4_without_selecting_qwen2b(
     assert run.model == "task-excluded-selection-pending"
 
 
-def test_initialize_binds_v9_behavioral_treatment_program(tmp_path: Path) -> None:
-    runtime = _runtime(tmp_path, "capability-program-v9")
+def test_initialize_binds_v10_top_venue_control_program(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path, "capability-program-v10")
 
     initialized = runtime.initialize(
-        project_id="capability-program-v9",
+        project_id="capability-program-v10",
         program_path=CURRENT_CAPABILITY_PROGRAM,
         model_inventory_path=CURRENT_MODEL_INVENTORY,
         expected_revision=0,
     )
 
-    assert initialized.state.program_id.endswith("-v9")
+    assert initialized.state.program_id.endswith("-v10")
     assert initialized.contract.source_program_schema_version == "4.0"
     assert initialized.contract.controller_authorizes_api_calls is False
     assert initialized.contract.controller_authorizes_gpu_work is False
+    evidence_phase = next(
+        item
+        for item in initialized.contract.phases
+        if item.phase_id == "evidence-admission"
+    )
+    assert "venue-competitiveness-assessment" in evidence_phase.required_artifact_ids
+    assert "project-evaluation-and-top-venue-admission-v1" in (
+        evidence_phase.accepted_semantic_validator_ids
+    )
 
 
 def test_review_disagreement_adjudicates_and_revision_can_return_to_experiment(

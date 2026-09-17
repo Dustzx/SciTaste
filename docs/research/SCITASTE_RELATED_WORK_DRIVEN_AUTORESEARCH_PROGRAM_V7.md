@@ -1,14 +1,17 @@
-# SciTaste related-work-driven AutoResearch program v7 to v9 handoff
+# SciTaste related-work-driven AutoResearch program v7 to v10 handoff
 
-Status: **v9 is the current project authority; one-shot B0 role selection complete;
-E2 v5 blocks an inactive Taste treatment; no formal E1--E4 result yet**.
+Status: **v10 is the current program specification; the self-development project's
+immutable v9 run retains its completed history until a v10 run is explicitly
+initialized; no formal E1--E4 result yet**.
 
 The machine-readable authority is
-[`iclr2027_scitaste_capability_driven_autoresearch_program_v9.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v9.yaml).
-The self-development project binds an immutable copy of that program and the
-v2 resource inventory under run
-`scitaste-iclr2027-capability-driven-autoresearch-program-v9`. Planning does not
-itself authorize a benchmark, GPU, download, or provider call.
+[`iclr2027_scitaste_capability_driven_autoresearch_program_v10.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_capability_driven_autoresearch_program_v10.yaml).
+V10 adds a mandatory same-venue innovation and evidence-portfolio gate before
+paper assembly. The self-development project still binds the immutable v9 program
+and v2 resource inventory under run
+`scitaste-iclr2027-capability-driven-autoresearch-program-v9`; that historical
+input is not rewritten in place. Planning does not itself authorize a benchmark,
+GPU, download, or provider call.
 
 ## Selection order
 
