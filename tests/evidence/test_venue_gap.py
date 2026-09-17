@@ -8,6 +8,8 @@ from scitaste.evidence.venue_gap import (
     EvidenceDirection,
     EvidenceMaturity,
     SubmissionEvidencePosition,
+    VenueClaimCentrality,
+    VenueClaimEvidenceContract,
     VenueComparisonProfile,
     VenueContributionAxis,
     VenueEvidenceComponent,
@@ -132,6 +134,7 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
         profile_id="test-venue-comparison",
         project_id="test-project",
         venue_gap_manifest_id="test-venue-gap",
+        target_paper_kind=AcceptedPaperKind.METHOD,
         innovation_claims=(
             VenueInnovationClaim(
                 claim_id="conditional-scientific-policy",
@@ -171,6 +174,17 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
                 evidence_ids=("one-local-table",),
             ),
         ),
+        claim_evidence_contracts=(
+            VenueClaimEvidenceContract(
+                claim_id="conditional-scientific-policy",
+                centrality=VenueClaimCentrality.CENTRAL,
+                required_components=(
+                    VenueEvidenceComponent.MECHANISM_ABLATION,
+                    VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+                ),
+                minimum_independent_families=2,
+            ),
+        ),
     )
 
     assessment = assess_venue_gap(manifest, deadline, comparison)
@@ -187,6 +201,14 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert assessment.venue_comparison.current_admitted_family_count == 0
     assert assessment.venue_comparison.current_admitted_component_count == 0
     assert assessment.venue_comparison.evidence_shape_complete_for_review is False
+    assert assessment.venue_comparison.target_paper_kind is AcceptedPaperKind.METHOD
+    assert assessment.venue_comparison.claim_contracts_complete is True
+    assert assessment.venue_comparison.central_claim_arguments_complete is False
+    assert assessment.venue_comparison.claim_arguments[0].complete_for_review is False
+    assert assessment.venue_comparison.claim_arguments[0].missing_or_unadmitted_components == (
+        VenueEvidenceComponent.MECHANISM_ABLATION,
+        VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+    )
     assert assessment.venue_comparison.innovation_claims[0].evidence_status is (
         VenueInnovationEvidenceStatus.DEVELOPMENT_ONLY
     )

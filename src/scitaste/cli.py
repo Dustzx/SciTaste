@@ -8089,8 +8089,21 @@ def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
                         "current_admitted_component_count": (
                             assessment.venue_comparison.current_admitted_component_count
                         ),
+                        "target_paper_kind": assessment.venue_comparison.target_paper_kind,
+                        "central_claim_arguments_complete": (
+                            assessment.venue_comparison.central_claim_arguments_complete
+                        ),
+                        "incomplete_central_claims": [
+                            item.claim_id
+                            for item in assessment.venue_comparison.claim_arguments
+                            if item.centrality.value == "central"
+                            and not item.complete_for_review
+                        ],
                         "missing_or_unadmitted_accepted_majority_components": (
                             assessment.venue_comparison.missing_or_unadmitted_accepted_majority_components
+                        ),
+                        "missing_or_unadmitted_target_components": (
+                            assessment.venue_comparison.missing_or_unadmitted_target_components
                         ),
                         "diagnosis": assessment.venue_comparison.diagnosis,
                     }

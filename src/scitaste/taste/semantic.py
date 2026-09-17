@@ -173,19 +173,28 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
     """Assess transfer before selecting a diverse set of decision precedents."""
 
     node_name = TASTE_DELIBERATION_NODE
-    prompt_version = "taste-deliberation-v1"
+    prompt_version = "taste-deliberation-v2"
     system_instruction = (
         "Select Scientific Taste precedents for the current research decision, not passages that "
-        "merely share vocabulary. Assess every supplied case exactly once. Cite exact current "
-        "decision-fact IDs for each satisfied applicability or triggered failure condition; never "
-        "invent a condition, fact, case, or action. A selected case must satisfy at least two of "
-        "its stated applicability conditions, trigger none of its stated failure conditions, and "
-        "align to a current action. Preserve decision tension: when the applicable pool supports "
+        "merely share vocabulary. Assess every supplied case exactly once. For every "
+        "applicability_supports boundary_condition, copy one complete string byte-for-byte from "
+        "that case's applies_when list. For every triggered_failure_supports boundary_condition, "
+        "copy one complete string byte-for-byte from that case's fails_when list. Put your "
+        "interpretation of why the copied condition is satisfied or triggered only in rationale; "
+        "never paraphrase, shorten, combine, or invent a boundary condition. Cite exact current "
+        "decision-fact IDs for each copied applicability or failure condition; never invent a "
+        "fact, case, or action. A selected case must have verdict=applicable, satisfy at least two "
+        "of its stated applicability conditions, have an empty triggered_failure_supports list, "
+        "and align to a current action. Never select an uncertain, inapplicable, challenge-only, "
+        "or failure-triggered case merely to preserve diversity. Preserve decision tension only "
+        "within the applicable pool: when that pool supports "
         "different actions, select source-disjoint precedents covering more than one action; when "
         "an applicable challenge or boundary case is available, do not return only supportive "
         "precedents. Source outcomes, held-out task content, relation labels, and external facts "
-        "are unavailable and must not be inferred. The output is a proposal only: do not execute "
-        "an action, admit memory, call tools, or claim effectiveness."
+        "are unavailable and must not be inferred. Before returning JSON, verify exact boundary "
+        "copying for every support and verify that every selected case passes all selection rules. "
+        "The output is a proposal only: do not execute an action, admit memory, call tools, or "
+        "claim effectiveness."
     )
     input_model = TasteDeliberationInput
     output_model = TasteDeliberationProposal

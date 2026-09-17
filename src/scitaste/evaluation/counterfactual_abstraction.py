@@ -24,7 +24,7 @@ def build_counterfactual_taste_abstraction_input(
     if result.prefix_sha256 != prefix.prefix_sha256:
         raise ValueError("counterfactual abstraction result and prefix differ")
 
-    preferred = _resource_aware_preferred_outcome(result)
+    preferred = resource_aware_preferred_outcome(result)
     outcomes = sorted(result.outcomes, key=lambda item: item.action.value)
     action_names = [item.action.value for item in outcomes]
     visible_history = [
@@ -138,7 +138,7 @@ def build_counterfactual_taste_abstraction_input(
     )
 
 
-def _resource_aware_preferred_outcome(
+def resource_aware_preferred_outcome(
     result: CounterfactualActionSetResult,
 ) -> CounterfactualBranchOutcome:
     preferred = [item for item in result.outcomes if item.action in result.preferred_actions]
@@ -165,4 +165,7 @@ def _compact(value: object) -> str:
     )
 
 
-__all__ = ["build_counterfactual_taste_abstraction_input"]
+__all__ = [
+    "build_counterfactual_taste_abstraction_input",
+    "resource_aware_preferred_outcome",
+]

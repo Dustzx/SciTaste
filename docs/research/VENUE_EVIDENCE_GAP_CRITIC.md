@@ -80,8 +80,8 @@ strong baselines, ablations, objective or external validation, and case studies.
 The current project-owned manifest and generated assessment are:
 
 - `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V5.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V2.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V9.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V3.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V10.json`
 
 The comparison set contains ICLR main-track method, evaluation, and benchmark
 papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
@@ -182,3 +182,22 @@ current comparison still lacks admitted end-to-end trajectories, human or expert
 validation, and strong system baselines. This guard prevents one controlled study from
 being relabeled across several claims or table columns to simulate an ICLR-level
 argument; it remains a necessary condition, never an acceptance or oral prediction.
+
+V10 strengthens this from a paper-wide checklist into a claim--evidence argument graph.
+The comparison profile now declares whether SciTaste is a method, benchmark, or combined
+contribution and computes evidence-shape references separately from accepted methods and
+accepted benchmarks. Every declared innovation has its own centrality, required evidence
+components, and independent-family floor. Evidence counts for a claim only when the same
+evidence ID is explicitly bound both to that claim and to the required component; unrelated
+tables elsewhere in the paper cannot close it. A central claim remains incomplete when any
+required component is absent, development-only, contradicting, or supported by too few
+independent families.
+
+Applied to the current method-and-benchmark paper, all five central claim arguments are
+incomplete. Four are contradicted by admitted objective evidence, while the SciTasteBench
+construct remains proposed-only. The accepted-paper evidence shape additionally requires
+end-to-end trajectories, human/expert validation, objective or hidden evaluation,
+statistical uncertainty, strong system baselines, and task/domain breadth; the current
+portfolio lacks the first, second, and fifth of these. Thus the framework now reaches the
+same conclusion the paper-level reading demands: several local result tables, including a
+well-controlled one, do not constitute a complete ICLR argument.

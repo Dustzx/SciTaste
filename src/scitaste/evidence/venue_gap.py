@@ -89,6 +89,13 @@ class VenueInnovationEvidenceStatus(StrEnum):
     CONTRADICTED = "contradicted"
 
 
+class VenueClaimCentrality(StrEnum):
+    """Whether failure of a claim collapses the paper's main argument."""
+
+    CENTRAL = "central"
+    SUPPORTING = "supporting"
+
+
 class VenueComponentMaturity(StrEnum):
     MISSING = "missing"
     DEVELOPMENT_ONLY = "development-only"
@@ -236,6 +243,28 @@ class CurrentEvidenceComponentBinding(BaseModel):
         return self
 
 
+class VenueClaimEvidenceContract(BaseModel):
+    """Evidence obligations for one claim in the paper's argument graph."""
+
+    model_config = _CONFIG
+
+    claim_id: str
+    centrality: VenueClaimCentrality
+    required_components: tuple[VenueEvidenceComponent, ...] = Field(
+        min_length=1, max_length=20
+    )
+    minimum_independent_families: int = Field(default=1, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def contract_is_canonical(self) -> VenueClaimEvidenceContract:
+        validate_entry_id(self.claim_id, field_name="claim-evidence contract claim_id")
+        if self.required_components != tuple(
+            sorted(set(self.required_components), key=lambda item: item.value)
+        ):
+            raise ValueError("claim-evidence required components must be sorted and unique")
+        return self
+
+
 class VenueComparisonProfile(BaseModel):
     """Project-owned, source-bound comparison with accepted venue papers."""
 
@@ -245,11 +274,15 @@ class VenueComparisonProfile(BaseModel):
     profile_id: str
     project_id: str
     venue_gap_manifest_id: str
+    target_paper_kind: AcceptedPaperKind = AcceptedPaperKind.METHOD_AND_BENCHMARK
     innovation_claims: tuple[VenueInnovationClaim, ...] = Field(min_length=1, max_length=30)
     accepted_evidence_profiles: tuple[AcceptedNeighbourEvidenceProfile, ...] = Field(
         min_length=2, max_length=30
     )
     current_evidence_components: tuple[CurrentEvidenceComponentBinding, ...] = Field(
+        default=(), max_length=30
+    )
+    claim_evidence_contracts: tuple[VenueClaimEvidenceContract, ...] = Field(
         default=(), max_length=30
     )
 
@@ -273,6 +306,13 @@ class VenueComparisonProfile(BaseModel):
         components = [item.component for item in self.current_evidence_components]
         if len(components) != len(set(components)):
             raise ValueError("venue comparison current evidence components must be unique")
+        contract_claim_ids = [item.claim_id for item in self.claim_evidence_contracts]
+        if len(contract_claim_ids) != len(set(contract_claim_ids)):
+            raise ValueError("venue comparison claim-evidence contracts must be unique")
+        if self.claim_evidence_contracts and set(contract_claim_ids) != set(claim_ids):
+            raise ValueError(
+                "claim-evidence contracts must cover every and only innovation claim"
+            )
         return self
 
 
@@ -453,6 +493,24 @@ class VenueEvidenceComponentAssessment(BaseModel):
     diagnosis: str
 
 
+class VenueClaimArgumentAssessment(BaseModel):
+    """Whether one claim has a complete, independent evidential argument."""
+
+    model_config = _CONFIG
+
+    claim_id: str
+    centrality: VenueClaimCentrality
+    innovation_status: VenueInnovationEvidenceStatus
+    required_components: tuple[VenueEvidenceComponent, ...]
+    admitted_supporting_components: tuple[VenueEvidenceComponent, ...]
+    missing_or_unadmitted_components: tuple[VenueEvidenceComponent, ...]
+    admitted_supporting_family_ids: tuple[str, ...]
+    contradicting_family_ids: tuple[str, ...]
+    minimum_independent_families: int = Field(ge=1)
+    complete_for_review: bool
+    diagnosis: str
+
+
 class VenueComparisonAssessment(BaseModel):
     """No-score comparison of novelty claims and complete evidence shape."""
 
@@ -461,16 +519,24 @@ class VenueComparisonAssessment(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     profile_id: str
     profile_sha256: str
+    target_paper_kind: AcceptedPaperKind
     innovation_claims: tuple[VenueInnovationClaimAssessment, ...]
+    claim_arguments: tuple[VenueClaimArgumentAssessment, ...]
     component_matrix: tuple[VenueEvidenceComponentAssessment, ...]
     accepted_neighbour_count: int = Field(ge=2)
     accepted_component_union_count: int = Field(ge=1)
     accepted_majority_components: tuple[VenueEvidenceComponent, ...]
+    accepted_method_majority_components: tuple[VenueEvidenceComponent, ...]
+    accepted_benchmark_majority_components: tuple[VenueEvidenceComponent, ...]
+    target_required_components: tuple[VenueEvidenceComponent, ...]
     current_admitted_component_count: int = Field(ge=0)
     current_admitted_supporting_component_count: int = Field(ge=0)
     current_admitted_contradicting_component_count: int = Field(ge=0)
     current_admitted_family_count: int = Field(ge=0)
     missing_or_unadmitted_accepted_majority_components: tuple[VenueEvidenceComponent, ...]
+    missing_or_unadmitted_target_components: tuple[VenueEvidenceComponent, ...]
+    claim_contracts_complete: bool
+    central_claim_arguments_complete: bool
     independent_empirical_family_floor: Literal[2] = 2
     evidence_shape_complete_for_review: bool
     one_controlled_family_cannot_establish_venue_competitiveness: Literal[True] = True
@@ -679,6 +745,8 @@ def _assess_venue_comparison(
         _assess_innovation_claim(item, evidence_by_id)
         for item in sorted(profile.innovation_claims, key=lambda item: item.axis.value)
     )
+    innovation_by_id = {item.claim_id: item for item in innovation_claims}
+    claim_by_id = {item.claim_id: item for item in profile.innovation_claims}
     accepted_by_component: dict[VenueEvidenceComponent, set[str]] = defaultdict(set)
     for neighbour in profile.accepted_evidence_profiles:
         for component in neighbour.components:
@@ -704,10 +772,47 @@ def _assess_venue_comparison(
         for component in sorted(accepted_union, key=lambda item: item.value)
         if len(accepted_by_component[component]) * 2 > neighbour_count
     )
+    neighbour_kind_by_id = {item.paper_id: item.paper_kind for item in manifest.nearest_neighbours}
+    method_neighbour_ids = {
+        paper_id
+        for paper_id, kind in neighbour_kind_by_id.items()
+        if kind in {AcceptedPaperKind.METHOD, AcceptedPaperKind.METHOD_AND_BENCHMARK}
+    }
+    benchmark_neighbour_ids = {
+        paper_id
+        for paper_id, kind in neighbour_kind_by_id.items()
+        if kind in {AcceptedPaperKind.BENCHMARK, AcceptedPaperKind.METHOD_AND_BENCHMARK}
+    }
+    accepted_method_majority = _majority_components(
+        accepted_by_component,
+        method_neighbour_ids,
+    )
+    accepted_benchmark_majority = _majority_components(
+        accepted_by_component,
+        benchmark_neighbour_ids,
+    )
+    target_required = set(accepted_majority)
+    if profile.target_paper_kind in {
+        AcceptedPaperKind.METHOD,
+        AcceptedPaperKind.METHOD_AND_BENCHMARK,
+    }:
+        target_required.update(accepted_method_majority)
+    if profile.target_paper_kind in {
+        AcceptedPaperKind.BENCHMARK,
+        AcceptedPaperKind.METHOD_AND_BENCHMARK,
+    }:
+        target_required.update(accepted_benchmark_majority)
+    target_required_components = tuple(sorted(target_required, key=lambda item: item.value))
     missing_majority = tuple(
         item.component
         for item in matrix
         if item.component in accepted_majority
+        and item.current_maturity is not VenueComponentMaturity.ADMITTED
+    )
+    missing_target = tuple(
+        item.component
+        for item in matrix
+        if item.component in target_required
         and item.current_maturity is not VenueComponentMaturity.ADMITTED
     )
     admitted_components = tuple(
@@ -733,16 +838,52 @@ def _assess_venue_comparison(
         item.evidence_status is VenueInnovationEvidenceStatus.CONTRADICTED
         for item in innovation_claims
     )
+    claim_arguments = tuple(
+        _assess_claim_argument(
+            contract,
+            claim_by_id[contract.claim_id],
+            innovation_by_id[contract.claim_id],
+            current_by_component,
+            evidence_by_id,
+        )
+        for contract in sorted(profile.claim_evidence_contracts, key=lambda item: item.claim_id)
+    )
+    claim_contracts_complete = bool(profile.claim_evidence_contracts)
+    central_claims = tuple(
+        item for item in claim_arguments if item.centrality is VenueClaimCentrality.CENTRAL
+    )
+    central_claim_arguments_complete = (
+        claim_contracts_complete
+        and bool(central_claims)
+        and all(item.complete_for_review for item in central_claims)
+    )
     evidence_shape_complete = (
         not contradicted_innovations
         and contradicting_count == 0
         and len(admitted_family_ids) >= 2
-        and not missing_majority
+        and not missing_target
+        and central_claim_arguments_complete
     )
     if contradicted_innovations:
         diagnosis = (
             f"{contradicted_innovations} declared innovation claim(s) are contradicted by "
             "admitted evidence. Evidence breadth cannot compensate for a failed central mechanism."
+        )
+    elif not claim_contracts_complete:
+        diagnosis = (
+            "The comparison profile has no complete claim-evidence argument graph. Component "
+            "counts and result tables cannot establish which central claim each study closes."
+        )
+    elif not central_claim_arguments_complete:
+        incomplete = [
+            item.claim_id
+            for item in central_claims
+            if not item.complete_for_review
+        ]
+        diagnosis = (
+            "Central claim arguments remain incomplete: " + ", ".join(incomplete) + ". "
+            "A favorable local table cannot substitute for every evidence obligation of the "
+            "paper's central argument."
         )
     elif len(admitted_family_ids) <= 1:
         diagnosis = (
@@ -750,10 +891,12 @@ def _assess_venue_comparison(
             "family. Accepted neighbours combine multiple independent components, so a single "
             "controlled result cannot establish venue competitiveness."
         )
-    elif missing_majority:
+    elif missing_target:
         diagnosis = (
-            "The current portfolio lacks admitted evidence for components reported by a majority "
-            "of accepted neighbours: " + ", ".join(item.value for item in missing_majority) + "."
+            "The current portfolio lacks admitted evidence required by accepted papers of the "
+            f"same contribution type ({profile.target_paper_kind.value}): "
+            + ", ".join(item.value for item in missing_target)
+            + "."
         )
     else:
         diagnosis = (
@@ -763,19 +906,119 @@ def _assess_venue_comparison(
     return VenueComparisonAssessment.create(
         profile_id=profile.profile_id,
         profile_sha256=content_sha256(profile.model_dump(mode="json")),
+        target_paper_kind=profile.target_paper_kind,
         innovation_claims=innovation_claims,
+        claim_arguments=claim_arguments,
         component_matrix=matrix,
         accepted_neighbour_count=neighbour_count,
         accepted_component_union_count=len(accepted_union),
         accepted_majority_components=accepted_majority,
+        accepted_method_majority_components=accepted_method_majority,
+        accepted_benchmark_majority_components=accepted_benchmark_majority,
+        target_required_components=target_required_components,
         current_admitted_component_count=len(admitted_components),
         current_admitted_supporting_component_count=supporting_count,
         current_admitted_contradicting_component_count=contradicting_count,
         current_admitted_family_count=len(admitted_family_ids),
         missing_or_unadmitted_accepted_majority_components=missing_majority,
+        missing_or_unadmitted_target_components=missing_target,
+        claim_contracts_complete=claim_contracts_complete,
+        central_claim_arguments_complete=central_claim_arguments_complete,
         independent_empirical_family_floor=2,
         evidence_shape_complete_for_review=evidence_shape_complete,
         one_controlled_family_cannot_establish_venue_competitiveness=True,
+        diagnosis=diagnosis,
+    )
+
+
+def _majority_components(
+    accepted_by_component: dict[VenueEvidenceComponent, set[str]],
+    neighbour_ids: set[str],
+) -> tuple[VenueEvidenceComponent, ...]:
+    """Return components reported by a strict majority of one paper-kind cohort."""
+
+    if not neighbour_ids:
+        return ()
+    return tuple(
+        component
+        for component in sorted(VenueEvidenceComponent, key=lambda item: item.value)
+        if len(accepted_by_component.get(component, set()) & neighbour_ids) * 2
+        > len(neighbour_ids)
+    )
+
+
+def _assess_claim_argument(
+    contract: VenueClaimEvidenceContract,
+    claim: VenueInnovationClaim,
+    innovation: VenueInnovationClaimAssessment,
+    current_by_component: dict[VenueEvidenceComponent, tuple[str, ...]],
+    evidence_by_id: dict[str, VenueEvidenceSignal],
+) -> VenueClaimArgumentAssessment:
+    """Require claim-linked evidence rather than crediting a paper-wide table count."""
+
+    claim_evidence_ids = set(claim.effect_evidence_ids)
+    admitted_components: list[VenueEvidenceComponent] = []
+    supporting_families: set[str] = set()
+    contradicting_families = {
+        evidence_by_id[evidence_id].family_id
+        for evidence_id in claim.effect_evidence_ids
+        if evidence_by_id[evidence_id].maturity is EvidenceMaturity.ADMITTED
+        and evidence_by_id[evidence_id].direction is EvidenceDirection.CONTRADICTING
+    }
+    for component in contract.required_components:
+        linked = claim_evidence_ids & set(current_by_component.get(component, ()))
+        support = tuple(
+            evidence_by_id[evidence_id]
+            for evidence_id in linked
+            if evidence_by_id[evidence_id].maturity is EvidenceMaturity.ADMITTED
+            and evidence_by_id[evidence_id].headline_eligible
+            and evidence_by_id[evidence_id].direction is EvidenceDirection.SUPPORTING
+        )
+        if support:
+            admitted_components.append(component)
+            supporting_families.update(item.family_id for item in support)
+    admitted_tuple = tuple(sorted(admitted_components, key=lambda item: item.value))
+    missing = tuple(
+        item for item in contract.required_components if item not in set(admitted_tuple)
+    )
+    complete = (
+        innovation.evidence_status is VenueInnovationEvidenceStatus.ADMITTED_SUPPORT
+        and not contradicting_families
+        and not missing
+        and len(supporting_families) >= contract.minimum_independent_families
+    )
+    if innovation.evidence_status is VenueInnovationEvidenceStatus.CONTRADICTED:
+        diagnosis = f"{claim.claim_id}: admitted evidence contradicts the claim."
+    elif missing:
+        diagnosis = (
+            f"{claim.claim_id}: missing claim-linked admitted components: "
+            + ", ".join(item.value for item in missing)
+            + "."
+        )
+    elif len(supporting_families) < contract.minimum_independent_families:
+        diagnosis = (
+            f"{claim.claim_id}: {len(supporting_families)} independent admitted supporting "
+            f"family/families do not meet the contract floor of "
+            f"{contract.minimum_independent_families}."
+        )
+    elif contradicting_families:
+        diagnosis = f"{claim.claim_id}: admitted contradictory evidence remains unresolved."
+    else:
+        diagnosis = (
+            f"{claim.claim_id}: the declared claim-level evidence obligations are covered; "
+            "this is not an acceptance judgment."
+        )
+    return VenueClaimArgumentAssessment(
+        claim_id=claim.claim_id,
+        centrality=contract.centrality,
+        innovation_status=innovation.evidence_status,
+        required_components=contract.required_components,
+        admitted_supporting_components=admitted_tuple,
+        missing_or_unadmitted_components=missing,
+        admitted_supporting_family_ids=tuple(sorted(supporting_families)),
+        contradicting_family_ids=tuple(sorted(contradicting_families)),
+        minimum_independent_families=contract.minimum_independent_families,
+        complete_for_review=complete,
         diagnosis=diagnosis,
     )
 
@@ -1197,6 +1440,9 @@ __all__ = [
     "EvidenceMaturity",
     "RankedVenueGapAction",
     "SubmissionEvidencePosition",
+    "VenueClaimArgumentAssessment",
+    "VenueClaimCentrality",
+    "VenueClaimEvidenceContract",
     "VenueComparisonAssessment",
     "VenueComparisonProfile",
     "VenueComponentDirection",

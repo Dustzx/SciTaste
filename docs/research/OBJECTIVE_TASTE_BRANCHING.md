@@ -166,6 +166,21 @@ conditioned selector, then evaluate that frozen selector on a new disjoint task
 population. Reusing formal-v4 states as confirmation would leak objective outcomes and
 is prohibited.
 
+The first selector gate did not pass. Each target excluded all three precedents from
+its own task cluster and exposed the other nine without source or target outcomes.
+GLM-5.3-Flash paraphrased or invented closed applicability boundaries; one stricter-
+contract retry then returned invalid JSON. DeepSeek V4.1 Flash accepted the first
+state, but on the second assessed only three of nine cases and was rejected for
+incomplete closed-pool coverage. Both runs stopped at the first post-repair or semantic
+failure. Missing assessments were not synthesized, and target outcomes were not used
+to repair the selection.
+
+There is therefore no formal-v5 confirmation. The next representation change is an
+outcome-hidden retrieval stage that reduces the cross-task population to a small,
+explicitly recorded candidate set before complete deliberation. That change must pass
+this same development-only gate; it is not a prompt retry and cannot reuse formal-v4
+as confirmation.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration
