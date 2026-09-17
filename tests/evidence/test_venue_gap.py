@@ -2,15 +2,22 @@ from datetime import UTC, datetime, timedelta
 
 from scitaste.evidence.venue_gap import (
     AcceptedNearestNeighbour,
+    AcceptedNeighbourEvidenceProfile,
     AcceptedPaperKind,
+    CurrentEvidenceComponentBinding,
     EvidenceMaturity,
     SubmissionEvidencePosition,
+    VenueComparisonProfile,
+    VenueContributionAxis,
+    VenueEvidenceComponent,
     VenueEvidenceCriterion,
     VenueEvidenceSignal,
     VenueGapAction,
     VenueGapActionKind,
     VenueGapDimension,
     VenueGapManifest,
+    VenueInnovationClaim,
+    VenueInnovationEvidenceStatus,
     assess_venue_gap,
 )
 from scitaste.project.deadlines import (
@@ -120,8 +127,52 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
             ),
         ),
     )
+    comparison = VenueComparisonProfile(
+        profile_id="test-venue-comparison",
+        project_id="test-project",
+        venue_gap_manifest_id="test-venue-gap",
+        innovation_claims=(
+            VenueInnovationClaim(
+                claim_id="conditional-scientific-policy",
+                axis=VenueContributionAxis.DECISION_MECHANISM,
+                contribution="Condition scientific actions on the observed research state.",
+                nearest_neighbour_ids=(
+                    "accepted-neighbour-1",
+                    "accepted-neighbour-2",
+                ),
+                closest_overlap="Accepted agents also revise research artifacts.",
+                falsifiable_difference=(
+                    "State-matched preferences should improve objective downstream outcomes."
+                ),
+                effect_evidence_ids=("one-local-table",),
+            ),
+        ),
+        accepted_evidence_profiles=(
+            AcceptedNeighbourEvidenceProfile(
+                paper_id="accepted-neighbour-1",
+                components=(
+                    VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+                    VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+                ),
+            ),
+            AcceptedNeighbourEvidenceProfile(
+                paper_id="accepted-neighbour-2",
+                components=(
+                    VenueEvidenceComponent.HUMAN_EXPERT_VALIDATION,
+                    VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+                    VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+                ),
+            ),
+        ),
+        current_evidence_components=(
+            CurrentEvidenceComponentBinding(
+                component=VenueEvidenceComponent.MECHANISM_ABLATION,
+                evidence_ids=("one-local-table",),
+            ),
+        ),
+    )
 
-    assessment = assess_venue_gap(manifest, deadline)
+    assessment = assess_venue_gap(manifest, deadline, comparison)
 
     assert assessment.submission_position is SubmissionEvidencePosition.NOT_YET_COMPETITIVE
     assert assessment.admitted_evidence_family_count == 0
@@ -131,3 +182,13 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     assert len(assessment.unresolved_dimensions) == len(VenueGapDimension)
     assert assessment.next_actions[0].action_id == "broad-experiment"
     assert assessment.acceptance_prediction_made is False
+    assert assessment.venue_comparison is not None
+    assert assessment.venue_comparison.current_admitted_family_count == 0
+    assert assessment.venue_comparison.current_admitted_component_count == 0
+    assert assessment.venue_comparison.innovation_claims[0].evidence_status is (
+        VenueInnovationEvidenceStatus.DEVELOPMENT_ONLY
+    )
+    assert assessment.venue_comparison.missing_or_unadmitted_accepted_majority_components == (
+        VenueEvidenceComponent.OBJECTIVE_HIDDEN_EVALUATION,
+        VenueEvidenceComponent.STRONG_SYSTEM_BASELINES,
+    )

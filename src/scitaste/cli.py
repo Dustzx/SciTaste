@@ -361,6 +361,7 @@ from scitaste.evaluation.track_a_abstraction_campaign import (
 )
 from scitaste.evidence.venue_gap import (
     assess_venue_gap,
+    load_venue_comparison_profile,
     load_venue_gap_manifest,
     save_venue_gap_assessment,
 )
@@ -2103,6 +2104,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Compare the complete claim-evidence portfolio with accepted venue neighbours",
     )
     evidence_venue_gap.add_argument("--manifest", type=Path, required=True)
+    evidence_venue_gap.add_argument("--comparison-profile", type=Path, default=None)
     evidence_venue_gap.add_argument("--project-id", required=True)
     evidence_venue_gap.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     evidence_venue_gap.add_argument("--at", default=None)
@@ -2494,9 +2496,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Project third-model choices onto frozen primary semantics",
     )
     development_panel_normalize.add_argument("--directory", type=Path, required=True)
-    development_panel_normalize.add_argument(
-        "--locator-root", type=Path, default=Path(".")
-    )
+    development_panel_normalize.add_argument("--locator-root", type=Path, default=Path("."))
     _add_log_level_option(development_panel_normalize)
     development_panel_normalize.set_defaults(
         handler=_handle_evaluation_scitastebench_v4_panel_normalize
@@ -8055,7 +8055,12 @@ def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
     manifest = load_venue_gap_manifest(args.manifest)
     if manifest.project_id != args.project_id:
         raise ValueError("venue-gap manifest project differs from --project-id")
-    assessment = assess_venue_gap(manifest, deadline)
+    comparison_profile = (
+        None
+        if args.comparison_profile is None
+        else load_venue_comparison_profile(args.comparison_profile)
+    )
+    assessment = assess_venue_gap(manifest, deadline, comparison_profile)
     output = save_venue_gap_assessment(assessment, args.output)
     print(
         json.dumps(
@@ -8064,21 +8069,32 @@ def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
                 "project_revision": assessment.project_revision,
                 "submission_position": assessment.submission_position,
                 "unresolved_dimensions": assessment.unresolved_dimensions,
-                "admitted_evidence_family_count": (
-                    assessment.admitted_evidence_family_count
-                ),
-                "paper_deadline_hours_remaining": (
-                    assessment.paper_deadline_hours_remaining
-                ),
+                "admitted_evidence_family_count": (assessment.admitted_evidence_family_count),
+                "paper_deadline_hours_remaining": (assessment.paper_deadline_hours_remaining),
                 "next_action": (
                     None
                     if not assessment.next_actions
                     else assessment.next_actions[0].model_dump(mode="json")
                 ),
-                "strongest_rejection_reasons": (
-                    assessment.strongest_rejection_reasons
-                ),
+                "strongest_rejection_reasons": (assessment.strongest_rejection_reasons),
                 "single_result_is_insufficient": True,
+                "venue_comparison": (
+                    None
+                    if assessment.venue_comparison is None
+                    else {
+                        "profile_id": assessment.venue_comparison.profile_id,
+                        "current_admitted_family_count": (
+                            assessment.venue_comparison.current_admitted_family_count
+                        ),
+                        "current_admitted_component_count": (
+                            assessment.venue_comparison.current_admitted_component_count
+                        ),
+                        "missing_or_unadmitted_accepted_majority_components": (
+                            assessment.venue_comparison.missing_or_unadmitted_accepted_majority_components
+                        ),
+                        "diagnosis": assessment.venue_comparison.diagnosis,
+                    }
+                ),
                 "acceptance_prediction_made": False,
                 "oral_prediction_made": False,
                 "output": str(output),

@@ -10,6 +10,7 @@ The critic is available through:
 ```bash
 scitaste evidence venue-gap \
   --manifest <project-owned-manifest.yaml> \
+  --comparison-profile <accepted-paper-comparison.yaml> \
   --project-id <project-id> \
   --outputs-root outputs \
   --output <project-owned-assessment.json>
@@ -44,6 +45,21 @@ assessment remains `not-yet-competitive` until every declared evidence contract
 is covered; even then its strongest output is
 `evidence-program-complete-for-review`, never “accepted” or “oral-ready.”
 
+The optional comparison profile makes two previously implicit judgments
+machine-checkable. First, every claimed innovation is located on a contribution
+axis, tied to named accepted neighbours, and separated into its closest overlap
+and a falsifiable difference. The assessment then labels its effect evidence as
+proposed-only, development-only, admitted support, or contradicted. A new name
+for an existing loop is therefore not counted as demonstrated innovation.
+Second, the critic constructs an evidence-component matrix spanning task/domain
+breadth, strong system baselines, objective evaluation, mechanism ablation,
+expert validation, end-to-end trajectories, real-world cases, uncertainty,
+failure analysis, and resource reporting. It reports both whether a component
+is present and whether its direction supports or contradicts the paper claim.
+There is intentionally no aggregate “ICLR score”: breadth cannot cancel a
+failed central mechanism, and a single family cannot become independent
+evidence merely by appearing in several table columns.
+
 Action ranking favors high-importance gaps and evidence breadth, discounts work
 that cannot finish before the paper deadline, and suppresses literature or
 writing polish while empirical core gaps remain open. This prevents a sequence
@@ -63,13 +79,17 @@ strong baselines, ablations, objective or external validation, and case studies.
 
 The current project-owned manifest and generated assessment are:
 
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V3.yaml`
-- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V4.json`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_MANIFEST_V4.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_COMPARISON_PROFILE_V1.yaml`
+- `outputs/projects/scitaste-self-development/planning/iclr2027/VENUE_GAP_ASSESSMENT_V7.json`
 
-The comparison set contains the ICLR 2025 main-track ScienceAgentBench paper and
-the ICLR 2026 main-track EXP-Bench and TusoAI papers. The first two show the
-scale and validation expected of benchmark work; TusoAI shows the breadth,
-baseline strength, ablations, and real case studies expected of a method paper.
+The comparison set contains ICLR main-track method, evaluation, and benchmark
+papers: ScienceAgentBench and the 100+ researcher ideation study from 2025, plus
+EXP-Bench, HeurekaBench, and TusoAI from 2026. They are not interchangeable
+baselines. The benchmark papers establish task authenticity and coverage; the
+ideation study establishes the standard for blind expert construct validation;
+TusoAI establishes the method-paper pattern of strong systems and expert
+baselines, ablations, held-out objectives, and real scientific case studies.
 The current SciTaste position is `core-claim-contradicted`. A first frozen
 NewtonBench block was invalidated rather than reported because required cost
 telemetry was unavailable after independent scoring. The repaired, new-seed
@@ -101,6 +121,19 @@ construct-validity, mechanism, end-to-end, strong-baseline, failure-boundary,
 and narrative evidence separately. The next iteration must change and diagnose
 the Taste mechanism on development data before any new independent confirmation;
 adding another presentation table would not close the scientific gap.
+
+The structured accepted-paper comparison reaches the same conclusion more
+sharply. Five evidence components are formally present, but all five come from
+the same NewtonBench family; four of six declared innovation claims are
+contradicted, the recursive loop is development-only, and the evaluation
+construct is still proposed-only. Strong system baselines, human/expert
+construct validation, and admitted end-to-end trajectories are missing despite
+appearing in a majority of the registered accepted neighbours. The resulting
+next action is therefore a prefix-matched counterfactual action study: fork the
+same observable research state across candidate actions, continue each branch
+under a common rollout and budget, score hidden terminal outcomes, learn only
+on development branches, and confirm on independent states. Another table over
+the collapsed policy is explicitly lower priority.
 
 This assessment is deliberately dynamic. Each admitted result updates the same
 manifest and recompiles the matrix, so completed work disappears from the next
