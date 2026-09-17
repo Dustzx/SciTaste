@@ -111,9 +111,17 @@ def prepare(args: argparse.Namespace) -> InteractiveTasteExecutionProtocol:
         raise ValueError("interactive preparation did not resolve a lifecycle policy")
     policy_groups = tuple(policy.source_group_ids)
     heldout_groups = (args.heldout_source_group_id,)
-    for group in (*policy_groups, *heldout_groups):
+    # Held-out benchmark identities must be known canonical registry entries.
+    # A learned policy may also contain immutable project-native episodes, whose
+    # namespace is intentionally outside the paper/benchmark identity registry.
+    # Keep those opaque IDs as frozen policy provenance while still rejecting a
+    # registered legacy alias and enforcing exact held-out disjointness below.
+    for group in policy_groups:
+        if registry.resolve(group, require_known=False) != group:
+            raise ValueError("interactive policy source group is a legacy alias")
+    for group in heldout_groups:
         if registry.resolve(group) != group:
-            raise ValueError("interactive protocol source group is not canonical")
+            raise ValueError("interactive held-out source group is not canonical")
     implementation_sha256 = content_sha256(
         {
             Path(module.__file__).name: _sha256_file(module.__file__)
