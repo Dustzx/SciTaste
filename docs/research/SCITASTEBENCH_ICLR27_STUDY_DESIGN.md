@@ -74,6 +74,35 @@ minimum detectable paired-regret improvement is recomputed from development and
 validation variance. If the resulting precision is inadequate, more
 source-group-disjoint pairs are added without inspecting hidden-test outcomes.
 
+The 120-pair floor applies **after** construct rejection, not to the raw source
+pool.  The consumed construction audit retained 13 of 26 proposed pairs (50%).
+Using that yield only for acquisition planning, the construction pool therefore
+has a preregistered floor of **240 independent source groups**, with additional
+acquisition triggered if the validation-stage acceptance rate implies fewer than
+120 admissible pairs.  A paper, review, or trajectory contributes at most one
+released pair even when it contains several review comments.  This is the data
+buffer: source acquisition may be enlarged before labels are opened, whereas a
+rejected pair is never relaxed into the benchmark merely to meet the target.
+
+As of 2026-09-18, exact local compilation has produced the following
+construction inventory.  These are candidates, not benchmark cases, and no row
+is counted as formal evidence:
+
+| Source population | Domains | Candidate decisions | Independent source groups |
+|---|---|---:|---:|
+| ARIES natural review--edit records | machine learning | 196 | 42 |
+| F1000 development population | ecology, public health | 77 | 39 |
+| F1000 validation reserve | ecology, public health | 77 | 40 |
+| F1000 confirmation buffer | ecology, public health | 80 | 38 |
+| **Disjoint union** | **three domains** | **430** | **159** |
+
+All six cross-population overlap counts are zero under canonical source-group
+identities.  The inventory is still 81 source groups short of the 240-group
+construction floor, before accounting for earlier development exposure.  The
+formal split therefore remains closed.  The next acquisition targets new
+source groups; repeated prompts, comments from the same paper, paraphrases, or
+candidate orders cannot close this deficit.
+
 ### Consumed construction audit (not a result)
 
 The first live construction deliberately used only the outcome-hidden screening

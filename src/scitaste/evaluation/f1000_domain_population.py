@@ -577,8 +577,14 @@ def acquire_f1000_domain_sources(
                 timeout=plan.timeout_seconds,
                 maximum_bytes=plan.per_article_xml_max_bytes,
             )
-            _verify_article_identity(reviewed.body, reviewed_doi)
-            _verify_article_identity(latest.body, latest_doi)
+            try:
+                _verify_article_identity(reviewed.body, reviewed_doi)
+                _verify_article_identity(latest.body, latest_doi)
+            except ValueError as exc:
+                raise ValueError(
+                    "F1000 selected source pair "
+                    f"{reviewed_doi!r} -> {latest_doi!r} failed qualification: {exc}"
+                ) from exc
             return (
                 position,
                 domain_id,

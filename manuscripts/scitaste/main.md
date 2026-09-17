@@ -319,6 +319,12 @@ contamination probe, and immutable split. The release target contains 24
 development pairs, 24 validation pairs, and 72 hidden-test pairs, stratified to
 give 20 independent pairs in each of six scientific decision contexts across at
 least three domains.
+Because the independent unit is an admitted pair rather than a raw review
+comment, source collection is separately buffered.  The construction pool is
+frozen at no fewer than 240 source-group-disjoint records---twice the 120-pair
+release floor---and is enlarged if development acceptance rates imply inadequate
+yield.  Rejected constructs are never relaxed to fill a split, and multiple
+comments or prompts from one paper cannot increase the independent sample size.
 The primary endpoint is pair-level budgeted decision regret, averaging base and
 twin before aggregation. A co-primary mechanism endpoint requires both states to
 be correct, the registered reversal to occur, and both choices to be robust to
