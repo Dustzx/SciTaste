@@ -325,7 +325,7 @@ class TasteInterventionContract(BaseModel):
         )
         if lifecycle_policy is not None:
             checks["policy source groups"] = (
-                lifecycle_policy.schema_version == "1.4"
+                lifecycle_policy.schema_version in {"1.4", "1.5"}
                 and lifecycle_policy.source_group_ids == self.policy_source_group_ids
             )
             checks["credit assignment schedule"] = (
