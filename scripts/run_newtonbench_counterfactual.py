@@ -13,6 +13,7 @@ from scitaste.evaluation.counterfactual_taste import (
     CounterfactualActionSetAdequacy,
     CounterfactualActionSetResult,
     CounterfactualResearchAction,
+    save_counterfactual_action_intervention,
     save_counterfactual_action_set_adequacy,
     save_counterfactual_action_set_result,
 )
@@ -137,13 +138,17 @@ def run(args: argparse.Namespace) -> CounterfactualActionSetResult:
             rollout_policy_sha256=rollout.policy_sha256,
             study_id=args.study_id,
         )
+        action_root = output_root / action.value.casefold()
+        save_counterfactual_action_intervention(
+            provider.intervention,
+            action_root / "INTERVENTION.json",
+        )
         receipt = InteractiveResearchLoop(toolbox, agent, provider, limits).run(
             project_id=args.project_id,
             run_id=f"{args.study_id}-{action.value.casefold()}",
             condition_id=f"{args.study_id}-forced-{action.value.casefold()}",
             prefix=prefix,
         )
-        action_root = output_root / action.value.casefold()
         save_interactive_research_run_receipt(receipt, action_root / "RECEIPT.json")
         receipts.append(receipt)
         interventions.append(provider.intervention)

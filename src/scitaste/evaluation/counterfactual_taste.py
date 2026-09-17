@@ -307,6 +307,27 @@ class CounterfactualBranchOutcome(BaseModel):
     status: str
     objective_value: float = Field(allow_inf_nan=False)
     objective_observed: bool
+    branch_experiment_count: int = Field(
+        default=0,
+        ge=0,
+        exclude_if=lambda value: value == 0,
+    )
+    branch_input_tokens: int = Field(
+        default=0,
+        ge=0,
+        exclude_if=lambda value: value == 0,
+    )
+    branch_output_tokens: int = Field(
+        default=0,
+        ge=0,
+        exclude_if=lambda value: value == 0,
+    )
+    branch_api_cost_usd: float | None = Field(
+        default=None,
+        ge=0,
+        allow_inf_nan=False,
+        exclude_if=lambda value: value is None,
+    )
 
 
 class CounterfactualActionSetResult(BaseModel):
@@ -442,6 +463,17 @@ class CounterfactualActionSetResult(BaseModel):
                     status=receipt.status,
                     objective_value=value,
                     objective_observed=observed,
+                    branch_experiment_count=(
+                        receipt.experiment_count - prefix.experiment_count
+                    ),
+                    branch_input_tokens=receipt.input_tokens - prefix.input_tokens,
+                    branch_output_tokens=receipt.output_tokens - prefix.output_tokens,
+                    branch_api_cost_usd=(
+                        receipt.api_cost_usd - prefix.api_cost_usd
+                        if receipt.api_cost_usd is not None
+                        and prefix.api_cost_usd is not None
+                        else None
+                    ),
                 )
             )
         ordered = tuple(sorted(outcomes, key=lambda item: item.action.value))
@@ -593,6 +625,21 @@ def save_counterfactual_action_set_adequacy(
     return target
 
 
+def save_counterfactual_action_intervention(
+    intervention: CounterfactualActionIntervention,
+    path: str | Path,
+) -> Path:
+    target = Path(path)
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("xb") as handle:
+        handle.write((intervention.model_dump_json(indent=2) + "\n").encode())
+        handle.flush()
+        os.fsync(handle.fileno())
+    return target
+
+
 __all__ = [
     "CommonResearchRolloutGuidanceProvider",
     "CounterfactualActionGuidanceProvider",
@@ -601,6 +648,7 @@ __all__ = [
     "CounterfactualActionSetResult",
     "CounterfactualBranchOutcome",
     "CounterfactualResearchAction",
+    "save_counterfactual_action_intervention",
     "save_counterfactual_action_set_adequacy",
     "save_counterfactual_action_set_result",
 ]
