@@ -185,6 +185,94 @@ class CounterfactualTemporalSafePrecedentAudit(BaseModel):
         )
 
 
+class CounterfactualTemporalSafeMergeSource(BaseModel):
+    """Content identities of one temporal-safe library entering a merge."""
+
+    model_config = _CONFIG
+
+    audit_id: str
+    audit_sha256: str = Field(pattern=_SHA256)
+    manifest_id: str
+    manifest_sha256: str = Field(pattern=_SHA256)
+    library_sha256: str = Field(pattern=_SHA256)
+    case_ids: tuple[str, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def source_is_canonical(self) -> CounterfactualTemporalSafeMergeSource:
+        validate_entry_id(self.audit_id, field_name="temporal-safe merge source audit_id")
+        validate_entry_id(self.manifest_id, field_name="temporal-safe merge source manifest_id")
+        if self.case_ids != tuple(sorted(set(self.case_ids))):
+            raise ValueError("temporal-safe merge source case IDs must be sorted and unique")
+        return self
+
+
+class CounterfactualTemporalSafeMergeReceipt(BaseModel):
+    """Receipt for combining development precedents without changing target labels."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    merge_id: str
+    project_id: str
+    sources: tuple[CounterfactualTemporalSafeMergeSource, ...] = Field(min_length=2)
+    output_manifest_id: str
+    output_manifest_sha256: str = Field(pattern=_SHA256)
+    output_library_sha256: str = Field(pattern=_SHA256)
+    case_count: int = Field(ge=4)
+    selector_visible_contract: Literal["counterfactual-predecision-observables-v1"] = (
+        TEMPORAL_SAFE_PRECEDENT_CONTRACT
+    )
+    objective_labels_preserved: Literal[True] = True
+    terminal_metrics_quarantined: Literal[True] = True
+    development_only: Literal[True] = True
+    target_population_unchanged_by_merge: Literal[True] = True
+    formal_confirmation_reuse_prohibited: Literal[True] = True
+    receipt_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def receipt_is_closed(self) -> CounterfactualTemporalSafeMergeReceipt:
+        validate_entry_id(self.merge_id, field_name="temporal-safe merge_id")
+        validate_project_id(self.project_id)
+        validate_entry_id(
+            self.output_manifest_id,
+            field_name="temporal-safe merge output_manifest_id",
+        )
+        if self.sources != tuple(sorted(self.sources, key=lambda item: item.manifest_id)):
+            raise ValueError("temporal-safe merge sources must be manifest ordered")
+        if len({item.manifest_id for item in self.sources}) != len(self.sources):
+            raise ValueError("temporal-safe merge repeats a source manifest")
+        if self.case_count != sum(len(item.case_ids) for item in self.sources):
+            raise ValueError("temporal-safe merge case count differs from its sources")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+        if self.receipt_sha256 != expected:
+            raise ValueError("temporal-safe merge receipt hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> CounterfactualTemporalSafeMergeReceipt:
+        payload = {
+            "schema_version": "1.0",
+            "selector_visible_contract": TEMPORAL_SAFE_PRECEDENT_CONTRACT,
+            "objective_labels_preserved": True,
+            "terminal_metrics_quarantined": True,
+            "development_only": True,
+            "target_population_unchanged_by_merge": True,
+            "formal_confirmation_reuse_prohibited": True,
+            **values,
+        }
+        payload.pop("receipt_sha256", None)
+        payload["sources"] = tuple(
+            sorted(payload["sources"], key=lambda item: item.manifest_id)  # type: ignore[arg-type]
+        )
+        unsigned = cls.model_construct(receipt_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            receipt_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"receipt_sha256"})
+            ),
+        )
+
+
 def derive_temporal_safe_counterfactual_precedents(
     *,
     audit_id: str,
@@ -284,6 +372,131 @@ def derive_temporal_safe_counterfactual_precedents(
         )
         staging.replace(target)
         return audit
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+
+
+def merge_temporal_safe_counterfactual_precedents(
+    *,
+    merge_id: str,
+    manifest_id: str,
+    precedent_roots: tuple[str | Path, ...],
+    output_root: str | Path,
+) -> CounterfactualTemporalSafeMergeReceipt:
+    """Merge verified temporal-safe development libraries into one source pool.
+
+    This operation changes only the available precedent population. Callers must
+    separately bind a frozen target manifest when preparing an evaluation so that
+    adding precedents cannot silently add or remove evaluated states.
+    """
+
+    if len(precedent_roots) < 2:
+        raise ValueError("temporal-safe merge requires at least two source roots")
+    target = Path(output_root).expanduser()
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+
+    project_id: str | None = None
+    action_vocabulary: tuple[str, ...] | None = None
+    all_bindings = []
+    all_cases: dict[str, TasteCase] = {}
+    sources: list[CounterfactualTemporalSafeMergeSource] = []
+    for raw_root in precedent_roots:
+        unresolved = Path(raw_root).expanduser()
+        if unresolved.is_symlink() or not unresolved.is_dir():
+            raise ValueError(f"temporal-safe source root must be a regular directory: {raw_root}")
+        root = unresolved.resolve(strict=True)
+        manifest_bytes = (root / "MANIFEST.json").read_bytes()
+        library_bytes = (root / "TASTE_LIBRARY.jsonl").read_bytes()
+        audit_bytes = (root / "TEMPORAL_SAFETY.json").read_bytes()
+        manifest = CounterfactualTastePrecedentManifest.model_validate_json(
+            manifest_bytes, strict=True
+        )
+        audit = CounterfactualTemporalSafePrecedentAudit.model_validate_json(
+            audit_bytes, strict=True
+        )
+        manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+        library_sha256 = hashlib.sha256(library_bytes).hexdigest()
+        audit_sha256 = hashlib.sha256(audit_bytes).hexdigest()
+        if (
+            audit.project_id != manifest.project_id
+            or audit.output_manifest_sha256 != manifest_sha256
+            or audit.output_library_sha256 != library_sha256
+            or manifest.library_sha256 != library_sha256
+        ):
+            raise ValueError("temporal-safe source hashes differ from its audit")
+        if project_id is None:
+            project_id = manifest.project_id
+            action_vocabulary = manifest.action_vocabulary
+        elif (
+            manifest.project_id != project_id
+            or manifest.action_vocabulary != action_vocabulary
+        ):
+            raise ValueError("temporal-safe sources differ in project or action vocabulary")
+        cases = {item.case_id: item for item in TasteLibrary(root / "TASTE_LIBRARY.jsonl").all()}
+        binding_ids = {item.case_id for item in manifest.bindings}
+        audit_ids = {item.case_id for item in audit.cases}
+        if set(cases) != binding_ids or binding_ids != audit_ids:
+            raise ValueError("temporal-safe source populations differ across artifacts")
+        duplicates = set(all_cases) & set(cases)
+        if duplicates:
+            raise ValueError(
+                "temporal-safe merge repeats case IDs: " + ", ".join(sorted(duplicates))
+            )
+        for binding in manifest.bindings:
+            if content_sha256(cases[binding.case_id].model_dump(mode="json")) != (
+                binding.taste_case_sha256
+            ):
+                raise ValueError("temporal-safe source case hash differs from its binding")
+        all_cases.update(cases)
+        all_bindings.extend(manifest.bindings)
+        sources.append(
+            CounterfactualTemporalSafeMergeSource(
+                audit_id=audit.audit_id,
+                audit_sha256=audit_sha256,
+                manifest_id=manifest.manifest_id,
+                manifest_sha256=manifest_sha256,
+                library_sha256=library_sha256,
+                case_ids=tuple(sorted(cases)),
+            )
+        )
+
+    assert project_id is not None
+    assert action_vocabulary is not None
+    target.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.", dir=target.parent))
+    try:
+        library_path = staging / "TASTE_LIBRARY.jsonl"
+        library = TasteLibrary(library_path)
+        for case in sorted(all_cases.values(), key=lambda item: item.case_id):
+            library.add(case)
+        output_library_sha256 = hashlib.sha256(library_path.read_bytes()).hexdigest()
+        output_manifest = CounterfactualTastePrecedentManifest.create(
+            manifest_id=manifest_id,
+            project_id=project_id,
+            source_run_id=merge_id,
+            bindings=tuple(all_bindings),
+            action_vocabulary=action_vocabulary,
+            library_sha256=output_library_sha256,
+        )
+        manifest_bytes = (output_manifest.model_dump_json(indent=2) + "\n").encode()
+        _write_new(staging / "MANIFEST.json", manifest_bytes)
+        receipt = CounterfactualTemporalSafeMergeReceipt.create(
+            merge_id=merge_id,
+            project_id=project_id,
+            sources=tuple(sources),
+            output_manifest_id=manifest_id,
+            output_manifest_sha256=hashlib.sha256(manifest_bytes).hexdigest(),
+            output_library_sha256=output_library_sha256,
+            case_count=len(all_cases),
+        )
+        _write_new(
+            staging / "TEMPORAL_SAFE_MERGE.json",
+            (receipt.model_dump_json(indent=2) + "\n").encode(),
+        )
+        staging.replace(target)
+        return receipt
     except BaseException:
         shutil.rmtree(staging, ignore_errors=True)
         raise
@@ -494,8 +707,11 @@ __all__ = [
     "TEMPORAL_SAFE_PRECEDENT_CONTRACT",
     "CounterfactualPreDecisionState",
     "CounterfactualTemporalSafeCaseAudit",
+    "CounterfactualTemporalSafeMergeReceipt",
+    "CounterfactualTemporalSafeMergeSource",
     "CounterfactualTemporalSafePrecedentAudit",
     "counterfactual_predecision_state",
     "derive_temporal_safe_counterfactual_precedents",
+    "merge_temporal_safe_counterfactual_precedents",
     "temporal_applicability_mismatches",
 ]

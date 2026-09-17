@@ -11,8 +11,10 @@ from scitaste.evaluation.counterfactual_deliberation_policy import (
     prepare_counterfactual_deliberation_inputs,
 )
 from scitaste.evaluation.counterfactual_temporal_precedents import (
+    CounterfactualTemporalSafeMergeReceipt,
     CounterfactualTemporalSafePrecedentAudit,
     derive_temporal_safe_counterfactual_precedents,
+    merge_temporal_safe_counterfactual_precedents,
 )
 from scitaste.taste.deliberation import TasteDeliberationInput
 
@@ -101,3 +103,36 @@ def test_real_precedents_can_be_rebuilt_from_predecision_observables(tmp_path: P
         for item in inputs
         for candidate in item.candidates
     )
+
+
+def test_temporal_safe_merge_keeps_frozen_target_population(tmp_path: Path) -> None:
+    base = Path("outputs/projects/scitaste-self-development/evaluations")
+    original = base / "counterfactual-taste-policy-v2-development-precedents-v2-temporal-safe"
+    coverage = base / "counterfactual-taste-policy-v2-coverage-precedents-v2-temporal-safe"
+    if not original.exists() or not coverage.exists():
+        pytest.skip("project-owned temporal-safe development bundles are absent")
+
+    merged = tmp_path / "merged"
+    receipt = merge_temporal_safe_counterfactual_precedents(
+        merge_id="counterfactual-temporal-safe-merge-test",
+        manifest_id="counterfactual-temporal-safe-merged-test",
+        precedent_roots=(original, coverage),
+        output_root=merged,
+    )
+    loaded = CounterfactualTemporalSafeMergeReceipt.model_validate_json(
+        (merged / "TEMPORAL_SAFE_MERGE.json").read_bytes(), strict=True
+    )
+
+    assert loaded == receipt
+    assert receipt.case_count == 14
+    outputs = prepare_counterfactual_deliberation_inputs(
+        project_id="scitaste-self-development",
+        state_root=base,
+        precedent_root=merged,
+        target_precedent_root=original,
+        output_root=tmp_path / "merged-deliberations",
+        maximum_candidate_cases=5,
+    )
+    assert len(outputs) == 12
+    assert all(item.name.startswith("counterfactual-taste-formal-v4-") for item in outputs)
+    assert all("coverage" not in item.name for item in outputs)

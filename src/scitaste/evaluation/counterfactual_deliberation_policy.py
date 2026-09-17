@@ -202,6 +202,7 @@ def prepare_counterfactual_deliberation_inputs(
     project_id: str,
     state_root: str | Path,
     precedent_root: str | Path,
+    target_precedent_root: str | Path | None = None,
     output_root: str | Path,
     maximum_selected_cases: int = 3,
     maximum_candidate_cases: int | None = None,
@@ -228,10 +229,26 @@ def prepare_counterfactual_deliberation_inputs(
     bindings = {item.case_id: item for item in manifest.bindings}
     if set(cases) != set(bindings):
         raise ValueError("counterfactual precedent library and manifest populations differ")
+    target_manifest = manifest
+    if target_precedent_root is not None:
+        target_precedent_base = Path(target_precedent_root).resolve(strict=True)
+        target_manifest = CounterfactualTastePrecedentManifest.model_validate_json(
+            (target_precedent_base / "MANIFEST.json").read_bytes(), strict=True
+        )
+        if target_manifest.project_id != project_id:
+            raise ValueError("counterfactual target manifest belongs to another project")
+        missing_targets = {
+            item.case_id for item in target_manifest.bindings
+        } - set(bindings)
+        if missing_targets:
+            raise ValueError(
+                "counterfactual target population is absent from the precedent library: "
+                + ", ".join(sorted(missing_targets))
+            )
 
     outputs = []
     target_base.mkdir(parents=True)
-    for binding in manifest.bindings:
+    for binding in target_manifest.bindings:
         state_dir = state_base / binding.study_id
         result = CounterfactualActionSetResult.model_validate_json(
             (state_dir / "RESULT.json").read_bytes(), strict=True

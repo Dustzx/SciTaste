@@ -226,6 +226,35 @@ to weaken the gate or tune on a held-out population. Formal v5 therefore remains
 the next development population must add temporally valid precedents for those observable
 decision regimes and rerun the unchanged gate.
 
+## Expanded-source development gate
+
+SciTaste added five temporally safe precedents from independent development trajectories,
+then merged them with the original 12-source library under hash verification. The merge
+receipt fixes the resulting source population at 17 cases while retaining the original 12
+formal-v4 target states unchanged. Source expansion therefore cannot improve the result by
+silently changing the evaluated population. The new cases cover an early `PILOT` decision,
+a no-candidate `REFINE` decision, two candidate-supported `STOP` decisions, and a
+low-confidence `PILOT` decision. Two bounded abstraction runs used DeepSeek-V4.1-Flash and
+recorded 50,438 total tokens at USD 0.02510148.
+
+The direct selector was then rerun once over all 12 frozen targets. Three initially invalid
+JSON-schema outputs received a maximum of two structure-only repair attempts; every original
+rejection remains in the immutable ledger, and no repair was selected from target outcomes.
+All 12 targets ultimately had an accepted proposal. The selector chose `PILOT` eight times,
+`PROBE` three times, and `REFINE` once. It achieved 0.4733 mean bounded objective, 91.7%
+preferred-action hits, zero objective failures, and 0.00235 mean regret. The strongest static
+action remained `EXPERIMENT` at 0.3850, so the selector exceeded it by 0.0883 and cleared the
+unchanged +0.02 development margin. In particular, the added coverage changed the two largest
+prior errors: magnetic middle now selects `REFINE`, and Snell early selects `PILOT`.
+
+This authorizes freezing a new disjoint confirmation protocol; it does not authorize a paper
+effect claim. The result reuses formal-v4 states strictly as development targets, remains
+`development_only=true`, and cannot reverse the admitted negative formal-v4 finding. Its
+machine-readable record is
+`evaluations/counterfactual-taste-policy-v2-expanded-direct-action-development-v4/REPORT.json`.
+Any subsequent confirmation must use unseen task trajectories and a policy frozen before
+their outcomes are opened.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration
