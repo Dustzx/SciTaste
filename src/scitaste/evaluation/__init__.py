@@ -325,6 +325,13 @@ from scitaste.evaluation.clustered_power import (
     plan_clustered_power,
     save_clustered_power_report,
 )
+from scitaste.evaluation.codescientist_population import (
+    CodeScientistDecisionState,
+    CodeScientistObservedOutcome,
+    CodeScientistPopulationReport,
+    CodeScientistTasteCandidate,
+    compile_codescientist_population,
+)
 from scitaste.evaluation.counterfactual_cohort import (
     CounterfactualCohortState,
     CounterfactualDevelopmentCohortProtocol,
@@ -1610,6 +1617,10 @@ __all__ = [
     "ClusteredPowerReportInspection",
     "ClusteredPowerRequest",
     "ClusteredPowerRequestInspection",
+    "CodeScientistDecisionState",
+    "CodeScientistObservedOutcome",
+    "CodeScientistPopulationReport",
+    "CodeScientistTasteCandidate",
     "CommonResearchRolloutGuidanceProvider",
     "ComparisonBlock",
     "ComparisonRegime",
@@ -2215,6 +2226,7 @@ __all__ = [
     "compile_ai_preference_request_pack",
     "compile_ai_taste_abstraction_review_requests",
     "compile_benchmark_condition_guidance",
+    "compile_codescientist_population",
     "compile_effective_experiment_program",
     "compile_evaluation_campaign_activation",
     "compile_evaluation_cell_plan",

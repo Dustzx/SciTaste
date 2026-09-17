@@ -319,6 +319,12 @@ contamination probe, and immutable split. The release target contains 24
 development pairs, 24 validation pairs, and 72 hidden-test pairs, stratified to
 give 20 independent pairs in each of six scientific decision contexts across at
 least three domains.
+For analysis, the six contexts form three powered scientific-decision axes:
+Direction combines problem value with hypothesis falsifiability; Information
+combines experiment design with resource, pivot, continue, and stop decisions;
+and Inference combines evidence interpretation with claim calibration. The six
+contexts remain visible coverage tags, but they are not presented as six
+underpowered miniature benchmarks.
 Because the independent unit is an admitted pair rather than a raw review
 comment, source collection is separately buffered.  The construction pool is
 frozen at no fewer than 240 source-group-disjoint records---twice the 120-pair
@@ -357,6 +363,16 @@ that must remain feasible in both. Independent construct reviewers see randomly
 named states and the original record, but not the constructor's preferred
 actions, utilities, state roles, rationale, or observed outcome.
 
+Source strata are explicit. Human review--revision records supply natural
+construct targets. Agent-generated idea and trajectory corpora may supply
+development precedents, but never human labels. Objective decision utilities
+come from a separate executable-fork stratum: immediately before a consequential
+hypothesis, experiment, or pivot decision, we freeze the state and execute two
+feasible continuations under the same remaining budget and independent seeds.
+The public task evaluator scores both continuations. We report human-grounded
+and scorer-grounded strata separately rather than pooling them into an omnibus
+sample count.
+
 Every formal target is paired with source-group-disjoint precedents. The Base
 condition receives no precedent, equal-token raw receives the underlying source
 record, Matched Taste receives the outcome-grounded decision abstraction whose
@@ -389,6 +405,14 @@ action. Training-free law-discovery tasks exercise sequential hypotheses and
 experiments; training-based machine-learning tasks will measure progress on a
 frozen hidden objective. These are two workloads for the same policy, not two
 versions of SciTaste.
+
+The external comparison is not replaced by SciTasteBench. MLRC-Bench evaluates
+all seven official tasks with Full SciTaste, the same-backbone Native Base,
+equal-context Raw/RAG, and the runnable official MLAB scaffold. MLR-Bench then
+tests ten frozen source-disjoint briefs with Full, Native Base, Raw/generic
+memory, and official MLR-Agent. SciTasteBench identifies the mechanism;
+MLRC-Bench tests objective executable progress; MLR-Bench tests the validity of
+the complete research product.
 
 Complete research trajectories additionally connect idea selection,
 experimentation, evidence synthesis, paper construction, review, and

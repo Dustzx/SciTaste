@@ -90,18 +90,81 @@ is counted as formal evidence:
 
 | Source population | Domains | Candidate decisions | Independent source groups |
 |---|---|---:|---:|
-| ARIES natural review--edit records | machine learning | 196 | 42 |
+| ARIES test review--edit records | machine learning | 196 | 42 |
+| ARIES dev review--reply reserve | machine learning | 102 | 102 |
 | F1000 development population | ecology, public health | 77 | 39 |
 | F1000 validation reserve | ecology, public health | 77 | 40 |
 | F1000 confirmation buffer | ecology, public health | 80 | 38 |
-| **Disjoint union** | **three domains** | **430** | **159** |
+| **Disjoint union** | **three domains** | **532** | **261** |
 
-All six cross-population overlap counts are zero under canonical source-group
-identities.  The inventory is still 81 source groups short of the 240-group
-construction floor, before accounting for earlier development exposure.  The
-formal split therefore remains closed.  The next acquisition targets new
-source groups; repeated prompts, comments from the same paper, paraphrases, or
-candidate orders cannot close this deficit.
+All ten pairwise cross-population overlap counts are zero under canonical
+source-group identities. The raw inventory now exceeds the 240-group
+construction floor. Twenty of the 102 ARIES dev groups are a subset previously
+used in development, leaving 82 newly materialized groups in that source; other
+development exposure is tracked separately. The formal split remains closed:
+the acquisition-count gate is satisfied, but context coverage, atomic-pair
+construction, rights, expert construct validity, and source-disjoint allocation
+are not. Repeated prompts, comments from the same paper, paraphrases, or
+candidate orders cannot repair any of those gates.
+
+### Coverage audit and source-specific roles
+
+The source deficit is not only numerical. Two outcome-hidden development
+screens independently found that the natural review records are concentrated in
+experiment, evidence, and claim decisions. The Qwen screen admitted 56
+decisions: 23 experiment, 11 evidence, 12 claim, but only 3 problem, 3
+hypothesis, and 4 resource/pivot/stopping decisions. The GLM screen admitted 52:
+15 experiment, 13 evidence, 15 claim, 6 problem, 3 hypothesis, and **zero**
+resource/pivot/stopping decisions. These are screening diagnostics on partly
+different candidate sets, not agreement statistics or benchmark results. They
+show that acquiring more undifferentiated peer-review records would increase
+sample count without repairing lifecycle coverage.
+
+SciTasteBench therefore uses three scientific-decision axes rather than treating
+six context tags as unrelated miniature benchmarks:
+
+| Primary axis | Operational contexts | Scientific question |
+|---|---|---|
+| Direction | problem value; hypothesis and falsifiability | Is this question or conjecture worth pursuing under the present evidence? |
+| Information | experiment and confounds; resource, pivot, continue, or stop | Which feasible action has the highest value of information per constrained resource? |
+| Inference | evidence interpretation; claim and review response | What conclusion is warranted, and how strongly may it be stated? |
+
+The formal population remains stratified over all six tags, but the three axes
+are the powered reporting strata. This prevents six underpowered headline tests
+while preserving the important distinction between, for example, experiment
+choice and stopping. The hidden-test allocation and context minima will be
+recomputed from validation attrition before freezing rather than filled by
+relabeling abundant claim decisions.
+
+Source types have different evidential roles and are never pooled into a single
+sample count:
+
+| Source stratum | Current qualified material | Admissible role | Missing condition for formal use |
+|---|---|---|---|
+| Human scientific record | ARIES and F1000 review--revision histories | candidate natural states, especially the Inference axis | pair-blinded domain-expert construct labels, utility elicitation, and valid atomic twins |
+| Executed research attempts | CodeScientist metadata at commit `778b146a...` | development precedents for Direction and Information | ideas are model-generated; no independent quality label, objective utility contract, or chronological pivot/stopping trace |
+| Ordered agent traces | OpenDiscoveryTrace core trajectories at dataset commit `b112204c...` | development diagnostics for error-triggered revision and recovery | agent-generated actions, incomplete human validation, simulated retrieval, and no controlled alternative-action outcomes |
+| Scorer-owned executable forks | new forks collected on frozen public benchmark tasks | objective Information-axis cases and treatment mediation | both feasible actions must be executed from an identical prefix under matched budgets and scored by the external evaluator |
+
+The locally compiled CodeScientist population contains 50 independent idea
+groups and 543 bound experiment attempts: 232 completed and 311 failed or
+interrupted. Repeated attempts remain correlated observations within one idea,
+not 543 benchmark samples. All 50 ideas have an expert filter note, but those
+notes do not constitute per-decision utility labels. The local
+OpenDiscoveryTrace audit confirms that its 372 core frontier-model trajectories
+contain 1,536 steps and 323 non-empty revision triggers; this is useful process
+material, but a model's self-recorded revision is not expert scientific Taste.
+Both sources are therefore quarantined from hidden formal targets.
+
+For scorer-owned executable forks, a benchmark state is frozen immediately
+before a consequential hypothesis, experiment, or pivot decision. Two feasible
+continuations receive the same remaining budget and independent random seeds;
+the official task scorer supplies the terminal outcome. This stratum supplies
+objective action utility and tests whether the Taste recommendation mediates
+real progress. It does **not** replace the natural-record stratum or the external
+system comparison: the former measures human-grounded construct validity, while
+the latter evaluates an unconstrained end-to-end agent on untouched public
+tasks.
 
 ### Consumed construction audit (not a result)
 
