@@ -229,8 +229,8 @@ endpoints:
 
 | Evaluation | Endpoint | Primary comparison | Role |
 |---|---|---|---|
-| MLRC-Bench (NeurIPS 2025 D&B) | objective competition-score improvement and progress per GPU/API budget | Full SciTaste, same-backbone Native Base, official/runnable agent baseline | accepted external benchmark, executable research, and competitiveness |
-| MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, MLR-Agent or another runnable external system | accepted external idea-to-paper evaluation |
+| MLRC-Bench (NeurIPS 2025 D&B) | objective competition-score improvement and progress per GPU/API budget | Full SciTaste, same-backbone Native Base, official MLAB scaffold under the same research-agent model | accepted external benchmark, executable research, and competitiveness |
+| MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, official MLR-Agent | accepted external idea-to-paper evaluation |
 | SciTasteBench | paired regret, correct boundary reversal, abstention, and delayed-credit learning | Base, equal-token raw, Matched Taste, Mismatched Taste | internal mechanism attribution rather than external competitiveness |
 
 EXP-Bench (ICLR 2026) and ScienceAgentBench (ICLR 2025) are useful reserve routes,
@@ -255,11 +255,14 @@ system establishes competitiveness. A best-native external comparison is useful
 but model-confounded and is labelled accordingly.
 
 Consequently the smallest defensible external comparison contains three roles,
-not a large Cartesian grid: Full SciTaste, same-model Native Base, and one real
-runnable external method.  Repetitions are added only when the development pair
-shows stochastic variance large enough to change the conclusion.  Benchmark
-adapters may translate files and telemetry, but may not reimplement a blocked
-method or substitute a new scorer.
+not a large Cartesian grid: Full SciTaste, same-model Native Base, and the
+benchmark's real runnable method. The formal MLRC endpoint covers all seven
+official tasks; the first Temporal Action Localisation pair is development-only
+and cannot select a favourable task subset. Two independent agent seeds are the
+formal floor, with further repetitions added only when the development pair
+shows variance large enough to change the conclusion. Benchmark adapters may
+translate files and telemetry, but may not reimplement a blocked method or
+substitute a new scorer.
 
 ## Evidence buffer
 
@@ -295,8 +298,8 @@ self-validating. The smallest defensible external portfolio is:
 
 | Question | External route | Conditions | Primary evidence |
 |---|---|---|---|
-| Does Taste improve executable research on an accepted external benchmark? | at least three MLRC-Bench tasks | Full SciTaste, same-backbone Native Base, one runnable research-agent baseline; one paired seed first | objective score gain and gain per GPU/API budget |
-| Does the complete research product improve on an accepted external benchmark? | source-disjoint MLR-Bench briefs | Full, Native Base, MLR-Agent or another runnable external system | stagewise and final-package review with invalid-result accounting |
+| Does Taste improve executable research on an accepted external benchmark? | all seven official MLRC-Bench tasks after one development task | Full SciTaste, same-backbone Native Base, official MLAB under the same agent model; two formal seeds | objective score gain and gain per GPU/API budget |
+| Does the complete research product improve on an accepted external benchmark? | ten frozen, source-disjoint MLR-Bench briefs | Full, Native Base, official MLR-Agent | stagewise and final-package review with invalid-result accounting |
 | Where does experiment integrity fail? | unchanged official EXP-Bench subset, only if its runtime and scorer qualify | Full, Native Base, official agent baseline | conjunctive hypothesis-to-conclusion success; secondary diagnostic only |
 
 The same-backbone Full/Base pair identifies the effect of Taste. The external

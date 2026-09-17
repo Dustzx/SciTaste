@@ -380,9 +380,10 @@ The submission result boundary is intentionally empty until frozen evidence is
 available. Three result blocks are required: (i) SciTasteBench hidden boundary
 judgment, including matched--mismatched specificity and abstention; (ii)
 MLRC-Bench objective progress for Full SciTaste, the same-backbone Native Base,
-and a runnable external agent; and (iii) MLR-Bench stagewise and final-package
-quality with invalid or fabricated results retained. Development effects are
-not substituted for any block.
+and the official MLAB scaffold under the same research-agent model across all
+seven tasks; and (iii) MLR-Bench stagewise and final-package quality for Full,
+Native Base, and official MLR-Agent, with invalid or fabricated results retained.
+Development effects are not substituted for any block.
 
 | Claim-bearing block | Independent unit | Primary endpoint | Current status |
 |---|---|---|---|
