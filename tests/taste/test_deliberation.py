@@ -25,11 +25,14 @@ from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.controller import TasteController, TasteMode
 from scitaste.taste.deliberation import (
+    TasteApplicabilityProposal,
     TasteDeliberationInput,
     TasteDeliberationProposal,
     TasteTransferVerdict,
     VerifiedTasteDeliberation,
+    merge_taste_applicability_proposals,
     select_deliberated_taste_cases,
+    shard_taste_deliberation_input,
     validate_taste_deliberation,
 )
 from scitaste.taste.retriever import TasteRetriever
@@ -254,6 +257,93 @@ def test_deliberation_can_abstain_when_no_precedent_is_applicable(
         )
         == []
     )
+
+
+def test_applicability_shards_merge_into_order_stable_controller_decision(
+    tmp_path, research_state: ResearchState
+) -> None:
+    input_data = _controller(tmp_path).prepare_taste_deliberation(
+        state=research_state,
+        candidate_actions=_actions(),
+    )
+    copies = tuple(
+        candidate.model_copy(
+            update={
+                "case_id": f"{candidate.case_id}-copy",
+                "source_identities": (f"source-{candidate.case_id}-copy",),
+                "broad_retrieval_score": candidate.broad_retrieval_score / 2,
+            }
+        )
+        for candidate in input_data.candidates
+    )
+    expanded = input_data.model_copy(
+        update={
+            "candidates": (*input_data.candidates, *copies),
+            "maximum_selected_cases": 3,
+        }
+    )
+    shards = shard_taste_deliberation_input(
+        expanded,
+        maximum_candidates_per_shard=2,
+    )
+    proposals = tuple(
+        TasteApplicabilityProposal(
+            decision_id=shard.decision_id,
+            assessments=_proposal(shard).assessments,
+        )
+        for shard in shards
+    )
+
+    merged = merge_taste_applicability_proposals(
+        expanded,
+        shard_inputs=tuple(reversed(shards)),
+        shard_proposals=tuple(reversed(proposals)),
+    )
+    forward = merge_taste_applicability_proposals(
+        expanded,
+        shard_inputs=shards,
+        shard_proposals=proposals,
+    )
+
+    assert {item.case_id for item in merged.assessments} == {
+        item.case_id for item in expanded.candidates
+    }
+    assert len(merged.selected_case_ids) == 3
+    assert merged.recommended_action_id in {"probe", "experiment"}
+    assert merged.selected_case_ids == forward.selected_case_ids
+    assert merged.recommended_action_id == forward.recommended_action_id
+    assert validate_taste_deliberation(expanded, merged) == ()
+
+
+def test_applicability_that_supports_every_action_cannot_force_a_tie_break(
+    tmp_path, research_state: ResearchState
+) -> None:
+    input_data = _controller(tmp_path).prepare_taste_deliberation(
+        state=research_state,
+        candidate_actions=_actions(),
+    )
+    proposal = _proposal(input_data)
+    nondiscriminative = TasteApplicabilityProposal(
+        decision_id=input_data.decision_id,
+        assessments=tuple(
+            item.model_copy(
+                update={
+                    "aligned_current_action_ids": ("probe", "experiment"),
+                    "opposed_current_action_ids": (),
+                }
+            )
+            for item in proposal.assessments
+        ),
+    )
+
+    merged = merge_taste_applicability_proposals(
+        input_data,
+        shard_inputs=(input_data,),
+        shard_proposals=(nondiscriminative,),
+    )
+
+    assert merged.selected_case_ids == ()
+    assert merged.recommended_action_id is None
 
 
 def test_deliberation_cannot_override_deterministic_hard_applicability(

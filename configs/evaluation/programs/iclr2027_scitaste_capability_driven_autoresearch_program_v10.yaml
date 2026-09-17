@@ -77,7 +77,7 @@ external_validity_control:
 model_inventory_binding:
   inventory_id: scitaste-model-role-inventory-20260916-v2
   inventory_path: configs/resources/assets/model_role_inventory_v2.yaml
-  inventory_file_sha256: 4b7ceaa3038acf2c1d45d37d1116a67a41a6c97bce1f66399d042058906f3e63
+  inventory_file_sha256: 7ead930c38590f661b5bb8a0886b84392d2fafd6bceeb1c0eb936f62b8a29ac1
   role_partition: [research_agent, code_agent, judge, embedding, task_training]
   inventory_presence_selects_model: false
   candidate_pool_may_expand_after_scientific_design: true
@@ -206,7 +206,7 @@ model_selection:
       preferred_pool: [bailian-qwen38-max, zhipu-glm53-flash, deepseek-v41-flash, qwen3-vl-8b-instruct-local]
     embedding:
       required: [scientific-retrieval-quality, deterministic-batching, multilingual-policy]
-      preferred_pool: [all-minilm-l6-v2-local, downloadable-scientific-embedding]
+      preferred_pool: [qwen3-embedding-0-6b-local, all-minilm-l6-v2-local]
     task_training:
       required: [benchmark-task-fit, license-clearance, reproducible-load, 24GB-or-distributed-feasibility]
       preferred_pool:
@@ -286,7 +286,9 @@ model_strata:
       decisions, with separate hashes, budgets, telemetry, and causal roles.
   embedding_models:
     baseline: all-minilm-l6-v2-local
-    upgrade_rule: compare-a-scientific-or-multilingual-embedding-model-if-E1-corpus-retrieval-error-is-material
+    current_candidate: qwen3-embedding-0-6b-local
+    upgrade_trigger: E1-corpus-retrieval-error-observed-on-consumed-natural-development-cases
+    formal_selection_rule: compare-on-source-disjoint-retrieval-conformance-before-opening-a-new-confirmation-split
     formal_selection_data: source-disjoint-retrieval-conformance-only
 
 review_panel_contract:

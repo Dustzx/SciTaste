@@ -250,6 +250,18 @@ local_assets:
     license_metadata: apache-2.0
     role_fit: {research_agent: not_applicable, code_agent: not_applicable, judge: not_applicable, embedding: candidate, task_training: baseline_candidate}
     constraints: English 384-dimensional retrieval baseline; scientific-domain and multilingual alternatives may be downloaded and compared.
+  - asset_id: qwen3-embedding-0-6b-local
+    path_name: Qwen3-Embedding-0.6B
+    category: embedding-model
+    regular_file_bytes: 1207489041
+    architecture: Qwen3ForCausalLM
+    model_type: qwen3
+    tokenizer_class: Qwen2Tokenizer
+    model_max_length: 32768
+    weights_layout: single-safetensors
+    license_metadata: apache-2.0
+    role_fit: {research_agent: not_applicable, code_agent: not_applicable, judge: not_applicable, embedding: candidate, task_training: not_applicable}
+    constraints: Instruction-aware 1024-dimensional retrieval candidate; use last-token pooling and an English task instruction, never as the autonomous-research controller.
   - asset_id: llava-1-5-7b-hf-local
     path_name: llava-1.5-7b-hf
     category: multimodal-generative-model

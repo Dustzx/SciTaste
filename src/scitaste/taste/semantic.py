@@ -21,11 +21,14 @@ from scitaste.model_nodes.runtime import (
 )
 from scitaste.project import ProjectRuntime
 from scitaste.taste.deliberation import (
+    TASTE_APPLICABILITY_NODE,
     TASTE_DELIBERATION_NODE,
+    TasteApplicabilityProposal,
     TasteDeliberationInput,
     TasteDeliberationProposal,
     TasteTransferVerdict,
     VerifiedTasteDeliberation,
+    validate_taste_applicability,
     validate_taste_deliberation,
 )
 from scitaste.taste.reference_mining import (
@@ -168,6 +171,73 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
             context=context,
         )
         reasons.extend(validate_grounded_abstraction_against_projection(proposal, input_data))
+        return sorted(set(reasons))
+
+
+class TasteApplicabilityNode(ModelNode[TasteDeliberationInput, TasteApplicabilityProposal]):
+    """Judge transfer boundaries while leaving selection to the controller."""
+
+    node_name = TASTE_APPLICABILITY_NODE
+    prompt_version = "taste-applicability-v1"
+    system_instruction = (
+        "Assess whether every supplied Scientific Taste precedent transfers to the current "
+        "research decision. Return exactly one assessment for every supplied case ID and do "
+        "not select a precedent or recommend an action. For every applicability_supports "
+        "boundary_condition, copy one complete string byte-for-byte from that case's "
+        "applies_when list. For every triggered_failure_supports boundary_condition, copy one "
+        "complete string byte-for-byte from that case's fails_when list. Cite only supplied "
+        "decision-fact and current-action IDs. An applicable case must satisfy at least two "
+        "stated applicability conditions, trigger no failure condition, and align to at least "
+        "one current action. Use uncertain or inapplicable otherwise. Source outcomes, held-out "
+        "task content, relation labels, and external facts are unavailable and must not be "
+        "inferred. The controller, not this node, owns source de-duplication, selection, "
+        "aggregation, and abstention."
+    )
+    input_model = TasteDeliberationInput
+    output_model = TasteApplicabilityProposal
+
+    def _normalize_output_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        input_data: TasteDeliberationInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> dict[str, Any]:
+        """Normalize controller identity and exact enum spelling aliases only."""
+
+        del context, policy
+        normalized = deepcopy(payload)
+        normalized["decision_id"] = input_data.decision_id
+        if normalized.get("type") == "json_object":
+            normalized.pop("type")
+        assessments = normalized.get("assessments")
+        if isinstance(assessments, list):
+            for assessment in assessments:
+                if not isinstance(assessment, dict):
+                    continue
+                if assessment.get("verdict") in {"not_applicable", "not-applicable"}:
+                    assessment["verdict"] = "inapplicable"
+        return normalized
+
+    def _proposal_rejections(
+        self,
+        proposal: TasteApplicabilityProposal,
+        *,
+        input_data: TasteDeliberationInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del policy
+        reasons = list(validate_taste_applicability(input_data, proposal))
+        if context.stage != input_data.stage:
+            reasons.append("Taste applicability context stage differs from the closed input")
+        if context.state_snapshot_id != input_data.state_snapshot_id:
+            reasons.append("Taste applicability context state differs from the closed input")
+        if context.candidate_actions != list(input_data.current_actions):
+            reasons.append("Taste applicability context actions differ from the closed input")
+        if context.claim_ids or context.evidence_ids or context.section_ids or context.metadata:
+            reasons.append("Taste applicability context contains information outside the input")
         return sorted(set(reasons))
 
 
@@ -400,6 +470,11 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
     from scitaste.taste.family_review import family_review_node_types
 
     registrations = {
+        TASTE_APPLICABILITY_NODE: ModelNodeRegistration(
+            TasteApplicabilityNode,
+            TasteDeliberationInput,
+            TasteApplicabilityProposal,
+        ),
         REFERENCE_MINING_NODE: ModelNodeRegistration(
             ReferenceMiningNode,
             ReferenceMiningNeed,
@@ -1183,6 +1258,7 @@ __all__ = [
     "REFERENCE_MINING_NODE",
     "REFERENCE_QUALITY_NODE",
     "TASTE_ABSTRACTION_NODE",
+    "TASTE_APPLICABILITY_NODE",
     "TASTE_DELIBERATION_NODE",
     "GroundedTasteAbstractionNode",
     "GroundedTasteCaseAbstraction",
@@ -1194,6 +1270,8 @@ __all__ = [
     "ReferenceQualityProposal",
     "TasteAbstractionInput",
     "TasteAbstractionNode",
+    "TasteApplicabilityNode",
+    "TasteApplicabilityProposal",
     "TasteCaseAbstraction",
     "TasteDeliberationInput",
     "TasteDeliberationNode",

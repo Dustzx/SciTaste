@@ -555,9 +555,10 @@ class TasteController:
                 "proposal_sha256": taste_deliberation.proposal.fingerprint,
             }
         elif self.mode is TasteMode.AUGMENTED:
+            assert self.retriever is not None
             selector = {
-                "mode": "lexical",
-                "algorithm": "stage-conditioned-lexical-similarity-v1",
+                "mode": "dense" if self.retriever.embedding_backend is not None else "lexical",
+                "algorithm": self.retriever.algorithm_id,
                 "domain_relation": self.retriever.domain_relation.value,
             }
         else:

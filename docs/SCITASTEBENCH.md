@@ -13,6 +13,12 @@ objective research progress. Neither role can substitute for the other.
 
 ![SciTasteBench and external evidence portfolio](figures/scitastebench-evidence-design.svg)
 
+The concrete ICLR study matrix, case anatomy, causal arms, formal population
+floor, and external benchmark division are summarized in
+[`SCITASTEBENCH_ICLR27_STUDY_DESIGN.md`](research/SCITASTEBENCH_ICLR27_STUDY_DESIGN.md).
+Its second figure makes the six decision contexts and the source-to-principle,
+principle-to-decision, outcome-to-learning, and external-outcome links explicit.
+
 The figure is also an evidence-admission rule. SciTasteBench must establish the
 mechanism and the validity of its decision instrument; an external scorer-owned
 benchmark must establish autonomous-research utility. Development runs remain in
@@ -47,6 +53,38 @@ from target-visible state, card applicability/reversal conditions, and uncertain
 with an abstention option. The 28-case reserve is now consumed failure evidence.
 Any revised selector must be developed elsewhere and evaluated on a new untouched
 split; rerunning these cases cannot become confirmation.
+
+### Revised selector development result
+
+The revised path has now been exercised on that consumed reserve.  It replaces
+family-plus-hash assignment with Qwen3-Embedding-0.6B broad retrieval, a
+target-visible applicability model, three-candidate shards, explicit abstention,
+and deterministic source-de-duplicated merging.  This fixed the main interface
+failure but did **not** recover a Scientific Taste effect.
+
+In
+`evaluations/scitastebench-deliberative-development-v5/`, 53 of 56 selector
+invocations were structurally valid.  The selector recommended a precedent-backed
+action in 7 declared-order and 11 reversed-order cases.  Yet it changed the Base
+action only once and twice respectively, producing zero improvements and three
+regressions.  Full-policy accuracy was 57.1%/67.9% versus Base 60.7%/75.0%;
+order-consistent accuracy was 53.6% versus 60.7%.
+
+Two follow-up decision paths tested whether the failure came from treating the
+selector as an action override.  The selected principles were instead returned to
+the frozen decision model, first as principles plus boundaries
+(`scitastebench-deliberative-context-development-v6`) and then as complete
+contrastive source experiences
+(`scitastebench-deliberative-context-development-v7`).  Both produced the same
+result: no declared-order change, one reversed-order regression, and no improvement
+over Base.  These remain ignored development artifacts, not manuscript results.
+
+The new selector is therefore operational but scientifically inactive on this
+population.  A fresh confirmation split remains closed.  The next benchmark work
+is not another retriever or prompt sweep: it is to admit action-identifiable cases
+with counterfactual boundary twins, verify that abstractions preserve the source's
+decision-relevant contrast, and then require matched applicability to beat an
+equal-quality mismatched pool before freezing new targets.
 
 The current ICLR design authority is the
 [`four-layer protocol`](research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md). It

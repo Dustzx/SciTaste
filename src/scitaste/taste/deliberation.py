@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from enum import StrEnum
 from typing import Literal
 
@@ -18,6 +19,7 @@ _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[A-Za-z0-9]+(?:[A-Za-z0-9._:-]*[A-Za-z0-9])?$"
 _SHA256 = r"^[0-9a-f]{64}$"
 
+TASTE_APPLICABILITY_NODE = "taste-applicability"
 TASTE_DELIBERATION_NODE = "taste-deliberation"
 
 
@@ -210,6 +212,27 @@ class TasteCaseTransferAssessment(BaseModel):
         return self
 
 
+class TasteApplicabilityProposal(BaseModel):
+    """Per-case transfer judgments before controller-owned selection."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    decision_id: str = Field(pattern=_ID)
+    assessments: tuple[TasteCaseTransferAssessment, ...] = Field(min_length=2, max_length=20)
+
+    @model_validator(mode="after")
+    def identities_are_unique(self) -> TasteApplicabilityProposal:
+        assessed = [item.case_id for item in self.assessments]
+        if len(assessed) != len(set(assessed)):
+            raise ValueError("Taste applicability assessments must cover unique cases")
+        return self
+
+    @property
+    def fingerprint(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json"))
+
+
 class TasteDeliberationProposal(BaseModel):
     """Untrusted, bounded proposal for a diverse decision-precedent set."""
 
@@ -357,6 +380,10 @@ def validate_taste_deliberation(
             and len(assessment.applicability_supports) >= 2
             and not assessment.triggered_failure_supports
             and assessment.aligned_current_action_ids
+            and (
+                set(assessment.aligned_current_action_ids) != action_ids
+                or bool(assessment.opposed_current_action_ids)
+            )
         ):
             eligible[case_id] = assessment
         if (
@@ -421,6 +448,225 @@ def validate_taste_deliberation(
     ):
         findings.append("Taste deliberation omitted available challenge or boundary evidence")
     return tuple(sorted(set(findings)))
+
+
+def validate_taste_applicability(
+    input_data: TasteDeliberationInput,
+    proposal: TasteApplicabilityProposal,
+) -> tuple[str, ...]:
+    """Validate transfer judgments without asking the model to select an action."""
+
+    synthetic = TasteDeliberationProposal(
+        schema_version="1.1",
+        decision_id=proposal.decision_id,
+        assessments=proposal.assessments,
+        selected_case_ids=(),
+        recommended_action_id=None,
+        selection_rationale="Applicability-only proposal; controller selection is pending.",
+    )
+    return validate_taste_deliberation(input_data, synthetic)
+
+
+def shard_taste_deliberation_input(
+    input_data: TasteDeliberationInput,
+    *,
+    maximum_candidates_per_shard: int = 3,
+) -> tuple[TasteDeliberationInput, ...]:
+    """Partition one closed pool into model-sized shards without changing its state.
+
+    Deliberating over many long precedents in one structured generation creates an
+    avoidable interface confound: a model may omit an assessment even when its
+    scientific judgment is sound.  Every shard therefore retains the exact decision
+    facts and action menu while exposing two or more candidates.  The companion merge
+    function restores one proposal over the original closed pool.
+    """
+
+    if maximum_candidates_per_shard < 2:
+        raise ValueError("Taste deliberation shards require at least two candidates")
+    candidates = list(input_data.candidates)
+    if len(candidates) <= maximum_candidates_per_shard:
+        return (input_data,)
+    shards = [
+        candidates[index : index + maximum_candidates_per_shard]
+        for index in range(0, len(candidates), maximum_candidates_per_shard)
+    ]
+    if len(shards[-1]) == 1:
+        shards[-1].insert(0, shards[-2].pop())
+    return tuple(
+        input_data.model_copy(
+            update={
+                "decision_id": f"{input_data.decision_id}-shard-{index:02d}",
+                "candidates": tuple(shard),
+                "maximum_selected_cases": min(
+                    input_data.maximum_selected_cases,
+                    len(shard),
+                ),
+            }
+        )
+        for index, shard in enumerate(shards, 1)
+    )
+
+
+def merge_taste_deliberation_proposals(
+    input_data: TasteDeliberationInput,
+    *,
+    shard_inputs: Sequence[TasteDeliberationInput],
+    shard_proposals: Sequence[TasteDeliberationProposal],
+) -> TasteDeliberationProposal:
+    """Merge validated shard assessments through a deterministic Taste policy.
+
+    Models judge transfer boundaries; the controller owns population coverage,
+    source de-duplication, the selection ceiling, and the final action aggregation.
+    This separation keeps recommendation invariant to shard and presentation order.
+    """
+
+    if not shard_inputs or len(shard_inputs) != len(shard_proposals):
+        raise ValueError("Taste deliberation merge requires one proposal per shard")
+    expected_candidates = {item.case_id: item for item in input_data.candidates}
+    observed_candidates: dict[str, TasteDeliberationCandidate] = {}
+    assessments: list[TasteCaseTransferAssessment] = []
+    for shard_input, proposal in zip(shard_inputs, shard_proposals, strict=True):
+        if (
+            shard_input.state_snapshot_id != input_data.state_snapshot_id
+            or shard_input.stage != input_data.stage
+            or shard_input.current_actions != input_data.current_actions
+            or shard_input.decision_facts != input_data.decision_facts
+        ):
+            raise ValueError("Taste deliberation shard changed the decision state")
+        findings = validate_taste_deliberation(shard_input, proposal)
+        if findings:
+            raise ValueError("invalid Taste deliberation shard: " + "; ".join(findings))
+        for candidate in shard_input.candidates:
+            if candidate.case_id in observed_candidates:
+                raise ValueError("Taste deliberation shards overlap")
+            observed_candidates[candidate.case_id] = candidate
+        assessments.extend(proposal.assessments)
+    if observed_candidates != expected_candidates:
+        raise ValueError("Taste deliberation shards do not partition the closed pool")
+
+    assessment_by_id = {item.case_id: item for item in assessments}
+    eligible = [
+        candidate
+        for candidate in input_data.candidates
+        if _assessment_is_eligible(
+            candidate,
+            assessment_by_id[candidate.case_id],
+            current_action_ids={item.action_id for item in input_data.current_actions},
+        )
+    ]
+    eligible.sort(
+        key=lambda candidate: (
+            -assessment_by_id[candidate.case_id].relevance_confidence,
+            -candidate.confidence,
+            -candidate.broad_retrieval_score,
+            candidate.case_id,
+        )
+    )
+    selected: list[TasteDeliberationCandidate] = []
+    selected_sources: set[str] = set()
+    for candidate in eligible:
+        if selected_sources.intersection(candidate.source_identities):
+            continue
+        selected.append(candidate)
+        selected_sources.update(candidate.source_identities)
+        if len(selected) == input_data.maximum_selected_cases:
+            break
+
+    action_scores = {item.action_id: 0.0 for item in input_data.current_actions}
+    for candidate in selected:
+        assessment = assessment_by_id[candidate.case_id]
+        weight = assessment.relevance_confidence * (0.5 + 0.5 * candidate.confidence)
+        for action_id in assessment.aligned_current_action_ids:
+            action_scores[action_id] += weight
+        for action_id in assessment.opposed_current_action_ids:
+            action_scores[action_id] -= weight
+    recommended_action_id = None
+    if selected:
+        recommended_action_id = min(
+            action_scores,
+            key=lambda action_id: (-action_scores[action_id], action_id),
+        )
+        if not any(
+            recommended_action_id
+            in assessment_by_id[candidate.case_id].aligned_current_action_ids
+            for candidate in selected
+        ):
+            selected = []
+            recommended_action_id = None
+
+    selected_ids = tuple(item.case_id for item in selected)
+    rationale = (
+        "No precedent satisfied two applicability boundaries without triggering a "
+        "failure boundary; the selector abstained."
+        if not selected_ids
+        else (
+            "The controller selected the highest-confidence source-disjoint applicable "
+            f"precedents ({', '.join(selected_ids)}) and recommended "
+            f"{recommended_action_id} by confidence-weighted aligned-minus-opposed support."
+        )
+    )
+    proposal = TasteDeliberationProposal(
+        schema_version="1.1",
+        decision_id=input_data.decision_id,
+        assessments=tuple(sorted(assessments, key=lambda item: item.case_id)),
+        selected_case_ids=selected_ids,
+        recommended_action_id=recommended_action_id,
+        selection_rationale=rationale,
+    )
+    findings = validate_taste_deliberation(input_data, proposal)
+    if findings:
+        raise ValueError("merged Taste deliberation is invalid: " + "; ".join(findings))
+    return proposal
+
+
+def merge_taste_applicability_proposals(
+    input_data: TasteDeliberationInput,
+    *,
+    shard_inputs: Sequence[TasteDeliberationInput],
+    shard_proposals: Sequence[TasteApplicabilityProposal],
+) -> TasteDeliberationProposal:
+    """Compile applicability-only shard outputs into one controller proposal."""
+
+    deliberation_proposals: list[TasteDeliberationProposal] = []
+    for shard_input, proposal in zip(shard_inputs, shard_proposals, strict=True):
+        findings = validate_taste_applicability(shard_input, proposal)
+        if findings:
+            raise ValueError("invalid Taste applicability shard: " + "; ".join(findings))
+        deliberation_proposals.append(
+            TasteDeliberationProposal(
+                schema_version="1.1",
+                decision_id=proposal.decision_id,
+                assessments=proposal.assessments,
+                selected_case_ids=(),
+                recommended_action_id=None,
+                selection_rationale=(
+                    "Applicability-only shard; controller selection is pending."
+                ),
+            )
+        )
+    return merge_taste_deliberation_proposals(
+        input_data,
+        shard_inputs=shard_inputs,
+        shard_proposals=deliberation_proposals,
+    )
+
+
+def _assessment_is_eligible(
+    candidate: TasteDeliberationCandidate,
+    assessment: TasteCaseTransferAssessment,
+    *,
+    current_action_ids: set[str],
+) -> bool:
+    aligned = set(assessment.aligned_current_action_ids)
+    opposed = set(assessment.opposed_current_action_ids)
+    discriminates = bool(aligned) and (aligned != current_action_ids or bool(opposed))
+    return (
+        assessment.verdict is TasteTransferVerdict.APPLICABLE
+        and candidate.hard_applicability_satisfied is not False
+        and len(assessment.applicability_supports) >= 2
+        and not assessment.triggered_failure_supports
+        and discriminates
+    )
 
 
 def select_deliberated_taste_cases(
@@ -551,7 +797,9 @@ def _canonical_sha256(value: object) -> str:
 
 
 __all__ = [
+    "TASTE_APPLICABILITY_NODE",
     "TASTE_DELIBERATION_NODE",
+    "TasteApplicabilityProposal",
     "TasteBoundarySupport",
     "TasteCaseTransferAssessment",
     "TasteCounterfactualStatus",
@@ -563,6 +811,10 @@ __all__ = [
     "TasteTransferVerdict",
     "VerifiedTasteDeliberation",
     "build_taste_deliberation_input",
+    "merge_taste_applicability_proposals",
+    "merge_taste_deliberation_proposals",
     "select_deliberated_taste_cases",
+    "shard_taste_deliberation_input",
+    "validate_taste_applicability",
     "validate_taste_deliberation",
 ]
