@@ -111,7 +111,7 @@ class BoundaryPairJudgment(BaseModel):
     twin_should_abstain: bool = False
     confidence: float = Field(ge=0, le=1)
     pair_order_blinded: bool
-    decisive_fact_hidden_from_rationale_prompt: bool
+    expected_pair_labels_hidden: bool
     conflict_cleared: bool
     evidence_refs: tuple[str, ...] = Field(min_length=1, max_length=30)
 
@@ -258,7 +258,7 @@ def inspect_boundary_pair_package(package: BoundaryPairPackage) -> BoundaryPairR
     context_counts = Counter(pair.decision_context_family for pair in pairs)
     judgment_counts = defaultdict(int)
     for pair in pairs:
-        if not pair.public_reconstruction_allowed:
+        if not pair.public_reconstruction_allowed and package.release_tier == "formal":
             blockers.append(f"pair:{pair.pair_id}:release-rights-unresolved")
         if not pair.outcome_hidden_during_construction:
             blockers.append(f"pair:{pair.pair_id}:outcome-leakage")
@@ -269,7 +269,7 @@ def inspect_boundary_pair_package(package: BoundaryPairPackage) -> BoundaryPairR
             blockers.append(f"pair:{pair.pair_id}:duplicate-reviewer")
         if any(
             not judgment.pair_order_blinded
-            or not judgment.decisive_fact_hidden_from_rationale_prompt
+            or not judgment.expected_pair_labels_hidden
             or not judgment.conflict_cleared
             for judgment in pair.judgments
         ):

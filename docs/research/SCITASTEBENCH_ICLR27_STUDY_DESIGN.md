@@ -1,8 +1,11 @@
 # SciTasteBench and external validation: ICLR 2027 study design
 
-Status: current scientific design; formal data have not been opened.  The revised
-content-conditioned selector also failed its consumed-case development gate, so a
-new confirmation population is not yet frozen.
+Status: current scientific design; formal data have not been opened. A first
+outcome-hidden construction pass produced 26 unique candidate boundary pairs.
+Independent label-hidden GLM and DeepSeek construct review admitted only 13, so
+these cases are consumed development material rather than a paper result. The
+revised selector also failed its earlier consumed-case gate; no confirmation
+population is frozen.
 
 SciTasteBench is the mechanism instrument for the SciTaste method paper. It is
 not intended to make SciTasteBench itself the entire contribution, and it cannot
@@ -66,6 +69,23 @@ The 120-pair floor is not a post-hoc power claim. Before opening hidden test, th
 minimum detectable paired-regret improvement is recomputed from development and
 validation variance. If the resulting precision is inadequate, more
 source-group-disjoint pairs are added without inspecting hidden-test outcomes.
+
+### Consumed construction audit (not a result)
+
+The first live construction deliberately used only the outcome-hidden screening
+projection. Three proposal runs yielded 26 unique candidates, but the same
+constructor changed its admission decisions when the seed changed. Two further
+model reviewers therefore saw randomized `state_1`/`state_2` order, the original
+pre-decision record, and the frozen action menu, while the proposed preferred
+actions, utilities, role names, rationale, and observed outcomes were withheld.
+
+Requiring both reviewers to accept the construct, recover the natural state from
+the source, and independently reproduce the registered action flip retained 13
+pairs. They span all six contexts and three domains, but only one hypothesis and
+one resource-allocation pair survived. This is evidence that the construction
+protocol needs targeted replacement cases and later human/domain-expert
+validation; it is not evidence that SciTaste works. The AI reviews are disclosed
+as proxy judgments and cannot satisfy the formal expert-label requirement.
 
 ### Two benchmark tracks
 
@@ -198,18 +218,24 @@ not credited as learning.
 
 ## External Auto Research evaluation
 
-At least one external objective benchmark is mandatory. The minimum defensible
-ICLR portfolio uses two complementary external endpoints:
+At least one **peer-reviewed, community-owned external Auto Research benchmark**
+is mandatory. A local benchmark plus an arXiv-only task cannot support the broad
+title by itself. The minimum defensible ICLR portfolio therefore uses three
+complementary endpoints:
 
 | Evaluation | Endpoint | Primary comparison | Role |
 |---|---|---|---|
+| ScienceAgentBench official tasks (ICLR 2025), or an unchanged qualified EXP-Bench subset (ICLR 2026) | official task/scorer success | Full SciTaste, same-backbone Native Base, official/runnable agent baseline | accepted external benchmark and competitiveness |
 | MLRC-Bench | objective task improvement and progress per GPU/API budget | Full SciTaste vs same-backbone Native Base | whether Taste improves executable research |
 | MLR-Bench official briefs | blinded evidence-aware preference over the complete research package | Full, Native Base, direct agent, runnable external system | whether the whole idea-to-paper product is better |
 
-EXP-Bench is a valuable experiment-integrity analysis, but the locally acquired
-package currently contains task metadata rather than the upstream runtime assets
-and scorer. It enters the headline only if an unchanged official runnable subset
-is qualified in time; it must not be imitated with a SciTaste-authored scorer.
+ScienceAgentBench is the immediate accepted-benchmark qualification route because
+its ICLR 2025 release defines 102 tasks from 44 papers and evaluates executable
+scientific workflows. EXP-Bench is a valuable experiment-integrity alternative,
+but the locally acquired package currently contains task metadata rather than the
+upstream runtime assets and scorer. It enters only if an unchanged official
+runnable subset is qualified in time; it must not be imitated with a
+SciTaste-authored scorer.
 
 MLRC-Bench is the immediate objective route because its competition score directly
 measures improvement over a supplied baseline under a compute limit.  Its own
@@ -266,14 +292,15 @@ self-validating. The smallest defensible external portfolio is:
 
 | Question | External route | Conditions | Primary evidence |
 |---|---|---|---|
-| Does Taste improve executable research? | at least three MLRC-Bench tasks | Full SciTaste, same-backbone Native Base, one runnable research-agent baseline; two seeds initially | objective score gain and gain per GPU/API budget |
+| Is SciTaste competitive on an accepted community instrument? | official ScienceAgentBench tasks, or a qualified unchanged EXP-Bench subset | Full SciTaste, same-backbone Native Base, official/runnable agent baseline | official task success, conjunctive failures, and cost |
+| Does Taste improve executable research? | at least three MLRC-Bench tasks | Full SciTaste, same-backbone Native Base, one runnable research-agent baseline; one paired seed first | objective score gain and gain per GPU/API budget |
 | Does the complete research product improve? | source-disjoint MLR-Bench briefs | the same three system roles | blinded artifact-aware review with invalid-result accounting |
-| Does the experiment chain remain sound? | an unchanged official EXP-Bench subset, only if its runtime/scorer qualifies | Full, Native Base, official agent baseline | conjunctive design-to-conclusion success |
 
 The same-backbone Full/Base pair identifies the effect of Taste. The external
 system establishes competitiveness. EXP-Bench is not replaced by a local
-imitation if its official runtime is unavailable. Repetitions expand only when
-the first paired runs show enough stochastic variance to change the conclusion.
+imitation if its official runtime is unavailable. Start with one paired seed;
+repetitions expand only when the observed stochastic variance could change the
+conclusion.
 
 ## Required paper figures and tables
 

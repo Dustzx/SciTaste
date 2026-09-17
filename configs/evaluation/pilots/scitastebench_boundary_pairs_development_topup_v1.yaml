@@ -1,0 +1,37 @@
+schema_version: "1.0"
+construction_id: scitastebench-boundary-pairs-development-topup-v1
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+caseability_decisions:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-panel-v3/normalization/FINAL_DECISIONS.jsonl
+  sha256: 9110d85fc7910f5f9ded5165a8aa244d4d86cf9c7a5d530a394bcbbe9e4214b1
+constructor_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+constructor_provider: deepseek
+constructor_model: deepseek-flash
+batch_size: 4
+seed: 20270920
+standard_visible_budget: >-
+  Make one bounded revision decision. Either frozen candidate action is feasible;
+  prefer the action with the highest expected scientific value after accounting
+  for information gain, execution cost, and unsupported-claim risk.
+selection_mode: top-up
+selected_candidates:
+  - intake_candidate_id: intake-1825f52de856201a9269fdce
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: intake-48fefdedaa8cede5f6578b65
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: intake-15dd8008550c7eb5667b8c16
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: intake-8371585fd2d7ddbf29f2d5e0
+    decision_context_family: problem-and-idea-value
+target_pair_count: 4
+target_pairs_per_context: 1
+target_outcomes_visible_to_constructor: false
+formal_split_opened: false
+human_label_claim_allowed: false
+effectiveness_claim_allowed: false

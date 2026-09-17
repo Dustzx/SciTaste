@@ -1,0 +1,26 @@
+schema_version: "1.0"
+consensus_id: scitastebench-boundary-pair-consensus-development-v1
+pair_packages:
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pairs-development-v1/PACKAGE.json
+    sha256: d6a1c2983e1117e32707048b73862f7488a2dfe85d3e56941156a3817325f300
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pairs-development-v2/PACKAGE.json
+    sha256: 596f6dbc770e9da5cd8b7a9efa262daaefc07cf460c655e5fc8ea33f2b7c8572
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pairs-development-topup-v1/PACKAGE.json
+    sha256: fcb983e61fa3cdcc27cab91b5736365a07462e8d77fb6d92a69d2290bae9ad6e
+pair_selection_policy: first-package-wins-by-pair-id
+reviews:
+  - reviewer_id: glm-5.3-flash-construct-proxy-v1
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pair-review-glm-v1/REVIEWS.jsonl
+    sha256: f366d53f2980614597bcd4eab62787f2b9985f7e3f330aa0d56d1084cea7278a
+  - reviewer_id: deepseek-flash-construct-proxy-v1
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pair-review-deepseek-v1/REVIEWS.jsonl
+    sha256: c12129df3f1b7363b262bbeebb6647c0f3660089a62c1d6c576d2d052a5f543e
+minimum_confidence: 0.6
+require_both_construct_valid: true
+require_protocol_valid: true
+require_natural_source_state_is_base: true
+require_registered_label_agreement: true
+authority: ai-panel-proxy
+human_review_claim_allowed: false
+formal_split_opened: false
+effectiveness_claim_allowed: false

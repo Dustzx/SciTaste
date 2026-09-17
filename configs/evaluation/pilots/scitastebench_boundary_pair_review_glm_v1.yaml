@@ -1,0 +1,25 @@
+schema_version: "1.0"
+review_id: scitastebench-boundary-pair-review-glm-v1
+project_id: scitaste-self-development
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+pair_packages:
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pairs-development-v1/PACKAGE.json
+    sha256: d6a1c2983e1117e32707048b73862f7488a2dfe85d3e56941156a3817325f300
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pairs-development-v2/PACKAGE.json
+    sha256: 596f6dbc770e9da5cd8b7a9efa262daaefc07cf460c655e5fc8ea33f2b7c8572
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-pairs-development-topup-v1/PACKAGE.json
+    sha256: fcb983e61fa3cdcc27cab91b5736365a07462e8d77fb6d92a69d2290bae9ad6e
+pair_selection_policy: first-package-wins-by-pair-id
+reviewer_backend:
+  locator: configs/model_nodes/zhipu_glm53_flash.scitastebench_live_20260916.yaml
+  sha256: ebb7f2495a04578a788f3bbb879d904ce8a5018b590285a5453bb30525dfc7c3
+reviewer_provider: zhipu-direct
+reviewer_model: glm-5.3-flash
+batch_size: 4
+seed: 20271001
+target_outcomes_visible: false
+expected_pair_labels_visible: false
+human_review_claim_allowed: false
+formal_split_opened: false

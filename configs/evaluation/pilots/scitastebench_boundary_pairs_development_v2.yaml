@@ -1,0 +1,82 @@
+schema_version: "1.0"
+construction_id: scitastebench-boundary-pairs-development-v2
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+caseability_decisions:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-panel-v3/normalization/FINAL_DECISIONS.jsonl
+  sha256: 9110d85fc7910f5f9ded5165a8aa244d4d86cf9c7a5d530a394bcbbe9e4214b1
+constructor_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+constructor_provider: deepseek
+constructor_model: deepseek-flash
+batch_size: 4
+seed: 20270919
+standard_visible_budget: >-
+  Make one bounded revision decision. Either frozen candidate action is feasible;
+  prefer the action with the highest expected scientific value after accounting
+  for information gain, execution cost, and unsupported-claim risk.
+selected_candidates:
+  - intake_candidate_id: intake-539581c5981c3f4b6bea3d2f
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: intake-07c3a2c25dd630272b2bad7d
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: intake-17f13d4d1e301b9910802940
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: intake-701c3720892aa8c65706a8db
+    decision_context_family: problem-and-idea-value
+
+  - intake_candidate_id: intake-0529daeff1e7ad868bae2c59
+    decision_context_family: hypothesis-and-falsifiability
+  - intake_candidate_id: intake-229e8f9f3620854144373dfb
+    decision_context_family: hypothesis-and-falsifiability
+  - intake_candidate_id: intake-3d131b33c3e8f6ea915b9250
+    decision_context_family: hypothesis-and-falsifiability
+  - intake_candidate_id: intake-d18ac95a1dbaa1189c522576
+    decision_context_family: hypothesis-and-falsifiability
+
+  - intake_candidate_id: intake-67a4a3f3dbd84a6c460bc72f
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: intake-03bd5dc203f20928a804517e
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: intake-ea31a3fa3a5cec90ddc597f3
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: intake-179f5b208488263cc534eb40
+    decision_context_family: experiment-design-and-confound-control
+
+  - intake_candidate_id: intake-b392014b5db95ad891c5bb6b
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-2e5c3b49c127664b54140623
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-359634b7c3e358992ca2de33
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-567ae8d3cd834798e3a12538
+    decision_context_family: evidence-interpretation-and-contradiction
+
+  - intake_candidate_id: intake-678eaecedc3b9b4aa41bdc99
+    decision_context_family: claim-calibration-and-review-closure
+  - intake_candidate_id: intake-0b4ea37b55496907fde45ce9
+    decision_context_family: claim-calibration-and-review-closure
+  - intake_candidate_id: intake-1294002dfeb380a5f34beb6b
+    decision_context_family: claim-calibration-and-review-closure
+  - intake_candidate_id: intake-01c101f7846401bf380791f0
+    decision_context_family: claim-calibration-and-review-closure
+
+  - intake_candidate_id: intake-e9e970f407a5eb75e6c97b25
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+  - intake_candidate_id: intake-0172c47512eb4fe29ef87187
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+  - intake_candidate_id: intake-4c8905313f09ff6bd8cc830d
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+  - intake_candidate_id: intake-0028cdd94ba467c2fd73a251
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+
+target_pair_count: 24
+target_pairs_per_context: 4
+target_outcomes_visible_to_constructor: false
+formal_split_opened: false
+human_label_claim_allowed: false
+effectiveness_claim_allowed: false

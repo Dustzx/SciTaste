@@ -30,7 +30,7 @@ def _judgment(reviewer_id: str) -> BoundaryPairJudgment:
         twin_selection_id="retain",
         confidence=0.9,
         pair_order_blinded=True,
-        decisive_fact_hidden_from_rationale_prompt=True,
+        expected_pair_labels_hidden=True,
         conflict_cleared=True,
         evidence_refs=(f"reviews/{reviewer_id}.json",),
     )
