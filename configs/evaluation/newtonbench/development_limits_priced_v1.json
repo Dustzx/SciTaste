@@ -1,0 +1,11 @@
+{
+  "max_turns": 8,
+  "max_experiments": 24,
+  "max_experiments_per_turn": 6,
+  "max_code_calls": 0,
+  "max_observation_bytes": 256000,
+  "max_total_tokens": 120000,
+  "max_api_cost_usd": 1.0,
+  "require_cost_telemetry": true,
+  "enforce_guidance_compliance": true
+}
