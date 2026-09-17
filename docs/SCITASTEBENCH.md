@@ -86,6 +86,26 @@ with counterfactual boundary twins, verify that abstractions preserve the source
 decision-relevant contrast, and then require matched applicability to beat an
 equal-quality mismatched pool before freezing new targets.
 
+### State-conditioned control-packet update
+
+The current method no longer treats a fluent Taste card as the intervention.
+It compiles selected precedents into a typed, state-bound control packet that
+cites the exact current facts satisfying each applicability condition, maps the
+precedent onto feasible actions, exposes signed action adjustments, and abstains
+without a unique positive margin. The same packet is now accepted by the native
+controller, and formal boundary-pair schema 1.1 recomputes scalar utility from
+registered evidence-value, information-gain, resource-cost, and claim-risk
+components.
+
+On the 13 consumed development pairs, this packet improved mean pair regret over
+Base (0.296 versus 0.360) but remained worse than equal-token Raw (0.221) and the
+Mismatched control (0.200). Pair success was 0.385 versus 0.462 for both controls.
+The exact development report is under
+`outputs/projects/scitaste-self-development/evaluations/scitastebench-boundary-decision-development-v4/`.
+This result fails the mechanism gate, keeps hidden confirmation closed, and
+locates the next problem in construct validity and applicability/action mapping
+rather than context length or interface plumbing.
+
 The current ICLR design authority is the
 [`four-layer protocol`](research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md). It
 connects source and abstraction evidence (SA), held-out decisions (D), delayed

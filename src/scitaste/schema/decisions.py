@@ -99,7 +99,7 @@ class TasteDeliberationTrace(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     invocation_id: str = Field(min_length=1)
     backend: str = Field(min_length=1)
     model: str = Field(min_length=1)
@@ -108,7 +108,11 @@ class TasteDeliberationTrace(BaseModel):
     input_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     broad_candidate_case_ids: tuple[str, ...] = Field(min_length=2, max_length=20)
-    selected_case_ids: tuple[str, ...] = Field(min_length=1, max_length=5)
+    selected_case_ids: tuple[str, ...] = Field(max_length=5)
+    control_packet_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    recommended_action_id: str | None = Field(default=None, min_length=1)
+    abstained: bool | None = None
+    action_adjustments: dict[str, float] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def selection_is_a_closed_subset(self) -> TasteDeliberationTrace:
@@ -118,6 +122,23 @@ class TasteDeliberationTrace(BaseModel):
             raise ValueError("Taste deliberation selected case IDs must be unique")
         if not set(self.selected_case_ids).issubset(self.broad_candidate_case_ids):
             raise ValueError("Taste deliberation selection must stay inside the broad pool")
+        if self.schema_version == "1.0":
+            if (
+                self.control_packet_sha256 is not None
+                or self.recommended_action_id is not None
+                or self.abstained is not None
+                or self.action_adjustments
+            ):
+                raise ValueError("Taste deliberation trace 1.0 cannot carry a control packet")
+        else:
+            if self.control_packet_sha256 is None or self.abstained is None:
+                raise ValueError("Taste deliberation trace 1.1 requires a control packet")
+            if self.abstained == (self.recommended_action_id is not None):
+                raise ValueError("Taste deliberation recommendation must be xor abstention")
+            if self.recommended_action_id is not None and (
+                self.recommended_action_id not in self.action_adjustments
+            ):
+                raise ValueError("Taste deliberation recommends an unscored action")
         return self
 
 

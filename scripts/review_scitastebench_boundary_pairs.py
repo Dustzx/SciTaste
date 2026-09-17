@@ -81,9 +81,16 @@ class PairReviewProposal(BaseModel):
     pair_id: str = Field(min_length=1)
     construct_valid: bool
     exactly_one_decisive_fact: bool
+    shared_context_fact_neutral: bool
+    states_internally_noncontradictory: bool
     natural_source_state: NaturalSourceState
     both_action_menu_feasible: bool
+    action_meanings_stable_across_states: bool
     twin_changes_only_registered_fact: bool
+    labels_uniquely_identifiable: bool
+    abstention_explicitly_considered: bool
+    utility_components_defensible: bool
+    cue_shortcut_resistant: bool
     state_1_selection_id: str | None = Field(default=None, min_length=1)
     state_1_should_abstain: bool = False
     state_2_selection_id: str | None = Field(default=None, min_length=1)
@@ -173,15 +180,23 @@ For each pair:
    risk under the visible budget. Do not infer hidden facts.
 2. Decide whether exactly one atomic scientific fact differs. Reject compound interventions,
    hidden changes in budget or task, and action descriptions or preconditions that are infeasible in
-   either state.
+   either state. Reject when retained shared prose states a base-specific fact that contradicts the
+   twin, or a twin-specific fact that contradicts the base.
 3. Identify which randomly named state matches the natural value grounded in the original source.
    Use uncertain when the record cannot establish this. The hypothetical state need only be
    coherent; do not claim that it happened.
-4. A construct is valid only when both actions are feasible in both states, the state texts differ
-   only in the registered fact, ambiguity is not high, and that one fact produces a defensible
-   action or action/abstention reversal.
-5. Use concise rejection codes such as COMPOUND_CHANGE, SOURCE_NOT_GROUNDED,
-   ACTION_INFEASIBLE, NO_DECISION_FLIP, AMBIGUOUS, or TASK_DRIFT. Return reviews in input order.
+4. Check that each action has the same meaning in both states, that the preferred label is uniquely
+   identifiable from visible evidence, and that abstention was genuinely considered rather than
+   forcing a weak action. Treat scalar utilities as invalid unless their registered component
+   vectors and aggregation contract make the ordering defensible.
+5. Reject items solvable by a shallow word-to-action rule (for example observed/not observed maps
+   directly to retain/rephrase) without integrating scientific evidence. A boundary cue can be
+   present, but the correct decision must require its interaction with other invariant facts.
+6. A construct is valid only when all checks above pass, ambiguity is not high, and the one fact
+   produces a defensible action or action/abstention reversal.
+7. Use concise rejection codes such as COMPOUND_CHANGE, CONTEXT_CONTRADICTION,
+   SOURCE_NOT_GROUNDED, ACTION_INFEASIBLE, ACTION_SEMANTIC_DRIFT, LABEL_AMBIGUOUS,
+   UTILITY_UNGROUNDED, CUE_SHORTCUT, NO_DECISION_FLIP, or TASK_DRIFT. Return reviews in input order.
 
 Return one JSON object matching the supplied schema and no prose outside it."""
 
@@ -233,9 +248,7 @@ def _pair_payload(
         "visible_budget": pair.base.visible_budget,
         "declared_invariant_facts": list(pair.invariant_facts),
         "registered_fact_question": pair.changed_fact.question,
-        "frozen_action_menu": [
-            action.model_dump(mode="json") for action in pair.candidate_actions
-        ],
+        "frozen_action_menu": [action.model_dump(mode="json") for action in pair.candidate_actions],
         "state_1": states[order[0]].decision_context,
         "state_2": states[order[1]].decision_context,
     }
@@ -292,10 +305,24 @@ def _validate_review(
     if proposal.construct_valid:
         if not proposal.exactly_one_decisive_fact:
             errors.append("valid-review-denies-single-decisive-fact")
+        if not proposal.shared_context_fact_neutral:
+            errors.append("valid-review-shared-context-leaks-boundary-value")
+        if not proposal.states_internally_noncontradictory:
+            errors.append("valid-review-state-context-is-contradictory")
         if not proposal.both_action_menu_feasible:
             errors.append("valid-review-denies-action-feasibility")
+        if not proposal.action_meanings_stable_across_states:
+            errors.append("valid-review-denies-action-semantic-stability")
         if not proposal.twin_changes_only_registered_fact:
             errors.append("valid-review-denies-single-fact-intervention")
+        if not proposal.labels_uniquely_identifiable:
+            errors.append("valid-review-denies-label-identifiability")
+        if not proposal.abstention_explicitly_considered:
+            errors.append("valid-review-did-not-consider-abstention")
+        if not proposal.utility_components_defensible:
+            errors.append("valid-review-denies-utility-components")
+        if not proposal.cue_shortcut_resistant:
+            errors.append("valid-review-allows-cue-shortcut")
         if proposal.natural_source_state in {
             NaturalSourceState.NEITHER,
             NaturalSourceState.BOTH,
@@ -379,9 +406,7 @@ def main() -> int:
     pairs, package_sources, merge_counts = _deduplicate_packages(package_paths)
     screening_records = _jsonl(screening_path)
     screening_by_source = {str(item["source_group_id"]): item for item in screening_records}
-    missing_sources = sorted(
-        {pair.source_group_id for pair in pairs} - screening_by_source.keys()
-    )
+    missing_sources = sorted({pair.source_group_id for pair in pairs} - screening_by_source.keys())
     if missing_sources:
         raise ValueError(
             "pair sources missing from screening projection: " + ", ".join(missing_sources)
@@ -512,9 +537,7 @@ def main() -> int:
         if item["protocol_valid"] and item["proposal"]["construct_valid"]
     ]
     rejection_counts = Counter(
-        code
-        for item in review_records
-        for code in item["proposal"]["rejection_codes"]
+        code for item in review_records for code in item["proposal"]["rejection_codes"]
     )
     summary = {
         "schema_version": "1.0",

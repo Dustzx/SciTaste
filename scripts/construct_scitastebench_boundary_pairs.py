@@ -28,6 +28,8 @@ from scitaste.benchmark import (
     BoundaryPairSplit,
     BoundaryPairState,
     BoundaryStateRole,
+    BoundaryUtilityContract,
+    BoundaryUtilityVector,
     inspect_boundary_pair_package,
 )
 from scitaste.model_nodes import (
@@ -61,7 +63,7 @@ class CandidateSelection(BaseModel):
 class BoundaryConstructionConfig(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     construction_id: str = Field(min_length=1)
     project_id: str = Field(min_length=1)
     evidence_role: Literal["consumed-development-only"]
@@ -73,6 +75,7 @@ class BoundaryConstructionConfig(BaseModel):
     batch_size: int = Field(ge=1, le=8)
     seed: int
     standard_visible_budget: str = Field(min_length=1)
+    utility_contract: BoundaryUtilityContract | None = None
     selection_mode: Literal["balanced-cohort", "top-up"] = "balanced-cohort"
     selected_candidates: tuple[CandidateSelection, ...] = Field(min_length=1)
     target_pair_count: int = Field(ge=1)
@@ -95,6 +98,10 @@ class BoundaryConstructionConfig(BaseModel):
                 raise ValueError("boundary construction must cover all decision contexts")
             if any(value != self.target_pairs_per_context for value in counts.values()):
                 raise ValueError("boundary construction is not balanced by decision context")
+        if self.schema_version == "1.1" and self.utility_contract is None:
+            raise ValueError("boundary construction 1.1 requires a utility contract")
+        if self.schema_version == "1.0" and self.utility_contract is not None:
+            raise ValueError("legacy boundary construction cannot carry a utility contract")
         return self
 
 
@@ -114,6 +121,7 @@ class StatePreferenceProposal(BaseModel):
     preferred_action_id: str | None = Field(default=None, min_length=1, max_length=300)
     should_abstain: bool = False
     action_utilities: dict[str, float]
+    utility_components: dict[str, BoundaryUtilityVector] = Field(default_factory=dict)
     utility_rationale: dict[str, str]
 
 
@@ -202,21 +210,31 @@ hypothetical twin. The twin is a construct-validity intervention, never a claim 
 
 Hard requirements for an admitted pair:
 1. Write one shared_decision_context that is faithful to the supplied abstract, review, and atomic
-   question but does not state either value of the changed fact.
+   question but does not state, presuppose, or paraphrase either value of the changed fact. Read the
+   completed base and twin contexts back separately; reject the item if any retained sentence
+   contradicts either state.
 2. Register exactly one atomic scientific fact with a base value grounded in the supplied record and
    one hypothetical twin value. Do not change sample size and effect direction together; do not
    smuggle several observations into one fact.
 3. Supply 2 or 3 candidate actions at the same abstraction level. Their identifiers, descriptions,
    and feasibility must work unchanged in both states. Therefore do not write action descriptions
    such as 'cite the three observed events' that are impossible in the base state. Prefer semantic
-   actions such as 'retain the claim at its current strength' versus 'narrow the claim'.
+   actions such as 'retain the claim at its current strength' versus 'narrow the claim'. Reject when
+   an action description or rationale changes meaning across states or the visible budget cannot
+   establish that the action is feasible.
 4. The single changed fact must reverse the unique utility-maximizing action, or make exactly one
    state require abstention. Generic 'do more analysis' in both states is invalid.
-5. Utilities lie in [-2, 2]. Rationales must cover exactly the frozen action IDs. Account for
-   scientific outcome, information gain, execution cost, and unsupported-claim risk.
+5. Utilities lie in [-1, 1]. Rationales must cover exactly the frozen action IDs. When a utility
+   contract is supplied, score every action separately on evidence_value, expected_information_gain,
+   resource_cost, and claim_risk in [0, 1], then compute the scalar exactly from the supplied
+   benefit-minus-cost weights. The preferred action must uniquely maximize that scalar; abstain only
+   when every action is at or below the contract's commitment threshold.
 6. List at least two concrete invariant facts. Do not use author, venue prestige, or the hidden
    later response. Do not infer facts absent from the input.
-7. Return exactly one proposal per input candidate, in the same order. Reject honestly when no
+7. Prefer decisions in which the changed fact must interact with invariant scientific evidence.
+   Reject pairs solvable by a shallow cue rule such as present/absent -> retain/rephrase. Include
+   action-to-abstention pairs when the visible evidence does not uniquely justify any action.
+8. Return exactly one proposal per input candidate, in the same order. Reject honestly when no
    defensible single-fact reversal can be formed.
 
 Return one JSON object matching the supplied schema and no prose outside it."""
@@ -242,6 +260,11 @@ def _request(
         input_payload={
             "evidence_role": config.evidence_role,
             "standard_visible_budget": config.standard_visible_budget,
+            "utility_contract": (
+                None
+                if config.utility_contract is None
+                else config.utility_contract.model_dump(mode="json")
+            ),
             "target_outcomes_visible": False,
             "candidates": candidates,
         },
@@ -351,6 +374,11 @@ def _compile_pair(
     common = {
         "visible_budget": config.standard_visible_budget,
     }
+    base_payload = proposal.base.model_dump(mode="python")
+    twin_payload = proposal.twin.model_dump(mode="python")
+    if config.utility_contract is None:
+        base_payload.pop("utility_components", None)
+        twin_payload.pop("utility_components", None)
     base = BoundaryPairState(
         role=BoundaryStateRole.BASE,
         decision_context=(
@@ -358,7 +386,7 @@ def _compile_pair(
             f"Registered boundary fact — {fact.question} {fact.base_value}"
         ),
         **common,
-        **proposal.base.model_dump(mode="python"),
+        **base_payload,
     )
     twin = BoundaryPairState(
         role=BoundaryStateRole.TWIN,
@@ -367,7 +395,7 @@ def _compile_pair(
             f"Registered boundary fact — {fact.question} {fact.twin_value}"
         ),
         **common,
-        **proposal.twin.model_dump(mode="python"),
+        **twin_payload,
     )
     final = decision["final_decision"]
     if not isinstance(final, dict):
@@ -380,6 +408,7 @@ def _compile_pair(
         }
     )
     return BoundaryCounterfactualPair(
+        schema_version="1.1" if config.utility_contract is not None else "1.0",
         pair_id=pair_id,
         split=BoundaryPairSplit.DEVELOPMENT,
         source_group_id=str(screening["source_group_id"]),
@@ -395,6 +424,7 @@ def _compile_pair(
         invariant_facts=proposal.invariant_facts,
         changed_fact=fact,
         flip_kind=proposal.flip_kind,
+        utility_contract=config.utility_contract,
         base=base,
         twin=twin,
         judgments=(),

@@ -10,6 +10,26 @@ necessary. No files were edited by the reviewer.
 negative evidence is unusually candid, but the current artifact is a
 well-instrumented failed prototype rather than an ICLR-level learning method.
 
+Two additional isolated review passes independently returned **3/10** and
+**2/10**, both Strong Reject. All three agreed on the same claim-bearing gaps:
+the local mechanism has not beaten raw and mismatched controls, the proposed
+benchmark lacks formal construct validation, the local and downstream
+treatments are not yet identical, and no all-task accepted external comparison
+exists. The external-evaluation review further concluded that SciTasteBench plus
+MLRC-Bench and MLR-Bench can support a scoped ML-research-agent claim, while the
+broader autonomous-research title additionally requires a scorer-owned workload
+outside that task family or an explicit scope reduction.
+
+A separate context-isolated construct review inspected only the 13-pair
+SciTasteBench package, schema, study design, and latest development report. It
+accepted **0/13 pairs unchanged**: six require reconstruction and seven should
+be rejected. Eleven counterfactual twins retain prose that contradicts the
+changed fact; several registered changes are compound; all 26 states force an
+action rather than containing genuine abstention cases; scalar utilities are
+author-defined; the labels have only AI-proxy validation; and explicit boundary
+fact/action wording creates shortcut cues. This audit consumes the population.
+It cannot be repaired and relabelled as hidden evidence.
+
 ## Fatal findings
 
 1. The current effectiveness claim is false: the prospective policy solved
@@ -42,6 +62,13 @@ instrument**, not yet a benchmark contribution. A benchmark claim requires:
 - contamination and temporal-leakage analysis;
 - a datasheet and executable scorer; and
 - pair-level statistics rather than treating calls as independent samples.
+
+The replacement population must additionally pass a semantic-difference audit,
+two pair-blinded expert construct audits per pair, a frozen component-wise
+utility contract, stable action semantics and feasibility across twins, and
+matched shortcut controls. At least 12 formal pairs must cross an
+action-to-abstention boundary. The current 13 pairs remain useful only for
+method development and failure analysis.
 
 The review directly motivates the boundary-counterfactual pair specification in
 `scitaste.benchmark.boundary_pairs` and the revised study design in

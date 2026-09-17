@@ -223,55 +223,48 @@ frozen packet and a third adjudicates substantive disagreement. This is scalable
 AI supervision, not expert ground truth; reviewers can reject an attribution but
 cannot rewrite the trajectory.
 
-## Outcome-updated preference model
+## Outcome-grounded retrieval and state-conditioned transfer
 
-For each episode, signed credit compares the selected action with its meaningful
-alternatives over semantic features such as decision family, lifecycle stage,
-action, domain, state regime, and abstract tags. Run-local identifiers never
-become transferable features.
+Signed credit first determines which episodes may serve as precedents; it does
+not directly turn a frequently successful action into a global policy. Let
+$g(i)$ be the source group of episode $i$, $n_g$ its number of admitted episodes,
+and $q_i\in[0,1]$ the reviewed attribution weight. Episode $i$ contributes at
+most $q_i/n_{g(i)}$, so a prolific paper or trajectory cannot dominate merely by
+exposing more intermediate decisions. Semantic features are used to retrieve a
+broad candidate pool, not to declare transfer.
 
-Let $g(i)$ be the source group of episode $i$ and let $n_g$ be the number of
-admitted training episodes from that group. Episode $i$ receives weight
-$w_i=q_i/n_{g(i)}$, where $q_i\in[0,1]$ is its reviewed attribution weight. Thus
-one prolific paper or trajectory cannot contribute more total mass merely by
-exposing more intermediate decisions. For a semantic feature $f$---for example
-a stage--action pair, domain--action pair, or abstract decision-state tag---the
-weighted beneficial and harmful counts are
+For a new state $S$, SciTaste exposes the frozen action menu and atomic current
+facts to an applicability assessor. A precedent $c$ is eligible only if at least
+two of its registered applicability conditions cite exact facts in $S$, no
+registered failure condition is triggered, and its counterfactual probe is not
+satisfied. The assessor must also map the precedent to actions it supports and
+opposes. These references are validated against the closed candidate pool; the
+model cannot introduce a new fact, precedent, or action.
 
-$$
-W_f=\sum_i w_i\,\mathbb{1}[f\text{ wins in }i],\qquad
-L_f=\sum_i w_i\,\mathbb{1}[f\text{ loses in }i].
-$$
-
-A closed alternative set counts as one correlated observation. With a
-$\mathrm{Beta}(\alpha_0,\beta_0)$ prior, these counts yield posterior log odds
-$\ell_f$ and variance $v_f$ for each feature.
-
-For action $a$, matched features $F(S,a)$ are combined with fixed semantic
-weights $\omega_f$,
+The controller then compiles a typed *Taste control packet*. If $r_c$ is the
+state-relevance confidence and $q_c$ the source-grounding confidence, precedent
+$c$ receives bounded weight $\eta_c=r_c(1+q_c)/2$. Its action adjustment is
 
 $$
-s(a\mid S)=\frac{\sum_{f\in F(S,a)}\omega_f\ell_f}
-{\sum_{f\in F(S,a)}\omega_f},\qquad
-V(a\mid S)=\max_{f\in F(S,a)}v_f.
+\Delta_T(a\mid S)=\sum_{c\in C(S)}\eta_c
+\left[\mathbb{1}(a\in A_c^+)-\mathbb{1}(a\in A_c^-)\right],
 $$
 
-The maximum in $V$ prevents correlated features from manufacturing sample size.
-For the top two actions, margin $m=s(a_1)-s(a_2)$ and uncertainty
-$\sigma=\sqrt{V(a_1)}+\sqrt{V(a_2)}$ give
+where $A_c^+$ and $A_c^-$ are the assessor's fact-grounded aligned and opposed
+action sets. The packet records the cited facts, source and abstraction hashes,
+per-action support and opposition, and the deterministic adjustment. It
+intervenes only when one action has a unique positive adjustment; ties,
+non-positive margins, or no eligible precedent produce explicit abstention.
 
-$$
-P(a_1\succ a_2\mid S)\approx
-\operatorname{sigmoid}\!\left(
-\frac{m}{\sqrt{1+\pi\sigma^2/8}}
-\right).
-$$
-
-The policy applies a bounded adjustment only with sufficient support, covered
-stage and domain, and posterior probability above a frozen threshold; otherwise
-it abstains and exposes the failed condition. A conservative margin is reported
-as a diagnostic but is not a second intervention gate. All thresholds and
-feature weights are frozen before a confirmation split is opened.
+A deterministic controller ranks feasible actions by
+$U_0(a,S)+\lambda\Delta_T(a\mid S)$. A model-backed controller receives the same
+packet as bounded structured context, while hard feasibility remains outside the
+model. This packet is also the treatment interface used by SciTasteBench and by
+external research trajectories. Consequently, a text card that helps a model
+but cannot produce a fact-bound action adjustment is not counted as the SciTaste
+method. Delayed outcomes update the eligible precedent corpus and its signed
+credit; they earn a learning claim only if the resulting packet later changes an
+executed action.
 
 ## One lifecycle, multiple decision families
 
@@ -358,6 +351,14 @@ operates on independent pairs and reports raw disagreements rather than filterin
 them from the sample. Two action-order permutations and two nuisance paraphrases
 are repeated measurements inside each pair and are averaged before pair-level
 inference.
+
+Matched is admitted only when the same typed control packet used by the research
+controller is produced. The packet cites the current facts that satisfy each
+transfer boundary and exposes the resulting action adjustment; a generic card
+or retrieved passage cannot stand in for the method. Formal pair utilities are
+recomputed from frozen evidence-value, information-gain, resource-cost, and
+claim-risk components. Both action and abstention are therefore scored under the
+same preregistered utility contract.
 
 ## Objective research trajectories
 

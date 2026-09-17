@@ -31,7 +31,9 @@ from scitaste.taste.deliberation import (
     TasteDeliberationProposal,
     TasteTransferVerdict,
     VerifiedTasteDeliberation,
+    build_taste_control_packet,
     merge_taste_applicability_proposals,
+    render_taste_control_packet,
     select_deliberated_taste_cases,
     shard_taste_deliberation_input,
     validate_taste_deliberation,
@@ -260,6 +262,39 @@ def test_deliberation_can_abstain_when_no_precedent_is_applicable(
     )
 
 
+def test_control_packet_binds_applicability_to_current_facts_and_actions(
+    tmp_path, research_state: ResearchState
+) -> None:
+    input_data = (
+        _controller(tmp_path)
+        .prepare_taste_deliberation(
+            state=research_state,
+            candidate_actions=_actions(),
+        )
+        .model_copy(update={"maximum_selected_cases": 1})
+    )
+    proposal = merge_taste_applicability_proposals(
+        input_data,
+        shard_inputs=(input_data,),
+        shard_proposals=(
+            TasteApplicabilityProposal(
+                decision_id=input_data.decision_id,
+                assessments=_proposal(input_data).assessments,
+            ),
+        ),
+    )
+
+    packet = build_taste_control_packet(input_data, proposal)
+    rendered = render_taste_control_packet(packet)
+
+    assert packet.abstained is False
+    assert packet.recommended_action_id == proposal.recommended_action_id
+    assert {item.case_id for item in packet.selected_precedents} == set(proposal.selected_case_ids)
+    assert all(item.net_adjustment != 0 for item in packet.action_adjustments)
+    assert "Current-state applicability:" in rendered
+    assert f"Recommended feasible action: {proposal.recommended_action_id}" in rendered
+
+
 def test_applicability_shards_merge_into_order_stable_controller_decision(
     tmp_path, research_state: ResearchState
 ) -> None:
@@ -358,9 +393,7 @@ def test_triggered_counterfactual_cannot_be_selected(
     triggered = TasteApplicabilityProposal(
         decision_id=input_data.decision_id,
         assessments=tuple(
-            item.model_copy(
-                update={"counterfactual_status": TasteCounterfactualStatus.TRIGGERED}
-            )
+            item.model_copy(update={"counterfactual_status": TasteCounterfactualStatus.TRIGGERED})
             for item in proposal.assessments
         ),
     )
@@ -392,9 +425,7 @@ def test_boundary_fact_must_ground_selected_precedent(
             item.model_copy(
                 update={
                     "applicability_supports": tuple(
-                        support.model_copy(
-                            update={"decision_fact_ids": (facts[1].fact_id,)}
-                        )
+                        support.model_copy(update={"decision_fact_ids": (facts[1].fact_id,)})
                         for support in item.applicability_supports
                     )
                 }

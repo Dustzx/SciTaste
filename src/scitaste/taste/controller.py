@@ -34,8 +34,10 @@ from scitaste.taste.decision_families import (
     ScientificTasteDecisionFamily,
 )
 from scitaste.taste.deliberation import (
+    TasteControlPacket,
     TasteDeliberationInput,
     VerifiedTasteDeliberation,
+    build_taste_control_packet,
     build_taste_deliberation_input,
     select_deliberated_taste_cases,
 )
@@ -257,7 +259,18 @@ class TasteController:
             deliberation=taste_deliberation,
             broad_candidates=frozen_taste_pool,
         )
-        deliberation_trace = self._deliberation_trace(taste_deliberation)
+        control_packet = (
+            build_taste_control_packet(
+                taste_deliberation.input,
+                taste_deliberation.proposal,
+            )
+            if taste_deliberation is not None
+            else None
+        )
+        deliberation_trace = self._deliberation_trace(
+            taste_deliberation,
+            control_packet=control_packet,
+        )
         critic_findings = self.critic_suite.review(state, actions) if self.critics_enabled else ()
         generation_trace: ModelCandidateGenerationTrace | None = None
         if self.candidate_generation_backend is not None and len(feasible) >= 2:
@@ -270,6 +283,7 @@ class TasteController:
                 utility_enabled=self.utility_enabled,
                 taste_enabled=self.mode is TasteMode.AUGMENTED,
                 critics_enabled=self.critics_enabled,
+                control_packet=control_packet,
             )
             feasible_ids = {item.action_id for item in feasible}
             generated = concretize_candidate_actions(
@@ -296,12 +310,18 @@ class TasteController:
         for finding in critic_findings:
             critic_adjustments[finding.action_id] += finding.score_adjustment
         precedent_bonus = {action.action_id: 0.0 for action in actions}
-        for result in retrieved:
-            for action in actions:
-                if result.case.preferred_action in {action.action_id, action.type.value}:
-                    precedent_bonus[action.action_id] += (
-                        self.precedent_weight * result.score * result.case.confidence
-                    )
+        if control_packet is None:
+            for result in retrieved:
+                for action in actions:
+                    if result.case.preferred_action in {action.action_id, action.type.value}:
+                        precedent_bonus[action.action_id] += (
+                            self.precedent_weight * result.score * result.case.confidence
+                        )
+        elif not control_packet.abstained:
+            for adjustment in control_packet.action_adjustments:
+                precedent_bonus[adjustment.action_id] = (
+                    self.precedent_weight * adjustment.net_adjustment
+                )
         lifecycle_assessment: LifecycleTastePolicyAssessment | None = None
         lifecycle_adjustment = {action.action_id: 0.0 for action in actions}
         if self.lifecycle_policy is not None:
@@ -350,6 +370,7 @@ class TasteController:
                 lifecycle_policy_assessment=(
                     lifecycle_assessment if self.lifecycle_policy_weight > 0 else None
                 ),
+                control_packet=control_packet,
             )
             request = PreferenceRequest(
                 request_id=_preference_request_id(state, feasible, seed=self.seed),
@@ -646,10 +667,17 @@ class TasteController:
     @staticmethod
     def _deliberation_trace(
         deliberation: VerifiedTasteDeliberation | None,
+        *,
+        control_packet: TasteControlPacket | None,
     ) -> TasteDeliberationTrace | None:
         if deliberation is None:
+            if control_packet is not None:
+                raise ValueError("Taste control packet requires a verified deliberation")
             return None
+        if control_packet is None:
+            raise ValueError("verified Taste deliberation requires a control packet")
         return TasteDeliberationTrace(
+            schema_version="1.1",
             invocation_id=deliberation.invocation_id,
             backend=deliberation.backend,
             model=deliberation.model,
@@ -659,6 +687,12 @@ class TasteController:
             proposal_sha256=deliberation.proposal.fingerprint,
             broad_candidate_case_ids=tuple(item.case_id for item in deliberation.input.candidates),
             selected_case_ids=deliberation.proposal.selected_case_ids,
+            control_packet_sha256=control_packet.fingerprint,
+            recommended_action_id=control_packet.recommended_action_id,
+            abstained=control_packet.abstained,
+            action_adjustments={
+                item.action_id: item.net_adjustment for item in control_packet.action_adjustments
+            },
         )
 
     def _tie_break(self, action_id: str) -> str:
@@ -698,6 +732,7 @@ def _model_decision_context(
     taste_enabled: bool,
     critics_enabled: bool,
     lifecycle_policy_assessment: LifecycleTastePolicyAssessment | None = None,
+    control_packet: TasteControlPacket | None = None,
 ) -> str:
     """Build the bounded, condition-sensitive context seen by the shared model path."""
 
@@ -781,7 +816,15 @@ def _model_decision_context(
         "state": state_context,
         "remaining_budget": budget.model_dump(mode="json"),
         "explicit_utility": {"enabled": utility_enabled, "assessments": utility_context},
-        "taste_precedents": {"enabled": taste_enabled, "cases": taste_context},
+        # A verified packet is the entire Taste treatment. Do not also expose the
+        # broad retrieved pool, which would confound packet-specific attribution.
+        "taste_precedents": {
+            "enabled": taste_enabled and control_packet is None,
+            "cases": taste_context if control_packet is None else [],
+        },
+        "taste_control_packet": (
+            None if control_packet is None else control_packet.model_dump(mode="json")
+        ),
         "taste_critics": {
             "enabled": critics_enabled,
             "findings": [item.model_dump(mode="json") for item in critic_findings],

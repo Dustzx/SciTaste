@@ -55,7 +55,9 @@ from scitaste.taste.deliberation import (
     TasteDeliberationInput,
     TasteDeliberationProposal,
     TasteTransferVerdict,
+    build_taste_control_packet,
     merge_taste_applicability_proposals,
+    render_taste_control_packet,
     shard_taste_deliberation_input,
     validate_taste_applicability,
 )
@@ -92,16 +94,16 @@ class BoundaryDecisionConfig(BaseModel):
     maximum_broad_candidates: int = Field(ge=2, le=20)
     selector_shard_size: int = Field(ge=2, le=8)
     context_token_budget: int = Field(ge=128, le=4_096)
-    context_mode: Literal["contrastive-card", "grounded-capsule"] = "contrastive-card"
+    context_mode: Literal["contrastive-card", "grounded-capsule", "state-conditioned-packet"] = (
+        "contrastive-card"
+    )
     frozen_selector_run: str | None = None
     frozen_decision_run: str | None = None
     reused_conditions: tuple[
         Literal["base", "raw_source", "matched_taste", "mismatched_taste"], ...
     ] = ()
     candidate_orders: tuple[Literal["declared", "reversed"], ...]
-    conditions: tuple[
-        Literal["base", "raw_source", "matched_taste", "mismatched_taste"], ...
-    ]
+    conditions: tuple[Literal["base", "raw_source", "matched_taste", "mismatched_taste"], ...]
     seed: int
     target_outcomes_visible: Literal[False]
     registered_labels_visible: Literal[False]
@@ -194,8 +196,7 @@ def _raw_source(
     return (
         f"Prior source abstract:\n{source['reviewed_abstract']}\n\n"
         f"Prior decision context:\n{source['predecision_review_context']}\n\n"
-        "Observed later record:\n"
-        + json.dumps(outcome["outcome_payload"], ensure_ascii=False)
+        "Observed later record:\n" + json.dumps(outcome["outcome_payload"], ensure_ascii=False)
     )
 
 
@@ -420,9 +421,7 @@ def _run_selector(
                         "cases. Return exactly one assessment for each case ID."
                     ),
                     payload=shard.model_dump(mode="json"),
-                    schema=TasteApplicabilityProposal.model_json_schema(
-                        mode="serialization"
-                    ),
+                    schema=TasteApplicabilityProposal.model_json_schema(mode="serialization"),
                     output_dir=shard_root / "runtime",
                     seed=seed + index,
                 )
@@ -493,10 +492,19 @@ def _added_context(
     outcomes: dict[str, dict[str, JsonValue]],
     budget: int,
     context_mode: str,
+    selector_input: TasteDeliberationInput,
+    selector_proposal: TasteDeliberationProposal | None,
 ) -> str | None:
     if not matched_ids:
         return None
     if condition == "matched_taste":
+        if context_mode == "state-conditioned-packet":
+            if selector_proposal is None:
+                return None
+            packet = build_taste_control_packet(selector_input, selector_proposal)
+            if packet.abstained:
+                return None
+            return _fit_tokens(render_taste_control_packet(packet), budget=budget)
         selected_ids = matched_ids
     elif condition == "raw_source":
         values = [_raw_source(item, screens, outcomes) for item in matched_ids]
@@ -512,9 +520,7 @@ def _added_context(
         return _fit_tokens(cards_text, budget=budget)
     card_budget = round(budget * 0.625)
     evidence_budget = budget - card_budget
-    evidence_text = "\n\n".join(
-        _raw_source(item, screens, outcomes) for item in selected_ids
-    )
+    evidence_text = "\n\n".join(_raw_source(item, screens, outcomes) for item in selected_ids)
     return (
         _fit_tokens(cards_text, budget=card_budget)
         + " "
@@ -549,8 +555,7 @@ def _decision(
         context += (
             "\n\nOutcome-grounded Scientific Taste precedents follow. They are fallible "
             "decision experience, not answer keys. Apply them only when their visible "
-            "conditions fit this state.\n\n"
-            + added_context
+            "conditions fit this state.\n\n" + added_context
         )
     actions = list(pair.candidate_actions)
     if order == "reversed":
@@ -675,8 +680,7 @@ def _analyze(
             record["status"] != "accepted" for record in selector_records.values()
         ),
         "representation_gap_pair_success": (
-            float(matched["pair_success_rate"])
-            - float(metrics["raw_source"]["pair_success_rate"])
+            float(matched["pair_success_rate"]) - float(metrics["raw_source"]["pair_success_rate"])
         ),
         "specificity_gap_pair_success": (
             float(matched["pair_success_rate"])
@@ -700,8 +704,7 @@ def _analyze(
                 < float(metrics["mismatched_taste"]["mean_budgeted_pair_regret"])
             ),
             "matched_pair_success_above_base": (
-                float(matched["pair_success_rate"])
-                > float(metrics["base"]["pair_success_rate"])
+                float(matched["pair_success_rate"]) > float(metrics["base"]["pair_success_rate"])
             ),
             "selector_validity_at_least_95_percent": (
                 sum(record["status"] == "accepted" for record in selector_records.values())
@@ -734,9 +737,7 @@ def main() -> int:
     decision_backend_path = _bound(root, config.decision_backend)
     package = BoundaryPairPackage.model_validate_json(_bytes(package_path))
     source_suite = load_benchmark_suite(source_suite_path)
-    source_cases = {
-        item.case_id.removeprefix("natural-"): item for item in source_suite.cases
-    }
+    source_cases = {item.case_id.removeprefix("natural-"): item for item in source_suite.cases}
     ordered_card_ids = sorted(_precedent_ids(source_suite))
     card_root = (root / config.card_response_root).resolve(strict=True)
     card_root.relative_to(root)
@@ -751,9 +752,7 @@ def main() -> int:
     source_cases = {key: value for key, value in source_cases.items() if key in cards}
     screens = _jsonl(screens_path)
     outcome_payload = json.loads(_bytes(outcomes_path))
-    outcomes = {
-        str(item["intake_candidate_id"]): item for item in outcome_payload["records"]
-    }
+    outcomes = {str(item["intake_candidate_id"]): item for item in outcome_payload["records"]}
     if not set(cards).issubset(screens) or not set(cards).issubset(outcomes):
         raise ValueError("card sources are missing raw records or outcomes")
     output = args.output.resolve()
@@ -884,6 +883,9 @@ def main() -> int:
                     source_cases[item].source_group_id for item in mismatched_ids
                 ],
             }
+            if proposal is not None:
+                packet = build_taste_control_packet(input_data, proposal)
+                _write(state_root / "TASTE_CONTROL_PACKET.json", packet.model_dump(mode="json"))
             _write(state_root / "CONDITION_SOURCES.json", source_record)
             for order_index, order in enumerate(config.candidate_orders, 1):
                 base_response: PreferenceResponse | None = None
@@ -897,6 +899,8 @@ def main() -> int:
                         outcomes=outcomes,
                         budget=config.context_token_budget,
                         context_mode=config.context_mode,
+                        selector_input=input_data,
+                        selector_proposal=proposal,
                     )
                     frozen_response = None
                     if condition in config.reused_conditions:

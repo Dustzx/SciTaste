@@ -65,6 +65,72 @@ class BoundaryFactChange(BaseModel):
         return self
 
 
+class BoundaryUtilityVector(BaseModel):
+    """Separately registered benefits and liabilities of one feasible action."""
+
+    model_config = _CONFIG
+
+    evidence_value: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    expected_information_gain: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    resource_cost: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    claim_risk: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+
+
+class BoundaryUtilityContract(BaseModel):
+    """Frozen, context-specific aggregation rule for pair-level regret."""
+
+    model_config = _CONFIG
+
+    contract_id: str = Field(min_length=1, max_length=300)
+    evidence_value_weight: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    expected_information_gain_weight: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    resource_cost_weight: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    claim_risk_weight: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    minimum_action_utility_for_commitment: float = Field(ge=-1.0, le=1.0, allow_inf_nan=False)
+    component_anchors: dict[str, str]
+    registered_before_system_outputs: Literal[True] = True
+
+    @model_validator(mode="after")
+    def weights_and_anchors_are_complete(self) -> BoundaryUtilityContract:
+        weights = (
+            self.evidence_value_weight,
+            self.expected_information_gain_weight,
+            self.resource_cost_weight,
+            self.claim_risk_weight,
+        )
+        if abs(sum(weights) - 1.0) > 1e-9:
+            raise ValueError("boundary utility component weights must sum to one")
+        expected = {
+            "evidence_value",
+            "expected_information_gain",
+            "resource_cost",
+            "claim_risk",
+        }
+        if set(self.component_anchors) != expected:
+            raise ValueError("boundary utility anchors must cover exactly four components")
+        if any(not value.strip() for value in self.component_anchors.values()):
+            raise ValueError("boundary utility anchors cannot be blank")
+        return self
+
+    def aggregate(self, vector: BoundaryUtilityVector) -> float:
+        return (
+            self.evidence_value_weight * vector.evidence_value
+            + self.expected_information_gain_weight * vector.expected_information_gain
+            - self.resource_cost_weight * vector.resource_cost
+            - self.claim_risk_weight * vector.claim_risk
+        )
+
+    @property
+    def sha256(self) -> str:
+        canonical = json.dumps(
+            self.model_dump(mode="json"),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 class BoundaryPairState(BaseModel):
     """One outcome-hidden decision state in a counterfactual pair."""
 
@@ -76,6 +142,7 @@ class BoundaryPairState(BaseModel):
     preferred_action_id: str | None = Field(default=None, min_length=1, max_length=300)
     should_abstain: bool = False
     action_utilities: dict[str, float]
+    utility_components: dict[str, BoundaryUtilityVector] = Field(default_factory=dict)
     utility_rationale: dict[str, str]
 
     @model_validator(mode="after")
@@ -128,12 +195,77 @@ class BoundaryPairJudgment(BaseModel):
         return self
 
 
+class BoundaryConstructAudit(BaseModel):
+    """Independent audit of counterfactual-pair construct validity."""
+
+    model_config = _CONFIG
+
+    audit_id: str = Field(min_length=1, max_length=300)
+    reviewer_id: str = Field(min_length=1, max_length=300)
+    authority: BenchmarkLabelAuthority
+    expertise_scope: str = Field(min_length=1, max_length=1_000)
+    single_atomic_fact: bool
+    shared_context_fact_neutral: bool
+    states_internally_noncontradictory: bool
+    action_meanings_stable: bool
+    actions_feasible_in_both_states: bool
+    labels_uniquely_identifiable: bool
+    abstention_explicitly_considered: bool
+    utility_components_defensible: bool
+    cue_shortcut_resistant: bool
+    pair_order_blinded: bool
+    expected_pair_labels_hidden: bool
+    evidence_refs: tuple[str, ...] = Field(min_length=1, max_length=30)
+    rejection_codes: tuple[str, ...] = Field(default_factory=tuple, max_length=30)
+
+    @property
+    def accepted(self) -> bool:
+        checks = (
+            self.single_atomic_fact,
+            self.shared_context_fact_neutral,
+            self.states_internally_noncontradictory,
+            self.action_meanings_stable,
+            self.actions_feasible_in_both_states,
+            self.labels_uniquely_identifiable,
+            self.abstention_explicitly_considered,
+            self.utility_components_defensible,
+            self.cue_shortcut_resistant,
+            self.pair_order_blinded,
+            self.expected_pair_labels_hidden,
+        )
+        return all(checks) and not self.rejection_codes
+
+    @model_validator(mode="after")
+    def rejection_codes_match_checks(self) -> BoundaryConstructAudit:
+        if len(self.rejection_codes) != len(set(self.rejection_codes)):
+            raise ValueError("construct-audit rejection codes must be unique")
+        if len(self.evidence_refs) != len(set(self.evidence_refs)):
+            raise ValueError("construct-audit evidence references must be unique")
+        if all(
+            (
+                self.single_atomic_fact,
+                self.shared_context_fact_neutral,
+                self.states_internally_noncontradictory,
+                self.action_meanings_stable,
+                self.actions_feasible_in_both_states,
+                self.labels_uniquely_identifiable,
+                self.abstention_explicitly_considered,
+                self.utility_components_defensible,
+                self.cue_shortcut_resistant,
+                self.pair_order_blinded,
+                self.expected_pair_labels_hidden,
+            )
+        ) != (not self.rejection_codes):
+            raise ValueError("construct-audit checks and rejection codes disagree")
+        return self
+
+
 class BoundaryCounterfactualPair(BaseModel):
     """A natural decision and its single-fact counterfactual twin."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     pair_id: str = Field(min_length=1, max_length=300)
     split: BoundaryPairSplit
     source_group_id: str = Field(min_length=1, max_length=300)
@@ -149,9 +281,11 @@ class BoundaryCounterfactualPair(BaseModel):
     invariant_facts: tuple[str, ...] = Field(min_length=2, max_length=30)
     changed_fact: BoundaryFactChange
     flip_kind: BoundaryFlipKind
+    utility_contract: BoundaryUtilityContract | None = None
     base: BoundaryPairState
     twin: BoundaryPairState
     judgments: tuple[BoundaryPairJudgment, ...] = ()
+    construct_audits: tuple[BoundaryConstructAudit, ...] = ()
     contamination_probe_refs: tuple[str, ...] = Field(min_length=1, max_length=20)
     construction_manifest_sha256: str = Field(pattern=_SHA256)
 
@@ -168,6 +302,27 @@ class BoundaryCounterfactualPair(BaseModel):
         for state in (self.base, self.twin):
             if set(state.action_utilities) != action_set:
                 raise ValueError("both states must score the identical action menu")
+        if self.utility_contract is None:
+            if self.base.utility_components or self.twin.utility_components:
+                raise ValueError("utility components require a frozen utility contract")
+            if self.schema_version == "1.1":
+                raise ValueError("boundary pair schema 1.1 requires a utility contract")
+        else:
+            if self.schema_version != "1.1":
+                raise ValueError("a utility contract requires boundary pair schema 1.1")
+            for state in (self.base, self.twin):
+                if set(state.utility_components) != action_set:
+                    raise ValueError("utility components must cover the identical action menu")
+                for action_id, vector in state.utility_components.items():
+                    expected = self.utility_contract.aggregate(vector)
+                    if abs(state.action_utilities[action_id] - expected) > 1e-6:
+                        raise ValueError("scalar utility does not match the frozen contract")
+                maximum = max(state.action_utilities.values())
+                should_abstain = (
+                    maximum <= self.utility_contract.minimum_action_utility_for_commitment
+                )
+                if state.should_abstain != should_abstain:
+                    raise ValueError("abstention label contradicts the frozen utility threshold")
         if self.base.decision_context == self.twin.decision_context:
             raise ValueError("base and twin contexts must expose the registered fact change")
         if self.flip_kind is BoundaryFlipKind.ACTION_TO_ACTION:
@@ -185,6 +340,12 @@ class BoundaryCounterfactualPair(BaseModel):
             for selection in (judgment.base_selection_id, judgment.twin_selection_id):
                 if selection is not None and selection not in action_set:
                     raise ValueError("judgment selected an action outside the frozen menu")
+        audit_ids = [audit.audit_id for audit in self.construct_audits]
+        audit_reviewers = [audit.reviewer_id for audit in self.construct_audits]
+        if len(audit_ids) != len(set(audit_ids)):
+            raise ValueError("construct-audit identities must be unique")
+        if len(audit_reviewers) != len(set(audit_reviewers)):
+            raise ValueError("construct audits require independent reviewers")
         return self
 
     @property
@@ -203,7 +364,7 @@ class BoundaryPairPackage(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     package_id: str = Field(min_length=1, max_length=300)
     release_tier: Literal["development", "formal"]
     pairs: tuple[BoundaryCounterfactualPair, ...] = Field(min_length=1)
@@ -276,6 +437,21 @@ def inspect_boundary_pair_package(package: BoundaryPairPackage) -> BoundaryPairR
             blockers.append(f"pair:{pair.pair_id}:judgment-protocol-failed")
         for judgment in pair.judgments:
             judgment_counts[judgment.authority] += 1
+        if package.release_tier == "formal" and pair.utility_contract is None:
+            blockers.append(f"pair:{pair.pair_id}:utility-contract-missing")
+        if package.release_tier == "formal":
+            if len(pair.construct_audits) < 2:
+                blockers.append(f"pair:{pair.pair_id}:construct-audit-incomplete")
+            elif any(not audit.accepted for audit in pair.construct_audits):
+                blockers.append(f"pair:{pair.pair_id}:construct-audit-failed")
+            if (
+                sum(
+                    audit.authority is BenchmarkLabelAuthority.HUMAN_EXPERT
+                    for audit in pair.construct_audits
+                )
+                < 2
+            ):
+                blockers.append(f"pair:{pair.pair_id}:expert-construct-audit-incomplete")
 
     formal = package.release_tier == "formal"
     if formal:
@@ -293,6 +469,8 @@ def inspect_boundary_pair_package(package: BoundaryPairPackage) -> BoundaryPairR
             blockers.append("formal:fewer-than-60-hidden-test-pairs")
         if judgment_counts[BenchmarkLabelAuthority.HUMAN_EXPERT] < 2 * len(pairs):
             blockers.append("formal:expert-construct-validation-incomplete")
+        if sum(pair.flip_kind is BoundaryFlipKind.ACTION_TO_ABSTENTION for pair in pairs) < 12:
+            blockers.append("formal:fewer-than-12-abstention-boundary-pairs")
 
     unique_blockers = tuple(dict.fromkeys(blockers))
     development_blockers = tuple(

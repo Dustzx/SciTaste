@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from scitaste.benchmark import (
     BenchmarkDecisionContextFamily,
     BenchmarkLabelAuthority,
+    BoundaryConstructAudit,
     BoundaryCounterfactualPair,
     BoundaryFactChange,
     BoundaryFlipKind,
@@ -14,6 +15,8 @@ from scitaste.benchmark import (
     BoundaryPairSplit,
     BoundaryPairState,
     BoundaryStateRole,
+    BoundaryUtilityContract,
+    BoundaryUtilityVector,
     inspect_boundary_pair_package,
 )
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -149,3 +152,105 @@ def test_boundary_pair_package_rejects_source_group_reuse() -> None:
             release_tier="development",
             pairs=(pair, duplicate),
         )
+
+
+def test_construct_audit_fails_closed_when_a_shortcut_is_detected() -> None:
+    audit = BoundaryConstructAudit(
+        audit_id="audit-1",
+        reviewer_id="expert-1",
+        authority=BenchmarkLabelAuthority.HUMAN_EXPERT,
+        expertise_scope="claim calibration and counterfactual evaluation",
+        single_atomic_fact=True,
+        shared_context_fact_neutral=True,
+        states_internally_noncontradictory=True,
+        action_meanings_stable=True,
+        actions_feasible_in_both_states=True,
+        labels_uniquely_identifiable=True,
+        abstention_explicitly_considered=True,
+        utility_components_defensible=True,
+        cue_shortcut_resistant=False,
+        pair_order_blinded=True,
+        expected_pair_labels_hidden=True,
+        evidence_refs=("audits/expert-1.json",),
+        rejection_codes=("CUE_SHORTCUT",),
+    )
+
+    assert not audit.accepted
+
+    with pytest.raises(ValidationError, match="checks and rejection codes disagree"):
+        BoundaryConstructAudit.model_validate({**audit.model_dump(), "rejection_codes": ()})
+
+
+def test_boundary_pair_utility_contract_recomputes_registered_scalar_utility() -> None:
+    pair = _pair()
+    contract = BoundaryUtilityContract(
+        contract_id="claim-calibration-v1",
+        evidence_value_weight=0.5,
+        expected_information_gain_weight=0.2,
+        resource_cost_weight=0.1,
+        claim_risk_weight=0.2,
+        minimum_action_utility_for_commitment=0.0,
+        component_anchors={
+            "evidence_value": "0=no evidential value; 1=decisive evidence",
+            "expected_information_gain": "0=no uncertainty resolved; 1=decision resolving",
+            "resource_cost": "0=negligible; 1=exhausts the visible budget",
+            "claim_risk": "0=well calibrated; 1=unsupported central claim",
+        },
+    )
+    base_vectors = {
+        "narrow": BoundaryUtilityVector(
+            evidence_value=1.0,
+            expected_information_gain=0.0,
+            resource_cost=0.0,
+            claim_risk=0.0,
+        ),
+        "retain": BoundaryUtilityVector(
+            evidence_value=0.0,
+            expected_information_gain=0.0,
+            resource_cost=1.0,
+            claim_risk=1.0,
+        ),
+    }
+    twin_vectors = {
+        "narrow": BoundaryUtilityVector(
+            evidence_value=0.0,
+            expected_information_gain=0.0,
+            resource_cost=1.0,
+            claim_risk=0.0,
+        ),
+        "retain": BoundaryUtilityVector(
+            evidence_value=1.0,
+            expected_information_gain=0.0,
+            resource_cost=0.0,
+            claim_risk=0.0,
+        ),
+    }
+
+    contracted = pair.model_copy(
+        update={
+            "schema_version": "1.1",
+            "utility_contract": contract,
+            "base": pair.base.model_copy(
+                update={
+                    "action_utilities": {
+                        key: contract.aggregate(value) for key, value in base_vectors.items()
+                    },
+                    "utility_components": base_vectors,
+                }
+            ),
+            "twin": pair.twin.model_copy(
+                update={
+                    "action_utilities": {
+                        key: contract.aggregate(value) for key, value in twin_vectors.items()
+                    },
+                    "utility_components": twin_vectors,
+                }
+            ),
+        }
+    )
+
+    validated = BoundaryCounterfactualPair.model_validate(contracted.model_dump(mode="python"))
+
+    assert validated.utility_contract is not None
+    assert validated.base.action_utilities == pytest.approx({"narrow": 0.5, "retain": -0.3})
+    assert validated.twin.action_utilities == pytest.approx({"narrow": -0.1, "retain": 0.5})

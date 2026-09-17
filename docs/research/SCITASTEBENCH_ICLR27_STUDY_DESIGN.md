@@ -51,7 +51,8 @@ Each released pair contains the following machine-checkable objects:
 | Boundary twin | one changed fact, all invariant facts, unchanged action identifiers | intervention on applicability rather than topic |
 | Utility contract | per-action outcome, information, cost, and claim-risk rationale | regret rather than majority-label accuracy alone |
 | Construct judgments | two independent raw judgments plus adjudication only on disagreement | validity and uncertainty without agreement filtering |
-| Audit record | contamination probe, construction manifest, content hash, split | reproducible release and leakage analysis |
+| Construct audits | two pair-blinded domain-expert audits of atomicity, consistency, action stability, label identifiability, abstention, utility, and shortcut resistance | construct validity rather than constructor self-approval |
+| Audit record | semantic-difference and contamination probes, construction manifest, content hash, split | reproducible release and leakage analysis |
 
 The schema and fail-closed readiness checks live in
 `scitaste.benchmark.boundary_pairs`. They are separate from legacy development
@@ -61,12 +62,12 @@ suites so adding this design cannot silently change an old suite hash.
 
 The formal floor is **120 independent boundary pairs (240 decision states)**:
 20 pairs in each of the six decision contexts, at least three scientific
-domains, and at most one pair per source group. The planned split is 24
-development, 24 validation, and 72 hidden-test pairs, stratified by decision
-context and domain. Development is used for prompt and policy construction;
-validation can choose one frozen method version; hidden test is opened once.
-No candidate-order, paraphrase, condition, or model repetition counts as a new
-independent item.
+domains, at least 12 genuine action-to-abstention pairs, and at most one pair per
+source group. The planned split is 24 development, 24 validation, and 72
+hidden-test pairs, stratified by decision context, domain, and flip kind.
+Development is used for prompt and policy construction; validation can choose
+one frozen method version; hidden test is opened once. No candidate-order,
+paraphrase, condition, or model repetition counts as a new independent item.
 
 The 120-pair floor is not a post-hoc power claim. Before opening hidden test, the
 minimum detectable paired-regret improvement is recomputed from development and
@@ -89,6 +90,14 @@ one resource-allocation pair survived. This is evidence that the construction
 protocol needs targeted replacement cases and later human/domain-expert
 validation; it is not evidence that SciTaste works. The AI reviews are disclosed
 as proxy judgments and cannot satisfy the formal expert-label requirement.
+
+A later context-isolated audit accepted none of these 13 pairs unchanged: six
+require reconstruction and seven should be rejected. Eleven twins inherit prose
+that contradicts the registered fact change, some fact changes are compound,
+all states force an action, scalar utilities lack a component contract, and
+explicit boundary/action wording permits cue-following shortcuts. The full
+13-pair population is therefore consumed. Formal construction starts from new,
+source-disjoint material rather than editing these cases into a hidden split.
 
 ### Two benchmark tracks
 
@@ -229,6 +238,25 @@ and required hidden population are frozen from development/validation pair
 variance before hidden test is opened. The analysis never treats individual
 model calls as independent samples.
 
+### One treatment interface across local and external evaluation
+
+The claim-bearing method is the typed `TasteControlPacket`, not an arbitrary
+prompt containing a Taste card. For every decision it binds selected precedents
+to exact current-state facts, maps them onto the frozen action menu, records
+aligned and opposed support, and exposes deterministic per-action adjustments.
+A unique positive adjustment is required for intervention; tied or non-positive
+support abstains. The same packet must be consumed by SciTasteBench decisions and
+external research trajectories. A development arm that receives only a generic
+abstraction or raw source is labelled accordingly and cannot be renamed Full
+SciTaste after its score is observed.
+
+Formal pairs use boundary-pair schema 1.1. Their scalar utility is recomputed
+from a preregistered four-component vector—evidence value, expected information
+gain, resource cost, and claim risk—under a frozen context-specific contract.
+The contract also defines the minimum utility required to act, so benchmark
+abstention is a scored scientific choice rather than an undocumented label.
+Legacy development pairs remain schema 1.0 and cannot be silently promoted.
+
 The earlier family-plus-hash matcher failed the independent 28-case reserve:
 Matched underperformed Mismatched. That is retained as a falsification of the old
 selector. The revised selector must first pass on consumed development cases and
@@ -311,6 +339,13 @@ This buffer is why the current negative 28-case result is useful without becomin
 the paper's headline: it falsifies family-plus-hash matching and forces a
 content-conditioned selector, while reserving a new population for the first
 valid estimate of that revised selector.
+
+The first real MLRC Perception task is also consumed development. Its upstream,
+Native Base, Raw/RAG, and abstraction-guided arms are used to debug the official
+runtime and estimate variance. Because the abstraction-guided arm predates the
+shared `TasteControlPacket` treatment, it is not Full SciTaste regardless of its
+score. Formal MLRC comparisons begin only after one packet-producing method is
+frozen across all conditions and tasks.
 
 Evidence moves through four irreversible states:
 

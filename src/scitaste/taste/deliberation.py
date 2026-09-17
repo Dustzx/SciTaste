@@ -272,6 +272,115 @@ class TasteDeliberationProposal(BaseModel):
         return _canonical_sha256(self.model_dump(mode="json"))
 
 
+class TasteActionAdjustment(BaseModel):
+    """Controller-owned support for one currently feasible action."""
+
+    model_config = _CONFIG
+
+    action_id: str = Field(pattern=_ID)
+    support_score: float = Field(ge=0.0, allow_inf_nan=False)
+    opposition_score: float = Field(ge=0.0, allow_inf_nan=False)
+    net_adjustment: float = Field(allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def net_matches_components(self) -> TasteActionAdjustment:
+        if abs(self.net_adjustment - (self.support_score - self.opposition_score)) > 1e-9:
+            raise ValueError("Taste action adjustment does not match its components")
+        return self
+
+
+class TasteControlPrecedent(BaseModel):
+    """The exact outcome-grounded precedent admitted for one current decision."""
+
+    model_config = _CONFIG
+
+    case_id: str = Field(pattern=_ID)
+    case_sha256: str = Field(pattern=_SHA256)
+    taste_grounding_sha256: str = Field(pattern=_SHA256)
+    decision_principle: str = Field(min_length=1, max_length=10_000)
+    outcome_grounded_rationale: str = Field(min_length=1, max_length=10_000)
+    applicability_supports: tuple[TasteBoundarySupport, ...] = Field(min_length=2, max_length=20)
+    aligned_action_ids: tuple[str, ...] = Field(min_length=1, max_length=12)
+    opposed_action_ids: tuple[str, ...] = Field(default_factory=tuple, max_length=12)
+    relevance_confidence: float = Field(ge=0.0, le=1.0)
+    precedent_confidence: float = Field(ge=0.0, le=1.0)
+    contribution_weight: float = Field(gt=0.0, allow_inf_nan=False)
+
+
+class TasteControlPacket(BaseModel):
+    """Executable, state-bound projection of a deliberated Taste intervention.
+
+    The packet is the shared treatment interface for local decision evaluation and
+    downstream research execution.  It contains only controller-admitted precedents,
+    the current facts that made them applicable, and deterministic action adjustments.
+    Generic retrieved prose is deliberately absent.
+    """
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    decision_id: str = Field(pattern=_ID)
+    state_snapshot_id: str = Field(min_length=1)
+    proposal_sha256: str = Field(pattern=_SHA256)
+    cited_decision_facts: tuple[TasteDecisionFact, ...] = Field(max_length=80)
+    selected_precedents: tuple[TasteControlPrecedent, ...] = Field(max_length=5)
+    action_adjustments: tuple[TasteActionAdjustment, ...] = Field(min_length=2, max_length=12)
+    recommended_action_id: str | None = Field(default=None, pattern=_ID)
+    abstained: bool
+    abstention_reason: str | None = Field(default=None, max_length=2_000)
+
+    @model_validator(mode="after")
+    def intervention_is_internally_consistent(self) -> TasteControlPacket:
+        action_ids = [item.action_id for item in self.action_adjustments]
+        if len(action_ids) != len(set(action_ids)):
+            raise ValueError("Taste control packet action adjustments must be unique")
+        fact_ids = [item.fact_id for item in self.cited_decision_facts]
+        if len(fact_ids) != len(set(fact_ids)):
+            raise ValueError("Taste control packet cited facts must be unique")
+        cited = set(fact_ids)
+        for precedent in self.selected_precedents:
+            if not {
+                fact_id
+                for support in precedent.applicability_supports
+                for fact_id in support.decision_fact_ids
+            }.issubset(cited):
+                raise ValueError("Taste control precedent cites a fact absent from the packet")
+            if not set(precedent.aligned_action_ids).issubset(action_ids):
+                raise ValueError("Taste control precedent aligns an unknown action")
+            if not set(precedent.opposed_action_ids).issubset(action_ids):
+                raise ValueError("Taste control precedent opposes an unknown action")
+        if self.abstained:
+            if self.recommended_action_id is not None:
+                raise ValueError("an abstaining Taste control packet cannot recommend an action")
+            if not self.abstention_reason:
+                raise ValueError("an abstaining Taste control packet requires a reason")
+            if not self.selected_precedents and any(
+                abs(item.net_adjustment) > 1e-9 for item in self.action_adjustments
+            ):
+                raise ValueError("a no-precedent Taste packet must have zero adjustment")
+        else:
+            if not self.selected_precedents or self.recommended_action_id is None:
+                raise ValueError("an active Taste control packet requires evidence and an action")
+            if self.abstention_reason is not None:
+                raise ValueError("an active Taste control packet cannot carry an abstention reason")
+            if self.recommended_action_id not in action_ids:
+                raise ValueError("Taste control packet recommends an unknown action")
+            expected = min(
+                self.action_adjustments,
+                key=lambda item: (-item.net_adjustment, item.action_id),
+            ).action_id
+            if self.recommended_action_id != expected:
+                raise ValueError("Taste control recommendation does not maximize its adjustment")
+            ranked = sorted((item.net_adjustment for item in self.action_adjustments), reverse=True)
+            if ranked[0] <= 0 or abs(ranked[0] - ranked[1]) <= 1e-9:
+                raise ValueError("an active Taste control packet requires a unique positive margin")
+        return self
+
+    @property
+    def fingerprint(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json"))
+
+
 class VerifiedTasteDeliberation(BaseModel):
     """Accepted project-ledger proposal supplied to deterministic selection."""
 
@@ -477,6 +586,137 @@ def validate_taste_applicability(
         selection_rationale="Applicability-only proposal; controller selection is pending.",
     )
     return validate_taste_deliberation(input_data, synthetic)
+
+
+def build_taste_control_packet(
+    input_data: TasteDeliberationInput,
+    proposal: TasteDeliberationProposal,
+) -> TasteControlPacket:
+    """Compile one accepted deliberation into an executable treatment packet."""
+
+    findings = validate_taste_deliberation(input_data, proposal)
+    if findings:
+        raise ValueError("invalid Taste deliberation: " + "; ".join(findings))
+    candidate_by_id = {item.case_id: item for item in input_data.candidates}
+    assessment_by_id = {item.case_id: item for item in proposal.assessments}
+    action_scores = {
+        item.action_id: {"support": 0.0, "opposition": 0.0} for item in input_data.current_actions
+    }
+    precedents: list[TasteControlPrecedent] = []
+    cited_fact_ids: set[str] = set()
+    for case_id in proposal.selected_case_ids:
+        candidate = candidate_by_id[case_id]
+        assessment = assessment_by_id[case_id]
+        weight = assessment.relevance_confidence * (0.5 + 0.5 * candidate.confidence)
+        for action_id in assessment.aligned_current_action_ids:
+            action_scores[action_id]["support"] += weight
+        for action_id in assessment.opposed_current_action_ids:
+            action_scores[action_id]["opposition"] += weight
+        cited_fact_ids.update(
+            fact_id
+            for support in assessment.applicability_supports
+            for fact_id in support.decision_fact_ids
+        )
+        precedents.append(
+            TasteControlPrecedent(
+                case_id=case_id,
+                case_sha256=candidate.case_sha256,
+                taste_grounding_sha256=candidate.taste_grounding_sha256,
+                decision_principle=candidate.decision_principle,
+                outcome_grounded_rationale=candidate.why_preferred,
+                applicability_supports=assessment.applicability_supports,
+                aligned_action_ids=assessment.aligned_current_action_ids,
+                opposed_action_ids=assessment.opposed_current_action_ids,
+                relevance_confidence=assessment.relevance_confidence,
+                precedent_confidence=candidate.confidence,
+                contribution_weight=weight,
+            )
+        )
+    adjustments = tuple(
+        TasteActionAdjustment(
+            action_id=action.action_id,
+            support_score=action_scores[action.action_id]["support"],
+            opposition_score=action_scores[action.action_id]["opposition"],
+            net_adjustment=(
+                action_scores[action.action_id]["support"]
+                - action_scores[action.action_id]["opposition"]
+            ),
+        )
+        for action in sorted(input_data.current_actions, key=lambda item: item.action_id)
+    )
+    fact_by_id = {item.fact_id: item for item in input_data.decision_facts}
+    ranked_adjustments = sorted(
+        adjustments,
+        key=lambda item: (-item.net_adjustment, item.action_id),
+    )
+    unique_positive = (
+        bool(precedents)
+        and ranked_adjustments[0].net_adjustment > 0
+        and ranked_adjustments[0].net_adjustment - ranked_adjustments[1].net_adjustment > 1e-9
+    )
+    recommended_action_id = ranked_adjustments[0].action_id if unique_positive else None
+    abstained = recommended_action_id is None
+    return TasteControlPacket(
+        decision_id=input_data.decision_id,
+        state_snapshot_id=input_data.state_snapshot_id,
+        proposal_sha256=proposal.fingerprint,
+        cited_decision_facts=tuple(fact_by_id[item] for item in sorted(cited_fact_ids)),
+        selected_precedents=tuple(precedents),
+        action_adjustments=adjustments,
+        recommended_action_id=recommended_action_id,
+        abstained=abstained,
+        abstention_reason=(
+            (
+                proposal.selection_rationale
+                if not precedents
+                else "Selected precedents did not produce a unique positive action margin."
+            )
+            if abstained
+            else None
+        ),
+    )
+
+
+def render_taste_control_packet(packet: TasteControlPacket) -> str:
+    """Render the typed packet without adding ungrounded explanatory prose."""
+
+    lines = [
+        "SCITASTE STATE-CONDITIONED CONTROL PACKET",
+        f"Decision: {packet.decision_id}",
+    ]
+    if packet.abstained:
+        lines.extend(("Controller status: ABSTAIN", f"Reason: {packet.abstention_reason}"))
+    else:
+        facts = {item.fact_id: item.text for item in packet.cited_decision_facts}
+        lines.extend(
+            (
+                "Controller status: ACTIVE",
+                f"Recommended feasible action: {packet.recommended_action_id}",
+            )
+        )
+        for index, precedent in enumerate(packet.selected_precedents, 1):
+            lines.extend(
+                (
+                    f"Precedent {index}: {precedent.case_id}",
+                    f"Outcome-grounded principle: {precedent.decision_principle}",
+                    f"Why it was preferred: {precedent.outcome_grounded_rationale}",
+                    "Current-state applicability:",
+                )
+            )
+            for support in precedent.applicability_supports:
+                evidence = "; ".join(
+                    f"{fact_id}={facts[fact_id]}" for fact_id in support.decision_fact_ids
+                )
+                lines.append(f"- {support.boundary_condition} <- {evidence}")
+            lines.append("Supports actions: " + ", ".join(precedent.aligned_action_ids))
+            if precedent.opposed_action_ids:
+                lines.append("Opposes actions: " + ", ".join(precedent.opposed_action_ids))
+        lines.append("Controller adjustments:")
+        lines.extend(
+            f"- {item.action_id}: {item.net_adjustment:+.6f}" for item in packet.action_adjustments
+        )
+    lines.append(f"Packet SHA-256: {packet.fingerprint}")
+    return "\n".join(lines)
 
 
 def shard_taste_deliberation_input(
@@ -819,9 +1059,12 @@ def _canonical_sha256(value: object) -> str:
 __all__ = [
     "TASTE_APPLICABILITY_NODE",
     "TASTE_DELIBERATION_NODE",
+    "TasteActionAdjustment",
     "TasteApplicabilityProposal",
     "TasteBoundarySupport",
     "TasteCaseTransferAssessment",
+    "TasteControlPacket",
+    "TasteControlPrecedent",
     "TasteCounterfactualStatus",
     "TasteDecisionFact",
     "TasteDeliberationCandidate",
@@ -830,9 +1073,11 @@ __all__ = [
     "TasteDeliberationRole",
     "TasteTransferVerdict",
     "VerifiedTasteDeliberation",
+    "build_taste_control_packet",
     "build_taste_deliberation_input",
     "merge_taste_applicability_proposals",
     "merge_taste_deliberation_proposals",
+    "render_taste_control_packet",
     "select_deliberated_taste_cases",
     "shard_taste_deliberation_input",
     "validate_taste_applicability",
