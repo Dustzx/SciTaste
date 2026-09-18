@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="690" viewBox="0 0 1400 690" role="img" aria-labelledby="title desc">
+  <title id="title">SciTasteBench construction and causal evaluation</title>
+  <desc id="desc">A three-panel publication figure showing decision-episode construction, context-dependent boundary pairs, causal controls, feedback learning, and external validation.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3 Z" fill="#334155"/></marker>
+    <style>
+      .bg{fill:#fff}.panel{fill:#f8fafc;stroke:#94a3b8;stroke-width:2}.blue{fill:#eaf2ff;stroke:#3973c4;stroke-width:2}.orange{fill:#fff2e8;stroke:#cc6f35;stroke-width:2}.green{fill:#eaf8f1;stroke:#2e8a65;stroke-width:2}.purple{fill:#f2edff;stroke:#7557ae;stroke-width:2}.white{fill:#fff;stroke:#94a3b8;stroke-width:2}.title{font:700 34px Arial,sans-serif;fill:#172033}.head{font:700 26px Arial,sans-serif;fill:#172033}.body{font:400 24px Arial,sans-serif;fill:#334155}.small{font:700 24px Arial,sans-serif;fill:#52647b}.tiny{font:400 24px Arial,sans-serif;fill:#52647b}.arrow{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#arrow)}.dash{stroke:#64748b;stroke-width:3;stroke-dasharray:8 7;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="690"/>
+  <text class="title" x="40" y="50">SciTasteBench tests context-sensitive scientific decisions</text>
+
+  <rect class="panel" x="40" y="82" width="410" height="540" rx="16"/>
+  <text class="head" x="68" y="122">A  Build one decision episode</text>
+  <rect class="blue" x="70" y="152" width="350" height="104" rx="12"/>
+  <text class="small" x="92" y="188">PRE-DECISION RECORD</text>
+  <text class="body" x="92" y="224">state · actions · budget</text>
+  <path class="arrow" d="M245 258 V300"/>
+  <rect class="orange" x="70" y="302" width="350" height="104" rx="12"/>
+  <text class="small" x="92" y="338">OUTCOME FIREWALL</text>
+  <text class="body" x="92" y="374">later evidence stays hidden</text>
+  <path class="arrow" d="M245 408 V450"/>
+  <rect class="green" x="70" y="452" width="350" height="132" rx="12"/>
+  <text class="small" x="92" y="488">GROUNDED LESSON</text>
+  <text class="body" x="92" y="526">preference + applicability</text>
+  <text class="body" x="92" y="560">boundary + delayed credit</text>
+
+  <rect class="panel" x="485" y="82" width="430" height="540" rx="16"/>
+  <text class="head" x="513" y="122">B  Test context, not a cue</text>
+  <rect class="blue" x="515" y="152" width="170" height="184" rx="12"/>
+  <text class="small" x="537" y="188">BASE</text>
+  <text class="body" x="537" y="224">same question</text>
+  <text class="body" x="537" y="258">same actions</text>
+  <text class="body" x="537" y="292">fact = low</text>
+  <rect class="orange" x="715" y="152" width="170" height="184" rx="12"/>
+  <text class="small" x="737" y="188">TWIN</text>
+  <text class="body" x="737" y="224">same question</text>
+  <text class="body" x="737" y="258">same actions</text>
+  <text class="body" x="737" y="292">fact = high</text>
+  <path class="dash" d="M600 338 V386 H800 V338"/>
+  <rect class="purple" x="515" y="392" width="370" height="154" rx="12"/>
+  <text class="small" x="537" y="428">REQUIRED SIGNATURE</text>
+  <text class="body" x="537" y="466">action flips or abstains</text>
+  <text class="body" x="537" y="502">only with invariant context</text>
+  <text class="tiny" x="537" y="580">Boundary-only chooser</text>
+  <text class="tiny" x="537" y="610">must fail.</text>
+
+  <rect class="panel" x="950" y="82" width="410" height="540" rx="16"/>
+  <text class="head" x="978" y="122">C  Separate three claims</text>
+  <rect class="white" x="980" y="152" width="350" height="118" rx="12"/>
+  <text class="small" x="1002" y="188">MECHANISM</text>
+  <text class="body" x="1002" y="224">Base · Raw · Matched</text>
+  <text class="body" x="1002" y="256">Mismatched → pair regret</text>
+  <path class="arrow" d="M1155 272 V306"/>
+  <rect class="green" x="980" y="308" width="350" height="118" rx="12"/>
+  <text class="small" x="1002" y="344">OUTCOME LEARNING</text>
+  <text class="body" x="1002" y="380">update · no update · shuffled</text>
+  <text class="body" x="1002" y="412">→ later source-disjoint cases</text>
+  <path class="arrow" d="M1155 428 V462"/>
+  <rect class="purple" x="980" y="464" width="350" height="118" rx="12"/>
+  <text class="small" x="1002" y="500">EXTERNAL UTILITY</text>
+  <text class="body" x="1002" y="536">public benchmark score</text>
+  <text class="body" x="1002" y="568">progress · failures · cost</text>
+
+  <text class="small" x="40" y="662">Unit = one source-disjoint pair · formal estimate = one frozen hidden split</text>
+</svg>

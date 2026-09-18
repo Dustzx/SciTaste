@@ -1,77 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="790" viewBox="0 0 1500 790" role="img" aria-labelledby="title desc">
-  <title id="title">Anatomy of a SciTasteBench boundary pair</title>
-  <desc id="desc">A compact diagram showing a natural scientific decision, one registered fact change, its counterfactual twin, frozen controls, and evaluation conditions.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720" role="img" aria-labelledby="title desc">
+  <title id="title">Anatomy and controls of one SciTasteBench boundary pair</title>
+  <desc id="desc">A publication-scale schematic of invariant scientific context, one changed boundary fact, reversed action utility, a boundary-only shortcut control, and formal release gates.</desc>
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3 Z" fill="#34445c"/></marker>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#172033" flood-opacity=".12"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3 Z" fill="#334155"/></marker>
     <style>
-      .bg{fill:#f7f8fb}.title{font:700 30px Inter,Arial,sans-serif;fill:#172238}.sub{font:400 15px Inter,Arial,sans-serif;fill:#56657b}.head{font:700 17px Inter,Arial,sans-serif;fill:#172238}.body{font:400 13px Inter,Arial,sans-serif;fill:#485970}.small{font:700 11px Inter,Arial,sans-serif;fill:#66758a;letter-spacing:.55px}.natural{fill:#eaf2ff;stroke:#4f7dc9;stroke-width:1.8}.twin{fill:#fff0e8;stroke:#cf7845;stroke-width:1.8}.fixed{fill:#fff;stroke:#a9b3c3;stroke-width:1.5}.fact{fill:#fff4d8;stroke:#d4972f;stroke-width:2}.eval{fill:#edf8f2;stroke:#3e9470;stroke-width:1.8}.gate{fill:#f2ecff;stroke:#7e61b2;stroke-width:1.8}.arrow{stroke:#34445c;stroke-width:2.1;fill:none;marker-end:url(#arrow)}.dash{stroke:#7c899c;stroke-width:1.6;stroke-dasharray:6 6;fill:none}
+      .bg{fill:#fff}.panel{fill:#f8fafc;stroke:#94a3b8;stroke-width:2}.blue{fill:#eaf2ff;stroke:#3973c4;stroke-width:2}.orange{fill:#fff2e8;stroke:#cc6f35;stroke-width:2}.green{fill:#eaf8f1;stroke:#2e8a65;stroke-width:2}.purple{fill:#f2edff;stroke:#7557ae;stroke-width:2}.red{fill:#fff0f0;stroke:#b84b4b;stroke-width:2}.title{font:700 34px Arial,sans-serif;fill:#172033}.head{font:700 25px Arial,sans-serif;fill:#172033}.body{font:400 22px Arial,sans-serif;fill:#334155}.small{font:700 21px Arial,sans-serif;fill:#52647b}.arrow{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#arrow)}.dash{stroke:#64748b;stroke-width:3;stroke-dasharray:8 7;fill:none;marker-end:url(#arrow)}
     </style>
   </defs>
-  <rect class="bg" width="1500" height="790"/>
-  <text class="title" x="55" y="54">SciTasteBench measures whether one fact changes the right scientific action</text>
-  <text class="sub" x="55" y="82">The boundary pair—not each prompt or candidate order—is the independent experimental unit.</text>
+  <rect class="bg" width="1400" height="720"/>
+  <text class="title" x="40" y="50">One pair isolates a fact × scientific-context interaction</text>
 
-  <rect class="fixed" filter="url(#shadow)" x="55" y="125" rx="14" width="300" height="220"/>
-  <text class="small" x="80" y="158">FROZEN ACROSS THE PAIR</text>
-  <text class="head" x="80" y="190">Scientific setting</text>
-  <text class="body" x="80" y="220">question · evidence · remaining budget</text>
-  <text class="body" x="80" y="248">2–5 feasible actions · action identifiers</text>
-  <text class="body" x="80" y="276">topic · domain · prose style · source group</text>
-  <text class="body" x="80" y="304">all registered invariant facts</text>
+  <rect class="panel" x="40" y="82" width="420" height="540" rx="16"/>
+  <text class="head" x="68" y="122">A  Freeze the decision</text>
+  <rect class="blue" x="70" y="150" width="360" height="190" rx="12"/>
+  <text class="small" x="94" y="186">INVARIANT CONTEXT</text>
+  <text class="body" x="94" y="226">I₁  competing hypotheses</text>
+  <text class="body" x="94" y="262">I₂  diagnostic measurement model</text>
+  <text class="body" x="94" y="298">I₃  budget and feasible actions</text>
+  <path class="arrow" d="M250 342 V380"/>
+  <rect class="green" x="70" y="382" width="360" height="190" rx="12"/>
+  <text class="small" x="94" y="418">OUTCOME FIREWALL</text>
+  <text class="body" x="94" y="458">source and twin fixed first</text>
+  <text class="body" x="94" y="494">later outcome remains hidden</text>
+  <text class="body" x="94" y="530">one source group → one unit</text>
 
-  <path class="arrow" d="M355 235 H410"/>
-  <rect class="natural" filter="url(#shadow)" x="410" y="110" rx="14" width="310" height="250"/>
-  <text class="small" x="435" y="143">NATURAL BASE STATE</text>
-  <text class="head" x="435" y="177">No direct observation</text>
-  <text class="body" x="435" y="210">Claim: detached polyps can resettle.</text>
-  <text class="body" x="435" y="237">Record: viability observed;</text>
-  <text class="body" x="435" y="259">resettlement not observed.</text>
-  <line x1="435" y1="281" x2="695" y2="281" stroke="#b8c8de"/>
-  <text class="body" x="435" y="311">Preferred: narrow the claim</text>
-  <text class="body" x="435" y="335">Alternative: retain the claim</text>
+  <rect class="panel" x="490" y="82" width="450" height="540" rx="16"/>
+  <text class="head" x="518" y="122">B  Change exactly one fact</text>
+  <rect class="blue" x="520" y="150" width="175" height="180" rx="12"/>
+  <text class="small" x="542" y="186">BASE</text>
+  <text class="body" x="542" y="226">I₁, I₂, I₃</text>
+  <text class="body" x="542" y="264">b = 0</text>
+  <text class="body" x="542" y="302">u(A) &gt; u(B)</text>
+  <rect class="orange" x="735" y="150" width="175" height="180" rx="12"/>
+  <text class="small" x="757" y="186">TWIN</text>
+  <text class="body" x="757" y="226">I₁, I₂, I₃</text>
+  <text class="body" x="757" y="264">b = 1</text>
+  <text class="body" x="757" y="302">u(B) &gt; u(A)</text>
+  <path class="dash" d="M608 332 V370 H823 V332"/>
+  <rect class="purple" x="520" y="376" width="390" height="156" rx="12"/>
+  <text class="small" x="542" y="412">VALID PAIR</text>
+  <text class="body" x="542" y="450">single atomic fact; stable actions</text>
+  <text class="body" x="542" y="486">preference flips only with I₁–I₃</text>
+  <text class="body" x="542" y="522">ties produce abstention</text>
+  <text class="small" x="520" y="578">Unit = the pair, never two prompts</text>
 
-  <rect class="fact" filter="url(#shadow)" x="760" y="145" rx="14" width="275" height="180"/>
-  <text class="small" x="785" y="178">EXACTLY ONE FACT CHANGES</text>
-  <text class="head" x="785" y="211">Was resettlement observed?</text>
-  <text class="body" x="785" y="242">base · no</text>
-  <text class="body" x="785" y="268">twin · three time-linked events</text>
-  <text class="body" x="785" y="296">all other facts remain fixed</text>
-  <path class="arrow" d="M720 235 H760"/>
-  <path class="arrow" d="M1035 235 H1080"/>
+  <rect class="panel" x="970" y="82" width="390" height="540" rx="16"/>
+  <text class="head" x="998" y="122">C  Reject shortcut labels</text>
+  <rect class="red" x="1000" y="150" width="330" height="150" rx="12"/>
+  <text class="small" x="1022" y="186">BOUNDARY-ONLY CONTROL</text>
+  <text class="body" x="1022" y="226">sees actions + b</text>
+  <text class="body" x="1022" y="262">must be chance / abstain</text>
+  <path class="arrow" d="M1165 302 V338"/>
+  <rect class="green" x="1000" y="340" width="330" height="208" rx="12"/>
+  <text class="small" x="1022" y="376">FULL-CONTEXT REVIEW</text>
+  <text class="body" x="1022" y="416">must cite ≥2 invariant facts</text>
+  <text class="body" x="1022" y="452">two blind reviews retained</text>
+  <text class="body" x="1022" y="488">utilities robust to weights</text>
+  <text class="body" x="1022" y="524">contradictions rejected</text>
+  <text class="small" x="1000" y="586">No post-review repair</text>
 
-  <rect class="twin" filter="url(#shadow)" x="1080" y="110" rx="14" width="360" height="250"/>
-  <text class="small" x="1105" y="143">COUNTERFACTUAL TWIN</text>
-  <text class="head" x="1105" y="177">Direct observation available</text>
-  <text class="body" x="1105" y="210">Claim: detached polyps can resettle.</text>
-  <text class="body" x="1105" y="237">Record: viability and three</text>
-  <text class="body" x="1105" y="259">resettlement events observed.</text>
-  <line x1="1105" y1="281" x2="1415" y2="281" stroke="#dec3b3"/>
-  <text class="body" x="1105" y="311">Preferred: retain with evidence</text>
-  <text class="body" x="1105" y="335">Alternative: narrow the claim</text>
-
-  <path class="dash" d="M565 360 V405 H1260 V360"/>
-  <text class="small" x="642" y="398">REQUIRED SIGNATURE · CORRECT ACTION FLIP OR ACTION ↔ ABSTENTION</text>
-
-  <rect class="eval" filter="url(#shadow)" x="55" y="450" rx="14" width="900" height="245"/>
-  <text class="head" x="80" y="484">Same model, action menu, source count, token budget, and candidate orders</text>
-  <rect class="fixed" x="80" y="510" rx="10" width="190" height="70"/><text class="small" x="100" y="537">BASE</text><text class="body" x="100" y="560">decision state only</text>
-  <rect class="fixed" x="292" y="510" rx="10" width="190" height="70"/><text class="small" x="312" y="537">RAW</text><text class="body" x="312" y="560">equal-token source</text>
-  <rect class="fixed" x="504" y="510" rx="10" width="190" height="70"/><text class="small" x="524" y="537">MATCHED</text><text class="body" x="524" y="560">applicable Taste</text>
-  <rect class="fixed" x="716" y="510" rx="10" width="214" height="70"/><text class="small" x="736" y="537">MISMATCHED</text><text class="body" x="736" y="560">strong but inapplicable</text>
-  <text class="small" x="80" y="620">PRIMARY</text>
-  <text class="body" x="80" y="648">pair regret · both states correct · required flip · order consistency</text>
-  <text class="body" x="80" y="672">secondary: specificity · abstention risk–coverage · paraphrase invariance · cost</text>
-
-  <path class="arrow" d="M955 572 H1005"/>
-  <rect class="gate" filter="url(#shadow)" x="1005" y="450" rx="14" width="435" height="245"/>
-  <text class="head" x="1030" y="484">Release and evidence gate</text>
-  <text class="body" x="1030" y="520">source license + attribution + content hash</text>
-  <text class="body" x="1030" y="550">outcome firewall + construction manifest</text>
-  <text class="body" x="1030" y="580">raw independent judgments + disagreement</text>
-  <text class="body" x="1030" y="610">development / validation / hidden-test split</text>
-  <text class="body" x="1030" y="640">contamination probes + scorer + datasheet</text>
-  <text class="small" x="1030" y="674">ONLY HIDDEN CONFIRMATION ENTERS THE MAIN RESULT</text>
-
-  <text class="small" x="55" y="750">FORMAL FLOOR · 120 INDEPENDENT PAIRS · 20 PER DECISION CONTEXT · ≥3 DOMAINS · ONE PAIR PER SOURCE GROUP</text>
+  <text class="small" x="40" y="668">Formal release: provenance + rights + raw judgments + disagreement + frozen split + scorer + datasheet</text>
+  <text class="body" x="40" y="702">The 30-pair kill test checks construct feasibility; it is not a method result.</text>
 </svg>

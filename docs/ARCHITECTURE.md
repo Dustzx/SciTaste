@@ -4906,3 +4906,24 @@ label. SciTasteBench therefore requires both a full-context invariant-fact revie
 boundary-only negative control, or independent expert adjudication, before a reconstructed pair
 can enter a formal population. Development replays may change this mechanism, but their effects
 cannot be promoted to confirmation.
+
+### ADR-151: objective transfer compiles into the canonical Taste control packet
+
+Status: implemented as the claim-bearing interface; formal source data are not yet collected.
+
+Scientific-situation transfer is not a second controller. Its output can affect execution only
+after `compile_scientific_situation_control_packet` binds every admitted source fork to an existing
+grounded Taste case, at least two exact current-state facts, and a one-to-one mapping over the
+frozen target action menu. The compiler rejects post-selection action remapping, same-task
+precedents, menu drift, missing contributing evidence, and fewer than two grounded source task
+clusters. Any finding produces the ordinary zero-adjustment abstaining `TasteControlPacket`.
+Consequently local mechanism studies and external research trajectories consume the same typed
+treatment object and the controller's existing bounded adjustment path remains authoritative.
+
+Formal objective sources use `FormalObjectiveForkSituationCase`, not the legacy one-rollout
+development schema. Every action has at least three independently identified continuations on one
+registered utility scale; failed branches retain the preregistered intention-to-treat utility;
+action semantics, practical equivalence, and the scorer result are bound. Transfer estimates
+combine between-task variation with within-case replicate uncertainty, and formal mode refuses
+mixed utility or action contracts. Legacy min--max cases remain readable for development, but
+cannot satisfy the formal-source gate.

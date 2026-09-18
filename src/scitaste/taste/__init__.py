@@ -233,6 +233,12 @@ from scitaste.taste.semantic_models import (
     TasteTransferBoundary,
     validate_grounded_abstraction_against_projection,
 )
+from scitaste.taste.situation_transfer import (
+    ScientificActionSemanticBinding,
+    ScientificSituationControlCompilation,
+    ScientificSituationPrecedentBinding,
+    compile_scientific_situation_control_packet,
+)
 from scitaste.taste.trajectory_reconstruction import (
     TasteProcessEvidenceBinding,
     TasteProspectiveDecisionCompletionProjection,
@@ -335,8 +341,11 @@ __all__ = [
     "ReferenceSearchExecutionReceipt",
     "ReferenceSearchQuery",
     "ReferenceSearchRequestEvidence",
+    "ScientificActionSemanticBinding",
     "ScientificDecisionFamilyAssignment",
     "ScientificDecisionFamilyReview",
+    "ScientificSituationControlCompilation",
+    "ScientificSituationPrecedentBinding",
     "ScientificTasteDecisionFamily",
     "StageTasteCriticSuite",
     "TasteAbstractionInput",
@@ -431,6 +440,7 @@ __all__ = [
     "compile_prospective_taste_episode_v2",
     "compile_reference_mining_report",
     "compile_reference_quality_qualification",
+    "compile_scientific_situation_control_packet",
     "concretize_candidate_actions",
     "execute_reference_search",
     "fit_family_conditioned_lifecycle_taste_policy",

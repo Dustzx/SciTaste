@@ -403,6 +403,23 @@ source population for every candidate action, collapses repeated prefixes within
 and abstains when common support is absent; the earlier replay numbers are not retrospectively
 relabelled after this repair.
 
+The claim-bearing path now closes the previously separate implementation objects. Formal source
+forks use a replicate-level schema with at least three continuations per action, an explicit
+intention-to-treat utility for failed branches, a shared utility-contract identifier, frozen action
+semantics, and a practical-equivalence threshold. The transfer estimator exposes the matched and
+violated dimensions for every source case and combines within-fork sampling uncertainty with
+between-task variation. `require_formal_sources=true` refuses legacy one-rollout cases and mixed
+utility or action contracts.
+
+An objective transfer cannot act directly on the executor. It must compile through
+`compile_scientific_situation_control_packet`, which binds contributing source forks to grounded
+Taste cases, exact target facts, and one-to-one target action semantics. Missing bindings,
+post-selection remapping, same-task evidence, menu drift, or fewer than two grounded source task
+clusters produce an ordinary zero-effect abstaining `TasteControlPacket`. This makes the packet,
+rather than a diagnostic selector output or a free-form model rationale, the shared treatment for
+SciTasteBench and external trajectories. No existing development result is upgraded by this code
+change; the formal replicate population still has to be collected.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

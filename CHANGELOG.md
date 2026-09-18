@@ -20,6 +20,16 @@
 - Added full-context invariant-fact review and a boundary-only negative control to SciTasteBench
   construction. No current natural pair passed both views, so generated counterfactual utilities
   remain outside the formal benchmark.
+- Added a publication-scale SciTasteBench overview and a 30-proposal feasibility kill test. The
+  benchmark may scale only after atomicity, dual blind review, boundary-only shortcut, utility
+  robustness, and coverage gates pass; otherwise the reconstructed-pair route is redesigned or
+  replaced by scorer-owned executable forks rather than relaxed after review.
+- Added the formal objective-fork source contract: at least three continuations per action on one
+  registered utility scale, intention-to-treat failure values, frozen action semantics, practical
+  equivalence, and replicate-aware uncertainty. Legacy one-rollout forks remain development only.
+- Connected scientific-situation transfer to the existing `TasteControlPacket` through an explicit
+  fact and action-semantic compiler. Missing or inconsistent transfer evidence now becomes a
+  zero-adjustment packet abstention instead of a second untracked controller decision.
 
 ## 2026-09-16 — Prospective adaptive-allocation activation v2
 

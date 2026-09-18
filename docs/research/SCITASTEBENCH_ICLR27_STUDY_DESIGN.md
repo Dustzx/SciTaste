@@ -14,7 +14,7 @@ SciTasteBench is the mechanism instrument for the SciTaste method paper. It is
 not intended to make SciTasteBench itself the entire contribution, and it cannot
 establish end-to-end autonomous-research utility by itself.
 
-![SciTasteBench study design](../figures/scitastebench-study-design.svg)
+![SciTasteBench construction and causal evaluation](../figures/scitastebench-paper-overview.svg)
 
 ## The three questions the paper must answer
 
@@ -205,6 +205,40 @@ fact-by-context interaction rather than reaction to a highlighted fact.
 No formal split is opened until a new source-disjoint cohort passes this gate.
 The 13 rejected pairs and all API responses remain development provenance and
 will not be repaired into validation or hidden test.
+
+### Feasibility kill test before benchmark scaling
+
+The next benchmark action is not automatic expansion to 120 pairs. It is a bounded construction
+test on 30 newly selected, source-group-disjoint proposals: ten candidates on each primary axis,
+at least three candidates in each of the six operational contexts, at least three domains, and at
+least three proposed action-to-abstention boundaries. The proposals remain consumed development
+regardless of outcome. Constructor outputs, review order, and boundary-only controls are frozen
+before the independent reviews.
+
+Scaling is authorized only if all of the following preregistered gates pass:
+
+1. at least 12 of 30 proposals survive both deterministic validation and two independent,
+   pair-blinded construct reviews without editing after review;
+2. every survivor changes exactly one atomic fact, retains unchanged action semantics and
+   feasibility, contains no state contradiction, and names at least two invariant facts that both
+   reviewers say are necessary for the preference;
+3. reviewer agreement on admission and preferred action is reported on all 30 proposals, with
+   disagreement retained; AI reviewers used during this test remain proxy reviewers and do not
+   create a human- or expert-labelled claim;
+4. a frozen boundary-only chooser performs no better than its registered chance/abstention
+   baseline, while the full-context review exceeds the boundary-only result by at least 20
+   percentage points on admitted proposals;
+5. the preferred action is unchanged under equal component weights for at least 80% of survivors,
+   no preferred action is Pareto-dominated, and ambiguous/tied utilities produce abstention rather
+   than a forced label; and
+6. survivors cover all three primary axes and all six operational contexts. A zero cell is a
+   source-design failure, not permission to relabel another context.
+
+Failure of gates 1--5 kills the reconstructed-boundary-pair route for the ICLR submission and
+moves SciTasteBench's primary utility labels to scorer-owned executable forks. Failure only of gate
+6 triggers source-specific acquisition for the missing contexts; it does not justify collecting
+more undifferentiated peer-review records. Passing this test establishes construction feasibility,
+not method effectiveness and not final sample size.
 
 ### Consumed construction audit (not a result)
 
@@ -409,14 +443,16 @@ not credited as learning.
 
 ## External Auto Research evaluation
 
-At least one **peer-reviewed, community-owned external Auto Research benchmark**
+At least one **peer-reviewed, community-owned external end-to-end Auto Research benchmark**
 is mandatory. SciTaste already has two suitable accepted routes: MLRC-Bench and
-MLR-Bench were both accepted to the NeurIPS 2025 Datasets and Benchmarks Track.
-The minimum defensible ICLR portfolio therefore uses three complementary
-endpoints:
+MLR-Bench were both accepted to the NeurIPS 2025 Datasets and Benchmarks Track. AAAR-1.0 adds
+accepted component tasks, but cannot replace an end-to-end trajectory benchmark. The minimum
+defensible ICLR portfolio therefore separates component competence, local mechanism attribution,
+objective research progress, and final-package quality:
 
 | Evaluation | Endpoint | Primary comparison | Role |
 |---|---|---|---|
+| AAAR-1.0 (ICML 2025) | official equation-inference, experiment-design, and paper-weakness metrics | Full SciTaste, same-backbone Native Base, equal-context Raw/RAG | external component check; not evidence of complete autonomous research |
 | MLRC-Bench (NeurIPS 2025 D&B) | objective competition-score improvement and progress per GPU/API budget | Full SciTaste, same-backbone Native Base, equal-context Raw/RAG, official MLAB scaffold under the same research-agent model | accepted external benchmark, executable research, causal context control, and competitiveness |
 | MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, Raw/generic memory, official MLR-Agent | accepted external idea-to-paper evaluation |
 | SciTasteBench | paired regret, correct boundary reversal, abstention, and delayed-credit learning | Base, equal-token raw, Matched Taste, Mismatched Taste | internal mechanism attribution rather than external competitiveness |
@@ -457,6 +493,12 @@ three paired agent seeds are run unless a development-derived power calculation
 requires more; seed-level calls never inflate task count. Benchmark adapters may
 translate files and telemetry, but may not reimplement a blocked method or
 substitute a new scorer.
+
+The ordering is deliberate. AAAR can be run first because it is cheaper and checks whether the
+same frozen method improves recognized scientific subtasks. MLRC is the first claim-bearing
+end-to-end route because its scorer owns the objective. MLR-Bench then checks the broader
+idea-to-paper package. A positive AAAR score cannot authorize a paper claim when MLRC/MLR remain
+blank, and a positive self-authored SciTasteBench result cannot replace either external route.
 
 MLRC reports the official endpoint, normalized improvement over its supplied
 baseline, best-so-far score versus cumulative GPU/API cost, invalid-run rate,
@@ -511,6 +553,7 @@ self-validating. The smallest defensible external portfolio is:
 
 | Question | External route | Conditions | Primary evidence |
 |---|---|---|---|
+| Does Taste improve accepted scientific-reasoning subtasks? | official AAAR-1.0 tasks | Full, same-backbone Native Base, equal-context Raw/RAG | official subtask metrics, abstention, and cost |
 | Does Taste improve executable research on an accepted external benchmark? | all seven official MLRC-Bench tasks after one development task | Full, same-backbone Native Base, equal-context Raw/RAG, official MLAB; at least three paired seeds | objective score gain, cost curve, failures, and active-intervention mediation |
 | Does the complete research product improve on an accepted external benchmark? | ten frozen, source-disjoint MLR-Bench briefs | Full, Native Base, Raw/generic memory, official MLR-Agent | stagewise and final-package review with invalid-result accounting |
 | Does the broad claim transfer beyond ML research? | unchanged official ScienceAgentBench tasks spanning four disciplines | Full, Native Base, official agent baseline | execution success, program correctness, cost, and failure accounting |

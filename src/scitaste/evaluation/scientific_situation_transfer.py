@@ -13,6 +13,7 @@ support, agreement, or the best-action margin is inadequate.
 from __future__ import annotations
 
 import math
+from collections import Counter
 from enum import StrEnum
 from typing import Literal
 
@@ -69,6 +70,15 @@ class TerminalReadiness(StrEnum):
     READY = "ready"
 
 
+class ScientificSituationAxis(StrEnum):
+    HYPOTHESIS_STRUCTURE = "hypothesis_structure"
+    EVIDENCE_RELATION = "evidence_relation"
+    BOTTLENECK = "bottleneck"
+    IDENTIFIABILITY = "identifiability"
+    BUDGET_PRESSURE = "budget_pressure"
+    TERMINAL_READINESS = "terminal_readiness"
+
+
 class ScientificSituationEvidenceAnchor(BaseModel):
     """A short exact quote from one declared selector-visible field."""
 
@@ -76,6 +86,17 @@ class ScientificSituationEvidenceAnchor(BaseModel):
 
     field_id: str = Field(min_length=1, max_length=100)
     quote: str = Field(min_length=2, max_length=500)
+    supports_axes: tuple[ScientificSituationAxis, ...] = Field(
+        default=(),
+        max_length=6,
+        exclude_if=lambda value: not value,
+    )
+
+    @model_validator(mode="after")
+    def supported_axes_are_unique(self) -> ScientificSituationEvidenceAnchor:
+        if len(self.supports_axes) != len(set(self.supports_axes)):
+            raise ValueError("scientific-situation anchor axes must be unique")
+        return self
 
 
 class ScientificSituationProposal(BaseModel):
@@ -171,8 +192,41 @@ class ScientificSituation(BaseModel):
         )
 
 
+def validate_scientific_situation_grounding(
+    situation: ScientificSituation,
+    *,
+    visible_fields: dict[str, str],
+    require_all_axes: bool,
+) -> tuple[str, ...]:
+    """Check exact-span grounding against the outcome-hidden selector view.
+
+    Formal extraction must set ``require_all_axes``. Development artifacts may
+    keep older 2--6-anchor proposals, but cannot thereby claim axis-complete
+    grounding.
+    """
+
+    findings: list[str] = []
+    supported_axes: set[ScientificSituationAxis] = set()
+    for anchor in situation.anchors:
+        source = visible_fields.get(anchor.field_id)
+        if source is None:
+            findings.append(f"unknown-anchor-field:{anchor.field_id}")
+        elif anchor.quote not in source:
+            findings.append(f"non-exact-anchor:{anchor.field_id}")
+        supported_axes.update(anchor.supports_axes)
+    if require_all_axes:
+        missing = set(ScientificSituationAxis) - supported_axes
+        findings.extend(f"ungrounded-axis:{item.value}" for item in sorted(missing))
+    return tuple(sorted(set(findings)))
+
+
 class ObjectiveForkSituationCase(BaseModel):
-    """One source situation paired with scorer-owned branch utilities."""
+    """Legacy development source with one outcome per action.
+
+    These cases remain useful for falsification and interface development, but
+    they cannot support a formal effect claim because they contain neither
+    replicate-level uncertainty nor an intention-to-treat failure value.
+    """
 
     model_config = _CONFIG
 
@@ -198,6 +252,139 @@ class ObjectiveForkSituationCase(BaseModel):
         if any(not 0.0 <= item <= 1.0 for item in self.normalized_action_utilities.values()):
             raise ValueError("normalized objective-fork utilities must lie in [0, 1]")
         return self
+
+
+class ObjectiveForkReplicateOutcome(BaseModel):
+    """One independently seeded branch on a registered common utility scale."""
+
+    model_config = _CONFIG
+
+    action_id: str = Field(min_length=1)
+    replicate_id: str = Field(min_length=1)
+    executed: bool
+    objective_observed: bool
+    utility: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    failure_code: str | None = Field(default=None, min_length=1, max_length=500)
+    result_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def execution_status_is_closed(self) -> ObjectiveForkReplicateOutcome:
+        if self.objective_observed and not self.executed:
+            raise ValueError("an unexecuted branch cannot expose an objective outcome")
+        if self.objective_observed == (self.failure_code is not None):
+            raise ValueError(
+                "objective-fork replicate requires a failure code exactly when the "
+                "objective is unobserved"
+            )
+        return self
+
+
+class FormalObjectiveForkSituationCase(BaseModel):
+    """Scorer-owned source case admissible for confirmatory Taste transfer.
+
+    Unlike :class:`ObjectiveForkSituationCase`, this contract retains every
+    attempted branch, including failures, and requires repeated continuations
+    for every action.  Utilities are means on one registered task-family scale;
+    per-fork min--max normalization is forbidden.
+    """
+
+    model_config = _CONFIG
+
+    schema_version: Literal["2.0"] = "2.0"
+    study_id: str
+    task_cluster_id: str = Field(min_length=1)
+    situation: ScientificSituation
+    available_actions: tuple[str, ...] = Field(min_length=2)
+    utility_contract_id: str = Field(min_length=1)
+    action_semantics_sha256: str = Field(pattern=_SHA256)
+    practical_equivalence_tolerance: float = Field(
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )
+    intention_to_treat_failure_utility: float = Field(
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )
+    replicate_outcomes: tuple[ObjectiveForkReplicateOutcome, ...] = Field(min_length=6)
+    action_utility_estimates: dict[str, float] = Field(min_length=2)
+    result_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def formal_population_is_closed(self) -> FormalObjectiveForkSituationCase:
+        validate_entry_id(self.study_id, field_name="formal objective-fork study_id")
+        if self.study_id != self.situation.study_id:
+            raise ValueError("formal objective-fork case and situation study IDs differ")
+        if self.task_cluster_id != self.situation.task_cluster_id:
+            raise ValueError("formal objective-fork case and situation task clusters differ")
+        if self.available_actions != tuple(sorted(set(self.available_actions))):
+            raise ValueError("formal objective-fork actions must be sorted and unique")
+        if set(self.action_utility_estimates) != set(self.available_actions):
+            raise ValueError("formal objective-fork estimates must cover every action")
+        replicate_ids = [item.replicate_id for item in self.replicate_outcomes]
+        if len(replicate_ids) != len(set(replicate_ids)):
+            raise ValueError("formal objective-fork replicate IDs must be unique")
+        counts = Counter(item.action_id for item in self.replicate_outcomes)
+        if set(counts) != set(self.available_actions) or any(
+            count < 3 for count in counts.values()
+        ):
+            raise ValueError(
+                "formal objective-fork cases require at least three replicates per action"
+            )
+        for outcome in self.replicate_outcomes:
+            if outcome.action_id not in self.available_actions:
+                raise ValueError("formal objective-fork replicate uses an unknown action")
+            if (
+                not outcome.objective_observed
+                and abs(outcome.utility - self.intention_to_treat_failure_utility) > 1e-9
+            ):
+                raise ValueError(
+                    "failed formal branches must retain the registered intention-to-treat utility"
+                )
+        for action in self.available_actions:
+            utilities = [
+                item.utility for item in self.replicate_outcomes if item.action_id == action
+            ]
+            mean = sum(utilities) / len(utilities)
+            if abs(mean - self.action_utility_estimates[action]) > 1e-9:
+                raise ValueError(
+                    "formal objective-fork action estimate differs from its replicate mean"
+                )
+        return self
+
+    def action_sampling_variance(self, action_id: str) -> tuple[float, int]:
+        """Return the within-case variance and replicate count for one action."""
+
+        values = [item.utility for item in self.replicate_outcomes if item.action_id == action_id]
+        if len(values) < 2:
+            return 0.0, len(values)
+        mean = sum(values) / len(values)
+        return sum((value - mean) ** 2 for value in values) / (len(values) - 1), len(values)
+
+
+ScientificSituationSourceCase = ObjectiveForkSituationCase | FormalObjectiveForkSituationCase
+
+
+def _source_actions(source: ScientificSituationSourceCase) -> set[str]:
+    if isinstance(source, FormalObjectiveForkSituationCase):
+        return set(source.available_actions)
+    return set(source.normalized_action_utilities)
+
+
+def _source_utility(source: ScientificSituationSourceCase, action_id: str) -> float:
+    if isinstance(source, FormalObjectiveForkSituationCase):
+        return source.action_utility_estimates[action_id]
+    return source.normalized_action_utilities[action_id]
+
+
+def _source_sampling_variance(
+    source: ScientificSituationSourceCase,
+    action_id: str,
+) -> tuple[float, int]:
+    if isinstance(source, FormalObjectiveForkSituationCase):
+        return source.action_sampling_variance(action_id)
+    return 0.0, 1
 
 
 class ScientificSituationTransferThresholds(BaseModel):
@@ -230,6 +417,10 @@ class ScientificSituationTransferThresholds(BaseModel):
         le=1.0,
         allow_inf_nan=False,
     )
+    require_formal_sources: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+    )
 
 
 class ScientificSituationActionEstimate(BaseModel):
@@ -242,6 +433,52 @@ class ScientificSituationActionEstimate(BaseModel):
     effective_support: float = Field(gt=0, allow_inf_nan=False)
     maximum_source_similarity: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
     contributing_case_ids: tuple[str, ...] = Field(min_length=1)
+    contributing_task_cluster_count: int = Field(
+        default=1,
+        ge=1,
+        exclude_if=lambda value: value == 1,
+    )
+    minimum_replicates_per_case: int = Field(
+        default=1,
+        ge=1,
+        exclude_if=lambda value: value == 1,
+    )
+    replicate_aware_uncertainty: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+    )
+
+
+class ScientificSituationBoundaryAssessment(BaseModel):
+    """Explicit transfer boundary between one source and the target situation."""
+
+    model_config = _CONFIG
+
+    source_case_id: str
+    source_task_cluster_id: str = Field(min_length=1)
+    similarity: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    satisfied_dimensions: tuple[str, ...] = Field(max_length=6)
+    violated_dimensions: tuple[str, ...] = Field(max_length=6)
+
+    @model_validator(mode="after")
+    def dimensions_partition_the_contract(self) -> ScientificSituationBoundaryAssessment:
+        expected = {
+            "hypothesis_structure",
+            "evidence_relation",
+            "bottleneck",
+            "identifiability",
+            "budget_pressure",
+            "terminal_readiness",
+        }
+        satisfied = set(self.satisfied_dimensions)
+        violated = set(self.violated_dimensions)
+        if satisfied & violated or satisfied | violated != expected:
+            raise ValueError("scientific-situation boundary dimensions must form a partition")
+        if self.satisfied_dimensions != tuple(sorted(satisfied)):
+            raise ValueError("satisfied boundary dimensions must be sorted and unique")
+        if self.violated_dimensions != tuple(sorted(violated)):
+            raise ValueError("violated boundary dimensions must be sorted and unique")
+        return self
 
 
 class ScientificSituationTransferDecision(BaseModel):
@@ -254,6 +491,10 @@ class ScientificSituationTransferDecision(BaseModel):
     target_situation_sha256: str = Field(pattern=_SHA256)
     excluded_same_cluster_case_ids: tuple[str, ...] = ()
     estimates: tuple[ScientificSituationActionEstimate, ...] = ()
+    source_boundary_assessments: tuple[ScientificSituationBoundaryAssessment, ...] = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+    )
     selected_action: str | None = Field(default=None, min_length=1)
     abstained: bool
     abstention_reasons: tuple[str, ...] = ()
@@ -279,6 +520,13 @@ class ScientificSituationTransferDecision(BaseModel):
             )
         ):
             raise ValueError("action estimates must be ordered by utility then action ID")
+        boundary_ids = [item.source_case_id for item in self.source_boundary_assessments]
+        if len(boundary_ids) != len(set(boundary_ids)):
+            raise ValueError("source boundary assessments must cover unique cases")
+        if self.source_boundary_assessments != tuple(
+            sorted(self.source_boundary_assessments, key=lambda item: item.source_case_id)
+        ):
+            raise ValueError("source boundary assessments must be ordered by case ID")
         if not self.estimates and not self.abstained:
             raise ValueError("a transfer decision without estimates must abstain")
         if self.selected_action is not None and self.selected_action != self.estimates[0].action_id:
@@ -475,12 +723,38 @@ def scientific_situation_similarity(
     return sum(weight for matched, weight in components if matched)
 
 
+def assess_scientific_situation_boundary(
+    source: ScientificSituationSourceCase,
+    target: ScientificSituation,
+) -> ScientificSituationBoundaryAssessment:
+    """Expose the exact matched and violated axes behind one transfer weight."""
+
+    dimensions = {
+        "hypothesis_structure": source.situation.hypothesis_structure
+        == target.hypothesis_structure,
+        "evidence_relation": source.situation.evidence_relation == target.evidence_relation,
+        "bottleneck": source.situation.bottleneck == target.bottleneck,
+        "identifiability": source.situation.identifiability == target.identifiability,
+        "budget_pressure": source.situation.budget_pressure == target.budget_pressure,
+        "terminal_readiness": source.situation.terminal_readiness == target.terminal_readiness,
+    }
+    return ScientificSituationBoundaryAssessment(
+        source_case_id=source.study_id,
+        source_task_cluster_id=source.task_cluster_id,
+        similarity=scientific_situation_similarity(source.situation, target),
+        satisfied_dimensions=tuple(sorted(key for key, matched in dimensions.items() if matched)),
+        violated_dimensions=tuple(
+            sorted(key for key, matched in dimensions.items() if not matched)
+        ),
+    )
+
+
 def scientific_situation_candidate_precedents(
     *,
     target: ScientificSituation,
-    sources: tuple[ObjectiveForkSituationCase, ...],
+    sources: tuple[ScientificSituationSourceCase, ...],
     maximum_precedents: int = 6,
-) -> tuple[ObjectiveForkSituationCase, ...]:
+) -> tuple[ScientificSituationSourceCase, ...]:
     """Select the most similar cross-task cases without consulting target outcomes."""
 
     if not 2 <= maximum_precedents <= 12:
@@ -502,7 +776,7 @@ def scientific_situation_candidate_precedents(
 def admit_scientific_situation_model_proposal(
     *,
     target: ScientificSituation,
-    candidates: tuple[ObjectiveForkSituationCase, ...],
+    candidates: tuple[ScientificSituationSourceCase, ...],
     proposal: ScientificSituationModelTransferProposal,
     available_actions: set[str],
     request_fingerprint: str,
@@ -538,15 +812,15 @@ def admit_scientific_situation_model_proposal(
     unknown_precedents = set(proposal.used_precedent_ids) - set(candidate_by_id)
     if unknown_precedents:
         reasons.append("unknown-precedent-citation")
-    used_ids = tuple(
-        item for item in proposal.used_precedent_ids if item in candidate_by_id
-    )
+    used_ids = tuple(item for item in proposal.used_precedent_ids if item in candidate_by_id)
     used = [candidate_by_id[item] for item in used_ids]
     if len({item.task_cluster_id for item in used}) < minimum_used_task_clusters:
         reasons.append("insufficient-source-task-diversity")
-    if used and min(
-        scientific_situation_similarity(item.situation, target) for item in used
-    ) < minimum_used_precedent_similarity:
+    if (
+        used
+        and min(scientific_situation_similarity(item.situation, target) for item in used)
+        < minimum_used_precedent_similarity
+    ):
         reasons.append("cited-precedent-outside-transfer-boundary")
     if not used:
         reasons.append("no-outcome-grounded-precedent-cited")
@@ -573,7 +847,7 @@ def admit_scientific_situation_model_proposal(
 def select_by_scientific_situation(
     *,
     target: ScientificSituation,
-    sources: tuple[ObjectiveForkSituationCase, ...],
+    sources: tuple[ScientificSituationSourceCase, ...],
     available_actions: set[str],
     thresholds: ScientificSituationTransferThresholds,
 ) -> ScientificSituationTransferDecision:
@@ -584,9 +858,7 @@ def select_by_scientific_situation(
     same_cluster = tuple(
         sorted(item.study_id for item in sources if item.task_cluster_id == target.task_cluster_id)
     )
-    eligible = tuple(
-        item for item in sources if item.task_cluster_id != target.task_cluster_id
-    )
+    eligible = tuple(item for item in sources if item.task_cluster_id != target.task_cluster_id)
     if not eligible:
         raise ValueError("scientific-situation transfer requires cross-task precedents")
 
@@ -594,16 +866,40 @@ def select_by_scientific_situation(
     # action can appear strongest merely because its failed/missing branches were
     # silently omitted, while another action is averaged over a harder subset.
     common_support = tuple(
-        item
-        for item in eligible
-        if available_actions.issubset(item.normalized_action_utilities)
+        item for item in eligible if available_actions.issubset(_source_actions(item))
     )
+    if thresholds.require_formal_sources:
+        common_support = tuple(
+            item for item in common_support if isinstance(item, FormalObjectiveForkSituationCase)
+        )
+        utility_contract_ids = {item.utility_contract_id for item in common_support}
+        action_semantics = {item.action_semantics_sha256 for item in common_support}
+        if len(utility_contract_ids) > 1 or len(action_semantics) > 1:
+            boundaries = tuple(
+                sorted(
+                    (assess_scientific_situation_boundary(item, target) for item in common_support),
+                    key=lambda item: item.source_case_id,
+                )
+            )
+            return ScientificSituationTransferDecision.create(
+                target_study_id=target.study_id,
+                target_situation_sha256=target.situation_sha256,
+                excluded_same_cluster_case_ids=same_cluster,
+                estimates=(),
+                source_boundary_assessments=boundaries,
+                selected_action=None,
+                abstained=True,
+                abstention_reasons=("incompatible-formal-utility-or-action-contracts",),
+                best_action_margin=0.0,
+                outcome_grounded_source_count=len(common_support),
+            )
     if not common_support:
         return ScientificSituationTransferDecision.create(
             target_study_id=target.study_id,
             target_situation_sha256=target.situation_sha256,
             excluded_same_cluster_case_ids=same_cluster,
             estimates=(),
+            source_boundary_assessments=(),
             selected_action=None,
             abstained=True,
             abstention_reasons=("no-common-action-support",),
@@ -611,56 +907,85 @@ def select_by_scientific_situation(
             outcome_grounded_source_count=0,
         )
 
+    boundary_assessments = tuple(
+        sorted(
+            (assess_scientific_situation_boundary(item, target) for item in common_support),
+            key=lambda item: item.source_case_id,
+        )
+    )
+
     estimates: list[ScientificSituationActionEstimate] = []
     for action in sorted(available_actions):
-        weighted_by_cluster: dict[str, list[tuple[float, float, str, float]]] = {}
+        weighted_by_cluster: dict[
+            str,
+            list[tuple[float, float, str, float, float, int]],
+        ] = {}
         for source in common_support:
             similarity = scientific_situation_similarity(source.situation, target)
             if similarity < thresholds.minimum_source_similarity:
                 continue
             weight = similarity * similarity
+            sampling_variance, replicate_count = _source_sampling_variance(source, action)
             weighted_by_cluster.setdefault(source.task_cluster_id, []).append(
-                (weight, source.normalized_action_utilities[action], source.study_id, similarity)
+                (
+                    weight,
+                    _source_utility(source, action),
+                    source.study_id,
+                    similarity,
+                    sampling_variance,
+                    replicate_count,
+                )
             )
         contributing_case_ids = tuple(
             sorted(
-                case_id
-                for rows in weighted_by_cluster.values()
-                for _, _, case_id, _ in rows
+                case_id for rows in weighted_by_cluster.values() for _, _, case_id, _, _, _ in rows
             )
         )
         # Repeated prefixes from one task are correlated. Collapse them to one
         # task-cluster contribution before estimating transfer uncertainty.
-        weighted: list[tuple[float, float, str, float]] = []
+        weighted: list[tuple[float, float, str, float, float, int]] = []
         for task_cluster_id, rows in sorted(weighted_by_cluster.items()):
             cluster_weight = sum(item[0] for item in rows)
             cluster_value = sum(item[0] * item[1] for item in rows) / cluster_weight
+            cluster_sampling_variance = sum(
+                item[0] * item[0] * item[4] / item[5] for item in rows
+            ) / (cluster_weight * cluster_weight)
             weighted.append(
                 (
                     max(item[0] for item in rows),
                     cluster_value,
                     task_cluster_id,
                     max(item[3] for item in rows),
+                    cluster_sampling_variance,
+                    min(item[5] for item in rows),
                 )
             )
         if not weighted:
             continue
         total_weight = sum(item[0] for item in weighted)
-        mean = sum(weight * value for weight, value, _, _ in weighted) / total_weight
-        variance = sum(
-            weight * (value - mean) ** 2 for weight, value, _, _ in weighted
-        ) / total_weight
+        mean = sum(weight * value for weight, value, _, _, _, _ in weighted) / total_weight
+        variance = (
+            sum(weight * (value - mean) ** 2 for weight, value, _, _, _, _ in weighted)
+            / total_weight
+        )
         effective = total_weight * total_weight / sum(item[0] ** 2 for item in weighted)
         deviation = math.sqrt(max(variance, 0.0))
+        sampling_variance_of_mean = sum(
+            weight * weight * within_variance for weight, _, _, _, within_variance, _ in weighted
+        ) / (total_weight * total_weight)
+        standard_error = math.sqrt(max(variance / effective + sampling_variance_of_mean, 0.0))
         estimates.append(
             ScientificSituationActionEstimate(
                 action_id=action,
                 expected_normalized_utility=min(max(mean, 0.0), 1.0),
                 weighted_standard_deviation=min(max(deviation, 0.0), 1.0),
-                standard_error=min(max(deviation / math.sqrt(effective), 0.0), 1.0),
+                standard_error=min(max(standard_error, 0.0), 1.0),
                 effective_support=effective,
                 maximum_source_similarity=max(item[3] for item in weighted),
                 contributing_case_ids=contributing_case_ids,
+                contributing_task_cluster_count=len(weighted),
+                minimum_replicates_per_case=min(item[5] for item in weighted),
+                replicate_aware_uncertainty=all(item[5] >= 3 for item in weighted),
             )
         )
     if not estimates:
@@ -669,6 +994,7 @@ def select_by_scientific_situation(
             target_situation_sha256=target.situation_sha256,
             excluded_same_cluster_case_ids=same_cluster,
             estimates=(),
+            source_boundary_assessments=boundary_assessments,
             selected_action=None,
             abstained=True,
             abstention_reasons=("no-similar-common-action-support",),
@@ -694,6 +1020,16 @@ def select_by_scientific_situation(
         reasons.append("insufficient-effective-support")
     if margin < thresholds.minimum_action_margin:
         reasons.append("insufficient-action-margin")
+    if thresholds.require_formal_sources:
+        formal_tolerance = max(
+            item.practical_equivalence_tolerance
+            for item in common_support
+            if isinstance(item, FormalObjectiveForkSituationCase)
+        )
+        if margin <= formal_tolerance:
+            reasons.append("margin-within-practical-equivalence")
+        if not best.replicate_aware_uncertainty:
+            reasons.append("non-replicate-aware-uncertainty")
     if best.standard_error > thresholds.maximum_standard_error:
         reasons.append("excessive-transfer-uncertainty")
     return ScientificSituationTransferDecision.create(
@@ -701,6 +1037,7 @@ def select_by_scientific_situation(
         target_situation_sha256=target.situation_sha256,
         excluded_same_cluster_case_ids=same_cluster,
         estimates=ordered,
+        source_boundary_assessments=boundary_assessments,
         selected_action=None if reasons else best.action_id,
         abstained=bool(reasons),
         abstention_reasons=tuple(reasons),
@@ -712,12 +1049,16 @@ def select_by_scientific_situation(
 __all__ = [
     "BudgetPressure",
     "EvidenceRelation",
+    "FormalObjectiveForkSituationCase",
     "HypothesisStructure",
     "IdentifiabilityBand",
+    "ObjectiveForkReplicateOutcome",
     "ObjectiveForkSituationCase",
     "ScientificBottleneck",
     "ScientificSituation",
     "ScientificSituationActionEstimate",
+    "ScientificSituationAxis",
+    "ScientificSituationBoundaryAssessment",
     "ScientificSituationEvidenceAnchor",
     "ScientificSituationModelActionScore",
     "ScientificSituationModelTransferDecision",
@@ -727,8 +1068,10 @@ __all__ = [
     "ScientificSituationTransferThresholds",
     "TerminalReadiness",
     "admit_scientific_situation_model_proposal",
+    "assess_scientific_situation_boundary",
     "normalize_objective_fork_utilities",
     "scientific_situation_candidate_precedents",
     "scientific_situation_similarity",
     "select_by_scientific_situation",
+    "validate_scientific_situation_grounding",
 ]
