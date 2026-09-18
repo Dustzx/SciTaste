@@ -1,0 +1,22 @@
+schema_version: "1.0"
+control_id: scitastebench-aries-axis-boundary-cue-qwen-v1
+project_id: scitaste-self-development
+pair_packages:
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-axis-direction-pairs-v1/PACKAGE.json
+    sha256: 2770e73e218e2d1e1b2ba5553b49ca432945e6da330519665a35cd729e0505a5
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-axis-information-pairs-v1/PACKAGE.json
+    sha256: ceaffd6029cccf35d69f01e7838940516e0346ffe00a9990027393b0355bbd77
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-axis-inference-pairs-v1/PACKAGE.json
+    sha256: 87da0c9bff77f8eae64aa00a2c9258eab81715246f8c7e72246c447680051719
+pair_selection_policy: first-package-wins-by-pair-id
+chooser_backend:
+  locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+  sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+chooser_provider: bailian
+chooser_model: qwen3.8-max
+batch_size: 7
+seed: 20271005
+invariant_context_visible: false
+expected_pair_labels_visible: false
+admission_policy: reject-if-both-registered-labels-recovered
+formal_split_opened: false

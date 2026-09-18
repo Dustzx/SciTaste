@@ -1,0 +1,20 @@
+schema_version: "1.0"
+control_id: scitastebench-aries-grounded-boundary-cue-qwen-v3
+project_id: scitaste-self-development
+pair_packages:
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-grounded-information-pairs-v3/PACKAGE.json
+    sha256: ae465bf97c98433c68a8e7a680283b075dc83a38fd2ceeed4c803290cbb1641b
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-grounded-inference-pairs-v3/PACKAGE.json
+    sha256: 54a8db6dd628a71019135b65b4021e57b599554febfed7bceec324ac12218afb
+pair_selection_policy: first-package-wins-by-pair-id
+chooser_backend:
+  locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+  sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+chooser_provider: bailian
+chooser_model: qwen3.8-max
+batch_size: 8
+seed: 20271031
+invariant_context_visible: false
+expected_pair_labels_visible: false
+admission_policy: reject-if-both-registered-labels-recovered
+formal_split_opened: false

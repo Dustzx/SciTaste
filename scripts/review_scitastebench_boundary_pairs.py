@@ -91,6 +91,7 @@ class PairReviewProposal(BaseModel):
     abstention_explicitly_considered: bool
     utility_components_defensible: bool
     cue_shortcut_resistant: bool
+    decision_relevant_invariant_facts: tuple[str, ...] = ()
     state_1_selection_id: str | None = Field(default=None, min_length=1)
     state_1_should_abstain: bool = False
     state_2_selection_id: str | None = Field(default=None, min_length=1)
@@ -114,6 +115,12 @@ class PairReviewProposal(BaseModel):
             raise ValueError("a valid construct cannot carry rejection codes")
         if not self.construct_valid and not self.rejection_codes:
             raise ValueError("an invalid construct requires at least one rejection code")
+        if len(self.decision_relevant_invariant_facts) != len(
+            set(self.decision_relevant_invariant_facts)
+        ):
+            raise ValueError("decision-relevant invariant facts must be unique")
+        if self.construct_valid and len(self.decision_relevant_invariant_facts) < 2:
+            raise ValueError("a valid construct must require at least two invariant facts")
         return self
 
 
@@ -191,7 +198,9 @@ For each pair:
    vectors and aggregation contract make the ordering defensible.
 5. Reject items solvable by a shallow word-to-action rule (for example observed/not observed maps
    directly to retain/rephrase) without integrating scientific evidence. A boundary cue can be
-   present, but the correct decision must require its interaction with other invariant facts.
+   present, but the correct decision must require its interaction with other invariant facts. For a
+   valid construct, return at least two verbatim entries from declared_invariant_facts in
+   decision_relevant_invariant_facts; each must be necessary to justify the selections.
 6. A construct is valid only when all checks above pass, ambiguity is not high, and the one fact
    produces a defensible action or action/abstention reversal.
 7. Use concise rejection codes such as COMPOUND_CHANGE, CONTEXT_CONTRADICTION,
@@ -293,6 +302,7 @@ def _request(
 def _validate_review(
     proposal: PairReviewProposal,
     pair: BoundaryCounterfactualPair,
+    order: tuple[str, str],
 ) -> list[str]:
     action_ids = {action.action_id for action in pair.candidate_actions}
     errors: list[str] = []
@@ -323,6 +333,12 @@ def _validate_review(
             errors.append("valid-review-denies-utility-components")
         if not proposal.cue_shortcut_resistant:
             errors.append("valid-review-allows-cue-shortcut")
+        declared = set(pair.invariant_facts)
+        cited = set(proposal.decision_relevant_invariant_facts)
+        if len(cited) < 2:
+            errors.append("valid-review-cites-fewer-than-two-invariant-facts")
+        if not cited <= declared:
+            errors.append("valid-review-cites-unregistered-invariant-fact")
         if proposal.natural_source_state in {
             NaturalSourceState.NEITHER,
             NaturalSourceState.BOTH,
@@ -331,6 +347,20 @@ def _validate_review(
             errors.append("valid-review-does-not-ground-natural-state")
         if proposal.ambiguity is Ambiguity.HIGH:
             errors.append("valid-review-has-high-ambiguity")
+        submitted = {
+            order[0]: (
+                proposal.state_1_selection_id,
+                proposal.state_1_should_abstain,
+            ),
+            order[1]: (
+                proposal.state_2_selection_id,
+                proposal.state_2_should_abstain,
+            ),
+        }
+        if submitted["base"] != (pair.base.preferred_action_id, pair.base.should_abstain):
+            errors.append("valid-review-base-label-disagreement")
+        if submitted["twin"] != (pair.twin.preferred_action_id, pair.twin.should_abstain):
+            errors.append("valid-review-twin-label-disagreement")
     return errors
 
 
@@ -365,7 +395,18 @@ def _normalize_review_payload(
             )
         codes = review.get("rejection_codes")
         if not isinstance(codes, list):
-            continue
+            codes = []
+            review["rejection_codes"] = codes
+            corrections.append(
+                {
+                    "request_id": request_id,
+                    "pair_id": str(review.get("pair_id", "")),
+                    "field": "rejection_codes",
+                    "observed": "missing-or-non-list",
+                    "replacement": "empty-list-before-fail-closed-consistency-check",
+                    "authority": "bounded-review-envelope-normalization-v1",
+                }
+            )
         for state in ("state_1", "state_2"):
             selection_key = f"{state}_selection_id"
             abstain_key = f"{state}_should_abstain"
@@ -494,8 +535,8 @@ def main() -> int:
         if observed_ids != expected_ids:
             raise ValueError(f"reviewer changed pair order in batch {batch_number}")
         for pair, proposal in zip(batch_pairs, proposal_batch.reviews, strict=True):
-            deterministic_errors = _validate_review(proposal, pair)
             order = orders[pair.pair_id]
+            deterministic_errors = _validate_review(proposal, pair, order)
             selections = {
                 order[0]: {
                     "selection_id": proposal.state_1_selection_id,
@@ -523,6 +564,9 @@ def main() -> int:
                     "proposal": proposal.model_dump(mode="json"),
                     "deterministic_protocol_errors": deterministic_errors,
                     "protocol_valid": not deterministic_errors,
+                    "registered_label_agreement": not any(
+                        "label-disagreement" in error for error in deterministic_errors
+                    ),
                     "request_fingerprint": request.fingerprint,
                     "response_sha256": response.raw_response_sha256,
                 }

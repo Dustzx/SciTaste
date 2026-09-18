@@ -63,7 +63,7 @@ class CandidateSelection(BaseModel):
 class BoundaryConstructionConfig(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     construction_id: str = Field(min_length=1)
     project_id: str = Field(min_length=1)
     evidence_role: Literal["consumed-development-only"]
@@ -98,8 +98,8 @@ class BoundaryConstructionConfig(BaseModel):
                 raise ValueError("boundary construction must cover all decision contexts")
             if any(value != self.target_pairs_per_context for value in counts.values()):
                 raise ValueError("boundary construction is not balanced by decision context")
-        if self.schema_version == "1.1" and self.utility_contract is None:
-            raise ValueError("boundary construction 1.1 requires a utility contract")
+        if self.schema_version in {"1.1", "1.2"} and self.utility_contract is None:
+            raise ValueError("boundary construction 1.1+ requires a utility contract")
         if self.schema_version == "1.0" and self.utility_contract is not None:
             raise ValueError("legacy boundary construction cannot carry a utility contract")
         return self
@@ -125,6 +125,16 @@ class StatePreferenceProposal(BaseModel):
     utility_rationale: dict[str, str]
 
 
+class NeutralizedSourceSpan(BaseModel):
+    """Exact source prose excluded because it asserts the natural boundary value."""
+
+    model_config = _CONFIG
+
+    source_field: Literal["article_title", "reviewed_abstract", "predecision_review_context"]
+    exact_text: str = Field(min_length=12, max_length=4_000)
+    asserted_value: Literal["base"] = "base"
+
+
 class PairProposal(BaseModel):
     model_config = _CONFIG
 
@@ -134,6 +144,13 @@ class PairProposal(BaseModel):
     shared_decision_context: str | None = Field(default=None, max_length=30_000)
     candidate_actions: tuple[ResearchAction, ...] = ()
     invariant_facts: tuple[str, ...] = ()
+    required_invariant_facts: tuple[str, ...] = ()
+    neutralized_source_spans: tuple[NeutralizedSourceSpan, ...] = ()
+    boundary_only_insufficient_reason: str | None = Field(
+        default=None,
+        min_length=30,
+        max_length=4_000,
+    )
     changed_fact: FactProposal | None = None
     flip_kind: BoundaryFlipKind | None = None
     base: StatePreferenceProposal | None = None
@@ -147,6 +164,7 @@ class PairProposal(BaseModel):
             self.flip_kind,
             self.base,
             self.twin,
+            self.boundary_only_insufficient_reason,
         )
         if self.admitted:
             if self.rejection_reason is not None or not all(item is not None for item in payload):
@@ -155,6 +173,11 @@ class PairProposal(BaseModel):
                 raise ValueError("admitted pair proposal requires 2--5 actions")
             if len(self.invariant_facts) < 2:
                 raise ValueError("admitted pair proposal requires at least two invariant facts")
+            span_keys = [
+                (item.source_field, item.exact_text) for item in self.neutralized_source_spans
+            ]
+            if len(span_keys) != len(set(span_keys)):
+                raise ValueError("neutralized source spans must be unique")
         elif self.rejection_reason is None:
             raise ValueError("rejected pair proposal requires a reason")
         return self
@@ -213,7 +236,9 @@ Hard requirements for an admitted pair:
 1. Write one shared_decision_context that is faithful to the supplied abstract, review, and atomic
    question but does not state, presuppose, or paraphrase either value of the changed fact. Read the
    completed base and twin contexts back separately; reject the item if any retained sentence
-   contradicts either state.
+   contradicts either state. Copy every source sentence or clause that had to be excluded for this
+   reason verbatim into neutralized_source_spans with its source field. At least one exact source
+   span is required; do not invent or paraphrase a span.
 2. Register exactly one atomic scientific fact with a base value grounded in the supplied record and
    one hypothetical twin value. Do not change sample size and effect direction together; do not
    smuggle several observations into one fact.
@@ -231,10 +256,17 @@ Hard requirements for an admitted pair:
    benefit-minus-cost weights. The preferred action must uniquely maximize that scalar; abstain only
    when every action is at or below the contract's commitment threshold.
 6. List at least two concrete invariant facts. Do not use author, venue prestige, or the hidden
-   later response. Do not infer facts absent from the input.
+   later response. Do not infer facts absent from the input. Copy at least two into
+   required_invariant_facts because they are jointly necessary for the registered reversal. Every
+   required_invariant_facts entry MUST be one exact verbatim substring that appears unchanged both
+   in a supplied source field and in shared_decision_context. Repeat the identical string; do not
+   summarize, translate, or change punctuation. Use a shorter exact source clause when needed.
 7. Prefer decisions in which the changed fact must interact with invariant scientific evidence.
    Reject pairs solvable by a shallow cue rule such as present/absent -> retain/rephrase. Include
-   action-to-abstention pairs when the visible evidence does not uniquely justify any action.
+   action-to-abstention pairs when the visible evidence does not uniquely justify any action. In
+   boundary_only_insufficient_reason, explain why the fact values plus action names and budget do
+   not identify either registered label without the required invariant facts. If that explanation
+   is not defensible, reject the candidate.
 8. Return exactly one proposal per input candidate, in the same order. Reject honestly when no
    defensible single-fact reversal can be formed.
 
@@ -295,7 +327,10 @@ def _normalize_output_payload(
     proposals = normalized.get("proposals")
     if not isinstance(proposals, list):
         return normalized, []
-    aliases = {"REPORT": "WRITE"}
+    aliases = {
+        "REPORT": "WRITE",
+        "RETAIN_CLAIM": "CITE_EXISTING_EVIDENCE",
+    }
     corrections: list[dict[str, str]] = []
     for proposal in proposals:
         if not isinstance(proposal, dict):
@@ -589,6 +624,59 @@ def _recompute_utility_scalars(
     return proposal.model_copy(update=updates), corrections, None
 
 
+def _normalized_text(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
+def _construction_gate_rejection(
+    proposal: PairProposal,
+    source: dict[str, JsonValue],
+) -> str | None:
+    """Fail closed when fact neutralization or context interaction is not inspectable."""
+
+    if not proposal.admitted:
+        return None
+    assert proposal.shared_decision_context is not None
+    assert proposal.changed_fact is not None
+    if len(proposal.required_invariant_facts) < 2:
+        return "fewer than two interacting invariant facts were registered"
+    if not set(proposal.required_invariant_facts) <= set(proposal.invariant_facts):
+        return "required invariant facts are outside the invariant fact list"
+    if not proposal.neutralized_source_spans:
+        return "no exact source-span neutralization was registered"
+    if proposal.boundary_only_insufficient_reason is None:
+        return "boundary-only insufficiency was not explained"
+    shared = _normalized_text(proposal.shared_decision_context)
+    source_texts = [
+        _normalized_text(str(source[field]))
+        for field in ("article_title", "reviewed_abstract", "predecision_review_context")
+        if isinstance(source.get(field), str)
+    ]
+    for fact in proposal.required_invariant_facts:
+        normalized_fact = _normalized_text(fact)
+        if normalized_fact not in shared:
+            return "a required invariant fact is not visible verbatim in shared context"
+        if not any(normalized_fact in source_text for source_text in source_texts):
+            return "a required invariant fact is not grounded verbatim in a source field"
+    for span in proposal.neutralized_source_spans:
+        source_value = source.get(span.source_field)
+        if not isinstance(source_value, str):
+            return f"neutralized source field is unavailable: {span.source_field}"
+        normalized_span = _normalized_text(span.exact_text)
+        if normalized_span not in _normalized_text(source_value):
+            return "a neutralized source span is not an exact source substring"
+        if normalized_span in shared:
+            return "a neutralized source span remains in shared context"
+    for value in (
+        proposal.changed_fact.base_value,
+        proposal.changed_fact.twin_value,
+    ):
+        normalized_value = _normalized_text(value)
+        if len(normalized_value) >= 12 and normalized_value in shared:
+            return "shared context repeats a registered boundary value"
+    return None
+
+
 def _write(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
@@ -693,13 +781,48 @@ def main() -> int:
         expected_ids = [item.intake_candidate_id for item in selections]
         observed_ids = [item.intake_candidate_id for item in proposal_batch.proposals]
         if observed_ids != expected_ids:
-            raise ValueError(f"constructor changed candidate order in batch {batch_number}")
-        for selection, proposal in zip(selections, proposal_batch.proposals, strict=True):
+            if not args.allow_partial:
+                raise ValueError(f"constructor changed candidate order in batch {batch_number}")
+            if len(observed_ids) != len(set(observed_ids)) or not set(observed_ids) <= set(
+                expected_ids
+            ):
+                raise ValueError(f"constructor returned invalid identities in batch {batch_number}")
+            retained_order = [item for item in expected_ids if item in set(observed_ids)]
+            if observed_ids != retained_order:
+                raise ValueError(
+                    f"constructor reordered retained candidates in batch {batch_number}"
+                )
+            for missing_id in [item for item in expected_ids if item not in set(observed_ids)]:
+                rejections.append(
+                    {
+                        "intake_candidate_id": missing_id,
+                        "reason": "constructor response omitted candidate; no retry performed",
+                    }
+                )
+        selection_by_id = {item.intake_candidate_id: item for item in selections}
+        for proposal in proposal_batch.proposals:
+            selection = selection_by_id[proposal.intake_candidate_id]
             if not proposal.admitted:
                 rejections.append(
                     {
                         "intake_candidate_id": proposal.intake_candidate_id,
                         "reason": proposal.rejection_reason or "unspecified",
+                    }
+                )
+                continue
+            gate_rejection = (
+                _construction_gate_rejection(
+                    proposal,
+                    screening[selection.intake_candidate_id],
+                )
+                if config.schema_version == "1.2"
+                else None
+            )
+            if gate_rejection is not None:
+                rejections.append(
+                    {
+                        "intake_candidate_id": proposal.intake_candidate_id,
+                        "reason": gate_rejection,
                     }
                 )
                 continue
@@ -751,6 +874,38 @@ def main() -> int:
     ) // config.batch_size
     if completed_response_count != expected_batch_count and not args.allow_partial:
         raise ValueError("cannot compile a partial boundary construction package")
+    omitted_candidate_count = sum(
+        item["reason"].startswith("constructor response omitted candidate")
+        for item in rejections
+    )
+    if not pairs:
+        summary = {
+            "schema_version": "1.0",
+            "construction_id": config.construction_id,
+            "selected_candidate_count": len(config.selected_candidates),
+            "completed_response_count": completed_response_count,
+            "expected_response_count": expected_batch_count,
+            "complete": (
+                completed_response_count == expected_batch_count
+                and omitted_candidate_count == 0
+            ),
+            "omitted_candidate_count": omitted_candidate_count,
+            "admitted_pair_count": 0,
+            "rejected_candidate_count": len(rejections),
+            "rejections": rejections,
+            "bounded_normalization_count": len(normalizations),
+            "bounded_normalizations": normalizations,
+            "context_counts": {},
+            "domain_counts": {},
+            "package_sha256": None,
+            "readiness": None,
+            "usage": usage,
+            "target_outcomes_used": False,
+            "formal_split_opened": False,
+            "effectiveness_claim_allowed": False,
+        }
+        _write(output / "SUMMARY.json", (json.dumps(summary, indent=2) + "\n").encode())
+        return 0
     package = BoundaryPairPackage(
         package_id=config.construction_id,
         release_tier="development",
@@ -767,7 +922,10 @@ def main() -> int:
         "selected_candidate_count": len(config.selected_candidates),
         "completed_response_count": completed_response_count,
         "expected_response_count": expected_batch_count,
-        "complete": completed_response_count == expected_batch_count,
+        "complete": (
+            completed_response_count == expected_batch_count and omitted_candidate_count == 0
+        ),
+        "omitted_candidate_count": omitted_candidate_count,
         "admitted_pair_count": len(pairs),
         "rejected_candidate_count": len(rejections),
         "rejections": rejections,

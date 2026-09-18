@@ -1,0 +1,23 @@
+schema_version: "1.0"
+review_id: scitastebench-aries-grounded-pair-review-deepseek-v3
+project_id: scitaste-self-development
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: b6c903fef4698ff927a3321ea55b16b3e9c409aa302860bc61c4050b93facb91
+pair_packages:
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-grounded-information-pairs-v3/PACKAGE.json
+    sha256: ae465bf97c98433c68a8e7a680283b075dc83a38fd2ceeed4c803290cbb1641b
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-grounded-inference-pairs-v3/PACKAGE.json
+    sha256: 54a8db6dd628a71019135b65b4021e57b599554febfed7bceec324ac12218afb
+pair_selection_policy: first-package-wins-by-pair-id
+reviewer_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+reviewer_provider: deepseek
+reviewer_model: deepseek-flash
+batch_size: 4
+seed: 20271032
+target_outcomes_visible: false
+expected_pair_labels_visible: false
+human_review_claim_allowed: false
+formal_split_opened: false

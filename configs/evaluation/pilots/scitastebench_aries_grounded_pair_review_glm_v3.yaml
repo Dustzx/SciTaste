@@ -1,0 +1,23 @@
+schema_version: "1.0"
+review_id: scitastebench-aries-grounded-pair-review-glm-v3
+project_id: scitaste-self-development
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: b6c903fef4698ff927a3321ea55b16b3e9c409aa302860bc61c4050b93facb91
+pair_packages:
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-grounded-information-pairs-v3/PACKAGE.json
+    sha256: ae465bf97c98433c68a8e7a680283b075dc83a38fd2ceeed4c803290cbb1641b
+  - locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-grounded-inference-pairs-v3/PACKAGE.json
+    sha256: 54a8db6dd628a71019135b65b4021e57b599554febfed7bceec324ac12218afb
+pair_selection_policy: first-package-wins-by-pair-id
+reviewer_backend:
+  locator: configs/model_nodes/zhipu_glm53_flash.scitastebench_live_20260916.yaml
+  sha256: ebb7f2495a04578a788f3bbb879d904ce8a5018b590285a5453bb30525dfc7c3
+reviewer_provider: zhipu-direct
+reviewer_model: glm-5.3-flash
+batch_size: 2
+seed: 20271033
+target_outcomes_visible: false
+expected_pair_labels_visible: false
+human_review_claim_allowed: false
+formal_split_opened: false

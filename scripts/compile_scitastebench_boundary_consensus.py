@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from scitaste.benchmark import (
     BenchmarkLabelAuthority,
@@ -37,10 +37,14 @@ class ReviewBinding(FileBinding):
     reviewer_id: str = Field(min_length=1)
 
 
+class CueControlBinding(FileBinding):
+    chooser_id: str = Field(min_length=1)
+
+
 class ConsensusConfig(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     consensus_id: str = Field(min_length=1)
     pair_packages: tuple[FileBinding, ...] = Field(min_length=1)
     pair_selection_policy: Literal["first-package-wins-by-pair-id"]
@@ -50,10 +54,24 @@ class ConsensusConfig(BaseModel):
     require_protocol_valid: Literal[True]
     require_natural_source_state_is_base: Literal[True]
     require_registered_label_agreement: Literal[True]
+    boundary_cue_controls: tuple[CueControlBinding, ...] = ()
+    require_boundary_cue_failure: bool = False
     authority: Literal[BenchmarkLabelAuthority.AI_PANEL_PROXY]
     human_review_claim_allowed: Literal[False]
     formal_split_opened: Literal[False]
     effectiveness_claim_allowed: Literal[False]
+
+    @model_validator(mode="after")
+    def shortcut_gate_matches_schema(self) -> ConsensusConfig:
+        if self.schema_version == "1.1":
+            if not self.require_boundary_cue_failure or not self.boundary_cue_controls:
+                raise ValueError("consensus 1.1 requires at least one boundary-cue control")
+        elif self.require_boundary_cue_failure or self.boundary_cue_controls:
+            raise ValueError("legacy consensus cannot claim boundary-cue control")
+        chooser_ids = [item.chooser_id for item in self.boundary_cue_controls]
+        if len(chooser_ids) != len(set(chooser_ids)):
+            raise ValueError("boundary-cue chooser identities must be unique")
+        return self
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -122,6 +140,7 @@ def _natural_role(review: dict[str, JsonValue]) -> str | None:
 def _rejection_reasons(
     pair: BoundaryCounterfactualPair,
     reviews: list[dict[str, JsonValue]],
+    cue_controls: list[dict[str, JsonValue]],
     config: ConsensusConfig,
 ) -> list[str]:
     reasons: list[str] = []
@@ -149,6 +168,16 @@ def _rejection_reasons(
             or bool(review.get("twin_should_abstain")) != pair.twin.should_abstain
         ):
             reasons.append(f"{prefix}:twin-label-disagreement")
+    if config.require_boundary_cue_failure:
+        for control, binding in zip(
+            cue_controls,
+            config.boundary_cue_controls,
+            strict=True,
+        ):
+            if bool(control.get("both_registered_labels_recovered")):
+                reasons.append(f"{binding.chooser_id}:boundary-cue-recovered-reversal")
+            if control.get("passes_boundary_cue_control") is not True:
+                reasons.append(f"{binding.chooser_id}:boundary-cue-control-failed")
     return reasons
 
 
@@ -197,11 +226,21 @@ def main() -> int:
     for binding, mapping in zip(config.reviews, review_maps, strict=True):
         if set(mapping) != expected_ids:
             raise ValueError(f"review coverage differs from candidate set: {binding.locator}")
+    cue_control_maps: list[dict[str, dict[str, JsonValue]]] = []
+    for binding in config.boundary_cue_controls:
+        rows = _jsonl(_bound(root, binding))
+        mapping = {str(row["pair_id"]): row for row in rows}
+        if len(mapping) != len(rows):
+            raise ValueError(f"duplicate cue-control choice in {binding.locator}")
+        if set(mapping) != expected_ids:
+            raise ValueError(f"cue-control coverage differs from candidate set: {binding.locator}")
+        cue_control_maps.append(mapping)
     admitted: list[BoundaryCounterfactualPair] = []
     rejected: list[dict[str, JsonValue]] = []
     for pair in pairs:
         reviews = [mapping[pair.pair_id] for mapping in review_maps]
-        reasons = _rejection_reasons(pair, reviews, config)
+        cue_controls = [mapping[pair.pair_id] for mapping in cue_control_maps]
+        reasons = _rejection_reasons(pair, reviews, cue_controls, config)
         if reasons:
             rejected.append({"pair_id": pair.pair_id, "reasons": reasons})
             continue
@@ -239,6 +278,8 @@ def main() -> int:
         ),
         "domain_counts": dict(Counter(pair.domain for pair in admitted)),
         "rejection_reason_counts": dict(reason_counts),
+        "boundary_cue_control_count": len(config.boundary_cue_controls),
+        "boundary_cue_failure_required": config.require_boundary_cue_failure,
         "rejections": rejected,
         "package_file_sha256": hashlib.sha256(package_bytes).hexdigest(),
         "package_content_sha256": package.sha256,

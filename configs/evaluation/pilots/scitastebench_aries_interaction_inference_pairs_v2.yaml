@@ -1,0 +1,49 @@
+schema_version: "1.2"
+construction_id: scitastebench-aries-interaction-inference-pairs-v2
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: b6c903fef4698ff927a3321ea55b16b3e9c409aa302860bc61c4050b93facb91
+caseability_decisions:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-aries-dev-102-screen-deepseek-v2/normalization/NORMALIZED_DECISIONS.jsonl
+  sha256: ed2d8a581412a42c9bace5e86ae2459369b8e5e0dce5cf66b62513920202c854
+constructor_backend:
+  locator: configs/model_nodes/bailian_qwen38max.taste_review_live_20260916.yaml
+  sha256: 77d3b1bba5fbbf1c573bfbb73e6298e4d41dd89acb126c44c11531c40398c2af
+constructor_provider: bailian
+constructor_model: qwen3.8-max
+batch_size: 2
+seed: 20271013
+standard_visible_budget: >-
+  Make one bounded evidence-interpretation or claim-calibration decision in the
+  current revision. No new experiment or hidden result may be assumed.
+utility_contract:
+  contract_id: scitastebench-inference-utility-v1
+  evidence_value_weight: 0.40
+  expected_information_gain_weight: 0.10
+  resource_cost_weight: 0.10
+  claim_risk_weight: 0.40
+  minimum_action_utility_for_commitment: 0.05
+  component_anchors:
+    evidence_value: "0=ignores or obscures the visible evidence; 1=faithfully preserves all decision-relevant evidence"
+    expected_information_gain: "0=does not clarify the competing interpretations; 1=strongly separates them"
+    resource_cost: "0=negligible within the visible budget; 1=consumes or exceeds the full visible budget"
+    claim_risk: "0=claim strength is fully supported; 1=claim is materially unsupported by the visible evidence"
+  registered_before_system_outputs: true
+selection_mode: top-up
+selected_candidates:
+  - intake_candidate_id: intake-4af556e472829aa51d9cc90e
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-f5cc6696bae3a8d0d3707399
+    decision_context_family: evidence-interpretation-and-contradiction
+  - intake_candidate_id: intake-6cf99bbc375bac9aa2ef9243
+    decision_context_family: claim-calibration-and-review-closure
+  - intake_candidate_id: intake-5f25ea0b0ff2c061b7e5317c
+    decision_context_family: claim-calibration-and-review-closure
+target_pair_count: 4
+target_pairs_per_context: 1
+target_outcomes_visible_to_constructor: false
+formal_split_opened: false
+human_label_claim_allowed: false
+effectiveness_claim_allowed: false
