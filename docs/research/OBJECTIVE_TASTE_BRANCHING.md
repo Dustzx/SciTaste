@@ -384,6 +384,25 @@ too sparse and often too tied to identify a transferable action policy. The next
 must be scorer-grounded, action-identifiable, and deliberately cover different bottlenecks; merely
 adding more superficially similar precedents or relaxing abstention would repeat the failure.
 
+A subsequent common-support audit made this limitation more precise. Of 35 available shared-prefix
+forks, only three across three task clusters observe all seven actions, have at most three actions
+inside the registered practical-equivalence band, and separate the best and worst outcomes by at
+least twice that band. This is an 8.6% development yield, not a benchmark result. Each branch still
+has only one stochastic continuation, so all three remain consumed candidates rather than formal
+cases. The compiler and frozen thresholds are
+`scripts/compile_objective_fork_population.py` and
+`configs/evaluation/pilots/objective_fork_action_identifiable_population_v1.yaml`; its ignored
+manifest is under `evaluations/objective-fork-action-identifiable-development-v1/`.
+
+This audit also invalidates a tempting shortcut: per-fork min--max values are useful for inspecting
+rank behavior, but they are not a common scientific utility scale and can magnify a negligible
+difference. They therefore cannot admit a case. A formal fork must instead have preregistered
+practical equivalence, complete common action support, repeated rollouts, task-cluster-level
+uncertainty, and an intention-to-treat value for failures. The transfer baseline now uses the same
+source population for every candidate action, collapses repeated prefixes within a task cluster,
+and abstains when common support is absent; the earlier replay numbers are not retrospectively
+relabelled after this repair.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

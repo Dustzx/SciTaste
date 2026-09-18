@@ -1,0 +1,12 @@
+schema_version: "1.0"
+population_id: objective-fork-action-identifiable-development-v1
+project_id: scitaste-self-development
+source_manifest:
+  locator: outputs/projects/scitaste-self-development/evaluations/counterfactual-taste-balanced-v6-merged-precedents-v1/MANIFEST.json
+  sha256: 4c22cfd45776b53d1f7d0787a44328f91742d053e2f9d11b474c1ab9e1756691
+state_search_root: outputs/projects/scitaste-self-development/evaluations
+required_observed_actions: 7
+maximum_preferred_actions: 3
+minimum_spread_to_tolerance_ratio: 2.0
+source_evidence_designation: consumed-development
+formal_split_opened: false

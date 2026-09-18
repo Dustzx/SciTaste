@@ -274,7 +274,11 @@ def _load_population(
             raise ValueError(f"result differs from population lock: {binding.study_id}")
         values = {item.action.value: item.objective_value for item in result.outcomes}
         observed = {item.action.value: item.objective_observed for item in result.outcomes}
-        normalized = normalize_objective_fork_utilities(values, observed)
+        normalized = normalize_objective_fork_utilities(
+            values,
+            observed,
+            metric_direction=result.metric_direction,
+        )
         cases.append(
             ObjectiveForkSituationCase(
                 study_id=binding.study_id,

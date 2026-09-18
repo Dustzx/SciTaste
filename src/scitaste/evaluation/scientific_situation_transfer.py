@@ -252,13 +252,13 @@ class ScientificSituationTransferDecision(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     target_study_id: str
     target_situation_sha256: str = Field(pattern=_SHA256)
-    excluded_same_cluster_case_ids: tuple[str, ...] = Field(min_length=1)
-    estimates: tuple[ScientificSituationActionEstimate, ...] = Field(min_length=1)
+    excluded_same_cluster_case_ids: tuple[str, ...] = ()
+    estimates: tuple[ScientificSituationActionEstimate, ...] = ()
     selected_action: str | None = Field(default=None, min_length=1)
     abstained: bool
     abstention_reasons: tuple[str, ...] = ()
     best_action_margin: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
-    outcome_grounded_source_count: int = Field(ge=1)
+    outcome_grounded_source_count: int = Field(ge=0)
     target_outcomes_used_for_selection: Literal[False] = False
     decision_sha256: str = Field(pattern=_SHA256)
 
@@ -279,6 +279,8 @@ class ScientificSituationTransferDecision(BaseModel):
             )
         ):
             raise ValueError("action estimates must be ordered by utility then action ID")
+        if not self.estimates and not self.abstained:
+            raise ValueError("a transfer decision without estimates must abstain")
         if self.selected_action is not None and self.selected_action != self.estimates[0].action_id:
             raise ValueError("selected action differs from the highest transfer estimate")
         expected = content_sha256(self.model_dump(mode="json", exclude={"decision_sha256"}))
@@ -422,8 +424,15 @@ class ScientificSituationModelTransferDecision(BaseModel):
 def normalize_objective_fork_utilities(
     values: dict[str, float],
     observed: dict[str, bool],
+    *,
+    metric_direction: Literal["higher", "lower"] = "higher",
 ) -> dict[str, float]:
-    """Normalize only scorer-observed actions within one shared-prefix fork."""
+    """Normalize scorer-observed actions for consumed development diagnostics.
+
+    Per-fork min--max values are not a common scientific utility scale. They must
+    not be used to admit a formal benchmark item or to claim an effect unless the
+    source contract separately establishes practical separation.
+    """
 
     if set(values) != set(observed):
         raise ValueError("objective values and observation maps differ")
@@ -440,7 +449,11 @@ def normalize_objective_fork_utilities(
     if spread <= 1e-12:
         return {action: 1.0 for action in sorted(eligible)}
     return {
-        action: (eligible[action] - minimum) / spread
+        action: (
+            (eligible[action] - minimum) / spread
+            if metric_direction == "higher"
+            else (maximum - eligible[action]) / spread
+        )
         for action in sorted(eligible)
     }
 
@@ -577,18 +590,58 @@ def select_by_scientific_situation(
     if not eligible:
         raise ValueError("scientific-situation transfer requires cross-task precedents")
 
+    # Compare every candidate action on the same source population. Otherwise an
+    # action can appear strongest merely because its failed/missing branches were
+    # silently omitted, while another action is averaged over a harder subset.
+    common_support = tuple(
+        item
+        for item in eligible
+        if available_actions.issubset(item.normalized_action_utilities)
+    )
+    if not common_support:
+        return ScientificSituationTransferDecision.create(
+            target_study_id=target.study_id,
+            target_situation_sha256=target.situation_sha256,
+            excluded_same_cluster_case_ids=same_cluster,
+            estimates=(),
+            selected_action=None,
+            abstained=True,
+            abstention_reasons=("no-common-action-support",),
+            best_action_margin=0.0,
+            outcome_grounded_source_count=0,
+        )
+
     estimates: list[ScientificSituationActionEstimate] = []
     for action in sorted(available_actions):
-        weighted: list[tuple[float, float, str, float]] = []
-        for source in eligible:
-            if action not in source.normalized_action_utilities:
-                continue
+        weighted_by_cluster: dict[str, list[tuple[float, float, str, float]]] = {}
+        for source in common_support:
             similarity = scientific_situation_similarity(source.situation, target)
             if similarity < thresholds.minimum_source_similarity:
                 continue
             weight = similarity * similarity
-            weighted.append(
+            weighted_by_cluster.setdefault(source.task_cluster_id, []).append(
                 (weight, source.normalized_action_utilities[action], source.study_id, similarity)
+            )
+        contributing_case_ids = tuple(
+            sorted(
+                case_id
+                for rows in weighted_by_cluster.values()
+                for _, _, case_id, _ in rows
+            )
+        )
+        # Repeated prefixes from one task are correlated. Collapse them to one
+        # task-cluster contribution before estimating transfer uncertainty.
+        weighted: list[tuple[float, float, str, float]] = []
+        for task_cluster_id, rows in sorted(weighted_by_cluster.items()):
+            cluster_weight = sum(item[0] for item in rows)
+            cluster_value = sum(item[0] * item[1] for item in rows) / cluster_weight
+            weighted.append(
+                (
+                    max(item[0] for item in rows),
+                    cluster_value,
+                    task_cluster_id,
+                    max(item[3] for item in rows),
+                )
             )
         if not weighted:
             continue
@@ -607,11 +660,21 @@ def select_by_scientific_situation(
                 standard_error=min(max(deviation / math.sqrt(effective), 0.0), 1.0),
                 effective_support=effective,
                 maximum_source_similarity=max(item[3] for item in weighted),
-                contributing_case_ids=tuple(sorted(item[2] for item in weighted)),
+                contributing_case_ids=contributing_case_ids,
             )
         )
     if not estimates:
-        raise ValueError("no action has eligible scientific-situation support")
+        return ScientificSituationTransferDecision.create(
+            target_study_id=target.study_id,
+            target_situation_sha256=target.situation_sha256,
+            excluded_same_cluster_case_ids=same_cluster,
+            estimates=(),
+            selected_action=None,
+            abstained=True,
+            abstention_reasons=("no-similar-common-action-support",),
+            best_action_margin=0.0,
+            outcome_grounded_source_count=len(common_support),
+        )
     ordered = tuple(
         sorted(estimates, key=lambda item: (-item.expected_normalized_utility, item.action_id))
     )
@@ -642,7 +705,7 @@ def select_by_scientific_situation(
         abstained=bool(reasons),
         abstention_reasons=tuple(reasons),
         best_action_margin=margin,
-        outcome_grounded_source_count=len(eligible),
+        outcome_grounded_source_count=len(common_support),
     )
 
 

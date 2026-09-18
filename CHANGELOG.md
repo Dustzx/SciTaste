@@ -12,6 +12,11 @@
 - Retained both twelve-state replays as consumed development. Deterministic transfer passed three
   of four authorization gates; model synthesis collapsed to one admitted decision. Neither opens a
   fresh confirmation split.
+- Audited all 35 objective forks against common seven-action support and practical separation.
+  Only three consumed states across three task clusters remain action-identifiable development
+  candidates; none has repeated branch rollouts, so none is formal evidence. Transfer now compares
+  actions on one common source population, collapses correlated prefixes by task cluster, preserves
+  lower-is-better metric direction, and abstains when common support is absent.
 - Added full-context invariant-fact review and a boundary-only negative control to SciTasteBench
   construction. No current natural pair passed both views, so generated counterfactual utilities
   remain outside the formal benchmark.

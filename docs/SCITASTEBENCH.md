@@ -86,6 +86,13 @@ with counterfactual boundary twins, verify that abstractions preserve the source
 decision-relevant contrast, and then require matched applicability to beat an
 equal-quality mismatched pool before freezing new targets.
 
+The objective-fork inventory reaches the same conclusion from executable outcomes. Only 3 of 35
+consumed forks have complete seven-action support and a selective preferred set outside the
+registered practical-equivalence band. Because every branch still has one stochastic rollout,
+these three cases define a construction diagnostic, not a formal SciTasteBench split. Formal
+admission requires repeated outcomes and a preregistered common utility contract; per-item min--max
+normalization is explicitly insufficient.
+
 ### State-conditioned control-packet update
 
 The current method no longer treats a fluent Taste card as the intervention.

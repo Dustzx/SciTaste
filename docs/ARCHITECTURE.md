@@ -4891,9 +4891,11 @@ may populate this representation only from the prefix and must cite exact visibl
 see target branch outcomes or recommend the target action during abstraction.
 
 Utility authority remains outside that model. Shared-prefix action forks expose scorer-owned
-outcomes, normalized within each source state so heterogeneous task scales cannot dominate
-transfer. The deterministic selector uses only cross-task precedents and abstains for insufficient
-similarity, effective support, action margin, or excessive uncertainty. An optional model synthesis
+outcomes. Per-state normalization is retained only as a consumed-development diagnostic: it is not
+a formal common utility scale and cannot establish practical separation. The deterministic selector
+uses one common-action-support population for every candidate action, collapses correlated prefixes
+within a task cluster, and abstains for missing common support, insufficient similarity, effective
+support, action margin, or excessive uncertainty. An optional model synthesis
 node sees the same typed states and source utility vectors, but its output is admitted only after
 deterministic citation, task-diversity, boundary, confidence, and margin checks. Unknown citations
 cause abstention; they are never silently repaired.
