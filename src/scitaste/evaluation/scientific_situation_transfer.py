@@ -13,7 +13,6 @@ support, agreement, or the best-action margin is inadequate.
 from __future__ import annotations
 
 import math
-from collections import Counter
 from enum import StrEnum
 from typing import Literal
 
@@ -254,15 +253,202 @@ class ObjectiveForkSituationCase(BaseModel):
         return self
 
 
+class ObjectiveForkActionDefinition(BaseModel):
+    """Content-bound executable meaning of one registered menu action."""
+
+    model_config = _CONFIG
+
+    action_id: str = Field(min_length=1)
+    semantic_role: str = Field(min_length=1, max_length=200)
+    description: str = Field(min_length=1, max_length=2_000)
+    executor_id: str = Field(min_length=1, max_length=200)
+    command_template: tuple[str, ...] = Field(min_length=1, max_length=100)
+    definition_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def definition_is_content_bound(self) -> ObjectiveForkActionDefinition:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"definition_sha256"}))
+        if self.definition_sha256 != expected:
+            raise ValueError("objective-fork action-definition hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> ObjectiveForkActionDefinition:
+        payload = dict(values)
+        payload.pop("definition_sha256", None)
+        unsigned = cls.model_construct(definition_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            definition_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"definition_sha256"})
+            ),
+        )
+
+
+class ObjectiveForkTaskBinding(BaseModel):
+    """Immutable task, environment, code, and prefix identities for one fork."""
+
+    model_config = _CONFIG
+
+    task_locator: str = Field(min_length=1, max_length=2_000)
+    task_sha256: str = Field(pattern=_SHA256)
+    environment_sha256: str = Field(pattern=_SHA256)
+    code_sha256: str = Field(pattern=_SHA256)
+    prefix_state_sha256: str = Field(pattern=_SHA256)
+    split_assignment: Literal["development", "validation", "test"]
+
+
+class ObjectiveForkExecutionContract(BaseModel):
+    """Registered tools, horizon, budget, and paired randomization blocks."""
+
+    model_config = _CONFIG
+
+    contract_id: str = Field(min_length=1, max_length=200)
+    allowed_tools: tuple[str, ...] = Field(min_length=1, max_length=100)
+    budget_limit: float = Field(gt=0.0, allow_inf_nan=False)
+    budget_unit: str = Field(min_length=1, max_length=100)
+    maximum_steps: int = Field(ge=1)
+    timeout_seconds: int = Field(ge=1)
+    network_access: bool
+    seed_block_ids: tuple[str, ...] = Field(min_length=3)
+    minimum_action_compliance_rate: float = Field(
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )
+    contract_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def execution_contract_is_closed(self) -> ObjectiveForkExecutionContract:
+        if self.allowed_tools != tuple(sorted(set(self.allowed_tools))):
+            raise ValueError("objective-fork allowed tools must be sorted and unique")
+        if self.seed_block_ids != tuple(sorted(set(self.seed_block_ids))):
+            raise ValueError("objective-fork seed blocks must be sorted and unique")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"contract_sha256"}))
+        if self.contract_sha256 != expected:
+            raise ValueError("objective-fork execution-contract hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> ObjectiveForkExecutionContract:
+        payload = dict(values)
+        payload.pop("contract_sha256", None)
+        unsigned = cls.model_construct(contract_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            contract_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"contract_sha256"})
+            ),
+        )
+
+
+class ObjectiveForkScorerContract(BaseModel):
+    """Registered objective and its transformation onto the common utility scale."""
+
+    model_config = _CONFIG
+
+    scorer_id: str = Field(min_length=1, max_length=200)
+    implementation_sha256: str = Field(pattern=_SHA256)
+    metric_name: str = Field(min_length=1, max_length=200)
+    metric_direction: Literal["higher", "lower"]
+    raw_scale_minimum: float = Field(allow_inf_nan=False)
+    raw_scale_maximum: float = Field(allow_inf_nan=False)
+    utility_transform: Literal["registered-affine-clip-v1"] = "registered-affine-clip-v1"
+    utility_contract_id: str = Field(min_length=1, max_length=200)
+    practical_equivalence_tolerance: float = Field(
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )
+    intention_to_treat_failure_utility: float = Field(
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )
+    contract_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def scorer_contract_is_closed(self) -> ObjectiveForkScorerContract:
+        if self.raw_scale_maximum <= self.raw_scale_minimum:
+            raise ValueError("objective-fork scorer scale must have positive width")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"contract_sha256"}))
+        if self.contract_sha256 != expected:
+            raise ValueError("objective-fork scorer-contract hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> ObjectiveForkScorerContract:
+        payload = {"utility_transform": "registered-affine-clip-v1", **values}
+        payload.pop("contract_sha256", None)
+        unsigned = cls.model_construct(contract_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            contract_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"contract_sha256"})
+            ),
+        )
+
+
+class ObjectiveForkConstructionManifest(BaseModel):
+    """Construction and contamination evidence fixed before outcomes are exposed."""
+
+    model_config = _CONFIG
+
+    source_collection_id: str = Field(min_length=1, max_length=500)
+    source_version: str = Field(min_length=1, max_length=200)
+    construction_protocol_sha256: str = Field(pattern=_SHA256)
+    constructor_provider: str = Field(min_length=1, max_length=200)
+    constructor_model: str = Field(min_length=1, max_length=200)
+    split_assignment: Literal["development", "validation", "test"]
+    target_outcomes_visible_during_construction: Literal[False] = False
+    contamination_audit_protocol: str = Field(min_length=1, max_length=500)
+    contamination_corpora: tuple[str, ...] = Field(min_length=1, max_length=20)
+    exact_overlap_count: Literal[0] = 0
+    contamination_status: Literal["passed"] = "passed"
+    contamination_report_sha256: str = Field(pattern=_SHA256)
+    manifest_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def construction_manifest_is_closed(self) -> ObjectiveForkConstructionManifest:
+        if self.contamination_corpora != tuple(sorted(set(self.contamination_corpora))):
+            raise ValueError("contamination corpora must be sorted and unique")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"manifest_sha256"}))
+        if self.manifest_sha256 != expected:
+            raise ValueError("objective-fork construction-manifest hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> ObjectiveForkConstructionManifest:
+        payload = {
+            "target_outcomes_visible_during_construction": False,
+            "exact_overlap_count": 0,
+            "contamination_status": "passed",
+            **values,
+        }
+        payload.pop("manifest_sha256", None)
+        unsigned = cls.model_construct(manifest_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            manifest_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"manifest_sha256"})
+            ),
+        )
+
+
 class ObjectiveForkReplicateOutcome(BaseModel):
-    """One independently seeded branch on a registered common utility scale."""
+    """One paired, action-compliance-audited branch on a registered utility scale."""
 
     model_config = _CONFIG
 
     action_id: str = Field(min_length=1)
     replicate_id: str = Field(min_length=1)
+    seed_block_id: str = Field(min_length=1)
+    requested_action_definition_sha256: str = Field(pattern=_SHA256)
+    action_compliance: Literal["compliant", "noncompliant"]
+    action_trace_sha256: str = Field(pattern=_SHA256)
     executed: bool
     objective_observed: bool
+    raw_metric_value: float | None = Field(default=None, allow_inf_nan=False)
     utility: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
     failure_code: str | None = Field(default=None, min_length=1, max_length=500)
     result_sha256: str = Field(pattern=_SHA256)
@@ -271,12 +457,31 @@ class ObjectiveForkReplicateOutcome(BaseModel):
     def execution_status_is_closed(self) -> ObjectiveForkReplicateOutcome:
         if self.objective_observed and not self.executed:
             raise ValueError("an unexecuted branch cannot expose an objective outcome")
+        if self.objective_observed != (self.raw_metric_value is not None):
+            raise ValueError(
+                "objective-fork raw metric must be present exactly when the objective is observed"
+            )
         if self.objective_observed == (self.failure_code is not None):
             raise ValueError(
                 "objective-fork replicate requires a failure code exactly when the "
                 "objective is unobserved"
             )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"result_sha256"}))
+        if self.result_sha256 != expected:
+            raise ValueError("objective-fork replicate-result hash mismatch")
         return self
+
+    @classmethod
+    def create(cls, **values: object) -> ObjectiveForkReplicateOutcome:
+        payload = dict(values)
+        payload.pop("result_sha256", None)
+        unsigned = cls.model_construct(result_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            result_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"result_sha256"})
+            ),
+        )
 
 
 class FormalObjectiveForkSituationCase(BaseModel):
@@ -290,23 +495,17 @@ class FormalObjectiveForkSituationCase(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["2.0"] = "2.0"
+    schema_version: Literal["3.0"] = "3.0"
     study_id: str
     task_cluster_id: str = Field(min_length=1)
     situation: ScientificSituation
+    task_binding: ObjectiveForkTaskBinding
     available_actions: tuple[str, ...] = Field(min_length=2)
-    utility_contract_id: str = Field(min_length=1)
+    action_definitions: tuple[ObjectiveForkActionDefinition, ...] = Field(min_length=2)
     action_semantics_sha256: str = Field(pattern=_SHA256)
-    practical_equivalence_tolerance: float = Field(
-        ge=0.0,
-        le=1.0,
-        allow_inf_nan=False,
-    )
-    intention_to_treat_failure_utility: float = Field(
-        ge=0.0,
-        le=1.0,
-        allow_inf_nan=False,
-    )
+    execution_contract: ObjectiveForkExecutionContract
+    scorer_contract: ObjectiveForkScorerContract
+    construction_manifest: ObjectiveForkConstructionManifest
     replicate_outcomes: tuple[ObjectiveForkReplicateOutcome, ...] = Field(min_length=6)
     action_utility_estimates: dict[str, float] = Field(min_length=2)
     result_sha256: str = Field(pattern=_SHA256)
@@ -318,29 +517,87 @@ class FormalObjectiveForkSituationCase(BaseModel):
             raise ValueError("formal objective-fork case and situation study IDs differ")
         if self.task_cluster_id != self.situation.task_cluster_id:
             raise ValueError("formal objective-fork case and situation task clusters differ")
+        if self.task_binding.prefix_state_sha256 != self.situation.prefix_sha256:
+            raise ValueError("formal objective-fork task binding and situation prefix differ")
+        if self.task_binding.split_assignment != self.construction_manifest.split_assignment:
+            raise ValueError("formal objective-fork split assignments differ")
         if self.available_actions != tuple(sorted(set(self.available_actions))):
             raise ValueError("formal objective-fork actions must be sorted and unique")
+        definition_ids = tuple(item.action_id for item in self.action_definitions)
+        if definition_ids != self.available_actions:
+            raise ValueError("formal objective-fork action definitions must match the sorted menu")
+        expected_semantics = content_sha256(
+            [item.model_dump(mode="json") for item in self.action_definitions]
+        )
+        if self.action_semantics_sha256 != expected_semantics:
+            raise ValueError("formal objective-fork action-semantics hash mismatch")
         if set(self.action_utility_estimates) != set(self.available_actions):
             raise ValueError("formal objective-fork estimates must cover every action")
         replicate_ids = [item.replicate_id for item in self.replicate_outcomes]
         if len(replicate_ids) != len(set(replicate_ids)):
             raise ValueError("formal objective-fork replicate IDs must be unique")
-        counts = Counter(item.action_id for item in self.replicate_outcomes)
-        if set(counts) != set(self.available_actions) or any(
-            count < 3 for count in counts.values()
+        block_pairs = [(item.seed_block_id, item.action_id) for item in self.replicate_outcomes]
+        if len(block_pairs) != len(set(block_pairs)):
+            raise ValueError("formal objective-fork seed/action pairs must be unique")
+        if {item.seed_block_id for item in self.replicate_outcomes} != set(
+            self.execution_contract.seed_block_ids
         ):
-            raise ValueError(
-                "formal objective-fork cases require at least three replicates per action"
-            )
+            raise ValueError("formal objective-fork outcomes must cover registered seed blocks")
+        expected_pairs = {
+            (seed_block_id, action_id)
+            for seed_block_id in self.execution_contract.seed_block_ids
+            for action_id in self.available_actions
+        }
+        if set(block_pairs) != expected_pairs:
+            raise ValueError("formal objective-fork branches must form a balanced paired design")
+        definition_hashes = {
+            item.action_id: item.definition_sha256 for item in self.action_definitions
+        }
         for outcome in self.replicate_outcomes:
             if outcome.action_id not in self.available_actions:
                 raise ValueError("formal objective-fork replicate uses an unknown action")
+            if outcome.requested_action_definition_sha256 != definition_hashes[outcome.action_id]:
+                raise ValueError("formal objective-fork replicate action definition drifted")
             if (
                 not outcome.objective_observed
-                and abs(outcome.utility - self.intention_to_treat_failure_utility) > 1e-9
+                and abs(
+                    outcome.utility
+                    - self.scorer_contract.intention_to_treat_failure_utility
+                )
+                > 1e-9
             ):
                 raise ValueError(
                     "failed formal branches must retain the registered intention-to-treat utility"
+                )
+            if outcome.objective_observed:
+                assert outcome.raw_metric_value is not None
+                scale_width = (
+                    self.scorer_contract.raw_scale_maximum
+                    - self.scorer_contract.raw_scale_minimum
+                )
+                if self.scorer_contract.metric_direction == "higher":
+                    transformed = (
+                        outcome.raw_metric_value - self.scorer_contract.raw_scale_minimum
+                    ) / scale_width
+                else:
+                    transformed = (
+                        self.scorer_contract.raw_scale_maximum - outcome.raw_metric_value
+                    ) / scale_width
+                transformed = min(max(transformed, 0.0), 1.0)
+                if abs(outcome.utility - transformed) > 1e-9:
+                    raise ValueError(
+                        "formal objective-fork utility differs from registered scorer transform"
+                    )
+        for action in self.available_actions:
+            action_outcomes = [
+                item for item in self.replicate_outcomes if item.action_id == action
+            ]
+            compliance_rate = sum(
+                item.action_compliance == "compliant" for item in action_outcomes
+            ) / len(action_outcomes)
+            if compliance_rate < self.execution_contract.minimum_action_compliance_rate:
+                raise ValueError(
+                    "formal objective-fork action compliance is below its registered floor"
                 )
         for action in self.available_actions:
             utilities = [
@@ -351,7 +608,69 @@ class FormalObjectiveForkSituationCase(BaseModel):
                 raise ValueError(
                     "formal objective-fork action estimate differs from its replicate mean"
                 )
+        expected_result = content_sha256(
+            self.model_dump(mode="json", exclude={"result_sha256"})
+        )
+        if self.result_sha256 != expected_result:
+            raise ValueError("formal objective-fork result hash mismatch")
         return self
+
+    @classmethod
+    def create(cls, **values: object) -> FormalObjectiveForkSituationCase:
+        payload = {"schema_version": "3.0", **values}
+        payload.pop("result_sha256", None)
+        payload["task_binding"] = ObjectiveForkTaskBinding.model_validate(
+            payload["task_binding"]
+        )
+        payload["action_definitions"] = tuple(
+            ObjectiveForkActionDefinition.model_validate(item)
+            for item in payload["action_definitions"]  # type: ignore[union-attr]
+        )
+        payload["execution_contract"] = ObjectiveForkExecutionContract.model_validate(
+            payload["execution_contract"]
+        )
+        payload["scorer_contract"] = ObjectiveForkScorerContract.model_validate(
+            payload["scorer_contract"]
+        )
+        payload["construction_manifest"] = ObjectiveForkConstructionManifest.model_validate(
+            payload["construction_manifest"]
+        )
+        payload["replicate_outcomes"] = tuple(
+            ObjectiveForkReplicateOutcome.model_validate(item)
+            for item in payload["replicate_outcomes"]  # type: ignore[union-attr]
+        )
+        payload["action_semantics_sha256"] = content_sha256(
+            [item.model_dump(mode="json") for item in payload["action_definitions"]]  # type: ignore[union-attr]
+        )
+        if "action_utility_estimates" not in payload:
+            payload["action_utility_estimates"] = {
+                action_id: sum(
+                    item.utility
+                    for item in payload["replicate_outcomes"]  # type: ignore[union-attr]
+                    if item.action_id == action_id
+                )
+                / sum(
+                    1
+                    for item in payload["replicate_outcomes"]  # type: ignore[union-attr]
+                    if item.action_id == action_id
+                )
+                for action_id in payload["available_actions"]  # type: ignore[union-attr]
+            }
+        unsigned = cls.model_construct(result_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            result_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"result_sha256"})
+            ),
+        )
+
+    @property
+    def utility_contract_id(self) -> str:
+        return self.scorer_contract.utility_contract_id
+
+    @property
+    def practical_equivalence_tolerance(self) -> float:
+        return self.scorer_contract.practical_equivalence_tolerance
 
     def action_sampling_variance(self, action_id: str) -> tuple[float, int]:
         """Return the within-case variance and replicate count for one action."""
@@ -361,6 +680,92 @@ class FormalObjectiveForkSituationCase(BaseModel):
             return 0.0, len(values)
         mean = sum(values) / len(values)
         return sum((value - mean) ** 2 for value in values) / (len(values) - 1), len(values)
+
+    def paired_action_difference_variance(
+        self,
+        preferred_action_id: str,
+        comparator_action_id: str,
+    ) -> tuple[float, float, int]:
+        """Return paired mean difference, sample variance, and seed-block count."""
+
+        by_pair = {
+            (item.seed_block_id, item.action_id): item.utility
+            for item in self.replicate_outcomes
+        }
+        differences = [
+            by_pair[(seed_block_id, preferred_action_id)]
+            - by_pair[(seed_block_id, comparator_action_id)]
+            for seed_block_id in self.execution_contract.seed_block_ids
+        ]
+        mean = sum(differences) / len(differences)
+        variance = sum((value - mean) ** 2 for value in differences) / (
+            len(differences) - 1
+        )
+        return mean, variance, len(differences)
+
+
+class ScientificActionSemanticBinding(BaseModel):
+    """Pre-selection semantic map from one source action to one target action."""
+
+    model_config = _CONFIG
+
+    source_action_id: str = Field(min_length=1)
+    source_action_definition_sha256: str = Field(pattern=_SHA256)
+    target_action: ObjectiveForkActionDefinition
+    mapping_rationale: str = Field(min_length=1, max_length=3_000)
+    boundary_conditions: tuple[str, ...] = Field(min_length=1, max_length=20)
+    mapping_confidence: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    adjudication_status: Literal["approved"] = "approved"
+
+
+class ScientificSituationActionMap(BaseModel):
+    """Content-bound source-to-target action map fixed before value estimation."""
+
+    model_config = _CONFIG
+
+    source_study_id: str
+    bindings: tuple[ScientificActionSemanticBinding, ...] = Field(min_length=2)
+    adjudicator_provider: str = Field(min_length=1, max_length=200)
+    adjudicator_model: str = Field(min_length=1, max_length=200)
+    request_fingerprint: str = Field(pattern=_SHA256)
+    response_sha256: str = Field(pattern=_SHA256)
+    target_outcomes_visible_to_adjudicator: Literal[False] = False
+    map_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def action_map_is_closed(self) -> ScientificSituationActionMap:
+        validate_entry_id(
+            self.source_study_id,
+            field_name="scientific-situation action-map source_study_id",
+        )
+        source_ids = tuple(item.source_action_id for item in self.bindings)
+        target_ids = tuple(item.target_action.action_id for item in self.bindings)
+        if len(source_ids) != len(set(source_ids)):
+            raise ValueError("source action-map IDs must be unique")
+        if len(target_ids) != len(set(target_ids)):
+            raise ValueError("target action-map IDs must be unique")
+        if target_ids != tuple(sorted(target_ids)):
+            raise ValueError("action-map bindings must be ordered by target action ID")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"map_sha256"}))
+        if self.map_sha256 != expected:
+            raise ValueError("scientific-situation action-map hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> ScientificSituationActionMap:
+        payload = {"target_outcomes_visible_to_adjudicator": False, **values}
+        payload.pop("map_sha256", None)
+        payload["bindings"] = tuple(
+            ScientificActionSemanticBinding.model_validate(item)
+            for item in payload["bindings"]  # type: ignore[union-attr]
+        )
+        unsigned = cls.model_construct(map_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            map_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"map_sha256"})
+            ),
+        )
 
 
 ScientificSituationSourceCase = ObjectiveForkSituationCase | FormalObjectiveForkSituationCase
@@ -385,6 +790,27 @@ def _source_sampling_variance(
     if isinstance(source, FormalObjectiveForkSituationCase):
         return source.action_sampling_variance(action_id)
     return 0.0, 1
+
+
+def _formal_source_action_definition(
+    source: FormalObjectiveForkSituationCase,
+    action_id: str,
+) -> ObjectiveForkActionDefinition:
+    return next(item for item in source.action_definitions if item.action_id == action_id)
+
+
+def _source_action_for_target(
+    source: ScientificSituationSourceCase,
+    target_action_id: str,
+    action_map: ScientificSituationActionMap | None,
+) -> str:
+    if action_map is None:
+        return target_action_id
+    return next(
+        item.source_action_id
+        for item in action_map.bindings
+        if item.target_action.action_id == target_action_id
+    )
 
 
 class ScientificSituationTransferThresholds(BaseModel):
@@ -413,6 +839,12 @@ class ScientificSituationTransferThresholds(BaseModel):
     )
     maximum_standard_error: float = Field(
         default=0.2,
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )
+    minimum_action_mapping_confidence: float = Field(
+        default=0.8,
         ge=0.0,
         le=1.0,
         allow_inf_nan=False,
@@ -486,7 +918,7 @@ class ScientificSituationTransferDecision(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["2.0"] = "2.0"
     target_study_id: str
     target_situation_sha256: str = Field(pattern=_SHA256)
     excluded_same_cluster_case_ids: tuple[str, ...] = ()
@@ -495,10 +927,22 @@ class ScientificSituationTransferDecision(BaseModel):
         default=(),
         exclude_if=lambda value: not value,
     )
+    admitted_action_map_sha256s: tuple[str, ...] = ()
     selected_action: str | None = Field(default=None, min_length=1)
     abstained: bool
     abstention_reasons: tuple[str, ...] = ()
     best_action_margin: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    best_action_contrast_standard_error: float = Field(
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )
+    contrast_uncertainty_method: Literal[
+        "unavailable",
+        "independent-conservative",
+        "paired-seed-block-task-clustered",
+    ]
+    minimum_paired_seed_blocks: int = Field(ge=0)
     outcome_grounded_source_count: int = Field(ge=0)
     target_outcomes_used_for_selection: Literal[False] = False
     decision_sha256: str = Field(pattern=_SHA256)
@@ -527,6 +971,10 @@ class ScientificSituationTransferDecision(BaseModel):
             sorted(self.source_boundary_assessments, key=lambda item: item.source_case_id)
         ):
             raise ValueError("source boundary assessments must be ordered by case ID")
+        if self.admitted_action_map_sha256s != tuple(
+            sorted(set(self.admitted_action_map_sha256s))
+        ):
+            raise ValueError("admitted action-map hashes must be sorted and unique")
         if not self.estimates and not self.abstained:
             raise ValueError("a transfer decision without estimates must abstain")
         if self.selected_action is not None and self.selected_action != self.estimates[0].action_id:
@@ -539,8 +987,12 @@ class ScientificSituationTransferDecision(BaseModel):
     @classmethod
     def create(cls, **values: object) -> ScientificSituationTransferDecision:
         payload = {
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "target_outcomes_used_for_selection": False,
+            "admitted_action_map_sha256s": (),
+            "best_action_contrast_standard_error": 0.0,
+            "contrast_uncertainty_method": "unavailable",
+            "minimum_paired_seed_blocks": 0,
             **values,
         }
         payload.pop("decision_sha256", None)
@@ -850,6 +1302,7 @@ def select_by_scientific_situation(
     sources: tuple[ScientificSituationSourceCase, ...],
     available_actions: set[str],
     thresholds: ScientificSituationTransferThresholds,
+    action_maps: tuple[ScientificSituationActionMap, ...] = (),
 ) -> ScientificSituationTransferDecision:
     """Choose from cross-task objective precedents or explicitly abstain."""
 
@@ -862,19 +1315,76 @@ def select_by_scientific_situation(
     if not eligible:
         raise ValueError("scientific-situation transfer requires cross-task precedents")
 
+    action_map_by_source = {item.source_study_id: item for item in action_maps}
+    if len(action_map_by_source) != len(action_maps):
+        raise ValueError("scientific-situation action maps must target unique sources")
+    unknown_action_map_sources = set(action_map_by_source) - {item.study_id for item in eligible}
+    if unknown_action_map_sources:
+        raise ValueError("scientific-situation action map targets an ineligible source")
+
     # Compare every candidate action on the same source population. Otherwise an
     # action can appear strongest merely because its failed/missing branches were
     # silently omitted, while another action is averaged over a harder subset.
-    common_support = tuple(
-        item for item in eligible if available_actions.issubset(_source_actions(item))
-    )
+    mapped_support: list[ScientificSituationSourceCase] = []
+    for source in eligible:
+        action_map = action_map_by_source.get(source.study_id)
+        if action_map is None:
+            if not thresholds.require_formal_sources and available_actions.issubset(
+                _source_actions(source)
+            ):
+                mapped_support.append(source)
+            continue
+        target_ids = {item.target_action.action_id for item in action_map.bindings}
+        source_ids = {item.source_action_id for item in action_map.bindings}
+        if target_ids != available_actions or source_ids != _source_actions(source):
+            continue
+        if any(
+            item.mapping_confidence < thresholds.minimum_action_mapping_confidence
+            for item in action_map.bindings
+        ):
+            continue
+        if isinstance(source, FormalObjectiveForkSituationCase):
+            source_definition_hashes = {
+                item.action_id: item.definition_sha256 for item in source.action_definitions
+            }
+            if any(
+                item.source_action_definition_sha256
+                != source_definition_hashes[item.source_action_id]
+                for item in action_map.bindings
+            ):
+                continue
+        mapped_support.append(source)
+    common_support = tuple(mapped_support)
     if thresholds.require_formal_sources:
         common_support = tuple(
             item for item in common_support if isinstance(item, FormalObjectiveForkSituationCase)
         )
+        if not common_support:
+            return ScientificSituationTransferDecision.create(
+                target_study_id=target.study_id,
+                target_situation_sha256=target.situation_sha256,
+                excluded_same_cluster_case_ids=same_cluster,
+                estimates=(),
+                source_boundary_assessments=(),
+                selected_action=None,
+                abstained=True,
+                abstention_reasons=("no-validated-preselection-action-map",),
+                best_action_margin=0.0,
+                outcome_grounded_source_count=0,
+            )
         utility_contract_ids = {item.utility_contract_id for item in common_support}
-        action_semantics = {item.action_semantics_sha256 for item in common_support}
-        if len(utility_contract_ids) > 1 or len(action_semantics) > 1:
+        target_definition_hashes = {
+            target_action_id: {
+                binding.target_action.definition_sha256
+                for source in common_support
+                for binding in action_map_by_source[source.study_id].bindings
+                if binding.target_action.action_id == target_action_id
+            }
+            for target_action_id in available_actions
+        }
+        if len(utility_contract_ids) > 1 or any(
+            len(hashes) != 1 for hashes in target_definition_hashes.values()
+        ):
             boundaries = tuple(
                 sorted(
                     (assess_scientific_situation_boundary(item, target) for item in common_support),
@@ -893,6 +1403,13 @@ def select_by_scientific_situation(
                 best_action_margin=0.0,
                 outcome_grounded_source_count=len(common_support),
             )
+    admitted_action_map_sha256s = tuple(
+        sorted(
+            action_map_by_source[item.study_id].map_sha256
+            for item in common_support
+            if item.study_id in action_map_by_source
+        )
+    )
     if not common_support:
         return ScientificSituationTransferDecision.create(
             target_study_id=target.study_id,
@@ -925,11 +1442,19 @@ def select_by_scientific_situation(
             if similarity < thresholds.minimum_source_similarity:
                 continue
             weight = similarity * similarity
-            sampling_variance, replicate_count = _source_sampling_variance(source, action)
+            source_action = _source_action_for_target(
+                source,
+                action,
+                action_map_by_source.get(source.study_id),
+            )
+            sampling_variance, replicate_count = _source_sampling_variance(
+                source,
+                source_action,
+            )
             weighted_by_cluster.setdefault(source.task_cluster_id, []).append(
                 (
                     weight,
-                    _source_utility(source, action),
+                    _source_utility(source, source_action),
                     source.study_id,
                     similarity,
                     sampling_variance,
@@ -995,6 +1520,7 @@ def select_by_scientific_situation(
             excluded_same_cluster_case_ids=same_cluster,
             estimates=(),
             source_boundary_assessments=boundary_assessments,
+            admitted_action_map_sha256s=admitted_action_map_sha256s,
             selected_action=None,
             abstained=True,
             abstention_reasons=("no-similar-common-action-support",),
@@ -1011,6 +1537,82 @@ def select_by_scientific_situation(
         if runner_up is None
         else best.expected_normalized_utility - runner_up.expected_normalized_utility
     )
+    contrast_standard_error = 0.0
+    contrast_method: Literal[
+        "unavailable",
+        "independent-conservative",
+        "paired-seed-block-task-clustered",
+    ] = "unavailable"
+    minimum_paired_seed_blocks = 0
+    if runner_up is not None and thresholds.require_formal_sources:
+        paired_by_cluster: dict[str, list[tuple[float, float, float, int]]] = {}
+        for source in common_support:
+            if not isinstance(source, FormalObjectiveForkSituationCase):
+                continue
+            similarity = scientific_situation_similarity(source.situation, target)
+            if similarity < thresholds.minimum_source_similarity:
+                continue
+            action_map = action_map_by_source[source.study_id]
+            preferred_source_action = _source_action_for_target(
+                source,
+                best.action_id,
+                action_map,
+            )
+            comparator_source_action = _source_action_for_target(
+                source,
+                runner_up.action_id,
+                action_map,
+            )
+            difference, variance, block_count = source.paired_action_difference_variance(
+                preferred_source_action,
+                comparator_source_action,
+            )
+            weight = similarity * similarity
+            paired_by_cluster.setdefault(source.task_cluster_id, []).append(
+                (weight, difference, variance, block_count)
+            )
+        paired_clusters: list[tuple[float, float, float, int]] = []
+        for rows in paired_by_cluster.values():
+            cluster_weight = sum(item[0] for item in rows)
+            cluster_difference = sum(item[0] * item[1] for item in rows) / cluster_weight
+            cluster_sampling_variance = sum(
+                item[0] * item[0] * item[2] / item[3] for item in rows
+            ) / (cluster_weight * cluster_weight)
+            paired_clusters.append(
+                (
+                    max(item[0] for item in rows),
+                    cluster_difference,
+                    cluster_sampling_variance,
+                    min(item[3] for item in rows),
+                )
+            )
+        if paired_clusters:
+            total_weight = sum(item[0] for item in paired_clusters)
+            contrast_mean = sum(
+                weight * difference for weight, difference, _, _ in paired_clusters
+            ) / total_weight
+            between_variance = sum(
+                weight * (difference - contrast_mean) ** 2
+                for weight, difference, _, _ in paired_clusters
+            ) / total_weight
+            effective = total_weight * total_weight / sum(
+                item[0] ** 2 for item in paired_clusters
+            )
+            within_variance = sum(
+                weight * weight * sampling_variance
+                for weight, _, sampling_variance, _ in paired_clusters
+            ) / (total_weight * total_weight)
+            contrast_standard_error = math.sqrt(
+                max(between_variance / effective + within_variance, 0.0)
+            )
+            contrast_method = "paired-seed-block-task-clustered"
+            minimum_paired_seed_blocks = min(item[3] for item in paired_clusters)
+    elif runner_up is not None:
+        contrast_standard_error = math.sqrt(
+            best.standard_error * best.standard_error
+            + runner_up.standard_error * runner_up.standard_error
+        )
+        contrast_method = "independent-conservative"
     reasons: list[str] = []
     if target.abstraction_confidence < thresholds.minimum_abstraction_confidence:
         reasons.append("low-abstraction-confidence")
@@ -1030,7 +1632,7 @@ def select_by_scientific_situation(
             reasons.append("margin-within-practical-equivalence")
         if not best.replicate_aware_uncertainty:
             reasons.append("non-replicate-aware-uncertainty")
-    if best.standard_error > thresholds.maximum_standard_error:
+    if contrast_standard_error > thresholds.maximum_standard_error:
         reasons.append("excessive-transfer-uncertainty")
     return ScientificSituationTransferDecision.create(
         target_study_id=target.study_id,
@@ -1038,10 +1640,17 @@ def select_by_scientific_situation(
         excluded_same_cluster_case_ids=same_cluster,
         estimates=ordered,
         source_boundary_assessments=boundary_assessments,
+        admitted_action_map_sha256s=admitted_action_map_sha256s,
         selected_action=None if reasons else best.action_id,
         abstained=bool(reasons),
         abstention_reasons=tuple(reasons),
         best_action_margin=margin,
+        best_action_contrast_standard_error=min(
+            max(contrast_standard_error, 0.0),
+            1.0,
+        ),
+        contrast_uncertainty_method=contrast_method,
+        minimum_paired_seed_blocks=minimum_paired_seed_blocks,
         outcome_grounded_source_count=len(common_support),
     )
 
@@ -1052,11 +1661,18 @@ __all__ = [
     "FormalObjectiveForkSituationCase",
     "HypothesisStructure",
     "IdentifiabilityBand",
+    "ObjectiveForkActionDefinition",
+    "ObjectiveForkConstructionManifest",
+    "ObjectiveForkExecutionContract",
     "ObjectiveForkReplicateOutcome",
+    "ObjectiveForkScorerContract",
     "ObjectiveForkSituationCase",
+    "ObjectiveForkTaskBinding",
+    "ScientificActionSemanticBinding",
     "ScientificBottleneck",
     "ScientificSituation",
     "ScientificSituationActionEstimate",
+    "ScientificSituationActionMap",
     "ScientificSituationAxis",
     "ScientificSituationBoundaryAssessment",
     "ScientificSituationEvidenceAnchor",

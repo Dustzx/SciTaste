@@ -438,7 +438,9 @@ def _parse_json_object(text: str) -> dict[str, JsonValue]:
         cleaned = match.group(1).strip()
     try:
         value = json.loads(cleaned, parse_constant=_reject_non_finite_json)
-    except (json.JSONDecodeError, ValueError) as exc:
+    except json.JSONDecodeError as exc:
+        value = _parse_json_object_with_redundant_closer(cleaned, original_error=exc)
+    except ValueError as exc:
         shape = _structured_text_shape(cleaned)
         digest = hashlib.sha256(cleaned.encode()).hexdigest()
         raise StructuredProviderResponseError(
@@ -448,6 +450,31 @@ def _parse_json_object(text: str) -> dict[str, JsonValue]:
     if not isinstance(value, dict):
         raise StructuredProviderResponseError("model response JSON must be an object")
     return value
+
+
+def _parse_json_object_with_redundant_closer(
+    cleaned: str,
+    *,
+    original_error: json.JSONDecodeError,
+) -> JsonValue:
+    """Accept only a complete JSON object followed by at most two stray closers."""
+
+    try:
+        value, end = json.JSONDecoder(
+            parse_constant=_reject_non_finite_json
+        ).raw_decode(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        value = None
+        end = 0
+    trailing = cleaned[end:].strip()
+    if value is not None and 1 <= len(trailing) <= 2 and set(trailing) <= {"}", "]"}:
+        return value
+    shape = _structured_text_shape(cleaned)
+    digest = hashlib.sha256(cleaned.encode()).hexdigest()
+    raise StructuredProviderResponseError(
+        "model did not return one valid JSON object "
+        f"(shape={shape}, chars={len(cleaned)}, sha256={digest})"
+    ) from original_error
 
 
 def _structured_text_shape(value: str) -> str:

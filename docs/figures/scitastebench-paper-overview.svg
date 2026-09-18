@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="690" viewBox="0 0 1400 690" role="img" aria-labelledby="title desc">
   <title id="title">SciTasteBench construction and causal evaluation</title>
-  <desc id="desc">A three-panel publication figure showing decision-episode construction, context-dependent boundary pairs, causal controls, feedback learning, and external validation.</desc>
+  <desc id="desc">A three-panel publication figure showing outcome-hidden decision construction, scorer-owned executable forks, causal controls, feedback learning, and external validation.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3 Z" fill="#334155"/></marker>
     <style>
@@ -11,7 +11,7 @@
   <text class="title" x="40" y="50">SciTasteBench tests context-sensitive scientific decisions</text>
 
   <rect class="panel" x="40" y="82" width="410" height="540" rx="16"/>
-  <text class="head" x="68" y="122">A  Build one decision episode</text>
+  <text class="head" x="68" y="122">A  Compile one decision</text>
   <rect class="blue" x="70" y="152" width="350" height="104" rx="12"/>
   <text class="small" x="92" y="188">PRE-DECISION RECORD</text>
   <text class="body" x="92" y="224">state · actions · budget</text>
@@ -21,46 +21,46 @@
   <text class="body" x="92" y="374">later evidence stays hidden</text>
   <path class="arrow" d="M245 408 V450"/>
   <rect class="green" x="70" y="452" width="350" height="132" rx="12"/>
-  <text class="small" x="92" y="488">GROUNDED LESSON</text>
-  <text class="body" x="92" y="526">preference + applicability</text>
-  <text class="body" x="92" y="560">boundary + delayed credit</text>
+  <text class="small" x="92" y="488">TASTE CONTROL PACKET</text>
+  <text class="body" x="92" y="526">grounded precedent + fit</text>
+  <text class="body" x="92" y="560">signed action adjustment</text>
 
   <rect class="panel" x="485" y="82" width="430" height="540" rx="16"/>
-  <text class="head" x="513" y="122">B  Test context, not a cue</text>
+  <text class="head" x="513" y="122">B  Execute every action</text>
   <rect class="blue" x="515" y="152" width="170" height="184" rx="12"/>
-  <text class="small" x="537" y="188">BASE</text>
-  <text class="body" x="537" y="224">same question</text>
-  <text class="body" x="537" y="258">same actions</text>
-  <text class="body" x="537" y="292">fact = low</text>
+  <text class="small" x="537" y="188">ACTION a₁</text>
+  <text class="body" x="537" y="224">seed 1</text>
+  <text class="body" x="537" y="258">seed 2</text>
+  <text class="body" x="537" y="292">seed 3+</text>
   <rect class="orange" x="715" y="152" width="170" height="184" rx="12"/>
-  <text class="small" x="737" y="188">TWIN</text>
-  <text class="body" x="737" y="224">same question</text>
-  <text class="body" x="737" y="258">same actions</text>
-  <text class="body" x="737" y="292">fact = high</text>
+  <text class="small" x="737" y="188">ACTION a₂</text>
+  <text class="body" x="737" y="224">seed 1</text>
+  <text class="body" x="737" y="258">seed 2</text>
+  <text class="body" x="737" y="292">seed 3+</text>
   <path class="dash" d="M600 338 V386 H800 V338"/>
   <rect class="purple" x="515" y="392" width="370" height="154" rx="12"/>
-  <text class="small" x="537" y="428">REQUIRED SIGNATURE</text>
-  <text class="body" x="537" y="466">action flips or abstains</text>
-  <text class="body" x="537" y="502">only with invariant context</text>
-  <text class="tiny" x="537" y="580">Boundary-only chooser</text>
-  <text class="tiny" x="537" y="610">must fail.</text>
+  <text class="small" x="537" y="428">OFFICIAL SCORER</text>
+  <text class="body" x="537" y="466">common objective utility</text>
+  <text class="body" x="537" y="502">replicate uncertainty</text>
+  <text class="tiny" x="537" y="580">Same prefix · tools · budget.</text>
+  <text class="tiny" x="537" y="610">Outcomes remain hidden.</text>
 
   <rect class="panel" x="950" y="82" width="410" height="540" rx="16"/>
   <text class="head" x="978" y="122">C  Separate three claims</text>
   <rect class="white" x="980" y="152" width="350" height="118" rx="12"/>
   <text class="small" x="1002" y="188">MECHANISM</text>
   <text class="body" x="1002" y="224">Base · Raw · Matched</text>
-  <text class="body" x="1002" y="256">Mismatched → pair regret</text>
+  <text class="body" x="1002" y="256">Mismatched → action regret</text>
   <path class="arrow" d="M1155 272 V306"/>
   <rect class="green" x="980" y="308" width="350" height="118" rx="12"/>
   <text class="small" x="1002" y="344">OUTCOME LEARNING</text>
   <text class="body" x="1002" y="380">update · no update · shuffled</text>
-  <text class="body" x="1002" y="412">→ later source-disjoint cases</text>
+  <text class="body" x="1002" y="412">→ later task-disjoint forks</text>
   <path class="arrow" d="M1155 428 V462"/>
   <rect class="purple" x="980" y="464" width="350" height="118" rx="12"/>
   <text class="small" x="1002" y="500">EXTERNAL UTILITY</text>
   <text class="body" x="1002" y="536">public benchmark score</text>
   <text class="body" x="1002" y="568">progress · failures · cost</text>
 
-  <text class="small" x="40" y="662">Unit = one source-disjoint pair · formal estimate = one frozen hidden split</text>
+  <text class="small" x="40" y="662">Unit = one executable fork · inference clusters by task · one frozen hidden split</text>
 </svg>

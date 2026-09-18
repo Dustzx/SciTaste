@@ -233,12 +233,6 @@ from scitaste.taste.semantic_models import (
     TasteTransferBoundary,
     validate_grounded_abstraction_against_projection,
 )
-from scitaste.taste.situation_transfer import (
-    ScientificActionSemanticBinding,
-    ScientificSituationControlCompilation,
-    ScientificSituationPrecedentBinding,
-    compile_scientific_situation_control_packet,
-)
 from scitaste.taste.trajectory_reconstruction import (
     TasteProcessEvidenceBinding,
     TasteProspectiveDecisionCompletionProjection,
@@ -495,3 +489,35 @@ __all__ = [
     "validate_taste_applicability",
     "validate_taste_deliberation",
 ]
+
+
+_LAZY_SITUATION_TRANSFER_EXPORTS = {
+    "ScientificActionSemanticBinding",
+    "ScientificSituationControlCompilation",
+    "ScientificSituationPrecedentBinding",
+    "compile_scientific_situation_control_packet",
+}
+
+
+def __getattr__(name: str) -> object:
+    """Load evaluation-backed transfer symbols after package initialization."""
+
+    if name not in _LAZY_SITUATION_TRANSFER_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from scitaste.taste.situation_transfer import (
+        ScientificActionSemanticBinding,
+        ScientificSituationControlCompilation,
+        ScientificSituationPrecedentBinding,
+        compile_scientific_situation_control_packet,
+    )
+
+    exports = {
+        "ScientificActionSemanticBinding": ScientificActionSemanticBinding,
+        "ScientificSituationControlCompilation": ScientificSituationControlCompilation,
+        "ScientificSituationPrecedentBinding": ScientificSituationPrecedentBinding,
+        "compile_scientific_situation_control_packet": (
+            compile_scientific_situation_control_packet
+        ),
+    }
+    globals().update(exports)
+    return exports[name]

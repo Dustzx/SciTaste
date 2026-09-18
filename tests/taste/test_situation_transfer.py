@@ -6,9 +6,16 @@ from scitaste.evaluation.scientific_situation_transfer import (
     FormalObjectiveForkSituationCase,
     HypothesisStructure,
     IdentifiabilityBand,
+    ObjectiveForkActionDefinition,
+    ObjectiveForkConstructionManifest,
+    ObjectiveForkExecutionContract,
     ObjectiveForkReplicateOutcome,
+    ObjectiveForkScorerContract,
+    ObjectiveForkTaskBinding,
+    ScientificActionSemanticBinding,
     ScientificBottleneck,
     ScientificSituation,
+    ScientificSituationActionMap,
     ScientificSituationTransferThresholds,
     TerminalReadiness,
     select_by_scientific_situation,
@@ -21,7 +28,6 @@ from scitaste.taste.deliberation import (
     TasteDeliberationInput,
 )
 from scitaste.taste.situation_transfer import (
-    ScientificActionSemanticBinding,
     ScientificSituationPrecedentBinding,
     compile_scientific_situation_control_packet,
 )
@@ -51,34 +57,122 @@ def _situation(study_id: str, task_cluster_id: str) -> ScientificSituation:
     )
 
 
+def _action_definition(action_id: str, role: str) -> ObjectiveForkActionDefinition:
+    return ObjectiveForkActionDefinition.create(
+        action_id=action_id,
+        semantic_role=role,
+        description=f"Execute the registered {role} intervention.",
+        executor_id="fixture-executor-v1",
+        command_template=("fixture", "--action", action_id, "--seed", "{seed_block_id}"),
+    )
+
+
 def _formal_case(study_id: str, task_cluster_id: str, suffix: str):
-    utilities = {"probe": (0.8, 0.9, 0.85), "experiment": (0.2, 0.3, 0.25)}
+    utilities = {"diagnostic": (0.8, 0.9, 0.85), "scale": (0.2, 0.3, 0.25)}
+    definitions = (
+        _action_definition("diagnostic", "bounded diagnostic"),
+        _action_definition("scale", "full experiment"),
+    )
+    definition_hashes = {item.action_id: item.definition_sha256 for item in definitions}
     outcomes = tuple(
-        ObjectiveForkReplicateOutcome(
+        ObjectiveForkReplicateOutcome.create(
             action_id=action,
-            replicate_id=f"{study_id}-{action}-{index}",
+            replicate_id=f"{study_id}-{action}-seed-{index}",
+            seed_block_id=f"seed-{index}",
+            requested_action_definition_sha256=definition_hashes[action],
+            action_compliance="compliant",
+            action_trace_sha256=suffix * 64,
             executed=True,
             objective_observed=True,
+            raw_metric_value=value,
             utility=value,
-            result_sha256=suffix * 64,
         )
         for action, values in utilities.items()
         for index, value in enumerate(values)
     )
-    return FormalObjectiveForkSituationCase(
+    return FormalObjectiveForkSituationCase.create(
         study_id=study_id,
         task_cluster_id=task_cluster_id,
         situation=_situation(study_id, task_cluster_id),
-        available_actions=("experiment", "probe"),
-        utility_contract_id="shared-utility-v1",
-        action_semantics_sha256="d" * 64,
-        practical_equivalence_tolerance=0.05,
-        intention_to_treat_failure_utility=0.0,
+        task_binding=ObjectiveForkTaskBinding(
+            task_locator=f"fixture://{study_id}",
+            task_sha256="4" * 64,
+            environment_sha256="5" * 64,
+            code_sha256="6" * 64,
+            prefix_state_sha256=_situation(study_id, task_cluster_id).prefix_sha256,
+            split_assignment="development",
+        ),
+        available_actions=("diagnostic", "scale"),
+        action_definitions=definitions,
+        execution_contract=ObjectiveForkExecutionContract.create(
+            contract_id="paired-budget-v1",
+            allowed_tools=("fixture-tool",),
+            budget_limit=100.0,
+            budget_unit="tokens",
+            maximum_steps=10,
+            timeout_seconds=60,
+            network_access=False,
+            seed_block_ids=("seed-0", "seed-1", "seed-2"),
+            minimum_action_compliance_rate=0.8,
+        ),
+        scorer_contract=ObjectiveForkScorerContract.create(
+            scorer_id="fixture-scorer-v1",
+            implementation_sha256="7" * 64,
+            metric_name="objective score",
+            metric_direction="higher",
+            raw_scale_minimum=0.0,
+            raw_scale_maximum=1.0,
+            utility_contract_id="shared-utility-v1",
+            practical_equivalence_tolerance=0.05,
+            intention_to_treat_failure_utility=0.0,
+        ),
+        construction_manifest=ObjectiveForkConstructionManifest.create(
+            source_collection_id="fixture-source",
+            source_version="v1",
+            construction_protocol_sha256="8" * 64,
+            constructor_provider="fixture",
+            constructor_model="fixture",
+            split_assignment="development",
+            contamination_audit_protocol="exact ID and semantic overlap audit v1",
+            contamination_corpora=("fixture-training-corpus",),
+            contamination_report_sha256="9" * 64,
+        ),
         replicate_outcomes=outcomes,
-        action_utility_estimates={
-            action: sum(values) / len(values) for action, values in utilities.items()
-        },
-        result_sha256="e" * 64,
+    )
+
+
+def _action_map(source: FormalObjectiveForkSituationCase) -> ScientificSituationActionMap:
+    source_definitions = {item.action_id: item for item in source.action_definitions}
+    target_definitions = {
+        "experiment": _action_definition("experiment", "full experiment"),
+        "probe": _action_definition("probe", "bounded diagnostic"),
+    }
+    return ScientificSituationActionMap.create(
+        source_study_id=source.study_id,
+        bindings=(
+            ScientificActionSemanticBinding(
+                source_action_id="scale",
+                source_action_definition_sha256=source_definitions["scale"].definition_sha256,
+                target_action=target_definitions["experiment"],
+                mapping_rationale="Both actions commit the full remaining budget.",
+                boundary_conditions=("The full-budget action is feasible.",),
+                mapping_confidence=0.95,
+            ),
+            ScientificActionSemanticBinding(
+                source_action_id="diagnostic",
+                source_action_definition_sha256=source_definitions[
+                    "diagnostic"
+                ].definition_sha256,
+                target_action=target_definitions["probe"],
+                mapping_rationale="Both actions run a bounded uncertainty-resolving probe.",
+                boundary_conditions=("Competing explanations remain live.",),
+                mapping_confidence=0.95,
+            ),
+        ),
+        adjudicator_provider="fixture",
+        adjudicator_model="fixture",
+        request_fingerprint="a" * 64,
+        response_sha256="b" * 64,
     )
 
 
@@ -116,6 +210,7 @@ def test_formal_objective_transfer_compiles_to_canonical_control_packet() -> Non
         _formal_case("source-one", "cluster-one", "2"),
         _formal_case("source-two", "cluster-two", "3"),
     )
+    action_maps = tuple(_action_map(source) for source in sources)
     decision = select_by_scientific_situation(
         target=target,
         sources=sources,
@@ -125,6 +220,7 @@ def test_formal_objective_transfer_compiles_to_canonical_control_packet() -> Non
             minimum_effective_support=2.0,
             maximum_standard_error=0.2,
         ),
+        action_maps=action_maps,
     )
     facts = (
         TasteDecisionFact(
@@ -175,28 +271,21 @@ def test_formal_objective_transfer_compiles_to_canonical_control_packet() -> Non
             decision_fact_ids=("fact-budget",),
         ),
     )
-    semantics = (
-        ScientificActionSemanticBinding(
-            source_action_id="probe",
-            target_action_id="probe",
-            relation="aligned",
-        ),
-        ScientificActionSemanticBinding(
-            source_action_id="experiment",
-            target_action_id="experiment",
-            relation="opposed",
-        ),
-    )
     bindings = tuple(
         ScientificSituationPrecedentBinding(
             source_study_id=source.study_id,
             target_taste_case_id=candidate.case_id,
             applicability_supports=supports,
-            action_semantics=semantics,
+            action_map=action_map,
             relevance_confidence=0.9,
             rationale="Both registered boundary conditions hold in the target state.",
         )
-        for source, candidate in zip(sources, candidates, strict=True)
+        for source, candidate, action_map in zip(
+            sources,
+            candidates,
+            action_maps,
+            strict=True,
+        )
     )
 
     compilation = compile_scientific_situation_control_packet(
@@ -208,6 +297,8 @@ def test_formal_objective_transfer_compiles_to_canonical_control_packet() -> Non
     )
 
     assert decision.selected_action == "probe"
+    assert decision.contrast_uncertainty_method == "paired-seed-block-task-clustered"
+    assert decision.minimum_paired_seed_blocks == 3
     assert all(item.replicate_aware_uncertainty for item in decision.estimates)
     assert compilation.compilation_findings == ()
     assert compilation.packet.abstained is False
@@ -216,3 +307,20 @@ def test_formal_objective_transfer_compiles_to_canonical_control_packet() -> Non
         "taste-one",
         "taste-two",
     }
+
+
+def test_formal_transfer_refuses_post_selection_action_interpretation() -> None:
+    target = _situation("target-study", "target-cluster")
+    decision = select_by_scientific_situation(
+        target=target,
+        sources=(
+            _formal_case("source-one", "cluster-one", "2"),
+            _formal_case("source-two", "cluster-two", "3"),
+        ),
+        available_actions={"probe", "experiment"},
+        thresholds=ScientificSituationTransferThresholds(require_formal_sources=True),
+    )
+
+    assert decision.abstained is True
+    assert decision.abstention_reasons == ("no-validated-preselection-action-map",)
+    assert decision.estimates == ()

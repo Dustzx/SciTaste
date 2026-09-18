@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, model_validator
 
 from scitaste.benchmark import (
     BenchmarkDecisionContextFamily,
@@ -309,6 +309,10 @@ def _request(
 
 def _source_license(screening: dict[str, JsonValue]) -> str:
     package_id = str(screening["package_id"])
+    if package_id.startswith("codescientist"):
+        return "Apache-2.0-development-source-not-human-target"
+    if package_id.startswith("opendiscoverytrace"):
+        return "CC-BY-4.0-development-source-not-human-target"
     if package_id.startswith("f1000"):
         return "CC-BY-item-binding-unresolved-development-only"
     return "ODC-BY-database-only-content-rights-unresolved-development-only"
@@ -332,7 +336,7 @@ def _normalize_output_payload(
         "RETAIN_CLAIM": "CITE_EXISTING_EVIDENCE",
     }
     corrections: list[dict[str, str]] = []
-    for proposal in proposals:
+    for proposal_index, proposal in enumerate(proposals):
         if not isinstance(proposal, dict):
             continue
         for observed_key in tuple(proposal):
@@ -354,6 +358,21 @@ def _normalize_output_payload(
                         "authority": "bounded-json-key-whitespace-normalization-v1",
                     }
                 )
+        for observed_key in tuple(proposal):
+            if observed_key in PairProposal.model_fields:
+                continue
+            proposal.pop(observed_key)
+            corrections.append(
+                {
+                    "request_id": request_id,
+                    "intake_candidate_id": str(proposal.get("intake_candidate_id", "")),
+                    "action_id": "",
+                    "field": observed_key,
+                    "observed": "provider-added-envelope-field",
+                    "replacement": "removed",
+                    "authority": "bounded-nonsemantic-envelope-removal-v1",
+                }
+            )
         _remove_null_provider_notes(
             proposal,
             path="proposal",
@@ -415,7 +434,39 @@ def _normalize_output_payload(
                         "authority": "bounded-action-vocabulary-alias-v1",
                     }
                 )
+        try:
+            PairProposal.model_validate(proposal)
+        except ValidationError as exc:
+            candidate_id = proposal.get("intake_candidate_id")
+            if not isinstance(candidate_id, str) or not candidate_id.strip():
+                continue
+            proposals[proposal_index] = {
+                "intake_candidate_id": candidate_id,
+                "admitted": False,
+                "rejection_reason": (
+                    "Provider emitted an internally incomplete proposal; deterministic schema "
+                    "validation converted it to a rejection without repairing scientific content."
+                ),
+            }
+            corrections.append(
+                {
+                    "request_id": request_id,
+                    "intake_candidate_id": candidate_id,
+                    "action_id": "",
+                    "field": "proposal",
+                    "observed": _validation_error_fingerprint(exc),
+                    "replacement": "rejected",
+                    "authority": "fail-closed-incomplete-proposal-v2",
+                }
+            )
     return normalized, corrections
+
+
+def _validation_error_fingerprint(error: ValidationError) -> str:
+    fields = sorted(
+        ".".join(str(part) for part in item["loc"]) for item in error.errors()
+    )
+    return "invalid-fields:" + ",".join(fields[:12])
 
 
 def _remove_null_provider_notes(

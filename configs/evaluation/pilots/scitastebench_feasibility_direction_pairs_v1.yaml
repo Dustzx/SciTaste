@@ -1,0 +1,62 @@
+schema_version: "1.2"
+construction_id: scitastebench-feasibility-direction-pairs-v1
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-feasibility-sources-v1/SCREENING_ITEMS.jsonl
+  sha256: db0dce4e2c8be9c4faedc359ded84ceb68b197951dc2cbe6362a2df3aacacf2f
+caseability_decisions:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-feasibility-sources-v1/CASEABILITY_DECISIONS.jsonl
+  sha256: cd3f72d3987b5d88b77f49819f6aae1d0cc10ce8e980f7a36cc75175eaeb7bf4
+constructor_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+constructor_provider: deepseek
+constructor_model: deepseek-flash
+batch_size: 1
+seed: 20270924
+standard_visible_budget: >-
+  Make one bounded research-direction decision before execution. A pilot may
+  consume at most 8 GPU-hours or an equivalent API budget, and no later result
+  or unlisted source may be assumed.
+utility_contract:
+  contract_id: scitastebench-direction-utility-v1
+  evidence_value_weight: 0.30
+  expected_information_gain_weight: 0.25
+  resource_cost_weight: 0.15
+  claim_risk_weight: 0.30
+  minimum_action_utility_for_commitment: 0.05
+  component_anchors:
+    evidence_value: "0=no credible evidence gained; 1=decisive evidence about research value or hypothesis viability"
+    expected_information_gain: "0=does not discriminate alternatives; 1=strongly separates consequential alternatives"
+    resource_cost: "0=negligible within the visible budget; 1=consumes or exceeds the full visible budget"
+    claim_risk: "0=does not induce an unsupported scientific claim; 1=likely creates a materially unsupported claim"
+  registered_before_system_outputs: true
+selection_mode: top-up
+selected_candidates:
+  - intake_candidate_id: feasibility-cs-problem-01
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: feasibility-cs-problem-02
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: feasibility-cs-problem-03
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: feasibility-cs-problem-04
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: feasibility-cs-problem-05
+    decision_context_family: problem-and-idea-value
+  - intake_candidate_id: feasibility-cs-hypothesis-06
+    decision_context_family: hypothesis-and-falsifiability
+  - intake_candidate_id: feasibility-cs-hypothesis-07
+    decision_context_family: hypothesis-and-falsifiability
+  - intake_candidate_id: feasibility-cs-hypothesis-08
+    decision_context_family: hypothesis-and-falsifiability
+  - intake_candidate_id: feasibility-cs-hypothesis-09
+    decision_context_family: hypothesis-and-falsifiability
+  - intake_candidate_id: feasibility-cs-hypothesis-10
+    decision_context_family: hypothesis-and-falsifiability
+target_pair_count: 10
+target_pairs_per_context: 5
+target_outcomes_visible_to_constructor: false
+formal_split_opened: false
+human_label_claim_allowed: false
+effectiveness_claim_allowed: false

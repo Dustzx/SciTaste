@@ -4914,16 +4914,59 @@ Status: implemented as the claim-bearing interface; formal source data are not y
 Scientific-situation transfer is not a second controller. Its output can affect execution only
 after `compile_scientific_situation_control_packet` binds every admitted source fork to an existing
 grounded Taste case, at least two exact current-state facts, and a one-to-one mapping over the
-frozen target action menu. The compiler rejects post-selection action remapping, same-task
+frozen target action menu. Action semantics are fixed and content-hashed before value estimation;
+the compiler verifies that the exact admitted map is reused downstream. It rejects same-task
 precedents, menu drift, missing contributing evidence, and fewer than two grounded source task
 clusters. Any finding produces the ordinary zero-adjustment abstaining `TasteControlPacket`.
 Consequently local mechanism studies and external research trajectories consume the same typed
 treatment object and the controller's existing bounded adjustment path remains authoritative.
 
-Formal objective sources use `FormalObjectiveForkSituationCase`, not the legacy one-rollout
-development schema. Every action has at least three independently identified continuations on one
-registered utility scale; failed branches retain the preregistered intention-to-treat utility;
-action semantics, practical equivalence, and the scorer result are bound. Transfer estimates
-combine between-task variation with within-case replicate uncertainty, and formal mode refuses
-mixed utility or action contracts. Legacy min--max cases remain readable for development, but
-cannot satisfy the formal-source gate.
+Formal objective sources use `FormalObjectiveForkSituationCase` schema 3.0, not the legacy
+one-rollout development schema. Every action has exactly one continuation in each of at least three
+paired seed blocks on one registered utility scale; failed and non-compliant branches remain in the
+intention-to-treat population. Task, environment, code, prefix, executable action definitions,
+tools, budget, horizon, scorer transform, split, construction, contamination, compliance, and
+branch outcomes are content-bound. The formal gate uses best-minus-runner-up paired contrast
+uncertainty rather than a marginal action standard error. Legacy min--max cases remain readable for
+development, but cannot satisfy the formal-source gate.
+
+### ADR-152: SciTasteBench utility authority is scorer-owned execution
+
+Status: accepted after the reconstructed-pair feasibility gate failed; formal objective-fork data
+are not yet collected.
+
+A frozen 30-proposal cohort covered the three decision axes, all six operational contexts, and 30
+independent source groups. No proposal survived deterministic single-fact, grounding,
+non-contradiction, stable-action, and shortcut-resistance checks. The route is therefore closed for
+the ICLR study. Model changes, threshold relaxation, or post-review repair cannot convert those
+responses into validation or hidden cases.
+
+SciTasteBench now obtains its primary action utilities from shared-prefix executable forks. The
+selector sees one content-hashed prefix, stable action semantics, and the common budget. Every
+action is executed with at least three independent continuations, failures receive an
+intention-to-treat value, and the official task scorer supplies the common utility and practical-
+equivalence contract. Task clusters define independent statistical units. Natural papers and
+review records still support situation coverage, precedent abstraction, and transfer-boundary
+audits, but never supply the counterfactual utility of an unexecuted action.
+
+Internal selector comparisons reuse the same hidden branch outcomes, which permits Base, raw,
+coarse kNN, generic outcome memory, Matched Taste, and Mismatched Taste without multiplying GPU
+execution. External end-to-end comparisons remain separate: same-backbone Full versus Native Base
+attributes the Taste effect, while unchanged official agents establish competitiveness.
+
+### ADR-153: benchmark evidence is separated into mechanism and external validity
+
+Status: accepted; formal executions have not begun.
+
+SciTasteBench is a causal instrument for the paper's Taste mechanism. Its shared-prefix objective
+forks answer whether situation-conditioned precedent transfer selects higher-value actions than
+Base, equal-token raw evidence, coarse retrieval, generic outcome memory, and mismatched Taste.
+It does not establish that SciTaste is competitive as an autonomous-research system. That claim
+requires unchanged, peer-reviewed external tasks and official scorers.
+
+The minimum external portfolio is AAAR-1.0 for accepted component tasks and MLRC-Bench for
+objective end-to-end ML research. MLR-Bench is the preferred idea-to-paper package evaluation.
+ScienceAgentBench is additionally required if the manuscript keeps an unqualified cross-domain
+autonomous-research title. Same-backbone Full versus Native Base isolates the Taste treatment;
+official benchmark agents establish competitiveness. Results from the local and external tracks
+must be reported separately and cannot substitute for each other.

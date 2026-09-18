@@ -1,0 +1,62 @@
+schema_version: "1.2"
+construction_id: scitastebench-feasibility-information-pairs-v1
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+screening_items:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-feasibility-sources-v1/SCREENING_ITEMS.jsonl
+  sha256: db0dce4e2c8be9c4faedc359ded84ceb68b197951dc2cbe6362a2df3aacacf2f
+caseability_decisions:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-feasibility-sources-v1/CASEABILITY_DECISIONS.jsonl
+  sha256: cd3f72d3987b5d88b77f49819f6aae1d0cc10ce8e980f7a36cc75175eaeb7bf4
+constructor_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+constructor_provider: deepseek
+constructor_model: deepseek-flash
+batch_size: 1
+seed: 20270925
+standard_visible_budget: >-
+  Choose one feasible experiment, diagnostic, retry, pivot, or stopping action
+  from the visible state. The action must fit within 8 GPU-hours or an
+  equivalent API budget and may not assume a later outcome.
+utility_contract:
+  contract_id: scitastebench-information-utility-v1
+  evidence_value_weight: 0.25
+  expected_information_gain_weight: 0.40
+  resource_cost_weight: 0.25
+  claim_risk_weight: 0.10
+  minimum_action_utility_for_commitment: 0.05
+  component_anchors:
+    evidence_value: "0=no credible evidence gained; 1=decisive evidence about the registered scientific uncertainty"
+    expected_information_gain: "0=does not discriminate alternatives; 1=strongly separates consequential alternatives"
+    resource_cost: "0=negligible within the visible budget; 1=consumes or exceeds the full visible budget"
+    claim_risk: "0=does not induce an unsupported scientific claim; 1=likely creates a materially unsupported claim"
+  registered_before_system_outputs: true
+selection_mode: top-up
+selected_candidates:
+  - intake_candidate_id: intake-096edb38aa6f2f5d8c4c3453
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: intake-95a157ec64bfed6a1b4b3401
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: intake-c712d826d8fa703368ce2248
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: intake-0a41bba00834c378f4cc730e
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: intake-0feef731340cdb7e7e116353
+    decision_context_family: experiment-design-and-confound-control
+  - intake_candidate_id: feasibility-odt-resource-01
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+  - intake_candidate_id: feasibility-odt-resource-02
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+  - intake_candidate_id: feasibility-odt-resource-03
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+  - intake_candidate_id: feasibility-odt-resource-04
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+  - intake_candidate_id: feasibility-odt-resource-05
+    decision_context_family: resource-allocation-pivot-continue-or-stop
+target_pair_count: 10
+target_pairs_per_context: 5
+target_outcomes_visible_to_constructor: false
+formal_split_opened: false
+human_label_claim_allowed: false
+effectiveness_claim_allowed: false

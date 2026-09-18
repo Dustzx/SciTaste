@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="650" viewBox="0 0 1400 650" role="img" aria-labelledby="title desc">
+  <title id="title">SciTasteBench scorer-owned objective fork</title>
+  <desc id="desc">An outcome-hidden selector chooses from a registered action menu at a shared research prefix. Every action is executed under the same budget in paired seed blocks, compliance is audited, and an official scorer supplies action regret.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0 0 L0 6 L9 3 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg{fill:#ffffff}.panel{fill:#f8fafc;stroke:#94a3b8;stroke-width:2.5}.blue{fill:#eaf2ff;stroke:#3973c4;stroke-width:2.5}.orange{fill:#fff2e8;stroke:#cc6f35;stroke-width:2.5}.green{fill:#eaf8f1;stroke:#2e8a65;stroke-width:2.5}.purple{fill:#f2edff;stroke:#7557ae;stroke-width:2.5}.red{fill:#fff0f0;stroke:#b84b4b;stroke-width:2.5}.title{font:700 36px Arial,sans-serif;fill:#172033}.head{font:700 27px Arial,sans-serif;fill:#172033}.body{font:400 24px Arial,sans-serif;fill:#334155}.small{font:700 22px Arial,sans-serif;fill:#52647b}.white{font:700 22px Arial,sans-serif;fill:#ffffff}.arrow{stroke:#334155;stroke-width:3.2;fill:none;marker-end:url(#arrow)}.dash{stroke:#b84b4b;stroke-width:3;stroke-dasharray:9 7;fill:none}.axis{font:700 21px Arial,sans-serif;fill:#334155}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="650"/>
+  <text class="title" x="42" y="52">SciTasteBench: predict action value before outcomes are visible</text>
+
+  <rect class="panel" x="40" y="86" width="350" height="450" rx="18"/>
+  <text class="head" x="66" y="128">A  Freeze one prefix</text>
+  <rect class="blue" x="70" y="160" width="290" height="205" rx="14"/>
+  <text class="small" x="94" y="198">HIDDEN DECISION STATE</text>
+  <text class="body" x="94" y="238">grounded situation</text>
+  <text class="body" x="94" y="278">tools + remaining budget</text>
+  <text class="body" x="94" y="318">registered action menu</text>
+  <rect class="red" x="70" y="397" width="290" height="92" rx="14"/>
+  <text class="small" x="94" y="433">FIREWALL</text>
+  <text class="body" x="94" y="468">no branch outcome seen</text>
+
+  <path class="arrow" d="M390 300 H445"/>
+
+  <rect class="panel" x="445" y="86" width="500" height="450" rx="18"/>
+  <text class="head" x="472" y="128">B  Execute every feasible action</text>
+  <rect class="orange" x="480" y="160" width="132" height="200" rx="14"/>
+  <text class="small" x="514" y="197">a₁</text>
+  <text class="body" x="500" y="238">block 1</text>
+  <text class="body" x="500" y="276">block 2</text>
+  <text class="body" x="500" y="314">block 3+</text>
+  <rect class="purple" x="628" y="160" width="132" height="200" rx="14"/>
+  <text class="small" x="662" y="197">a₂</text>
+  <text class="body" x="648" y="238">block 1</text>
+  <text class="body" x="648" y="276">block 2</text>
+  <text class="body" x="648" y="314">block 3+</text>
+  <rect class="green" x="776" y="160" width="132" height="200" rx="14"/>
+  <text class="small" x="810" y="197">a₃</text>
+  <text class="body" x="796" y="238">block 1</text>
+  <text class="body" x="796" y="276">block 2</text>
+  <text class="body" x="796" y="314">block 3+</text>
+  <path class="dash" d="M480 390 H908"/>
+  <text class="body" x="492" y="429">same prefix · tools · budget · scorer</text>
+  <text class="body" x="492" y="468">failure + action compliance are retained</text>
+
+  <path class="arrow" d="M945 300 H1000"/>
+
+  <rect class="panel" x="1000" y="86" width="360" height="450" rx="18"/>
+  <text class="head" x="1027" y="128">C  Select, score, compare</text>
+  <rect class="blue" x="1035" y="154" width="290" height="88" rx="14"/>
+  <text class="small" x="1060" y="190">HIDDEN-OUTCOME SELECTOR</text>
+  <text class="body" x="1060" y="222">situation + Taste → â</text>
+  <rect class="green" x="1035" y="260" width="290" height="120" rx="14"/>
+  <text class="small" x="1060" y="296">OFFICIAL EVALUATOR</text>
+  <text class="body" x="1060" y="332">u(a) + paired contrast</text>
+  <text class="body" x="1060" y="365">equivalence tolerance</text>
+  <rect class="orange" x="1035" y="398" width="290" height="91" rx="14"/>
+  <text class="small" x="1060" y="431">PRIMARY SIGNAL</text>
+  <text class="body" x="1060" y="466">regret = u(a*) − u(â)</text>
+
+  <rect class="blue" x="40" y="568" width="400" height="50" rx="12"/>
+  <text class="axis" x="76" y="601">DIRECTION  problem · hypothesis</text>
+  <rect class="orange" x="500" y="568" width="400" height="50" rx="12"/>
+  <text class="axis" x="535" y="601">INFORMATION  experiment · pivot</text>
+  <rect class="green" x="960" y="568" width="400" height="50" rx="12"/>
+  <text class="axis" x="999" y="601">INFERENCE  evidence · claim</text>
+</svg>

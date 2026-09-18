@@ -1,0 +1,21 @@
+schema_version: "1.0"
+gate_id: scitastebench-reconstructed-pair-feasibility-gate-v1
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+axis_summaries:
+  direction:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-feasibility-direction-pairs-v1/SUMMARY.json
+    sha256: 044800bfad1129c75164e53adff2628838480d23dd47796f8e9880f44386e2c3
+  information:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-feasibility-information-pairs-v1/SUMMARY.json
+    sha256: defbccfe74fcd57522c47855c78f7204186e70b278ca0e005389b24a1ac10f51
+  inference:
+    locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-feasibility-inference-pairs-v1/SUMMARY.json
+    sha256: 2c64d6f7c150122661c5427042f9ea7463ce4ac20349b991420b680424243b4a
+minimum_proposal_count: 30
+minimum_admitted_count: 12
+minimum_admitted_per_axis: 1
+minimum_full_context_advantage: 0.20
+minimum_equal_weight_stability: 0.80
+formal_split_opened: false
+effectiveness_claim_allowed: false

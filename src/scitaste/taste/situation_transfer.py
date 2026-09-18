@@ -9,12 +9,13 @@ abstaining packet rather than an ungrounded recommendation.
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.evaluation.scientific_situation_transfer import (
+    FormalObjectiveForkSituationCase,
+    ScientificActionSemanticBinding,
     ScientificSituation,
+    ScientificSituationActionMap,
     ScientificSituationSourceCase,
     ScientificSituationTransferDecision,
     scientific_situation_similarity,
@@ -36,16 +37,6 @@ _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[A-Za-z0-9]+(?:[A-Za-z0-9._:-]*[A-Za-z0-9])?$"
 
 
-class ScientificActionSemanticBinding(BaseModel):
-    """One explicit mapping from a source action to the frozen target menu."""
-
-    model_config = _CONFIG
-
-    source_action_id: str = Field(min_length=1)
-    target_action_id: str = Field(pattern=_ID)
-    relation: Literal["aligned", "opposed"]
-
-
 class ScientificSituationPrecedentBinding(BaseModel):
     """Fact and action binding required before one objective fork can intervene."""
 
@@ -57,7 +48,7 @@ class ScientificSituationPrecedentBinding(BaseModel):
         min_length=2,
         max_length=20,
     )
-    action_semantics: tuple[ScientificActionSemanticBinding, ...] = Field(min_length=2)
+    action_map: ScientificSituationActionMap
     role: TasteDeliberationRole = TasteDeliberationRole.SUPPORT
     counterfactual_status: TasteCounterfactualStatus = TasteCounterfactualStatus.NOT_TRIGGERED
     relevance_confidence: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
@@ -69,14 +60,8 @@ class ScientificSituationPrecedentBinding(BaseModel):
             self.source_study_id,
             field_name="scientific-situation precedent source_study_id",
         )
-        source_ids = [item.source_action_id for item in self.action_semantics]
-        if len(source_ids) != len(set(source_ids)):
-            raise ValueError("source action-semantic bindings must be unique")
-        target_ids = [item.target_action_id for item in self.action_semantics]
-        if len(target_ids) != len(set(target_ids)):
-            raise ValueError("target action-semantic bindings must be one-to-one")
-        if not any(item.relation == "aligned" for item in self.action_semantics):
-            raise ValueError("a precedent binding must align at least one target action")
+        if self.action_map.source_study_id != self.source_study_id:
+            raise ValueError("precedent binding and action-map source study IDs differ")
         return self
 
 
@@ -136,28 +121,20 @@ def compile_scientific_situation_control_packet(
         if candidate is None:
             findings.append(f"unknown-target-case:{binding.target_taste_case_id}")
             continue
-        source_actions = {item.source_action_id for item in binding.action_semantics}
-        target_actions = {item.target_action_id for item in binding.action_semantics}
-        # The current estimator operates on the shared MetaAction ontology.  We
-        # still record the mapping explicitly, but reject semantic remapping until
-        # it is applied before value estimation rather than after selection.
-        if any(item.source_action_id != item.target_action_id for item in binding.action_semantics):
-            findings.append(f"post-selection-action-remap:{binding.source_study_id}")
-            continue
-        if source_actions != action_ids or target_actions != action_ids:
+        source_actions = {item.source_action_id for item in binding.action_map.bindings}
+        target_actions = {
+            item.target_action.action_id for item in binding.action_map.bindings
+        }
+        registered_source_actions = (
+            set(source.available_actions)
+            if isinstance(source, FormalObjectiveForkSituationCase)
+            else set(source.observed_actions)
+        )
+        if source_actions != registered_source_actions or target_actions != action_ids:
             findings.append(f"incomplete-action-semantics:{binding.source_study_id}")
             continue
-        aligned = {
-            item.target_action_id for item in binding.action_semantics if item.relation == "aligned"
-        }
-        opposed = {
-            item.target_action_id for item in binding.action_semantics if item.relation == "opposed"
-        }
-        if aligned & opposed or aligned | opposed != action_ids:
-            findings.append(f"non-partitioning-action-semantics:{binding.source_study_id}")
-            continue
-        if decision.selected_action is not None and decision.selected_action not in aligned:
-            findings.append(f"selected-action-not-aligned:{binding.source_study_id}")
+        if binding.action_map.map_sha256 not in decision.admitted_action_map_sha256s:
+            findings.append(f"action-map-not-used-for-selection:{binding.source_study_id}")
             continue
         if binding.source_study_id not in contributing:
             continue
@@ -205,20 +182,8 @@ def compile_scientific_situation_control_packet(
                 )
             )
             continue
-        aligned = tuple(
-            sorted(
-                item.target_action_id
-                for item in binding.action_semantics
-                if item.relation == "aligned"
-            )
-        )
-        opposed = tuple(
-            sorted(
-                item.target_action_id
-                for item in binding.action_semantics
-                if item.relation == "opposed"
-            )
-        )
+        aligned = (() if decision.selected_action is None else (decision.selected_action,))
+        opposed = tuple(sorted(action_ids - set(aligned)))
         assessments.append(
             TasteCaseTransferAssessment(
                 case_id=candidate.case_id,

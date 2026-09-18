@@ -20,16 +20,25 @@
 - Added full-context invariant-fact review and a boundary-only negative control to SciTasteBench
   construction. No current natural pair passed both views, so generated counterfactual utilities
   remain outside the formal benchmark.
-- Added a publication-scale SciTasteBench overview and a 30-proposal feasibility kill test. The
-  benchmark may scale only after atomicity, dual blind review, boundary-only shortcut, utility
-  robustness, and coverage gates pass; otherwise the reconstructed-pair route is redesigned or
-  replaced by scorer-owned executable forks rather than relaxed after review.
-- Added the formal objective-fork source contract: at least three continuations per action on one
-  registered utility scale, intention-to-treat failure values, frozen action semantics, practical
-  equivalence, and replicate-aware uncertainty. Legacy one-rollout forks remain development only.
-- Connected scientific-situation transfer to the existing `TasteControlPacket` through an explicit
-  fact and action-semantic compiler. Missing or inconsistent transfer evidence now becomes a
-  zero-adjustment packet abstention instead of a second untracked controller decision.
+- Completed the frozen, source-disjoint 30-proposal SciTasteBench feasibility kill test across all
+  three axes and six operational contexts. Zero proposal passed deterministic admission, so the
+  reconstructed-pair route is closed without proxy review or post-hoc repair; its 30 API responses
+  remain consumed development evidence and cannot populate paper result tables.
+- Rebased SciTasteBench on scorer-owned executable forks: a content-hashed shared prefix, stable
+  action menu, matched tools and budget, at least three intention-to-treat continuations per
+  action, a common official scorer, practical equivalence, and task-clustered inference. Added
+  publication-scale objective-fork and claim-separation figures.
+- Pinned the official ScienceAgentBench code and current 102-task verified annotation split. Its
+  official execution archive remains unavailable through the published anonymous link, so no
+  substitute scorer or broad cross-domain claim is authorized.
+- Added the formal objective-fork schema 3.0 contract: content-bound task, environment, code,
+  prefix, executable action definitions, tools/budget/horizon, scorer transform, split,
+  contamination audit, balanced seed blocks, action-compliance traces, and intention-to-treat
+  outcomes. Legacy one-rollout forks remain development only.
+- Moved source-to-target action semantics before value estimation and bound the admitted maps into
+  the downstream `TasteControlPacket`. The formal gate now uses paired best-minus-runner-up
+  uncertainty rather than a marginal action error; missing or inconsistent evidence becomes a
+  zero-adjustment abstention.
 
 ## 2026-09-16 — Prospective adaptive-allocation activation v2
 

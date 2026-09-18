@@ -1,13 +1,11 @@
 # SciTasteBench and external validation: ICLR 2027 study design
 
-Status: current scientific design; formal data have not been opened. A first
-outcome-hidden construction pass produced 26 unique candidate boundary pairs.
-Independent label-hidden GLM and DeepSeek construct review admitted only 13, so
-these cases are consumed development material rather than a paper result. The
-revised selector made all 26 state-level applicability decisions protocol-valid,
-but its best grounded representation still had higher mean regret than the
-equal-token raw source and lower pair success than the mismatched control. This
-falsifies the current abstraction as a confirmation candidate. No confirmation
+Status: current scientific design; formal data have not been opened. A frozen
+30-proposal, source-disjoint feasibility test admitted zero reconstructed
+boundary pairs and therefore killed that data-unit design under its preregistered
+gate. SciTasteBench now uses scorer-owned executable objective forks as its
+primary unit. All reconstructed pairs and the earlier negative selector runs
+remain consumed development material rather than paper results. No confirmation
 population is frozen.
 
 SciTasteBench is the mechanism instrument for the SciTaste method paper. It is
@@ -30,59 +28,61 @@ SciTasteBench answers the first two questions and tests feedback learning. Publi
 Auto Research tasks answer the third. A positive result in either evaluation is
 insufficient without the other.
 
-## The released unit is a boundary pair, not a question
+## The released unit is an executable fork, not a question
 
-![Anatomy of one SciTasteBench boundary pair](../figures/scitastebench-case-anatomy.svg)
+![Anatomy of one SciTasteBench objective fork](../figures/scitastebench-objective-fork.svg)
 
-The independent unit is one natural decision plus one **single-fact
-counterfactual twin**. Topic, action menu, budget, writing style, and all
-registered invariant facts remain fixed. Exactly one decision-relevant fact
-changes, and that fact must reverse the preferred action or change action into
-abstention. A pair is rejected when both states still reward the same generic
-action. This directly tests the central claim that Taste is conditional rather
-than a globally useful piece of advice.
+The observational unit is one real pre-decision execution prefix with a frozen
+scientific action menu. The same prefix, tools, remaining budget, and scorer are
+forked across every feasible action; each branch is executed with independent
+seeds. The evaluated selector sees the prefix but never branch outcomes. This
+measures whether conditional Taste predicts objective action value rather than
+whether it agrees with a benchmark-author preference.
 
-Each released pair contains the following machine-checkable objects:
+Each released fork contains the following machine-checkable objects:
 
 | Object | Required content | Why it exists |
 |---|---|---|
-| Natural source | attributable locator, content hash, license, source-group identity | provenance, release rights, split integrity |
-| Frozen decision | outcome-hidden state, visible budget, 2--5 feasible actions | the actual judgment to be made |
-| Boundary twin | one changed fact, all invariant facts, unchanged action identifiers | intervention on applicability rather than topic |
-| Utility contract | per-action outcome, information, cost, and claim-risk rationale | regret rather than majority-label accuracy alone |
-| Construct judgments | two independent raw judgments plus adjudication only on disagreement | validity and uncertainty without agreement filtering |
-| Construct audits | two pair-blinded domain-expert audits of atomicity, consistency, action stability, label identifiability, abstention, utility, and shortcut resistance | construct validity rather than constructor self-approval |
-| Audit record | semantic-difference and contamination probes, construction manifest, content hash, split | reproducible release and leakage analysis |
+| Frozen prefix | task locator, environment and code hash, state hash, task-cluster identity | provenance and split integrity |
+| Scientific state | exact-span grounded situation dimensions and visible constraints | tests the proposed representation rather than topic retrieval |
+| Action menu | 2--5 stable action semantics executable from the same prefix | common support and meaningful alternatives |
+| Branch contract | identical tools/budget, at least three seeds per action, intention-to-treat failures | estimates action value without survivorship bias |
+| Objective utility | official scorer, common scale, direction, and practical-equivalence tolerance | regret without author-defined labels |
+| Transfer audit | source-to-target boundaries and explicit action-semantic bindings | matched versus mismatched attribution |
+| Audit record | replicate results, contamination probe, construction manifest, hashes, split | uncertainty and reproducibility |
 
-The schema and fail-closed readiness checks live in
-`scitaste.benchmark.boundary_pairs`. They are separate from legacy development
-suites so adding this design cannot silently change an old suite hash.
+The formal schema and fail-closed readiness checks live in
+`scitaste.evaluation.scientific_situation_transfer` as
+`FormalObjectiveForkSituationCase` schema 3.0. Reconstructed pair schemas remain
+available only to replay the consumed failure audit.
+
+Schema 3.0 closes the experimental unit before any selector is evaluated. It
+content-binds the task locator, prefix state, environment, code, executable
+action definitions, tool/budget/horizon contract, paired seed blocks, scorer
+identity and scale transform, split, construction manifest, contamination
+audit, action-compliance traces, and every branch result. Each seed block must
+contain exactly one branch for every registered action. A hash-shaped string
+without the corresponding bound payload is not admissible evidence.
 
 ### Population and splits
 
-The formal floor is **120 independent boundary pairs (240 decision states)**:
-20 pairs in each of the six decision contexts, at least three scientific
-domains, at least 12 genuine action-to-abstention pairs, and at most one pair per
-source group. The planned split is 24 development, 24 validation, and 72
-hidden-test pairs, stratified by decision context, domain, and flip kind.
-Development is used for prompt and policy construction; validation can choose
-one frozen method version; hidden test is opened once. No candidate-order,
-paraphrase, condition, or model repetition counts as a new independent item.
+The first objective-fork development population has a floor of **30 fresh
+prefixes from at least ten independent task clusters**, covers all three primary
+axes, and requires common support for every registered action. It is used only
+to estimate action identifiability, within-fork variance, task-cluster variance,
+and the smallest useful effect. Those quantities freeze the validation and
+hidden-test size once; the hidden population is never opened to repair the
+method. At most one split contains a task cluster. No branch seed, prefix,
+candidate order, paraphrase, condition, or model repetition counts as a new
+independent task.
 
-The 120-pair floor is not a post-hoc power claim. Before opening hidden test, the
-minimum detectable paired-regret improvement is recomputed from development and
-validation variance. If the resulting precision is inadequate, more
-source-group-disjoint pairs are added without inspecting hidden-test outcomes.
-
-The 120-pair floor applies **after** construct rejection, not to the raw source
-pool.  The consumed construction audit retained 13 of 26 proposed pairs (50%).
-Using that yield only for acquisition planning, the construction pool therefore
-has a preregistered floor of **240 independent source groups**, with additional
-acquisition triggered if the validation-stage acceptance rate implies fewer than
-120 admissible pairs.  A paper, review, or trajectory contributes at most one
-released pair even when it contains several review comments.  This is the data
-buffer: source acquisition may be enlarged before labels are opened, whereas a
-rejected pair is never relaxed into the benchmark merely to meet the target.
+The formal population is authorized only if development establishes nontrivial
+action separation beyond practical equivalence, complete intention-to-treat
+branch accounting, action diversity, and support on every primary axis. If the
+available tasks cannot supply that population, SciTasteBench is reported as a
+development instrument and the paper relies on untouched external benchmarks;
+sample counts are never filled by relabeling review comments or by treating
+correlated prefixes as independent.
 
 As of 2026-09-18, exact local compilation has produced the following
 construction inventory.  These are candidates, not benchmark cases, and no row
@@ -240,6 +240,20 @@ moves SciTasteBench's primary utility labels to scorer-owned executable forks. F
 more undifferentiated peer-review records. Passing this test establishes construction feasibility,
 not method effectiveness and not final sample size.
 
+**Gate outcome (2026-09-18).** The frozen cohort completed all 30 constructor
+requests: ten Direction, ten Information, and ten Inference proposals, with five
+proposals in every operational context and 30 independent source groups. Zero
+proposal passed the deterministic admission contract. The most common failures
+were source prose that made a twin internally contradictory, fact-presence cues
+that directly disclosed the action, missing exact invariant grounding, and
+incomplete constructor payloads. The preregistered minimum-yield and coverage
+gates therefore fail before proxy review. The reconstructed-pair route is closed;
+no repair, model swap, or additional API call may promote this cohort. The frozen
+decision is recorded in
+`evaluations/scitastebench-feasibility-gate-v1/GATE.json`. This is a benchmark-
+design result in the consumed-development ledger, not evidence about SciTaste's
+effectiveness and not a main-paper result.
+
 ### Consumed construction audit (not a result)
 
 The first live construction deliberately used only the outcome-hidden screening
@@ -265,21 +279,25 @@ explicit boundary/action wording permits cue-following shortcuts. The full
 13-pair population is therefore consumed. Formal construction starts from new,
 source-disjoint material rather than editing these cases into a hidden split.
 
-### Two benchmark tracks
+### Two benchmark tracks after the feasibility gate
 
 The release has two related but non-interchangeable tracks:
 
-1. **Boundary Judgment.** Choose or abstain on base and twin states. It measures
-   regret, correct reversal, selective risk, and invariance to action order and
-   nuisance paraphrase.
+1. **Objective Fork Judgment.** Choose or abstain at a real executable prefix.
+   Every feasible action is executed under the same remaining budget and
+   independent seeds. The official task scorer supplies the action-value target;
+   the primary measurements are regret, ranking quality, selective risk, and
+   invariance to action order and nuisance paraphrase.
 2. **Outcome Learning.** Observe reviewed delayed credit from earlier source
-   groups, update the Taste policy, and decide on later source-disjoint pairs.
+   groups, update the Taste policy, and decide on later source-disjoint forks.
    The reviewed update must beat both no-update and shuffled-credit controls.
 
-Boundary Judgment establishes whether the representation and selector express
-conditional scientific judgment. Outcome Learning establishes whether real
-outcomes improve that judgment. Neither track claims that an autonomous research
-project improved; external tasks own that endpoint.
+Objective Fork Judgment establishes whether the representation predicts which
+scientific action actually improves an independently scored task. Outcome
+Learning establishes whether earlier outcomes improve that judgment. Natural
+review/revision records remain a coverage and construct-audit source, never the
+utility-label authority. Neither track alone establishes end-to-end
+competitiveness; untouched external tasks own that endpoint.
 
 ## Paper type and evidence boundary
 
@@ -306,14 +324,16 @@ decision study alone therefore cannot justify an end-to-end Auto Research claim.
 
 ## What one SciTasteBench case contains
 
-Each case is one natural, outcome-hidden research fork:
+Each case is one real, outcome-hidden executable research fork:
 
-- the pre-decision scientific state;
-- two or more feasible actions at the same level of abstraction;
-- the visible budget and constraints;
-- a scoring-only later record, isolated from the evaluated system;
-- a panel distribution over actions and an explicit abstention judgment;
-- one source-group identity that controls all train/development/test placement.
+- a content-hashed execution prefix and pre-decision scientific state;
+- two or more stable action semantics feasible from that identical prefix;
+- one visible remaining budget shared by every action;
+- at least three independent continuations per action, with failures retained by
+  the intention-to-treat contract;
+- a common, scorer-owned utility scale, practical-equivalence tolerance, and
+  replicate-level outcomes isolated from the evaluated selector; and
+- one task-cluster identity that controls all train/development/test placement.
 
 The six contexts are problem value, hypothesis falsifiability, experiment and
 confounds, evidence interpretation, resource/pivot/stopping, and claim/review
@@ -323,29 +343,31 @@ The action menu must be diagnostic. A population in which almost every item asks
 the system to “perform more analysis” cannot distinguish scientific taste from a
 generic caution prior and is rejected before formal evaluation.
 
-The floor of 120 is a coverage constraint rather than a claim that 120 is
-automatically powered.  The final case count is revised once, using only the
-development-set paired-regret variance and the smallest effect worth detecting.
-Candidate-order repetitions are repeated measurements of the same case; they do
-not inflate the independent sample count.
+The old floor of 120 reconstructed pairs is retired with that route. The new
+sample size is a task-clustered power decision, not a prompt count. Development
+must first establish action identifiability on 30 fresh prefixes from at least
+ten independent tasks. The formal task and fork counts are then frozen once from
+development variance and the smallest effect worth detecting. Action seeds,
+candidate-order repetitions, and multiple prefixes from one task are correlated
+measurements; none inflates the independent task count.
 
 ## Construction and release contract
 
 The benchmark is incomplete until all of the following objects exist for every
 formal case:
 
-1. a source-licensed, de-duplicated decision episode and source-group identity;
-2. an outcome-hidden state and feasible action set at a common abstraction level;
-3. an isolated later-outcome record and a registered utility vector;
-4. applicability and reversal boundaries that cite source spans;
-5. a counterfactual twin that changes one decisive fact and should change either
-   the chosen action or the correct abstention;
-6. independent judgments with raw disagreements retained, not only an adjudicated
-   label; and
-7. a contamination probe, split assignment, and immutable content hash.
+1. a licensed task, content-hashed prefix, and task-cluster identity;
+2. an outcome-hidden state and stable feasible action set at one abstraction level;
+3. identical remaining tools and budget for every branch;
+4. at least three independent continuations per action, including failed branches;
+5. one common scorer-owned utility contract and practical-equivalence tolerance;
+6. exact-span grounded situation dimensions, applicability boundaries, and
+   action-semantic mappings fixed before outcomes are opened;
+7. replicate-level scorer outputs, uncertainty, split assignment, contamination
+   probe, and immutable content hashes.
 
-Formal targets, precedent sources, development cases, counterfactual twins, and
-self-development records are split by source group.  Exact source text is released
+Formal targets, precedent sources, development cases, and self-development
+records are split by task cluster. Exact source text is released
 only when its license permits it; otherwise the release must contain reproducible
 source locators and a deterministic reconstruction recipe.  An AI-reviewed set is
 reported as AI-reviewed and cannot be called expert- or human-labelled.
@@ -359,6 +381,8 @@ and context budget.
 |---|---|---|
 | Base | nothing | standalone model ability |
 | Equal-token raw | source evidence bytes | benefit from more factual context |
+| Stage/status kNN | coarse lifecycle features and objective outcomes | benefit from any low-dimensional case policy |
+| Generic outcome memory | outcome-bearing reflections without Taste dimensions or boundaries | benefit from remembering successes and failures at all |
 | Matched Taste | a grounded principle whose boundaries fit the target state | value of decision abstraction and transfer |
 | Mismatched Taste | an equally strong principle outside its applicability boundary | generic “good research” advice and context priming |
 
@@ -368,41 +392,48 @@ explicit action recommendation, lexical overlap, and formatting. Mismatched is
 chosen by a frozen minimum-distance matching rule subject to a verified boundary
 violation; it is never hand-picked after observing a model answer. Each state is
 run under two candidate orders and two meaning-preserving nuisance paraphrases.
-These four calls are repeated measurements and are averaged before pair-level
+These four calls are repeated measurements and are averaged before fork-level
 analysis.
 
-The utility contract is a four-component vector: evidence value, expected
-information gain, resource cost, and claim risk. Reviewers score anchored
-components before system outputs are observed. Components are normalized within
-the pair's frozen feasible action set, then aggregated with preregistered
-context-family weights. The component vector, equal-weight sensitivity, and
-Pareto-dominance violations are always reported. A result whose sign changes
-under a reasonable registered aggregation is labelled utility-sensitive rather
-than a win. Policy abstention (setting the Taste adjustment to zero) and a
-scientific abstention action are separate events and receive separate coverage
-and regret accounting.
+Branch execution is paid once per fork, not once per selector. Every selector
+chooses from the same frozen menu and is evaluated against the same hidden
+replicate outcomes, so these simple baselines add API inference rather than a
+large GPU Cartesian product. The expensive external end-to-end study retains a
+smaller four-role matrix.
+
+Utility is not authored by SciTasteBench reviewers. Every branch is scored by
+the task's official evaluator on one shared scale; failed or missing executions
+receive the preregistered intention-to-treat value. A practical-equivalence
+tolerance prevents negligible score noise from becoming a preferred action.
+Cost is controlled first by the identical branch budget and then reported as a
+separate score--cost curve rather than hidden inside arbitrary benchmark-author
+weights. Policy abstention (zero Taste adjustment) and an explicit scientific
+stop action are separate events and receive separate coverage and regret
+accounting.
 
 The primary decision signature is not accuracy alone. It requires all of:
 
 - lower decision regret for Matched than Base and equal-token raw;
 - a positive Matched-minus-Mismatched specificity gap;
 - calibrated abstention when no precedent satisfies its boundaries;
-- a correct action flip on counterfactual twins that change a decisive boundary
-  fact while preserving topic and wording style;
+- higher top-action accuracy and rank correlation with objective branch values;
+- lower regret on source-disjoint tasks after reviewed outcome updates than after
+  no update or shuffled credit;
 - invariance to action presentation order.
 
-The primary endpoint is mean **budgeted decision regret per boundary pair**,
-averaging the base and twin utilities before aggregation. The co-primary
-mechanism endpoint is pair success: both states correct, the required reversal
-present, and both decisions order-consistent. Secondary endpoints are
-Matched-minus-Mismatched specificity, intervention coverage and precision,
-abstention risk--coverage, Brier score, log loss, calibration error,
-candidate-order disagreement, nuisance-paraphrase invariance, and cost. A paired
-randomization test and source-group bootstrap operate on pairs; Holm correction
-covers the three registered Matched contrasts. The smallest effect of interest
-and required hidden population are frozen from development/validation pair
-variance before hidden test is opened. The analysis never treats individual
-model calls as independent samples.
+The primary endpoint is mean **objective action regret per executable fork** on
+the common scorer scale. The co-primary mechanism endpoint is task-clustered
+top-action selection: choose any action within the registered practical-
+equivalence set, or abstain when common support is insufficient. Secondary
+endpoints are Spearman ranking correlation over actions, Matched-minus-
+Mismatched specificity, intervention coverage and precision, abstention
+risk--coverage, candidate-order disagreement, nuisance-paraphrase invariance,
+failure rate, and score versus cost. A paired randomization test and task-cluster
+bootstrap operate on independent tasks; Holm correction covers the three
+registered Matched contrasts. The smallest effect of interest and hidden
+population are frozen once from development/validation task-cluster variance.
+The analysis never treats action seeds, prefixes, or model calls as independent
+tasks.
 
 ### One treatment interface across local and external evaluation
 
@@ -420,12 +451,16 @@ different high-level intervention. A development arm that receives only a
 generic abstraction or raw source is labelled accordingly and cannot be renamed
 Full SciTaste after its score is observed.
 
-Formal pairs use boundary-pair schema 1.1. Their scalar utility is recomputed
-from a preregistered four-component vector—evidence value, expected information
-gain, resource cost, and claim risk—under a frozen context-specific contract.
-The contract also defines the minimum utility required to act, so benchmark
-abstention is a scored scientific choice rather than an undocumented label.
-Legacy development pairs remain schema 1.0 and cannot be silently promoted.
+Formal forks use `FormalObjectiveForkSituationCase` schema 3.0. Before value
+estimation, every source action is mapped to the exact content-bound target
+action definition by an outcome-hidden adjudicator. Incomplete, low-confidence,
+post-selection, or definition-drifting maps are rejected. The selector then
+requires common action support and gates on the paired best-minus-runner-up
+contrast uncertainty, combining paired seed-block variance with between-task
+variation. Marginal standard errors cannot stand in for this contrast. Tied or
+practically equivalent forks remain in risk--coverage and abstention analyses;
+they are not silently discarded or converted into supervised winners. Legacy
+reconstructed pairs and single-rollout development forks cannot be promoted.
 
 The earlier family-plus-hash matcher failed the independent 28-case reserve:
 Matched underperformed Mismatched. That is retained as a falsification of the old
@@ -455,7 +490,7 @@ objective research progress, and final-package quality:
 | AAAR-1.0 (ICML 2025) | official equation-inference, experiment-design, and paper-weakness metrics | Full SciTaste, same-backbone Native Base, equal-context Raw/RAG | external component check; not evidence of complete autonomous research |
 | MLRC-Bench (NeurIPS 2025 D&B) | objective competition-score improvement and progress per GPU/API budget | Full SciTaste, same-backbone Native Base, equal-context Raw/RAG, official MLAB scaffold under the same research-agent model | accepted external benchmark, executable research, causal context control, and competitiveness |
 | MLR-Bench (NeurIPS 2025 D&B) | stagewise and final-package quality with invalid-result accounting | Full, Native Base, Raw/generic memory, official MLR-Agent | accepted external idea-to-paper evaluation |
-| SciTasteBench | paired regret, correct boundary reversal, abstention, and delayed-credit learning | Base, equal-token raw, Matched Taste, Mismatched Taste | internal mechanism attribution rather than external competitiveness |
+| SciTasteBench | objective action regret, action-value ranking, abstention, and delayed-credit learning | Base, equal-token raw, Matched Taste, Mismatched Taste | internal mechanism attribution rather than external competitiveness |
 
 MLRC-Bench and MLR-Bench are both ML-research evaluations; they cannot by
 themselves support an unqualified cross-domain autonomous-research claim.
@@ -463,6 +498,15 @@ ScienceAgentBench (ICLR 2025) is therefore the required external scope check if
 the broad title is retained: its 102 tasks were derived from 44 peer-reviewed
 papers in four scientific disciplines. It enters through its unchanged official
 tasks and execution-based evaluator, never through a local imitation.
+The official code is now pinned at commit `c26e151e...`, and the current
+Hugging Face `verified` split is pinned at dataset commit `9c6e96c9...`; exact
+inventory confirms 102 tasks across computational chemistry, GIS,
+bioinformatics, and psychology/cognitive science. The verified execution archive
+is not yet available locally because the official SharePoint link currently
+returns HTTP 401 to anonymous download. Therefore neither a development run nor
+the broad title is authorized. The pinned acquisition record is
+`configs/evaluation/acquisition/scienceagentbench_verified_v1.yaml`; no local
+substitute scorer is permitted.
 EXP-Bench (ICLR 2026) remains a strong experiment-integrity comparison, but its
 461 tasks are drawn from AI research papers and therefore do not substitute for
 cross-domain evidence. If ScienceAgentBench cannot be run comparably, the title
@@ -571,12 +615,12 @@ as the minimum.
 
 The benchmark contribution is not visually complete until the manuscript shows:
 
-1. the source-to-boundary-pair anatomy and outcome firewall;
-2. population coverage by context, domain, action transition, and label
-   disagreement, with split and contamination audit;
-3. a paired base-to-twin plot showing correct flips, failure modes, and
-   abstentions for every method;
-4. a risk--coverage curve and paired-regret interval for Boundary Judgment;
+1. the shared-prefix objective-fork anatomy and outcome firewall;
+2. population coverage by context, task cluster, action menu, and execution
+   status, with split and contamination audit;
+3. per-fork action-value distributions with each method's chosen action and
+   retained failures;
+4. a task-clustered objective-regret interval and risk--coverage curve;
 5. an outcome-learning curve against no-update and shuffled-credit; and
 6. a separate external task table/plot with objective outcome, failures, cost,
    and behavior-change mediation.

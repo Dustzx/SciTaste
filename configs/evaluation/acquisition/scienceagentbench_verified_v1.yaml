@@ -1,0 +1,44 @@
+schema_version: "1.0"
+acquisition_id: scienceagentbench-verified-v1
+project_id: scitaste-self-development
+benchmark_identity:
+  name: ScienceAgentBench
+  venue: ICLR 2025
+  official_paper: https://proceedings.iclr.cc/paper_files/paper/2025/hash/f12b4df26344f3be803c06b555252efe-Abstract-Conference.html
+code:
+  source: https://github.com/OSU-NLP-Group/ScienceAgentBench
+  commit: c26e151ed601ba109dc4d35e057ff8e73fec469d
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/scienceagentbench-source-v1/checkout
+  license: MIT
+  readme_sha256: 0696fe4ffa234ea30346901d9d61263d20d548e58810049c873b2049ac1a04b1
+annotation_dataset:
+  source: https://huggingface.co/datasets/osunlp/ScienceAgentBench
+  commit: 9c6e96c9e74572e979b0930ee735041cef528cb7
+  split: verified
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/scienceagentbench-source-v1/dataset
+  parquet_sha256: c6f937863a220bd1762a00c20a0f79cc8dfca900b819bdb552150310731ae147
+  csv_sha256: 7f490f17f721a9c7e9415d3608a1a37d1a5315a26862cf556e3096ac4062face
+  task_count: 102
+  domain_counts:
+    Computational Chemistry: 20
+    Geographical Information Science: 27
+    Bioinformatics: 27
+    Psychology and Cognitive science: 28
+  license: CC-BY-4.0-with-upstream-exceptions
+official_execution_artifacts:
+  source: https://buckeyemailosu-my.sharepoint.com/:u:/g/personal/chen_8336_osu_edu/IQB870QrmuqwS5Ck33cHpJfkAVt3LsMeariREIwP3AT7byA
+  expected_archive: benchmark_verified.zip
+  acquired: false
+  blocker: anonymous download redirects to HTTP 401 as of 2026-09-18
+  substitute_allowed: false
+readiness:
+  task_inventory: ready
+  official_code: ready
+  official_execution_assets: blocked
+  official_scorer: blocked-with-execution-assets
+  development_inference_allowed: false
+  formal_comparison_allowed: false
+claim_boundary:
+  role: cross-domain scope check only
+  broad_autonomous_research_title_authorized: false
+  human_or_expert_label_claim_allowed: false

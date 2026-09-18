@@ -192,6 +192,17 @@ def test_chat_payload_identity_pricing_and_raw_response(monkeypatch) -> None:
     }
 
 
+def test_complete_accepts_only_bounded_redundant_json_closer(monkeypatch) -> None:
+    monkeypatch.setenv("SCITASTE_STRUCTURED_TEST_KEY", "secret-for-test")
+    accepted = StubTransport(http_response(provider_data('{"summary":"bounded"}}')))
+    response = StructuredOpenAICompatibleBackend(config(), transport=accepted).complete(request())
+    assert response.output_payload == {"summary": "bounded"}
+
+    rejected = StubTransport(http_response(provider_data('{"summary":"bounded"} prose')))
+    with pytest.raises(StructuredProviderResponseError, match="one valid JSON object"):
+        StructuredOpenAICompatibleBackend(config(), transport=rejected).complete(request())
+
+
 def test_missing_key_and_disabled_config_fail_before_transport(monkeypatch) -> None:
     monkeypatch.delenv("SCITASTE_STRUCTURED_TEST_KEY", raising=False)
     transport = StubTransport(http_response(provider_data()))

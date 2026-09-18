@@ -1,0 +1,53 @@
+schema_version: "1.0"
+cohort_id: scitastebench-feasibility-sources-v1
+project_id: scitaste-self-development
+evidence_role: consumed-development-only
+codescientist_candidates:
+  locator: outputs/projects/scitaste-self-development/evaluations/codescientist-idea-experiment-population-v1/CANDIDATES.jsonl
+  sha256: 02daa4fc1f3a93336219f6d38e33fdf044702b50b710cbf530d02ce90ad2e1f7
+review_intake:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-intake-v1/SCREENING_ITEMS.jsonl
+  sha256: 6b0917696a32c7e02440316d4ebe24b43ef8e6c6da090936513fb216a687a7f6
+review_primary_a:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-v1/normalization/NORMALIZED_DECISIONS.jsonl
+  sha256: 1498f88ca06c66712f4e09f90f3e0ac80a6f1478e5df1dfaf9fb960611cd0ce6
+review_primary_b:
+  locator: outputs/projects/scitaste-self-development/evaluations/scitastebench-four-layer-development-screen-glm-v1/normalization/NORMALIZED_DECISIONS.jsonl
+  sha256: cff5294ce53e935e8c4f04b7373995d3c584bc94f1b4f3ad720e9cada13af789
+opendiscoverytrace_dataset:
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/opendiscoverytrace-source-v1/dataset
+  git_commit: b112204c25ad8944b0d70baf2391dc1647219631
+prior_pair_configs:
+  - locator: configs/evaluation/pilots/scitastebench_aries_axis_direction_pairs_v1.yaml
+    sha256: b3a2a442f3bd343da440ef53461e2624c4b75501ab6c59950510e134b2a98c34
+  - locator: configs/evaluation/pilots/scitastebench_aries_axis_inference_pairs_v1.yaml
+    sha256: 2a8ac499868b58f9400c7b07b2730242a07286d0b72fc13538bf03f29dc0f0b1
+  - locator: configs/evaluation/pilots/scitastebench_aries_axis_information_pairs_v1.yaml
+    sha256: 8e2592de16ec9d474bde07b246fb3d1eb43a6d546769d07dab6d385c62c290e2
+  - locator: configs/evaluation/pilots/scitastebench_aries_grounded_inference_pairs_v3.yaml
+    sha256: b73a1bc050bacd347db7234240cd7a43f78bcd13d602fe1af49a6f4c28ce8e9e
+  - locator: configs/evaluation/pilots/scitastebench_aries_grounded_information_pairs_v3.yaml
+    sha256: 6b7749c95d3909cb751636ff7bf2f75e935dc8813bc8d0d85569698e7c98a10e
+  - locator: configs/evaluation/pilots/scitastebench_aries_interaction_direction_pairs_v2.yaml
+    sha256: c42ed6a776583461998e85bb9a4b8faa2047d9afbb9e47401d6f00fd30097598
+  - locator: configs/evaluation/pilots/scitastebench_aries_interaction_inference_pairs_v2.yaml
+    sha256: 0164d4b181801d012b3ca128d780893a20b5704f371fb6c81beff4b62a4a4d41
+  - locator: configs/evaluation/pilots/scitastebench_aries_interaction_information_pairs_v2.yaml
+    sha256: 570c5bc1e0c19785d56f89dbfc97b923f23a8de9bf1bc631f23dd8853e47b2cb
+  - locator: configs/evaluation/pilots/scitastebench_boundary_pairs_development_topup_v1.yaml
+    sha256: b1abe7d9e58d923e5a620da6238a198897f23164089aa05ea7e336ca3802abda
+  - locator: configs/evaluation/pilots/scitastebench_boundary_pairs_development_v1.yaml
+    sha256: 92b493f2faa2b55e6237c7dec25ae6f4ed531dc1025768a05b4b7d9fd38a0309
+  - locator: configs/evaluation/pilots/scitastebench_boundary_pairs_development_v2.yaml
+    sha256: dcc872bfb63d903a90218133478cb1bde129d871a1bbd3be9b8845385c253969
+target_counts:
+  problem-and-idea-value: 5
+  hypothesis-and-falsifiability: 5
+  experiment-design-and-confound-control: 5
+  evidence-interpretation-and-contradiction: 5
+  resource-allocation-pivot-continue-or-stop: 5
+  claim-calibration-and-review-closure: 5
+future_outcomes_exposed: false
+formal_split_opened: false
+human_label_claim_allowed: false
+effectiveness_claim_allowed: false
