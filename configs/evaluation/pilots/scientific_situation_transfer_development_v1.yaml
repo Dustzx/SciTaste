@@ -1,0 +1,24 @@
+schema_version: "1.0"
+study_id: scientific-situation-transfer-development-v1
+project_id: scitaste-self-development
+population_lock:
+  locator: outputs/projects/scitaste-self-development/evaluations/counterfactual-taste-deliberation-formal-v5-inputs/POPULATION_LOCK.json
+  sha256: 308f4d1a45cf85f3e1678857660cd8540c5b51d357b56a3c34cf6cb68a61256a
+state_root: outputs/projects/scitaste-self-development/evaluations/counterfactual-taste-deliberation-formal-v5-states
+extractor_backend:
+  locator: configs/model_nodes/deepseek_v41flash.scitastebench_live_20260917.yaml
+  sha256: 166724fa545b201e2c6cc4368dcc49a1414c5c17544469c826b76c630a1604c8
+extractor_provider: deepseek
+extractor_model: deepseek-flash
+batch_size: 4
+seed: 20271041
+thresholds:
+  minimum_abstraction_confidence: 0.6
+  minimum_source_similarity: 0.45
+  minimum_effective_support: 2.0
+  minimum_action_margin: 0.08
+  maximum_standard_error: 0.2
+source_evidence_designation: consumed-development
+target_outcomes_visible_to_extractor: false
+target_outcomes_used_for_selection: false
+formal_split_opened: false

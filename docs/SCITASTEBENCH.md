@@ -225,6 +225,25 @@ Model-generated labels are structurally inadmissible to that historical human
 estimand. The active v2 AI-finality route is a distinct nonhuman estimand and
 must not relabel its output as human evidence.
 
+### Natural-context construction audit and label authority
+
+The first shortcut-resistant reconstruction attempts are complete and remain consumed
+development. Twelve source-group-disjoint proposals were rejected by the fact-neutralization gate.
+A second grounded attempt admitted eight candidates deterministically, but independent DeepSeek
+and GLM full-context reviews plus a Qwen boundary-only negative control admitted zero. The old
+thirteen-pair population is also cue-solvable: the boundary-only chooser recovered both registered
+labels on 8/13 pairs. These are not missing benchmark results; they show that a natural review
+record can provide ecological context without uniquely determining a counterfactual action utility.
+
+SciTasteBench therefore uses two complementary authorities rather than asking one generated card
+to do both jobs. Natural records supply the scientific setting, invariant facts, language, and
+ecological coverage. Shared-prefix executable forks supply scorer-owned action utilities when the
+environment permits them. A formal item requires agreement between those layers or independent
+expert adjudication; an LLM-constructed scalar utility is never promoted to gold merely because a
+second model finds it plausible. Full-context reviewers must integrate at least two registered
+invariant facts, while a label-hidden boundary-only control must fail to recover both labels. This
+dual-view gate is necessary but not sufficient for benchmark admission.
+
 ## Version 1 protocol
 
 The initial suite contains eight independent synthetic decisions across all six

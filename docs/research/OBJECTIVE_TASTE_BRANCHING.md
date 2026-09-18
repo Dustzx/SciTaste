@@ -351,6 +351,39 @@ decisions with source-hidden later outcomes and explicit raw/matched/mismatched 
 machine-readable audit is
 `evaluations/counterfactual-taste-balanced-v6-identifiability-audit-v2/REPORT.json`.
 
+## Typed scientific-situation transfer
+
+The retired population remains useful as consumed method-development evidence: it can reveal
+whether a new representation fixes the known global-action collapse, but it cannot be reopened as
+confirmation. SciTaste now separates state abstraction from label authority. A model sees only the
+pre-decision prefix and maps it to six typed axes: hypothesis structure, relation among visible
+evidence, the current epistemic bottleneck, identifiability, budget pressure, and terminal
+readiness. Every abstraction cites exact prefix spans. The model never sees the target branch
+utilities. Scorer-owned shared-prefix forks supply within-state normalized utilities, and a
+cross-task transfer rule aggregates them or abstains when similarity, support, margin, or
+uncertainty is inadequate.
+
+The first replay used the twelve already consumed formal-v5 states across four task clusters. The
+deterministic transfer rule intervened on 5/12 states with two action types and abstained on the
+remaining seven. On the intervention subset its mean normalized regret was 0.426 versus 0.596 for
+the cross-task static comparator, but objective preferred-action precision tied at 0.60. Three of
+four frozen authorization gates passed; strict improvement in precision did not. A fresh
+confirmation is therefore not authorized. Exact artifacts are under
+`evaluations/scientific-situation-transfer-development-v1/`.
+
+A second consumed replay tested whether a model could synthesize the same typed situations and
+objective source utilities more flexibly. Deterministic citation, confidence, source-task
+diversity, boundary, and margin gates admitted only 1/12 decisions. The single action was correct,
+but 8.3% coverage and one action type fail the nontrivial-coverage and diversity gates. This rules
+out treating a fluent model synthesis as the missing transfer mechanism. Its artifacts are under
+`evaluations/scientific-situation-model-transfer-development-v1/`.
+
+These two results sharpen rather than reverse the earlier conclusion. Typed situations recover a
+selective signal that coarse stage/status descriptors lost, but the available objective forks are
+too sparse and often too tied to identify a transferable action policy. The next source population
+must be scorer-grounded, action-identifiable, and deliberately cover different bottlenecks; merely
+adding more superficially similar precedents or relaxing abstention would repeat the failure.
+
 ## What would count as paper evidence
 
 Formal v4 now provides a valid but negative mechanism confirmation. The next iteration

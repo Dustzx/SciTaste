@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-18 — Typed scientific-situation transfer
+
+- Replaced coarse stage/status matching with a decision-time scientific-situation contract over
+  hypothesis structure, evidence relation, epistemic bottleneck, identifiability, budget pressure,
+  and terminal readiness, grounded by exact prefix quotes.
+- Kept target branch outcomes outside both abstraction and selection; scorer-owned shared-prefix
+  action forks remain the only utility authority.
+- Added cross-task, within-fork-normalized transfer with explicit support, margin, uncertainty, and
+  abstention gates, plus a separately gated model-synthesis variant.
+- Retained both twelve-state replays as consumed development. Deterministic transfer passed three
+  of four authorization gates; model synthesis collapsed to one admitted decision. Neither opens a
+  fresh confirmation split.
+- Added full-context invariant-fact review and a boundary-only negative control to SciTasteBench
+  construction. No current natural pair passed both views, so generated counterfactual utilities
+  remain outside the formal benchmark.
+
 ## 2026-09-16 — Prospective adaptive-allocation activation v2
 
 - Separated T0/T1 research workloads from A0/A1 Taste-controller adaptation;

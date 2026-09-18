@@ -4877,3 +4877,30 @@ episodes, retains missing strata without replacement, and uses two
 identity-distinct strong hosted reviewers. Review API calls, tokens, and cost are
 separate from trajectory usage and local GPU accounting. The retrospective v2/v3
 curations remain protocol-development evidence and cannot activate the policy.
+
+### ADR-150: scientific situations and objective forks have separate authority
+
+Status: accepted and implemented for consumed development; no new confirmation is authorized.
+
+The earlier counterfactual selector treated stage and evidence status as hard applicability and
+the diagnostic rationale as lexical similarity. Objective replays showed that these fields hide
+different epistemic bottlenecks and can collapse transfer to a global action prior. The successor
+contract represents the decision-time situation with six typed axes: hypothesis structure,
+evidence relation, bottleneck, identifiability, budget pressure, and terminal readiness. A model
+may populate this representation only from the prefix and must cite exact visible spans. It cannot
+see target branch outcomes or recommend the target action during abstraction.
+
+Utility authority remains outside that model. Shared-prefix action forks expose scorer-owned
+outcomes, normalized within each source state so heterogeneous task scales cannot dominate
+transfer. The deterministic selector uses only cross-task precedents and abstains for insufficient
+similarity, effective support, action margin, or excessive uncertainty. An optional model synthesis
+node sees the same typed states and source utility vectors, but its output is admitted only after
+deterministic citation, task-diversity, boundary, confidence, and margin checks. Unknown citations
+cause abstention; they are never silently repaired.
+
+Natural research records serve a complementary role. They supply ecological context and
+construct coverage, but do not acquire counterfactual utility authority from a plausible generated
+label. SciTasteBench therefore requires both a full-context invariant-fact review and a
+boundary-only negative control, or independent expert adjudication, before a reconstructed pair
+can enter a formal population. Development replays may change this mechanism, but their effects
+cannot be promoted to confirmation.
