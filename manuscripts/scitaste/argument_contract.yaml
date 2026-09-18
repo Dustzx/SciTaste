@@ -1,10 +1,10 @@
 schema_version: '1.0'
 project_id: scitaste-self-development
-paper_id: scitaste-iclr2027-submission-draft-v10
-archetype: empirical-method
-central_question: Can outcome-attributed scientific decisions support a bounded, uncertainty-aware lifecycle policy for autonomous research, and does that policy improve held-out objective progress?
-central_answer: SciTaste implements the decision, attribution, estimation, and abstention operators on authored fixtures, while natural-case proxy validity and held-out objective-progress effects remain open prospective questions.
-manuscript_sha256: 881a5803fa94f36c57fc8eb3bebdb353f49b0c2c6e6c4f5bb0e8921c6faadc43
+paper_id: scitaste-iclr2027-submission-draft-v23
+archetype: empirical-system
+central_question: Does an outcome-grounded, selectively transferring Scientific Taste policy improve the decisions and final research outcomes of a complete autonomous-research system under matched resources?
+central_answer: SciTaste defines and implements the policy and complete native system; the working draft reserves, but does not yet populate, the formal complete-system, external-validity, causal-ablation, and outcome-learning results required for an improvement claim.
+manuscript_sha256: 108bf7862ad7c7f77418c24c679b1b9b43d86b849ba3d77bba786c0ed636ac5f
 required_entry_points:
 - title
 - abstract
@@ -12,179 +12,171 @@ required_entry_points:
 - headline-results
 - conclusion
 claims:
-- claim_id: claim-decision-ownership
+- claim_id: claim-system-effectiveness
   role: headline
-  primary_carrier_ids:
-  - carrier-contract-suite
-- claim_id: claim-bounded-completion
+  primary_carrier_ids: [carrier-system-results]
+- claim_id: claim-external-validity
   role: headline
-  primary_carrier_ids:
-  - carrier-result-boundaries
-- claim_id: claim-publication-provenance
+  primary_carrier_ids: [carrier-external-results]
+- claim_id: claim-taste-causality
   role: supporting
-  primary_carrier_ids:
-  - carrier-venue-build
+  primary_carrier_ids: [carrier-mechanism-ablation]
+- claim_id: claim-outcome-learning
+  role: supporting
+  primary_carrier_ids: [carrier-learning-curve]
+- claim_id: claim-selective-policy
+  role: supporting
+  primary_carrier_ids: [carrier-method-algorithm, carrier-system-figure]
 carriers:
-- carrier_id: carrier-contract-suite
-  kind: evidence-audit
-  evidentiary_role: audit
-  status: available
-  title: Repository contract suite
-  intended_takeaway: The tested implementation preserves action ownership, provenance, bounded admission, recovery, and packaging contracts.
-  target_claim_ids:
-  - claim-decision-ownership
-  evidence_ids:
-  - evidence-repository-suite
-  artifact_locator: null
-  artifact_sha256: null
-  absence_reason: null
-- carrier_id: carrier-result-boundaries
+- carrier_id: carrier-system-results
   kind: result-table
   evidentiary_role: empirical
+  status: planned
+  title: Complete-system comparison on SciTasteBench-Agent
+  intended_takeaway: SciTaste Native is compared with a direct agent and at least two independent published research systems on common task packages.
+  target_claim_ids: [claim-system-effectiveness]
+  evidence_ids: []
+  artifact_locator: null
+  artifact_sha256: null
+  absence_reason: formal multi-system results are pending
+- carrier_id: carrier-external-results
+  kind: result-table
+  evidentiary_role: empirical
+  status: planned
+  title: External benchmark objective progress and product validity
+  intended_takeaway: Unchanged accepted benchmarks test whether SciTaste's system effect transfers outside author-defined tasks.
+  target_claim_ids: [claim-external-validity, claim-system-effectiveness]
+  evidence_ids: []
+  artifact_locator: null
+  artifact_sha256: null
+  absence_reason: formal untouched external tasks are pending
+- carrier_id: carrier-mechanism-ablation
+  kind: ablation
+  evidentiary_role: empirical
+  status: planned
+  title: Matched Taste causal and decision-level ablations
+  intended_takeaway: Same-backbone controls distinguish Taste from additional text, generic memory, mismatched transfer, and learned action-value prediction.
+  target_claim_ids: [claim-taste-causality, claim-selective-policy]
+  evidence_ids: []
+  artifact_locator: null
+  artifact_sha256: null
+  absence_reason: source-disjoint hidden objective-fork evaluation is pending
+- carrier_id: carrier-learning-curve
+  kind: result-figure
+  evidentiary_role: empirical
+  status: planned
+  title: Chronological outcome-learning curve
+  intended_takeaway: Correct delayed credit must improve later source-disjoint actions beyond no update and shuffled credit.
+  target_claim_ids: [claim-outcome-learning]
+  evidence_ids: []
+  artifact_locator: null
+  artifact_sha256: null
+  absence_reason: formal chronological learning evaluation is pending
+- carrier_id: carrier-method-algorithm
+  kind: algorithm
+  evidentiary_role: explanatory
   status: available
-  title: Evidence carriers and excluded inferences
-  intended_takeaway: Registered integration evidence establishes bounded operability but does not establish a research-yield improvement.
-  target_claim_ids:
-  - claim-bounded-completion
-  evidence_ids:
-  - evidence-native-full-workflow
-  - evidence-four-condition-task
+  title: Outcome-grounded selective-transfer estimator
+  intended_takeaway: The manuscript defines the episode, action alignment, task-collapsed value estimate, contrast uncertainty gate, abstention, and temporal update boundary.
+  target_claim_ids: [claim-selective-policy]
+  evidence_ids: []
   artifact_locator: null
   artifact_sha256: null
   absence_reason: null
-- carrier_id: carrier-venue-build
-  kind: evidence-audit
-  evidentiary_role: audit
-  status: available
-  title: ICLR 2027 venue build assessment
-  intended_takeaway: The current source can be rendered with the exact venue template and checked mechanically without implying peer-review acceptance.
-  target_claim_ids:
-  - claim-publication-provenance
-  evidence_ids:
-  - evidence-venue-build
-  artifact_locator: null
-  artifact_sha256: null
-  absence_reason: null
-- carrier_id: carrier-control-loop-figure
+- carrier_id: carrier-system-figure
   kind: system-diagram
   evidentiary_role: explanatory
   status: available
-  title: SciTaste scientific-taste framework
-  intended_takeaway: Verified decision precedents shape next-action selection, while models and executors perform bounded work and deterministic admission retains transition authority.
-  target_claim_ids:
-  - claim-decision-ownership
-  evidence_ids:
-  - evidence-repository-suite
+  title: SciTaste native policy and research loop
+  intended_takeaway: Scientific outcomes enter later decisions through a selective policy rather than directly rewriting the research state.
+  target_claim_ids: [claim-selective-policy]
+  evidence_ids: []
   artifact_locator: assets/fig1-scitaste-control.pdf
-  artifact_sha256: f9e30fac9ce5239a619adca245fb76100d046d7331a08331432b573f84fc0d19
+  artifact_sha256: 9322ddf9d0efe66a0ae21f6e8d24488aa11d75a04ec4c64062ebd1cc2176d988
   absence_reason: null
 entry_points:
 - location: title
-  claim_ids:
-  - claim-decision-ownership
+  claim_ids: [claim-system-effectiveness]
   central_question_visible: false
-  central_answer_visible: true
+  central_answer_visible: false
   scope_matches_contract: true
 - location: abstract
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
+  claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality, claim-outcome-learning]
   central_question_visible: true
   central_answer_visible: true
   scope_matches_contract: true
 - location: introduction
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
+  claim_ids: [claim-system-effectiveness, claim-taste-causality, claim-selective-policy]
   central_question_visible: true
   central_answer_visible: true
   scope_matches_contract: true
 - location: first-figure
-  claim_ids:
-  - claim-decision-ownership
+  claim_ids: [claim-selective-policy]
   central_question_visible: false
   central_answer_visible: true
   scope_matches_contract: true
 - location: headline-results
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
-  - claim-publication-provenance
+  claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality, claim-outcome-learning]
   central_question_visible: true
   central_answer_visible: true
   scope_matches_contract: true
 - location: conclusion
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
+  claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality, claim-outcome-learning]
   central_question_visible: true
   central_answer_visible: true
   scope_matches_contract: true
 sections:
 - section_id: introduction
   heading: Introduction
-  question_answered: What scientific decision problem does SciTaste expose, and which current claims does the evaluation test?
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
-  primary_carrier_ids:
-  - carrier-control-loop-figure
-- section_id: framework
-  heading: 'Method: SciTaste'
-  question_answered: Which state, controller, evidence, review, and communication objects implement decision-centric research control?
-  claim_ids:
-  - claim-decision-ownership
-  primary_carrier_ids:
-  - carrier-control-loop-figure
-- section_id: trust-architecture
-  heading: Trust and execution architecture
-  question_answered: Which component owns each proposal, action, execution, admission, and state transition?
-  claim_ids:
-  - claim-decision-ownership
-  primary_carrier_ids:
-  - carrier-contract-suite
-- section_id: evaluation-results
-  heading: Evaluation Protocol and Implementation Evidence
-  question_answered: Which implementation and bounded completion claims do the registered artifacts support, and which effectiveness inference remains excluded?
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
-  - claim-publication-provenance
-  primary_carrier_ids:
-  - carrier-contract-suite
-  - carrier-result-boundaries
-  - carrier-venue-build
+  question_answered: Why does autonomous research require a learned policy over consequential scientific actions?
+  claim_ids: [claim-system-effectiveness, claim-selective-policy]
+  primary_carrier_ids: [carrier-system-figure]
+- section_id: method
+  heading: 'Method: Outcome-Grounded Scientific Taste'
+  question_answered: How are outcome-grounded precedents transferred, uncertainty-gated, compiled into actions, and updated?
+  claim_ids: [claim-selective-policy, claim-outcome-learning]
+  primary_carrier_ids: [carrier-method-algorithm]
+- section_id: system
+  heading: The SciTaste Research System
+  question_answered: How does the policy control a complete native research lifecycle without changing the executor in the causal baseline?
+  claim_ids: [claim-system-effectiveness, claim-taste-causality, claim-selective-policy]
+  primary_carrier_ids: [carrier-system-figure]
+- section_id: benchmark
+  heading: SciTasteBench
+  question_answered: How are complete frameworks compared while objective forks remain a diagnostic ablation?
+  claim_ids: [claim-system-effectiveness, claim-taste-causality]
+  primary_carrier_ids: [carrier-system-results, carrier-mechanism-ablation]
+- section_id: evaluation
+  heading: Evaluation
+  question_answered: Which matched, best-native, external, and mechanism comparisons answer each research question?
+  claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality, claim-outcome-learning]
+  primary_carrier_ids: [carrier-system-results, carrier-external-results, carrier-mechanism-ablation, carrier-learning-curve]
+- section_id: results
+  heading: Results
+  question_answered: Do complete systems, external tasks, causal interventions, and chronological updates jointly support the title?
+  claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality, claim-outcome-learning]
+  primary_carrier_ids: [carrier-system-results, carrier-external-results, carrier-mechanism-ablation, carrier-learning-curve]
 - section_id: limitations
   heading: Limitations
-  question_answered: Which missing evidence changes the interpretation of the current system and paper claims?
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
+  question_answered: Which executor, task, construct, fairness, and self-development boundaries limit the conclusions?
+  claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality]
   primary_carrier_ids: []
 - section_id: conclusion
   heading: Conclusion
-  question_answered: What has the current implementation established, and what decisive evaluation remains open?
-  claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
-  primary_carrier_ids:
-  - carrier-result-boundaries
+  question_answered: Which strongest joint claim survives the frozen system, external, and mechanism results?
+  claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality, claim-outcome-learning]
+  primary_carrier_ids: [carrier-system-results, carrier-external-results]
 material_limitations:
-- limitation_id: limitation-effectiveness-pending
-  statement: The current evidence does not establish that Taste-guided control improves research yield; natural-case AI-panel proxy, objective-progress, native-ablation, and ecological package evidence remain incomplete, and none substitutes for independent construct validation.
-  affected_claim_ids:
-  - claim-bounded-completion
-  disclosed_in:
-  - Abstract
-  - Introduction
-  - Scope of the findings
-  - Limitations
-  - Conclusion
-- limitation_id: limitation-self-development-circularity
-  statement: SciTaste self-development is useful dogfooding evidence but cannot independently validate the scientific effectiveness of SciTaste.
-  affected_claim_ids:
-  - claim-decision-ownership
-  - claim-bounded-completion
-  disclosed_in:
-  - Limitations
-contract_sha256: ffe50f9540ded2d5a8b39fd646bc72e8308dc4bba93fce65c5a661c7929cb657
+- limitation_id: limitation-formal-results-pending
+  statement: No positive effectiveness claim is allowed until the complete-system, untouched external, causal-ablation, and outcome-learning result slots are populated from frozen manifests.
+  affected_claim_ids: [claim-system-effectiveness, claim-external-validity, claim-taste-causality, claim-outcome-learning]
+  disclosed_in: [Abstract, Results, Conclusion]
+- limitation_id: limitation-system-fairness
+  statement: Matched-backbone and best-native framework comparisons estimate different quantities and cannot be pooled into one superiority claim.
+  affected_claim_ids: [claim-system-effectiveness, claim-external-validity]
+  disclosed_in: [Evaluation, Limitations]
+- limitation_id: limitation-self-development
+  statement: SciTaste self-development is process evidence and cannot establish comparative effectiveness or external generalization.
+  affected_claim_ids: [claim-system-effectiveness, claim-external-validity]
+  disclosed_in: [Limitations]
+contract_sha256: 18d1a250b97c644aaebd7e4091a8aebc7ada4a11da49a581f813e388617087b2

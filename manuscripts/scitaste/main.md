@@ -3,669 +3,457 @@ SciTaste: Improving Autonomous Research through Scientific Taste
 
 # Abstract
 
-Autonomous research agents can search, code, experiment, and write, yet these
-capabilities do not determine *which* scientific move is worth making next. We
-study this missing capability as **scientific taste**: a contextual preference
-over consequential research decisions, learned from what was known when a
-choice was made and what happened afterward. We introduce **SciTaste**, which
-reconstructs scientific records into decision episodes containing the state,
-feasible alternatives, delayed outcome, and boundary of a transferable lesson.
-The resulting preference policy intervenes in an existing research controller
-only when its precedent is supported and applicable. This formulation predicts
-that a useful abstraction must do more than sound scientific: matched Taste
-must outperform both equal-token raw precedent and equally polished but
-mismatched advice, reverse its preference when a decisive fact crosses the
-learned boundary, and abstain outside support. We make this hypothesis testable
-with SciTasteBench, a source-grounded collection of natural decisions paired
-with single-fact counterfactual twins. We evaluate downstream utility separately
-on the accepted MLRC-Bench and MLR-Bench suites, and condition the broad
-cross-domain claim on ScienceAgentBench, comparing SciTaste with the same
-backbone and tools but no Taste intervention, an equal-context Raw/RAG control,
-and runnable research-agent baselines. This separation distinguishes learning
-scientific judgment from adding context, generating fluent rationales, or using
-a stronger executor.
+Autonomous research agents can search, code, experiment, and write, yet they
+still need to decide which scientific move is worth making next. We formulate
+this missing capability as **scientific taste**: a selective policy over
+consequential research actions, learned from the state before a decision and
+the evidence observed after it. We introduce **SciTaste**, an autonomous
+research framework that converts source-grounded research records and executed
+trajectories into decision episodes, transfers their outcome value only across
+compatible scientific situations, and abstains when common action support or
+uncertainty is insufficient. We evaluate SciTaste at three levels. First, the
+SciTasteBench Agent track compares complete research frameworks from a common
+task package to executable evidence and a final research product. Second,
+unchanged community benchmarks test objective progress and complete
+idea-to-paper validity outside our task definitions. Third, shared-prefix
+objective forks provide causal ablations of the Taste mechanism against
+same-backbone Base, equal-context retrieval, generic outcome memory, matched
+and mismatched precedents, and a learned action-value baseline. **[RESULT SLOT:
+insert the frozen complete-system, external-benchmark, and mechanism estimates
+before making a positive effectiveness claim.]**
 
 # Introduction
 
-Recent research agents can generate ideas, modify code, run experiments, and
-draft papers. The AI Scientist established an integrated idea-to-paper workflow,
-and its successor searches a larger space of experimental trajectories
-\citep{lu2024aiscientist,yamada2025aiscientistv2}. MLAgentBench and PaperBench
-measure progress in iterative machine-learning experimentation and paper
-replication \citep{huang2024mlagentbench,starace2025paperbench}. These systems
-make a compelling case that much of the *execution* of research can be
-automated.
+Research agents increasingly automate literature search, code generation,
+experimentation, and paper writing
+\citep{lu2024aiscientist,yamada2025aiscientistv2,tang2025airesearcher,
+schmidgall2025agentlab}. Execution, however, does not determine which hypothesis
+is discriminative, which experiment has the highest information value, when a
+failure warrants repair rather than a pivot, or how strongly a result supports
+a claim. These decisions determine what evidence will ever be collected.
 
-Research is not only execution. Before running an experiment, a scientist must
-decide whether the question is important, whether an observation is diagnostic,
-whether an apparent gain deserves another replicate, whether a failure calls
-for repair or a change of hypothesis, and whether the accumulated evidence is
-strong enough to support a claim. Such choices determine what evidence is ever
-collected. A flawless implementation of a weak experiment is still weak
-science, and a longer trace of tool calls is not necessarily progress.
+Current systems encode such judgment implicitly in a foundation model, a
+search policy, or free-form reflection. Retrieval supplies related facts;
+reflection summarizes previous attempts; tree search allocates additional
+execution. None of these mechanisms alone identifies why one scientific action
+was preferable to its feasible alternatives, which later outcome should receive
+credit, or where the preference should reverse. The same paper can support
+opposite actions at different evidence states.
 
-Most autonomous-research systems leave these decisions implicit in prompts or
-in the state of a general-purpose language model. Retrieval supplies relevant
-facts, reflection summarizes previous attempts, and a final judge scores an
-idea or paper. None of these operations by itself identifies the transferable
-lesson in a successful research choice. Published work usually shows the path
-that survived, but hides the alternatives that were rejected, the information
-available at the time, and the later evidence that should receive causal credit.
-As a result, simply retrieving high-quality papers risks copying conclusions
-rather than learning judgment.
+SciTaste treats judgment as a selective sequential decision problem. Its unit
+of experience is a *decision episode* that separates the pre-decision state from
+later evidence, preserves the feasible action menu and budget, assigns delayed
+signed credit, and states the applicability boundary of the resulting lesson.
+At run time, a typed scientific-situation representation retrieves cross-task
+precedents. A common-support estimator transfers their action values only after
+source-to-target action semantics have been fixed, while an uncertainty gate
+abstains when the estimated preference is unsupported. The admitted decision is
+compiled into a structured control packet consumed by the same executor used by
+the no-Taste baseline.
 
-SciTaste starts from a different unit of learning: the *decision episode*. An
-episode asks what the researcher knew, what alternatives were feasible, which
-action was selected, what evidence arrived afterward, and under what conditions
-the same preference should transfer or reverse. This unit supports three
-operations that raw retrieval cannot provide. It makes competing actions
-explicit, links delayed outcomes to earlier choices, and exposes uncertainty
-about whether a precedent applies to the current state.
+This method creates two different empirical questions. The first is whether
+SciTaste improves a *complete autonomous-research system* relative to real
+alternative frameworks. The second is whether an observed improvement is
+caused by the Taste policy rather than extra tokens, retrieved facts, a stronger
+model, or a more favorable task. The former requires system-level tasks and
+external benchmarks. The latter requires same-backbone interventions and
+decision-level negative controls. We therefore treat objective forks as a
+mechanism ablation, not as a substitute for complete-system comparison.
 
-The resulting policy is deliberately bounded. It does not replace the research
-agent or train a new foundation model. Instead, it adjusts the ranking of an
-already feasible action set. Evidence from one trajectory contributes at most
-one source-group unit, harmful outcomes can decrease rather than increase a
-preference, and an uncertain or out-of-scope policy abstains. This design makes
-the intervention observable: the same research system can be run with and
-without the learned adjustment while holding the model, tools, data, and budget
-fixed.
+The paper makes three contributions:
 
-Our central hypothesis is that outcome-grounded scientific taste improves both
-local decision quality and downstream research progress. We evaluate the two
-parts separately. SciTasteBench tests whether a system chooses well among
-held-out scientific alternatives, transfers a lesson to the right context,
-reverses it at a boundary, and knows when to abstain. Objective research tasks
-then test whether the same policy changes experiments and improves scorer-owned
-outcomes. A complete-system study measures the full path from idea to a
-reviewed-and-revised paper; it is complementary to, not a substitute for, the
-causal policy comparison.
+- **Scientific Taste as an outcome-grounded policy.** We define a transferable
+  research experience by its state, alternatives, delayed outcome, action
+  semantics, applicability boundary, and uncertainty, rather than by a paper or
+  trajectory as undifferentiated text.
+- **SciTaste as a complete research framework.** The policy controls a native
+  idea-to-evidence-to-paper workflow through an explicit intervention packet,
+  allowing a matched policy-on/policy-off comparison without changing the
+  generator, tools, task, or budget.
+- **A three-level evaluation.** SciTasteBench compares complete research agents;
+  community-owned benchmarks test external validity; objective forks and
+  chronological feedback isolate contextual transfer, abstention, and outcome
+  learning.
 
-The contribution is a source-to-policy account of scientific judgment and a
-falsifiable test of its central mechanism. We define a supervision unit that
-preserves rejected alternatives and delayed outcomes, derive a signed and
-source-balanced preference estimator with explicit abstention, and connect
-decision-level evaluation to objective experimental progress under a matched
-intervention. SciTasteBench measures whether the representation is selective;
-accepted external benchmarks test whether an admitted preference remains useful
-in an ecologically realistic system. A better paper or a more fluent rationale
-is not evidence for better taste unless the decision intervention is active,
-the matched precedent beats its mismatched control, and the changed action
-improves externally scored evidence.
-
-![SciTaste turns scientific records and endogenous research outcomes into grounded decision episodes. The learned policy changes a feasible action ranking only when the precedent matches the current state and its uncertainty is sufficiently small. Execution, evidence admission, and review remain separate from the learned preference.](assets/fig1-scitaste-control.pdf)
+![SciTaste converts pre-decision scientific states and delayed outcomes into
+cross-task precedents. The selective policy either emits one state-bound action
+intervention for the native research loop or abstains; executed outcomes return
+through a reviewed temporal boundary rather than directly rewriting the
+policy.](assets/fig1-scitaste-control.pdf)
 
 # Related Work
 
 ## Autonomous research systems
 
-The AI Scientist and AI Scientist-v2 demonstrate increasingly complete
-idea-to-paper workflows \citep{lu2024aiscientist,yamada2025aiscientistv2}.
-MLAgentBench evaluates agents that improve machine-learning systems, while
-PaperBench evaluates paper replication \citep{huang2024mlagentbench,starace2025paperbench}.
-SciTaste is compatible with such execution substrates but targets a different
-abstraction: the policy that chooses among scientifically meaningful next
-actions. This distinction matters experimentally. End-to-end quality can improve
-because of a stronger model, better tools, more compute, or better judgment;
-matched policy-on/policy-off runs isolate the last factor.
+The AI Scientist family demonstrates increasingly complete idea-to-paper
+automation \citep{lu2024aiscientist,yamada2025aiscientistv2}. AI-Researcher
+combines literature acquisition, idea generation, implementation, and paper
+composition with Scientist-Bench \citep{tang2025airesearcher}. Agent Laboratory
+executes literature, experimentation, and reporting stages
+\citep{schmidgall2025agentlab}. CycleResearcher couples research and review
+models through iterative preference learning \citep{weng2025cycleresearcher}.
+Search-oriented work instead studies how Greedy, MCTS, and evolutionary
+policies navigate machine-learning solution spaces
+\citep{toledo2025researchagents}. SciTaste is closest to this policy view, but
+uses outcome-grounded scientific situations and selective cross-task transfer
+rather than treating a code mutation operator as the learning unit.
 
-Recent ICLR papers also set a substantially higher evidence bar than a local
-preference table. ScienceAgentBench validates 102 tasks from 44 peer-reviewed
-papers across models and agent frameworks, while EXP-Bench evaluates 461 tasks
-from 51 accepted papers with design, implementation, execution, and conclusion
-checks \citep{chen2025scienceagentbench,kon2026expbench}. TusoAI, a method rather
-than a benchmark, compares against expert methods, an MLE agent, and scientific
-agents on 11 scientific tasks, adds component ablations, and tests two genetics
-case studies \citep{turcan2026tusoai}. These works do not test outcome-learned
-scientific preferences, but they define the breadth, objective validation, and
-baseline strength that a full SciTaste claim must eventually meet.
+## Research-agent evaluation
 
-Two accepted suites provide complementary external endpoints for the present
-claim. MLRC-Bench measures proposed and implemented methods with objective
-competition metrics across seven research tasks; its strongest reported agent
-closes only 9.3\% of the baseline-to-top-human gap. MLR-Bench instead evaluates
-201 open-ended research briefs stagewise and end to end, and explicitly counts
-fabricated or invalid experimental results \citep{zhang2025mlrcbench,chen2025mlrbench}.
-SciTaste uses the former to test objective research progress and the latter to
-test evidence-valid idea-to-paper completion; neither substitutes for the
-mechanism controls in SciTasteBench.
+AAAR-1.0 evaluates equation inference, experiment design, and paper weakness
+identification \citep{lou2025aaar}. ScienceAgentBench provides 102 executable
+tasks from four scientific disciplines, while EXP-Bench focuses on experiment
+integrity \citep{chen2025scienceagentbench,kon2026expbench}. MLRC-Bench uses
+objective metrics on seven machine-learning research competitions, whereas
+MLR-Bench evaluates 201 open-ended tasks across idea, proposal, experimentation,
+and paper writing and explicitly audits invalid results
+\citep{zhang2025mlrcbench,chen2025mlrbench}. These resources motivate our
+external evaluation; they are not renamed as SciTasteBench tasks.
 
-Reasoning-and-acting methods such as ReAct, Reflexion, and Tree of Thoughts
-interleave thought, action, search, and feedback
-\citep{yao2023react,shinn2023reflexion,yao2023tree}. Their traces can contain
-useful experience, but a trace is not yet a scientific supervision unit.
-SciTaste reconstructs the state and alternatives before the outcome, then asks
-which part of the later outcome should change a future choice.
+## Scientific judgment, retrieval, and feedback
 
-## Scientific judgment and taste
+Recent work learns paper- or proposal-level scientific taste from citation,
+publication, or future evidence \citep{tong2026scientific,gong2026institutional,
+tian2026foresci}. Kkanbu represents declared research preferences, while Sibyl
+studies how experimental outcomes alter later behavior
+\citep{zhang2026kkanbu,wang2026sibyl}. ReAct and Reflexion provide direct
+reasoning-and-feedback baselines \citep{yao2023react,shinn2023reflexion}.
+SciTaste targets a complementary object: the conditional value of an executable
+next action under the current evidence state, including when a precedent should
+not transfer.
 
-Recent work makes scientific taste an explicit learning target. Tong et al.
-learn paper-impact signals from citations and community feedback, and Gong et
-al. learn field-specific pitch evaluators from publication outcomes
-\citep{tong2026scientific,gong2026institutional}. ForeSci evaluates temporally
-grounded forward-looking judgments and shows that retrieving relevant evidence
-does not guarantee a good decision \citep{tian2026foresci}. These works motivate
-learning judgment while also exposing the limits of paper-level or socially
-derived labels.
+# Problem Formulation
 
-Kkanbu represents a user's declared taste as a structured object that can steer
-a research loop, while Sibyl turns experimental outcomes and recurring failures
-into later behavioral changes \citep{zhang2026kkanbu,wang2026sibyl}. SciTaste
-builds on the shared premise that preferences and outcomes should affect future
-research. Its focus is the joint problem of reconstructing heterogeneous
-scientific decisions, assigning delayed signed credit, transferring the lesson
-across contexts, and abstaining when transfer is unsupported.
-
-## Retrieval, reflection, and outcome learning
-
-Knowledge retrieval answers *what is known*. Scientific taste answers *which
-move is appropriate now*. The distinction motivates separate stores. A
-Knowledge Library contains claims, methods, data, and prior results; a Taste
-Library contains reviewed decision episodes. Retrieval may efficiently propose
-relevant precedents, but it does not decide that a precedent transfers. Raw
-source retrieval is therefore a direct baseline for SciTaste: both conditions
-see the same source content, while only SciTaste receives the reconstructed
-decision, outcome, and boundary.
-
-# Scientific Taste as Sequential Decision Making
-
-Let $S_t$ denote the research state before decision $t$. It contains the active
-question, hypotheses, observations, candidate explanations, evidence, open
-review obligations, and remaining budget. The system exposes a finite feasible
-set $A(S_t)$ and a base utility $U_0(a\mid S_t)$ supplied by the research
-controller. SciTaste adds a bounded preference term,
+At decision time $t$, an autonomous researcher observes state $S_t$, remaining
+resource budget $B_t$, and a finite feasible action set $A_t=A(S_t)$. Executing
+action $a\in A_t$ under research environment $E$ produces delayed evidence and
+terminal utility $Y$. A base controller supplies action scores $U_0(a\mid S_t)$.
+SciTaste learns an auxiliary selective policy $\pi_T$ from earlier source-task
+episodes and either recommends one action or abstains:
 
 $$
-a_t = \arg\max_{a\in A(S_t)}
-\left[U_0(a\mid S_t) + \lambda\,\Delta_\pi(a\mid S_t)\right],
+a_t = \arg\max_{a\in A_t}
+\left[U_0(a\mid S_t)+\lambda\Delta_T(a\mid S_t)\right],
 $$
 
-where $\lambda=0$ yields the matched native baseline and $\lambda=1$ enables
-the learned policy. The action set, model, tools, observations, and budget are
-unchanged between the two conditions. If the current state lies outside the
-policy's supported scope, $\Delta_\pi(a\mid S_t)=0$ for every action.
+where $\lambda=0$ is the same-backbone Native Base and $\lambda=1$ enables the
+Taste intervention. Model, task state, tools, and resource limits are identical
+between these conditions. Policy abstention sets every $\Delta_T$ to zero and
+is distinct from selecting a scientific `STOP` action.
 
-The desired supervision cannot be represented by a final scalar reward alone.
-We use an episode
+The title-level estimand is downstream research progress under matched
+resources, not agreement with an authored preference label. Decision regret is
+a mechanism estimand used to explain that system effect.
 
-$$
-e_i=(S_i,A_i,a_i,E_i,O_i,C_i,G_i),
-$$
+# Method: Outcome-Grounded Scientific Taste
 
-where $E_i$ is the evidence available for the choice, $O_i$ is the later
-outcome, $C_i$ assigns signed credit while naming confounders, and $G_i$
-specifies transfer and reversal conditions. The target is not to imitate
-$a_i$. It is to infer when the preference for $a_i$ over its alternatives is
-supported by the outcome and applicable to a new state.
+## Decision episodes and temporal supervision
 
-This formulation separates four quantities that are often conflated:
-
-- source quality: whether the underlying record is trustworthy and informative;
-- decision grounding: whether the state, alternatives, and evidence can be
-  reconstructed without using future information;
-- outcome attribution: whether later evidence supports beneficial or harmful
-  credit for the earlier choice;
-- contextual transfer: whether the credited lesson applies to the present
-  decision rather than merely sharing vocabulary.
-
-A useful scientific-taste method must improve decisions because of these
-quantities, not because it sees more source text or an outcome label unavailable
-to the baseline.
-
-# Method
-
-## From high-quality content to decision episodes
-
-SciTaste admits trajectories, revisions, reviewer exchanges, benchmark
-solutions, and its own runs only when provenance and temporal order support a
-consequential pre-outcome decision. The process miner projects what was known,
-reconstructs a closed feasible alternative set, and rejects forced, artificial,
-or outcome-leaking choices. Each accepted episode retains a concrete audit view
-and an abstract transfer view. Retrieval proposes candidate precedents from the
-abstract view; application is rechecked against the concrete state.
-
-## Delayed, signed outcome attribution
-
-Outcomes may arrive after an experiment, a sequence, or review. Attribution asks
-whether a feasible alternative under the same earlier state and budget would
-plausibly have produced better evidence, then assigns beneficial, harmful, or no
-credit while retaining confounders. Two identity-distinct AI reviewers assess a
-frozen packet and a third adjudicates substantive disagreement. This is scalable
-AI supervision, not expert ground truth; reviewers can reject an attribution but
-cannot rewrite the trajectory.
-
-## Outcome-grounded retrieval and state-conditioned transfer
-
-Signed credit first determines which episodes may serve as precedents; it does
-not directly turn a frequently successful action into a global policy. Let
-$g(i)$ be the source group of episode $i$, $n_g$ its number of admitted episodes,
-and $q_i\in[0,1]$ the reviewed attribution weight. Episode $i$ contributes at
-most $q_i/n_{g(i)}$, so a prolific paper or trajectory cannot dominate merely by
-exposing more intermediate decisions. Semantic features are used to retrieve a
-broad candidate pool, not to declare transfer.
-
-For a new state $S$, SciTaste exposes the frozen action menu and atomic current
-facts to an applicability assessor. A precedent $c$ is eligible only if at least
-two of its registered applicability conditions cite exact facts in $S$, no
-registered failure condition is triggered, and its counterfactual probe is not
-satisfied. The assessor must also map the precedent to actions it supports and
-opposes. These references are validated against the closed candidate pool; the
-model cannot introduce a new fact, precedent, or action.
-
-The controller then compiles a typed *Taste control packet*. If $r_c$ is the
-state-relevance confidence and $q_c$ the source-grounding confidence, precedent
-$c$ receives bounded weight $\eta_c=r_c(1+q_c)/2$. Its action adjustment is
+An episode is
 
 $$
-\Delta_T(a\mid S)=\sum_{c\in C(S)}\eta_c
-\left[\mathbb{1}(a\in A_c^+)-\mathbb{1}(a\in A_c^-)\right],
+e_i=(S_i,A_i,M_i,O_i,C_i,G_i,P_i),
 $$
 
-where $A_c^+$ and $A_c^-$ are the assessor's fact-grounded aligned and opposed
-action sets. The packet records the complete feasible action semantics, cited
-facts, source and abstraction hashes, per-action support and opposition, and the
-deterministic adjustment. It
-intervenes only when one action has a unique positive adjustment; ties,
-non-positive margins, or no eligible precedent produce explicit abstention.
+where $S_i$ is the outcome-hidden state, $A_i$ the feasible actions, $M_i$ their
+executable semantics, $O_i$ later evidence, $C_i$ signed credit with declared
+confounders, $G_i$ transfer and reversal conditions, and $P_i$ provenance and
+temporal order. Human records provide ecologically realistic states but rarely
+identify the utility of rejected alternatives. Executable forks provide
+objective action utilities by replaying every action from the same prefix.
+These sources retain separate authority: plausible reconstruction never becomes
+objective supervision merely because it is fluent.
 
-A deterministic controller ranks feasible actions by
-$U_0(a,S)+\lambda\Delta_T(a\mid S)$. A model-backed controller receives the same
-packet as bounded structured context, while hard feasibility remains outside the
-model. This packet is also the treatment interface used by SciTasteBench and by
-external research trajectories. For executable tasks, its recommendation is
-compiled into a hashed action directive that the code-generating agent must
-implement rather than reinterpret. Consequently, a text card that helps a model
-but cannot produce a fact-bound action adjustment is not counted as the SciTaste
-method. Delayed outcomes update the eligible precedent corpus and its signed
-credit; they earn a learning claim only if the resulting packet later changes an
-executed action.
+## Grounded scientific situations
 
-## One lifecycle, multiple decision families
+The extractor $h$ maps selector-visible state to
 
-Problem, experiment, interpretation, adaptation, and communication decisions
-share this mechanism but retain family-specific criteria. A persistent state
-links experiments to evidence, claims, review obligations, and revision. Models
-may propose actions; the controller selects among feasible choices and admits
-measured evidence. Tool Intelligence and Generation as Content expose and help
-operate this state but are not separate scientific contributions.
+$$
+z=h(S)=(H,E,K,I,B,R),
+$$
+
+covering hypothesis structure, evidence relation, epistemic bottleneck,
+identifiability, budget pressure, and terminal readiness. Every component cites
+an exact span in the visible state; target outcomes are unavailable to $h$.
+This representation is intentionally compact and falsifiable. It must beat raw
+semantic retrieval and learned value baselines to justify its use.
+
+## Semantic action alignment and common support
+
+Actions with the same label can mean different things across tasks. Before any
+source utility is exposed, an outcome-hidden mapper binds every target action to
+one source action definition. A source is eligible only when this map is
+complete, sufficiently confident, and covers the same target action set.
+SciTaste compares all target actions using the same eligible source population;
+missing or failed source branches receive their registered intention-to-treat
+value.
+
+Let $C(z)$ be the cross-task source cases satisfying these contracts and
+$m_i(a)$ the mapped source action. For categorical situation kernel $k$ and
+source utility $u_i$, cases from the same source task are first collapsed. The
+estimated action value is
+
+$$
+\widehat V(a\mid z)=
+\frac{\sum_g w_g(z)\,\overline{u}_{g,a}}
+     {\sum_g w_g(z)},\qquad
+w_g(z)=\max_{i\in g} k(z_i,z)^2.
+$$
+
+Replicate-level branch variance and between-task variation estimate uncertainty
+in the paired best-minus-runner-up contrast. The policy intervenes only if the
+state abstraction, source similarity, effective task support, practical margin,
+and contrast precision all pass thresholds frozen on development data.
+Otherwise it abstains.
+
+## Typed intervention and outcome learning
+
+An admitted estimate is compiled into a Taste Control Packet containing the
+frozen action menu, cited current-state facts, selected precedents, explicit
+source-to-target mappings, per-action support and opposition, and either one
+recommended action or a zero-effect abstention. This packet is the only Taste
+treatment accepted by the native executor and evaluation adapters; retrieved
+prose without a state-bound action adjustment is not Full SciTaste.
+
+Learning proceeds chronologically. Reviewed outcomes may add, remove, or change
+credit on source episodes only after the relevant action and outcome are
+closed. The updated memory is evaluated on later source-task-disjoint states.
+A learning effect requires the correct update to outperform both no update and
+shuffled credit, and requires a trace from changed policy state to changed
+executed action and outcome.
+
+# The SciTaste Research System
+
+SciTaste Native owns a complete research loop rather than wrapping another
+framework. It maintains one project state across literature grounding, idea and
+hypothesis formation, experiment planning, isolated execution, evidence
+admission, analysis, paper construction, review, and revision. Models propose
+semantic actions and code; deterministic components retain authority over
+feasibility, resource limits, artifact identity, evidence admission, and state
+transition. AutoResearchClaw and other systems are optional comparison adapters,
+not runtime parents.
+
+The Taste policy enters only at registered consequential decisions. Generation
+as Content exposes project state and accepts user interventions, while Tool
+Intelligence decides how bounded tools should be invoked. These are supporting
+system planes rather than independent paper contributions. The experimental
+comparison attributes a scientific effect only when a Taste packet changes an
+executed high-level action.
+
+**[FIGURE SLOT: replace the current generic framework figure with a compact
+native-loop diagram showing episode construction, selective policy,
+intervention, execution, delayed credit, and the policy-on/off boundary.]**
+
+# SciTasteBench
+
+SciTasteBench is a full-system research-agent benchmark with a diagnostic
+instrument, not a collection of SciTaste-only ablations.
+
+## Agent track: complete autonomous research
+
+Each task package freezes a research brief, starting code and data, allowed
+tools, hidden evaluation interface, resource envelope, required artifacts, and
+failure policy. A framework operates through its native loop from the common
+starting package to executable evidence and a final research product. The
+primary endpoint is scorer-owned research progress; evidence validity,
+completion, invalid-result rate, wall time, tokens, GPU/API cost, and final
+package quality are reported separately.
+
+The primary comparison contains SciTaste Native, a direct ReAct-style agent,
+and at least two independent published research systems whose unchanged-core
+implementations pass task, model, sandbox, artifact, and telemetry equivalence.
+AutoResearchClaw is retained as a real sensitivity system. AI Scientist-v2 or
+Sibyl appears only if its actual implementation is runnable; no unavailable
+system receives a proxy implementation or synthetic score.
+
+## Diagnostic track: shared-prefix objective forks
+
+At consequential points within task trajectories, the evaluator freezes the
+state and a menu of two to five stable scientific actions. Every action is
+executed from the same prefix with identical tools, remaining budget, scorer,
+and paired randomization blocks. The evaluated selector sees no branch outcomes.
+The primary diagnostic loss is objective action regret,
+$u(a^*)-u(\hat a)$.
+
+This track supplies the controlled ablations: Base, equal-context Raw/RAG,
+stage/status kNN, generic outcome memory, a learned action-value predictor,
+Matched Taste, and Mismatched Taste. Chronological cases additionally compare
+correct update, no update, and shuffled credit. Because branch execution is
+shared across selectors, these controls do not multiply the expensive research
+work.
+
+## Split and construct validity
+
+Task clusters, rather than prefixes, branches, candidate orders, or model calls,
+define independent units and cannot cross splits. Development estimates action
+identifiability, task-cluster variance, and the smallest relevant effect before
+the validation and hidden populations are frozen. Formal cases require complete
+action support, replicate-level outcomes, an unchanged scorer, action-compliance
+traces, source licenses or reconstructable locators, and outcome-hidden
+construct review. Direction, Information, and Inference are coverage strata;
+they are reported only where the task and action menu genuinely instantiate the
+corresponding scientific decision.
 
 # Evaluation
 
-The evaluation asks whether an abstracted lesson improves a held-out scientific
-choice, whether an admitted preference changes an actual research trajectory,
-and whether evidence from that trajectory changes the future policy. These are
-separate questions. A good local choice does not guarantee downstream progress,
-and a better downstream score cannot be attributed to Taste when the policy did
-not intervene.
+The evaluation separates four estimands that are often conflated in autonomous
+research: complete-system competitiveness, external validity, the causal
+contribution of Taste under a matched executor, and the behavior of the Taste
+mechanism itself. Each research question therefore has a distinct comparison
+and evidence carrier.
 
-![SciTasteBench isolates three mechanism questions---source abstraction,
-selective transfer, and outcome learning---from external validity. MLRC-Bench
-owns the objective executable-research endpoint, MLR-Bench owns the complete
-idea-to-paper endpoint, and ScienceAgentBench gates an unqualified cross-domain
-claim.](assets/fig3-scitastebench-study-design.png)
+## Research questions
 
-## SciTasteBench: boundary-conditioned scientific decisions
+- **RQ1---Complete systems:** Does SciTaste outperform independent Auto Research
+  frameworks on SciTasteBench-Agent under matched or explicitly best-native
+  resource conditions?
+- **RQ2---External validity:** Does SciTaste improve objective progress and
+  evidence-valid research products on unchanged accepted benchmarks?
+- **RQ3---Causal contribution of Taste:** Under the same backbone, executor,
+  state, tools, and budget, does Full SciTaste outperform Native Base and
+  equal-context Raw/RAG?
+- **RQ4---Mechanism and learning:** Do matched precedents reduce action regret,
+  do mismatched precedents fail, is abstention calibrated, and does correct
+  delayed credit beat no update and shuffled credit?
 
-The benchmark unit is not an isolated multiple-choice question. It is a natural,
-outcome-hidden decision and a counterfactual twin in which exactly one decisive
-fact changes. The scientific setting, action identifiers, budget, topic, style,
-and registered invariant facts remain fixed. A valid pair must change the
-preferred action or change action into abstention. This rules out populations in
-which generic caution or “run another analysis” succeeds in every state.
+## Systems and fairness
 
-![One SciTasteBench boundary pair holds the scientific setting and feasible action menu fixed while a single registered fact crosses an applicability boundary. The independent unit is the pair; development results never enter the main result table.](assets/fig2-scitastebench-case-anatomy.png)
+The matched block fixes the model revision, task information, tools, resource
+limits, recovery policy, and scorer. It supports causal framework comparisons
+only for systems that natively accept that envelope. A separate best-native
+block uses each framework's recommended configuration and is reported as
+ecological but model-confounded. Failed, timed-out, and invalid runs remain in
+the intention-to-treat population.
 
-Each formal pair binds its source license and content hash, outcome firewall,
-utility contract, raw independent judgments, counterfactual construction record,
-contamination probe, and immutable split. The release target contains 24
-development pairs, 24 validation pairs, and 72 hidden-test pairs, stratified to
-give 20 independent pairs in each of six scientific decision contexts across at
-least three domains.
-For analysis, the six contexts form three powered scientific-decision axes:
-Direction combines problem value with hypothesis falsifiability; Information
-combines experiment design with resource, pivot, continue, and stop decisions;
-and Inference combines evidence interpretation with claim calibration. The six
-contexts remain visible coverage tags, but they are not presented as six
-underpowered miniature benchmarks.
-Construction also emits a boundary-only control containing the changed fact and
-action menu but no invariant scientific context. A pair is diagnostic only when
-reviewers can name at least two invariant facts required for the full-state
-decision and a frozen strong chooser cannot recover the registered reversal
-from the boundary-only control. Source sentences that state either boundary
-value are removed from the shared context and retained only as provenance. This
-prevents “baseline missing implies add baseline” and comparable cue rules from
-masquerading as context-sensitive judgment.
-Because the independent unit is an admitted pair rather than a raw review
-comment, source collection is separately buffered.  The construction pool is
-frozen at no fewer than 240 source-group-disjoint records---twice the 120-pair
-release floor---and is enlarged if development acceptance rates imply inadequate
-yield.  Rejected constructs are never relaxed to fill a split, and multiple
-comments or prompts from one paper cannot increase the independent sample size.
-The primary endpoint is pair-level budgeted decision regret, averaging base and
-twin before aggregation. A co-primary mechanism endpoint requires both states to
-be correct, the registered reversal to occur, and both choices to be robust to
-candidate order. Matched-minus-mismatched specificity, selective risk, nuisance
-paraphrase invariance, and cost are secondary.
+The planned complete-system rows are Direct/ReAct, MLR-Agent, Agent Laboratory,
+SciTaste Native, and qualified additional systems. AutoResearchClaw is a
+sensitivity row. MLAB and MLR-Agent remain the official comparator rows on
+their native MLRC-Bench and MLR-Bench evaluations.
 
-Utilities are elicited before system evaluation on four anchored components:
-evidence value, expected information gain, resource cost, and claim risk. Each
-component is normalized within a pair using the frozen action menu; the primary
-scalar uses preregistered context-specific weights, while the component vector
-and every conclusion that changes under equal-weight or Pareto-respecting
-aggregation are reported. Policy abstention (no Taste adjustment) is evaluated
-separately from an explicit scientific abstention action in the menu. This
-prevents a system that never intervenes from receiving credit for choosing to
-defer.
+## External benchmark portfolio
 
-Construction results pass through an irreversible evidence buffer: engineering,
-consumed development, frozen validation, and hidden confirmation. Method changes
-consume a split, and only hidden confirmation can populate the main result
-table. Candidate-order or paraphrase repetitions are repeated measurements, not
-additional independent pairs.
+AAAR-1.0 provides a component check but cannot establish end-to-end research.
+The primary objective endpoint uses the six untouched MLRC-Bench tasks; the
+already consumed development task appears only in a seven-task descriptive
+sensitivity analysis. MLR-Bench evaluates the complete idea-to-paper product on
+a frozen source-disjoint subset with invalid-result accounting. The broad
+cross-domain title is retained only if unchanged ScienceAgentBench tasks can be
+run with the official execution assets; otherwise claims narrow to ML research
+agents.
 
-## Natural scientific decisions
+## Statistical analysis
 
-We reconstruct candidate decisions from natural paper reviews and subsequent
-author records in computing, ecology, and public health. The constructor sees
-only the article and review available before revision; the later response is
-isolated. It proposes a natural state, a hypothetical twin, and one action menu
-that must remain feasible in both. Independent construct reviewers see randomly
-named states and the original record, but not the constructor's preferred
-actions, utilities, state roles, rationale, or observed outcome.
-
-Source strata are explicit. Human review--revision records supply natural
-construct targets. Agent-generated idea and trajectory corpora may supply
-development precedents, but never human labels. Objective decision utilities
-come from a separate executable-fork stratum: immediately before a consequential
-hypothesis, experiment, or pivot decision, we freeze the state and execute two
-feasible continuations under the same remaining budget and independent seeds.
-The public task evaluator scores both continuations. We report human-grounded
-and scorer-grounded strata separately rather than pooling them into an omnibus
-sample count.
-
-Every formal target is paired with source-group-disjoint precedents. The Base
-condition receives no precedent, equal-token raw receives the underlying source
-record, Matched Taste receives the outcome-grounded decision abstraction whose
-boundary fits the target, and Mismatched Taste receives an equally formatted
-abstraction outside that boundary. All conditions share the generator, action
-menu, visible state, and context budget. Raw and abstracted conditions are
-additionally matched for factual content, answer polarity, explicit action
-recommendation, lexical overlap, and source identity; the mismatched condition
-is selected by a frozen matching rule, not constructor judgment. The analysis
-operates on independent pairs and reports raw disagreements rather than filtering
-them from the sample. Two action-order permutations and two nuisance paraphrases
-are repeated measurements inside each pair and are averaged before pair-level
-inference.
-
-Matched is admitted only when the same typed control packet used by the research
-controller is produced. The packet cites the current facts that satisfy each
-transfer boundary and exposes the resulting action adjustment; a generic card
-or retrieved passage cannot stand in for the method. Formal pair utilities are
-recomputed from frozen evidence-value, information-gain, resource-cost, and
-claim-risk components. Both action and abstention are therefore scored under the
-same preregistered utility contract.
-
-## Objective research trajectories
-
-For downstream evaluation, only the lifecycle-policy weight changes. Model,
-tools, hidden task, initialization, feasible actions, and resource budget remain
-fixed while an external scorer measures the final result. We retain failed arms
-in the denominator and record whether the policy actually changed a selected
-action. Training-free law-discovery tasks exercise sequential hypotheses and
-experiments; training-based machine-learning tasks will measure progress on a
-frozen hidden objective. These are two workloads for the same policy, not two
-versions of SciTaste.
-
-The external comparison is not replaced by SciTasteBench. MLRC-Bench evaluates
-all seven official tasks with Full SciTaste, the same-backbone Native Base,
-equal-context Raw/RAG, and the runnable official MLAB scaffold. MLR-Bench then
-tests ten frozen source-disjoint briefs with Full, Native Base, Raw/generic
-memory, and official MLR-Agent. If the unqualified autonomous-research claim is
-retained, ScienceAgentBench supplies the cross-domain execution check on its
-unchanged official tasks; EXP-Bench is a complementary AI experiment-integrity
-test rather than a substitute for cross-domain evidence. SciTasteBench identifies
-the mechanism; MLRC-Bench tests objective executable progress; MLR-Bench tests
-the validity of the complete research product.
-
-Complete research trajectories additionally connect idea selection,
-experimentation, evidence synthesis, paper construction, review, and
-review-driven revision. They evaluate ecological usefulness and cost, but they
-cannot replace either the local mechanism comparison or the matched downstream
-intervention.
-
-All treatment decisions are recorded before execution. Hidden labels remain in
-an isolated scorer until actions are frozen, source groups cannot cross from a
-target to its precedent, and failures remain in the denominator. Development
-runs may change a future algorithm version but cannot be retroactively promoted
-to confirmatory evidence.
+Tasks are the generalization unit. Paired randomization tests and task-cluster
+bootstrap intervals compare systems; seeds estimate within-task stability but
+do not increase sample size. Development data freeze the smallest effect of
+interest and required hidden population. Score--cost curves, invalid-run rates,
+and intervention-to-action mediation accompany endpoint means. Multiple
+mechanism contrasts are corrected as one registered family. Practical ties
+remain in risk--coverage analysis rather than being converted into winners.
 
 # Results
 
-The submission result boundary is intentionally empty until frozen evidence is
-available. Three result blocks are required for the ML-research claim: (i)
-SciTasteBench hidden boundary
-judgment, including matched--mismatched specificity and abstention; (ii)
-MLRC-Bench objective progress for Full SciTaste, the same-backbone Native Base,
-equal-context Raw/RAG, and the official MLAB scaffold under the same
-research-agent model across all seven tasks; and (iii) MLR-Bench stagewise and
-final-package quality for Full, Native Base, Raw/generic memory, and official
-MLR-Agent, with invalid or fabricated results retained. A fourth cross-domain
-block on ScienceAgentBench is required before retaining the broader title.
-Development effects are not substituted for any block.
+This manuscript reserves result locations without treating development runs as
+evidence. Every table will be generated from a frozen result manifest; `--`
+means not yet executed, not zero.
 
-| Claim-bearing block | Independent unit | Primary endpoint | Current status |
+## Complete-system comparison on SciTasteBench-Agent
+
+| Framework | Objective progress | Valid experiments | Valid final product | Cost | Failure rate |
+|---|---:|---:|---:|---:|---:|
+| Direct/ReAct | -- | -- | -- | -- | -- |
+| Published system A | -- | -- | -- | -- | -- |
+| Published system B | -- | -- | -- | -- | -- |
+| AutoResearchClaw (sensitivity) | -- | -- | -- | -- | -- |
+| SciTaste Native | -- | -- | -- | -- | -- |
+
+**[RESULT SLOT RQ1: paired task-level effect, uncertainty, success/failure
+counts, score--cost curve, and matched versus best-native interpretation.]**
+
+## External objective progress and research-product validity
+
+| Evaluation | Systems | Primary endpoint | Formal status |
 |---|---|---|---|
-| SciTaste mechanism | source-group-disjoint boundary pair | paired decision regret and correct two-state reversal | hidden confirmation not opened |
-| Executable research progress | MLRC-Bench task | objective score gain over supplied baseline per GPU/API budget | matched external run pending |
-| Complete research product | MLR-Bench brief | evidence-valid stage and final-package quality | external-system comparison pending |
-| Cross-domain scope | ScienceAgentBench task | executable task success, program correctness, and cost | required for broad claim; pending |
+| AAAR-1.0 | Full, Native Base, Raw/RAG | official component metrics | pending |
+| MLRC-Bench, six untouched tasks | Full, Native Base, Raw/RAG, MLAB | normalized objective progress per cost | pending |
+| MLR-Bench frozen subset | Full, Native Base, generic memory, MLR-Agent | evidence-valid final-package quality | pending |
+| ScienceAgentBench | Full, Native Base, official baseline | executable success and cost | asset-blocked |
 
-A result enters this table only if the method, task population, backbone,
-budget, scorer, and failure policy were frozen before outcomes were opened. Null
-results and failed runs remain in the denominator. If these blocks do not
-support the title, the claim and title are narrowed rather than repaired with
-development evidence.
+**[RESULT SLOT RQ2: external scores, task-cluster intervals, invalid runs,
+resource use, and any scope narrowing forced by unavailable official assets.]**
 
-<!-- DEVELOPMENT EVIDENCE QUARANTINE
-The material below is retained in source control as design history. It is not
-rendered in the submission draft and must not be used as a paper result.
+## Causal effect and decision-level ablations
 
-## Abstraction compresses precedent but does not yet select it
+| Condition | Downstream task outcome | Action regret | Intervention coverage | Cost |
+|---|---:|---:|---:|---:|
+| Native Base | -- | -- | -- | -- |
+| Equal-context Raw/RAG | -- | -- | -- | -- |
+| Generic outcome memory | -- | -- | -- | -- |
+| Learned action-value baseline | -- | -- | -- | -- |
+| Mismatched Taste | -- | -- | -- | -- |
+| Full / Matched Taste | -- | -- | -- | -- |
 
-The natural pilot does not support the current matched-Taste mechanism. Averaged
-over candidate order, Base selects the proxy-preferred action on 58.3% of cases.
-Raw precedent and the mismatched-Taste placebo both reach 66.7%, while matched
-Taste reaches 61.1%. Requiring correctness in both orders yields the more
-conservative result: 50.0% for Base, 55.6% for raw precedent, 47.2% for matched
-Taste, and 58.3% for the mismatched placebo. Thus matched Taste is 2.8 points
-below Base, 8.3 below raw precedent, and 11.1 below the placebo. Because this is
-an unbalanced 36-case development set, these differences are descriptive rather
-than a confirmatory significance test.
+**[RESULT SLOT RQ3: Full--Base and Full--Raw matched effects plus the trace from
+admitted packet to changed action and later score. RESULT SLOT RQ4: regret,
+Matched--Mismatched specificity, abstention risk--coverage, action-order and
+paraphrase invariance.]**
 
-| Information shown with the target decision | Declared | Reversed | Correct in both | Order-inconsistent cases | Input tokens |
-|---|---:|---:|---:|---:|---:|
-| None (Base) | 58.3 | 58.3 | 50.0 | 6 / 36 | 71,700 |
-| Raw matched precedent | 63.9 | 69.4 | 55.6 | 8 / 36 | 247,470 |
-| Matched abstracted Taste | 63.9 | 58.3 | 47.2 | 10 / 36 | 74,902 |
-| Mismatched abstracted Taste | 66.7 | 66.7 | 58.3 | 6 / 36 | 74,820 |
+## Outcome learning
 
-The abstraction is efficient: matched Taste uses 3.3 times fewer input tokens
-than raw precedent. Compression, however, is not the scientific objective. A
-useful Taste representation should preserve the reason a lesson applies and
-reject an equally plausible lesson outside that boundary. Here the matched and
-mismatched principles are statistically indistinguishable, and the mismatched
-condition is numerically better. Matched Taste is also the most order-sensitive
-condition, changing its selected action in 10 of 36 cases when the candidates
-are reversed, compared with 6 for Base, 8 for raw precedent, and 6 for placebo.
+| Policy state | Later source-disjoint regret | Action-change rate | Downstream outcome |
+|---|---:|---:|---:|
+| No update | -- | -- | -- |
+| Shuffled credit | -- | -- | -- |
+| Reviewed delayed-credit update | -- | -- | -- |
 
-This negative result narrows the method hypothesis. A judgment-family match is
-too coarse to establish applicability, and a fluent transferable principle can
-act as generic scientific advice. The next policy version must learn a
-contrastive boundary: not only what succeeded in one record, but which state
-feature makes the preference reverse. Increasing the number of retrieved
-principles would not address the observed failure.
+**[RESULT SLOT: chronological learning curve and a concrete episode showing
+outcome attribution, policy update, changed action, and changed evidence.]**
 
-## Contrastive applicability yields a provisional selective signal
+# Analysis
 
-The second study asks whether the missing information is precisely the boundary
-of application. The matched contrastive card reaches 58.3% order-consistent
-accuracy, compared with 41.7% for its token-matched raw precedent, 50.0% for a
-token-matched card from the wrong judgment family, and 44.4% for Base. The
-registered representation contrast is therefore +16.7 points: seven cases
-improve, one regresses, and 28 are unchanged. The registered selectivity
-contrast is +8.3 points: eight improve, five regress, and 23 are unchanged.
+The final analysis will separate at least five explanations: better action
+selection, higher abstention precision, generic context benefit, executor
+compliance, and additional cost. Failure slices will cover decision axis,
+domain shift, task budget, action-map confidence, abstention reason, and invalid
+experiment type. A qualitative case study will show one beneficial transfer,
+one harmful or mismatched transfer, and one correct abstention without exposing
+hidden test content.
 
-| Information shown with the target decision | Declared | Reversed | Correct in both | Order-inconsistent cases | Input tokens |
-|---|---:|---:|---:|---:|---:|
-| None (Base) | 52.8 | 58.3 | 44.4 | 8 / 36 | 71,700 |
-| Token-matched raw precedent | 61.1 | 55.6 | 41.7 | 12 / 36 | 96,880 |
-| Matched contrastive Taste card | 66.7 | 69.4 | 58.3 | 7 / 36 | 95,446 |
-| Mismatched contrastive Taste card | 66.7 | 58.3 | 50.0 | 9 / 36 | 95,490 |
-
-Order-averaged accuracy gives the same ordering: 68.1% for matched Taste,
-62.5% for mismatched Taste, 58.3% for raw precedent, and 55.6% for Base. A
-case-resampled interval for the secondary order-averaged selectivity contrast
-still crosses zero ($-5.6$ to $16.7$ points), whereas the corresponding
-representation interval is $0.0$ to $19.4$ points. We retain these intervals as
-diagnostics rather than headline tests because the population was chosen during
-development and contains only 36 unevenly distributed cases.
-
-The two studies jointly locate the mechanism more sharply than either alone.
-Compression into a generic principle destroys selection; explicitly encoding
-the conditions under which a lesson should reverse recovers a promising signal
-at nearly identical context length. This remains a hypothesis-generating result.
-The next decision-level experiment must freeze the contrastive representation
-and test it on an independent balanced population before the mechanism can be
-claimed. More importantly, even a replicated local effect would not establish
-that Taste improves downstream experiments or complete idea-to-paper research.
-
-## Source-disjoint research trajectories
-
-We executed a frozen cohort of eight NewtonBench physics families that were
-disjoint from the source groups used to fit the policy: Bose--Einstein
-distribution, Coulomb force, gravity, Hooke's law, magnetic force, Malus' law,
-Snell's law, and sound propagation. DeepSeek V4.1 Flash acted as the research
-agent. For each family, the policy-on and policy-off arms shared the hidden
-environment, action set, model, tools, initialization, and resource ceiling;
-only the policy weight changed. Failures were retained without replacement.
-
-The cohort executed 16 trajectories, 358 physical experiments, and 321,898
-model tokens at a recorded API cost of USD 0.1313. Twelve arms reached a scored
-submission and four terminated for agent noncompliance. Counting every failed
-arm as score zero, policy-on solved 0/8 tasks and policy-off solved 2/8, an
-intention-to-treat difference of $-0.25$. This numerical difference is *not* a
-Taste-effect estimate: the policy made zero nonzero adjustments in all eight
-pairs, and selected-action sequences were identical for every overlapping
-decision. The two arms therefore differed only through ordinary model sampling
-after an experimentally inactive treatment.
-
-| Cohort statistic | Observed value |
-|---|---:|
-| Source-disjoint task pairs | 8 |
-| Completed arms | 12 / 16 |
-| Physical experiments | 358 |
-| Taste-active pairs | 0 / 8 |
-| Policy-on solved | 0 / 8 |
-| Policy-off solved | 2 / 8 |
-| Recorded model tokens | 321,898 |
-
-The failure is scientifically informative because it contradicts the weaker
-assumption that passing a support-count threshold is sufficient for a usable
-preference policy. The fitted action posterior preferred refinement, yet the
-credible pairwise margin remained negative at every state. More repetitions of
-the same inactive comparison cannot resolve the question.
-
-## Closing the outcome-to-policy loop
-
-Inspection of the frozen decision rule revealed that it required both a
-pairwise posterior probability above 0.60 and a one-sided 95% lower margin above
-zero. The second condition strictly dominated the first in this regime. We
-materialized a new policy version from the *same eight training episodes*: no
-task outcome from the source-disjoint cohort entered its corpus. The revised
-rule uses a single posterior-probability threshold of 0.75 together with the
-unchanged support and scope requirements; the conservative margin remains a
-reported diagnostic.
-
-We then executed a matched follow-up on the previously used Heat task. This is
-a development loop-closure case, not a new held-out result. The revised policy
-made nonzero adjustments at all four nonterminal decisions and changed the
-selected action on two of five turns: the policy-on trajectory chose
-`REFINE--REFINE--REFINE--REFINE--STOP`, whereas the zero-weight control chose
-`REFINE--PILOT--PILOT--REFINE--STOP`. Both arms ran 24 experiments and failed
-exact symbolic recovery. The policy-on hypothesis nevertheless obtained RMSLE
-5.60 versus 12.51 for the control, using 36,265 total model tokens and USD
-0.0138 in API cost.
-
-This follow-up establishes the functional sequence that the inactive cohort
-could not: observed failure led to an explicit algorithm revision, the revised
-policy altered later research decisions, and those decisions changed the final
-hypothesis and continuous error. It does not establish average improvement.
-The task was a previously used development task, the sample contains one pair,
-and the primary metric remains tied at zero. A new source-disjoint prospective
-population is still required for an effectiveness estimate.
-
--->
+**[ANALYSIS SLOT: replace this paragraph with result-grounded findings and
+examples after formal manifests close.]**
 
 # Limitations
 
-Outcome attribution is intrinsically difficult. Later success may reflect luck,
-a stronger executor, or decisions made after the episode under review.
-Conversely, a failed experiment may be highly informative. Independent review,
-counterfactual alternatives, explicit confounders, and signed credit make these
-assumptions inspectable but do not eliminate error.
+Scientific action value is conditional on an executor, task distribution, and
+resource envelope; an objective fork does not reveal a universally optimal
+research action. The six-dimensional situation representation is deliberately
+small and may omit domain-specific facts. Action menus and semantic mappings
+introduce construct error even when they are outcome-hidden. Natural scientific
+records omit rejected alternatives, while executable forks are expensive and
+cover only tasks with reproducible scorers.
 
-The current estimator uses a fixed semantic feature vocabulary. It can combine
-evidence across source groups but does not learn an unrestricted representation
-of scientific similarity. This favors transparency and abstention at the cost
-of weaker transfer. Cross-domain, temporal, and cross-model evaluation is
-required before claiming general scientific judgment.
+System comparisons also face a fairness frontier. A shared backbone supports
+causal comparison but can distort a framework designed for another model;
+best-native execution preserves ecological validity but confounds system and
+model effects. We report these estimands separately. AI-based construction or
+review is disclosed as AI evidence and does not become human or domain-expert
+validation.
 
-SciTasteBench depends on reconstructed decisions. Natural records often omit
-rejected alternatives and intermediate uncertainty, while AI-assisted
-reconstruction can introduce plausible but false counterfactuals. The benchmark
-must therefore disclose source coverage, reconstruction confidence, reviewer
-agreement, and contamination risk. AI-panel labels are scalable proxies, not a
-replacement for expert validation.
-
-The current consumed construction set is small and uneven: only 13 of 26
-generated pairs survived two independent AI-proxy construct reviews, including
-only one hypothesis and one resource-allocation pair. Agreement between model
-reviewers does not establish human construct validity. The formal population
-therefore still requires targeted coverage, expert validation, and an unopened
-source-disjoint confirmation split. Even a replicated decision-level effect
-would not establish downstream causal utility.
-
-End-to-end comparisons introduce model, tool, compute, and implementation
-confounds. We separate matched-model from native-best comparisons and preserve
-unavailable systems rather than imitating them, but ecological results will
-still be specific to the tasks and resource envelope studied.
-
-Finally, self-development creates circularity. Using SciTaste to improve its own
-implementation is valuable for discovering failure modes and testing the
-lifecycle, but those traces cannot establish external generalization or serve as
-their own headline evaluation.
+Finally, self-development is useful for discovering defects and exercising the
+lifecycle, but it cannot establish SciTaste's comparative effectiveness. The
+paper's title-level claims require source-disjoint tasks and independent systems.
 
 # Conclusion
 
-SciTaste treats scientific taste as a learnable policy over the decisions that
-shape a research trajectory. Its key move is to convert high-quality content
-and endogenous outcomes into grounded episodes that retain the state,
-alternatives, evidence, delayed result, signed credit, and boundary of a
-scientific choice. A source-group-aware posterior then modifies a fixed
-controller only when the lesson is supported and applicable.
-
-The formulation turns an appealing but vague property into a testable learning
-problem. Its success condition is demanding by design: high-quality source
-content must yield a grounded preference, the representation must distinguish
-where that preference applies from where it does not, and an admitted preference
-must improve evidence gathered under a matched budget. SciTasteBench tests the
-first two requirements; accepted external benchmarks test the third. The method
-claim requires an independent boundary-pair confirmation, active objective
-trajectories on MLRC-Bench, and artifact-verifiable MLR-Bench comparisons against
-a runnable research agent. An unqualified autonomous-research claim additionally
-requires unchanged cross-domain ScienceAgentBench tasks. Until those tests are
-complete, this manuscript is a method and evaluation design rather than evidence
-for improved autonomous research.
+SciTaste reframes scientific taste as a selective policy over consequential
+research actions. It learns from pre-decision states and delayed outcomes,
+aligns action semantics across tasks, and intervenes only when cross-task
+support and uncertainty justify a preference. The evaluation deliberately
+separates complete-system competitiveness, external validity, the causal effect
+of Taste, and decision-level mechanism diagnostics. **[CONCLUSION RESULT SLOT:
+insert only the strongest claims supported jointly by the frozen system,
+external, and ablation results; narrow the title if cross-domain evidence is
+absent.]**
 
 # AI Use Statement
 
@@ -677,19 +465,15 @@ for the manuscript, experiments, citations, and reported claims.
 # Ethics Statement
 
 Autonomous research systems can amplify incorrect claims, unsafe generated
-code, licensing violations, and biases present in scientific records. SciTaste
-reduces some risks through provenance, explicit uncertainty, bounded execution,
+code, licensing violations, and biases in scientific records. SciTaste limits
+some risks through provenance, uncertainty-aware abstention, isolated execution,
 and separation of proposal from evidence admission. These mechanisms do not
 remove the need for domain-specific safety review or human responsibility.
 
 # Reproducibility Statement
 
-The implementation records configuration and source hashes, seeds, model and
-provider identities, action alternatives, decision traces, raw outcomes, token
-and cost telemetry, and failed runs. Boundary judgment retains both candidate
-orders and treats the source-group pair, rather than the model call, as the
-independent unit. Raw, matched, and mismatched conditions receive equal context
-budgets and source-disjoint precedents. Construction requests, independent raw
-reviews, disagreements, rejected cases, and consumed development runs remain in
-the evidence package but outside the submission result table. Human construct
-validity and formal effectiveness results are not yet reported.
+The release will bind task and source versions, model and provider identities,
+prompts, action semantics, seeds, budgets, raw outcomes, failed runs, tokens,
+cost, and analysis code. Complete-system and diagnostic results will be emitted
+from immutable manifests. Formal targets, development tasks, precedent sources,
+and self-development records remain disjoint by task cluster.
