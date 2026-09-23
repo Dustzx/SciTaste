@@ -1162,7 +1162,10 @@ def _claim_comparison_status(
         if not candidate_units or candidate_units != comparator_units:
             issues.add(f"analysis:{spec.contrast_id}:planned-units-not-paired")
 
-    h4_claim = any(cell.system_id in _H4_SYSTEM_IDS for cell in cells)
+    h4_claim = (
+        claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+        and any(cell.system_id in _H4_SYSTEM_IDS for cell in cells)
+    )
     if h4_claim:
         provenance = (
             result_set.run_id,

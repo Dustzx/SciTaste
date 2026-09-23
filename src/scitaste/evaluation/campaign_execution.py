@@ -538,7 +538,7 @@ class ProjectEvaluationCampaignRunner:
         if (
             activation is None
             and not resume
-            and _contains_h4_cells(selected)
+            and _requires_formal_h4(inputs.plan, selected)
             and _has_registered_primary_evaluation_attempt(
                 inputs.snapshot,
                 evaluation_id=evaluation_id,
@@ -549,7 +549,7 @@ class ProjectEvaluationCampaignRunner:
                 "approved claim-authority=false sensitivity campaign"
             )
 
-        h4_campaign = _contains_h4_cells(selected)
+        h4_campaign = _requires_formal_h4(inputs.plan, selected)
         preparation_binding = self.launch_config.formal_preparation
         campaign = EvaluationCampaignManifest.create(
             schema_version=("1.2" if h4_campaign else "1.1" if activation is not None else "1.0"),
@@ -1054,7 +1054,7 @@ class ProjectEvaluationCampaignRunner:
     ) -> list[str]:
         """Replay formal H4 evidence before a primary attempt can be registered."""
 
-        if not _contains_h4_cells(selected):
+        if not _requires_formal_h4(inputs.plan, selected):
             return []
         binding = self.launch_config.formal_preparation
         if self.launch_config.schema_version != "1.1" or binding is None:
@@ -1394,6 +1394,11 @@ class ProjectEvaluationCampaignRunner:
             else:
                 if launcher.gpu_count < 1:
                     blockers.append(f"launcher:{cell.system_id}:gpu-count-missing")
+                allocation = cell.resource.allocated_device_count_per_cell
+                if allocation is not None and launcher.gpu_count != allocation:
+                    blockers.append(
+                        f"launcher:{cell.system_id}:gpu-count-allocation-mismatch"
+                    )
                 if cell.lane_kind is ExecutionLaneKind.HYBRID:
                     key_env = cell.resource.api_key_env
                     if key_env not in launcher.pass_environment:
@@ -2204,12 +2209,20 @@ def _h4_conservative_failure_usage(
     return EvaluationAdapterUsage(experiment_count=arm.maximum_patch_iterations + 2)
 
 
-def _contains_h4_cells(cells: tuple[PlannedEvaluationCell, ...]) -> bool:
+def _requires_formal_h4(
+    plan: EvaluationCellPlan,
+    cells: tuple[PlannedEvaluationCell, ...],
+) -> bool:
+    """Distinguish title-level H4 from a development-only on/off pilot."""
+
     h4_systems = {
         "full-scitaste-learned-policy",
         "native-base-without-learned-taste",
     }
-    return any(cell.system_id in h4_systems for cell in cells)
+    return (
+        plan.claim_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+        and any(cell.system_id in h4_systems for cell in cells)
+    )
 
 
 def _has_registered_primary_evaluation_attempt(

@@ -16,7 +16,7 @@ from scitaste.evaluation.h4_preparation import (
     load_h4_formal_preparation,
     verify_h4_formal_preparation,
 )
-from scitaste.evaluation.prelaunch import load_prelaunch_manifest
+from scitaste.evaluation.prelaunch import ConfirmatoryEstimandKind, load_prelaunch_manifest
 from scitaste.evaluation.results import (
     EvaluationOutcomeAssessment,
     EvaluationResultArtifact,
@@ -75,7 +75,7 @@ def prepare_project_evaluation_result(
         evaluation_dir / evaluation.files["prelaunch_manifest"].locator
     ).manifest
     plan = load_evaluation_cell_plan(evaluation_dir / evaluation.files["cell_plan"].locator)
-    if _contains_h4_cells(plan.cells):
+    if _requires_formal_h4(plan):
         _verify_h4_result_origin(
             runtime,
             results,
@@ -295,12 +295,15 @@ def _repository_owned_regular_file(root: Path, locator: str) -> Path:
     return resolved
 
 
-def _contains_h4_cells(cells) -> bool:  # type: ignore[no-untyped-def]
+def _requires_formal_h4(plan) -> bool:  # type: ignore[no-untyped-def]
     systems = {
         "full-scitaste-learned-policy",
         "native-base-without-learned-taste",
     }
-    return any(item.system_id in systems for item in cells)
+    return (
+        plan.claim_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+        and any(item.system_id in systems for item in plan.cells)
+    )
 
 
 def _evidence_bindings(

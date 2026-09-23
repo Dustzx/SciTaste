@@ -40,6 +40,7 @@ from scitaste.evaluation import (
 )
 from scitaste.evaluation.campaign_execution import (
     _has_registered_primary_evaluation_attempt,
+    _requires_formal_h4,
 )
 from scitaste.project import (
     ProjectEvaluationArtifact,
@@ -447,6 +448,51 @@ def _runtime(tmp_path: Path, *, authorized: bool = True) -> ProjectRuntime:
     )
     _publish_evaluation(runtime, _manifest(), authorized=authorized)
     return runtime
+
+
+def test_campaign_distinguishes_host_inventory_from_cell_gpu_allocation(
+    tmp_path: Path,
+) -> None:
+    manifest = _manifest()
+    gpu = manifest.lanes[0].gpu_resource
+    assert gpu is not None
+    lane = manifest.lanes[0].model_copy(
+        update={
+            "gpu_resource": gpu.model_copy(
+                update={"device_count": 8, "allocated_device_count_per_cell": 1}
+            )
+        }
+    )
+    plan = compile_evaluation_cell_plan(manifest.model_copy(update={"lanes": (lane,)}))
+    base = _launch_config()
+    mismatched = base.model_copy(
+        update={
+            "launchers": {
+                system_id: launcher.model_copy(update={"gpu_count": 2})
+                for system_id, launcher in base.launchers.items()
+            }
+        }
+    )
+    runner = ProjectEvaluationCampaignRunner(ProjectRuntime(tmp_path / "outputs"), mismatched)
+
+    _launches, blockers = runner._launches(
+        "campaign-project", "allocation-check", plan.cells
+    )
+
+    assert set(blockers) == {
+        "launcher:native-base:gpu-count-allocation-mismatch",
+        "launcher:scitaste-native:gpu-count-allocation-mismatch",
+    }
+
+
+def test_development_on_off_pair_does_not_require_formal_h4_preparation() -> None:
+    manifest = load_prelaunch_manifest(
+        "configs/evaluation/prelaunch/mlrc_perception_native_development_hybrid_v2.yaml"
+    ).manifest
+    plan = compile_evaluation_cell_plan(manifest)
+
+    assert plan.claim_estimand_kind is None
+    assert _requires_formal_h4(plan, plan.cells) is False
 
 
 def test_campaign_executes_real_subprocesses_and_resumes_exact_successes(tmp_path: Path) -> None:
