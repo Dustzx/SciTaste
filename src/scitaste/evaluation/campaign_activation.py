@@ -124,22 +124,22 @@ def compile_evaluation_campaign_activation(
         maximum_total_gpu_hours=sum(
             float(cell.resource.max_gpu_hours or 0)
             for cell in selected
-            if cell.lane_kind is ExecutionLaneKind.GPU
+            if cell.lane_kind in {ExecutionLaneKind.GPU, ExecutionLaneKind.HYBRID}
         ),
         maximum_total_api_cost=sum(
             float(cell.resource.max_cost or 0)
             for cell in selected
-            if cell.lane_kind is ExecutionLaneKind.API_ONLY
+            if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
         ),
         maximum_total_tokens=sum(
             int(cell.resource.max_total_tokens or 0)
             for cell in selected
-            if cell.lane_kind is ExecutionLaneKind.API_ONLY
+            if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
         ),
         maximum_total_storage_bytes=sum(
             int(cell.resource.max_storage_bytes or 0)
             for cell in selected
-            if cell.lane_kind is ExecutionLaneKind.GPU
+            if cell.lane_kind in {ExecutionLaneKind.GPU, ExecutionLaneKind.HYBRID}
         ),
     )
 

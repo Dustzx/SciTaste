@@ -830,7 +830,7 @@ class ProjectEvaluationCampaignRunner:
             _preserve_partial_file(cell_dir / "CELL_RESULT.json")
             _preserve_partial_file(cell_dir / "CHECKPOINT.json")
             recovery_elapsed = 0.0
-            if cell.lane_kind is ExecutionLaneKind.GPU:
+            if cell.lane_kind in {ExecutionLaneKind.GPU, ExecutionLaneKind.HYBRID}:
                 recovery_elapsed = (
                     float(cell.resource.max_gpu_hours or 0.0) * 3600 / launcher.gpu_count
                 )
@@ -1391,8 +1391,13 @@ class ProjectEvaluationCampaignRunner:
                 key_env = cell.resource.api_key_env
                 if key_env not in launcher.pass_environment:
                     blockers.append(f"launcher:{cell.system_id}:api-key-env-not-bound")
-            elif launcher.gpu_count < 1:
-                blockers.append(f"launcher:{cell.system_id}:gpu-count-missing")
+            else:
+                if launcher.gpu_count < 1:
+                    blockers.append(f"launcher:{cell.system_id}:gpu-count-missing")
+                if cell.lane_kind is ExecutionLaneKind.HYBRID:
+                    key_env = cell.resource.api_key_env
+                    if key_env not in launcher.pass_environment:
+                        blockers.append(f"launcher:{cell.system_id}:api-key-env-not-bound")
             root = self._campaign_root(project_id, run_id)
             cell_dir = (root / "cells" / cell.cell_id).resolve()
             try:
@@ -1839,7 +1844,9 @@ class ProjectEvaluationCampaignRunner:
             output_tokens=usage.output_tokens,
             max_input_tokens_observed=usage.max_input_tokens_observed,
             max_output_tokens_observed=usage.max_output_tokens_observed,
-            api_cost=None,
+            api_cost=(
+                usage.api_cost if cell.lane_kind is ExecutionLaneKind.HYBRID else None
+            ),
             gpu_hours=elapsed * launcher.gpu_count / 3600,
             wall_time_hours=elapsed / 3600,
             experiment_count=usage.experiment_count,
@@ -2184,7 +2191,7 @@ def _h4_conservative_failure_usage(
     cell: PlannedEvaluationCell,
     arm: H4ArmRunRequest,
 ) -> EvaluationAdapterUsage:
-    if cell.lane_kind is ExecutionLaneKind.API_ONLY:
+    if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}:
         return EvaluationAdapterUsage(
             request_count=cell.resource.max_requests,
             input_tokens=cell.resource.max_total_tokens,
@@ -2338,7 +2345,9 @@ def _budget_error(
     accounted_storage_bytes: int,
 ) -> str | None:
     resource = cell.resource
-    if cell.lane_kind is ExecutionLaneKind.API_ONLY:
+    has_api = cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+    has_gpu = cell.lane_kind in {ExecutionLaneKind.GPU, ExecutionLaneKind.HYBRID}
+    if has_api:
         required = (
             reported.request_count,
             reported.input_tokens,
@@ -2365,7 +2374,7 @@ def _budget_error(
             return "output-token-call-budget-exceeded"
         if reported.api_cost > float(resource.max_cost or 0):
             return "cost-budget-exceeded"
-    else:
+    if has_gpu:
         local_model_telemetry = (
             reported.request_count,
             reported.input_tokens,
@@ -2373,7 +2382,7 @@ def _budget_error(
             reported.max_input_tokens_observed,
             reported.max_output_tokens_observed,
         )
-        if reported.api_cost is not None:
+        if cell.lane_kind is ExecutionLaneKind.GPU and reported.api_cost is not None:
             return "gpu-telemetry-kind-mismatch"
         if any(value is not None for value in local_model_telemetry) and any(
             value is None for value in local_model_telemetry

@@ -43,6 +43,7 @@ class SystemRole(StrEnum):
 class ExecutionLaneKind(StrEnum):
     API_ONLY = "api_only"
     GPU = "gpu"
+    HYBRID = "hybrid"
 
 
 class ScientificLaneRole(StrEnum):
@@ -89,6 +90,7 @@ class ScientificEndpointKind(StrEnum):
 
     OBJECTIVE_PROGRESS = "objective_progress"
     BLINDED_PACKAGE_PREFERENCE = "blinded_package_preference"
+    OFFICIAL_BENCHMARK_SCORE = "official_benchmark_score"
 
 
 class TaskSignalKind(StrEnum):
@@ -96,6 +98,7 @@ class TaskSignalKind(StrEnum):
 
     OBJECTIVE_SCORE = "objective_score"
     RESEARCH_PACKAGE_REVIEW = "research_package_review"
+    OFFICIAL_HIDDEN_RUBRIC = "official_hidden_rubric"
     MIXED = "mixed"
 
 
@@ -110,6 +113,7 @@ class AutomatedJudgeRole(StrEnum):
     NONE = "none"
     SECONDARY_DIAGNOSTIC = "secondary_diagnostic"
     CALIBRATED_PRIMARY = "calibrated_primary"
+    OFFICIAL_BENCHMARK_PRIMARY = "official_benchmark_primary"
 
 
 class ConfirmatoryEstimandKind(StrEnum):
@@ -117,6 +121,7 @@ class ConfirmatoryEstimandKind(StrEnum):
 
     NATIVE_TASTE_CAUSAL = "native_taste_causal"
     NATIVE_TASTE_MECHANISMS = "native_taste_mechanisms"
+    COMPLETE_SYSTEM_BUNDLE_EFFECT = "complete_system_bundle_effect"
     EXTERNAL_MATCHED_SUPERIORITY = "external_matched_superiority"
     EXTERNAL_BEST_NATIVE = "external_best_native"
 
@@ -391,16 +396,24 @@ class ExecutionLane(BaseModel):
             if self.kind is ExecutionLaneKind.API_ONLY:
                 if self.api_model is None or self.gpu_resource is not None:
                     raise ValueError("API-only lanes require only api_model")
-            elif self.gpu_resource is None or self.api_model is not None:
-                raise ValueError("GPU lanes require only gpu_resource")
+            elif self.kind is ExecutionLaneKind.GPU:
+                if self.gpu_resource is None or self.api_model is not None:
+                    raise ValueError("GPU lanes require only gpu_resource")
+            elif self.gpu_resource is None or self.api_model is None:
+                raise ValueError("hybrid lanes require one API model and one GPU resource")
         elif self.comparison_regime is ComparisonRegime.MATCHED_BACKBONE:
             if self.system_api_models is not None:
                 raise ValueError("matched-backbone lanes cannot use per-system API models")
             if self.kind is ExecutionLaneKind.API_ONLY:
                 if self.api_model is None or self.gpu_resource is not None:
                     raise ValueError("matched API lanes require one common API model")
-            elif self.gpu_resource is None or self.api_model is not None:
-                raise ValueError("matched GPU lanes require one common GPU model")
+            elif self.kind is ExecutionLaneKind.GPU:
+                if self.gpu_resource is None or self.api_model is not None:
+                    raise ValueError("matched GPU lanes require one common GPU model")
+            elif self.gpu_resource is None or self.api_model is None:
+                raise ValueError(
+                    "matched hybrid lanes require one common API model and GPU resource"
+                )
             if self.model_effects_confounded is not False:
                 raise ValueError("matched-backbone lanes must declare model effects unconfounded")
             if self.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE:
@@ -647,6 +660,26 @@ class ExperimentPrelaunchManifest(BaseModel):
                 for task in self.tasks
             ):
                 raise ValueError("objective progress requires objective or mixed task signals")
+            if self.automated_judge_role is AutomatedJudgeRole.OFFICIAL_BENCHMARK_PRIMARY:
+                raise ValueError("objective progress cannot use an official benchmark judge role")
+        elif self.primary_endpoint is ScientificEndpointKind.OFFICIAL_BENCHMARK_SCORE:
+            if any(
+                task.signal_kind
+                not in {TaskSignalKind.OFFICIAL_HIDDEN_RUBRIC, TaskSignalKind.MIXED}
+                for task in self.tasks
+            ):
+                raise ValueError(
+                    "official benchmark scoring requires hidden-rubric or mixed task signals"
+                )
+            if (
+                self.automated_judge_role
+                is not AutomatedJudgeRole.OFFICIAL_BENCHMARK_PRIMARY
+            ):
+                raise ValueError(
+                    "official benchmark scoring requires its disclosed official judge role"
+                )
+            if self.integrity.judge_protocol_ref is None:
+                raise ValueError("official benchmark scoring requires a bound judge protocol")
         else:
             if any(
                 task.signal_kind
@@ -661,7 +694,11 @@ class ExperimentPrelaunchManifest(BaseModel):
                     "automated judges cannot replace the primary blinded human preference"
                 )
         if self.schema_version in {"1.2", "1.3", "1.4", "1.5", "1.6"}:
-            api_lanes = [lane for lane in self.lanes if lane.kind is ExecutionLaneKind.API_ONLY]
+            api_lanes = [
+                lane
+                for lane in self.lanes
+                if lane.kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+            ]
             if any(lane.comparison_regime is None for lane in api_lanes):
                 raise ValueError("prelaunch v1.2 requires an explicit API comparison regime")
         task_freeze_semantics = self.integrity.task_freeze_semantics
@@ -670,20 +707,28 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError("prelaunch v1.5 is required for benchmark allocation binding")
             if (
                 self.study_scope != "formal"
-                or self.primary_endpoint is not ScientificEndpointKind.OBJECTIVE_PROGRESS
+                or self.primary_endpoint
+                not in {
+                    ScientificEndpointKind.OBJECTIVE_PROGRESS,
+                    ScientificEndpointKind.OFFICIAL_BENCHMARK_SCORE,
+                }
             ):
                 raise ValueError(
-                    "benchmark allocation binding is only valid for formal objective progress"
+                    "benchmark allocation binding requires a formal benchmark endpoint"
                 )
             if any(task.source_group is None for task in self.tasks):
                 raise ValueError("benchmark allocation binding requires every task source group")
         if (
             self.schema_version in {"1.5", "1.6"}
             and self.study_scope == "formal"
-            and self.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS
+            and self.primary_endpoint
+            in {
+                ScientificEndpointKind.OBJECTIVE_PROGRESS,
+                ScientificEndpointKind.OFFICIAL_BENCHMARK_SCORE,
+            }
             and task_freeze_semantics is not TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
         ):
-            raise ValueError("formal objective prelaunch v1.5 requires benchmark allocation")
+            raise ValueError("formal benchmark prelaunch v1.5 requires benchmark allocation")
         if self.schema_version not in {"1.3", "1.4", "1.5", "1.6"}:
             if self.analysis.claim_admission is not None:
                 raise ValueError("prelaunch v1.3 is required for claim-admission semantics")
@@ -769,6 +814,7 @@ class ExperimentPrelaunchManifest(BaseModel):
         if claim.estimand_kind in {
             ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
             ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+            ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT,
         }:
             if (
                 lane.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE
@@ -792,7 +838,42 @@ class ExperimentPrelaunchManifest(BaseModel):
             ):
                 raise ValueError("native Taste controls and treatments must be SciTaste ablations")
             roles = {item.role for item in claim.contrasts}
-            if claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS:
+            if (
+                claim.estimand_kind
+                is ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT
+            ):
+                expected_contrasts = {
+                    (
+                        "full-scitaste",
+                        "native-base",
+                        ConfirmatoryContrastRole.NO_TASTE_CONTROL,
+                    )
+                }
+                observed_contrasts = {
+                    (
+                        item.candidate_system_id,
+                        item.comparator_system_id,
+                        item.role,
+                    )
+                    for item in claim.contrasts
+                }
+                if (
+                    claim.candidate_system_id != "full-scitaste"
+                    or set(lane.system_ids) != {"full-scitaste", "native-base"}
+                    or observed_contrasts != expected_contrasts
+                ):
+                    raise ValueError(
+                        "complete-system bundle evidence requires the exact matched "
+                        "Full SciTaste versus Native Base contrast"
+                    )
+                if any(
+                    item.inference_role is not ContrastInferenceRole.CONFIRMATORY
+                    for item in claim.contrasts
+                ):
+                    raise ValueError(
+                        "complete-system bundle contrast must be confirmatory"
+                    )
+            elif claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS:
                 expected_systems = {
                     "full-scitaste",
                     "native-base",
@@ -843,7 +924,7 @@ class ExperimentPrelaunchManifest(BaseModel):
                     for item in claim.contrasts
                 ):
                     raise ValueError("native Taste mechanism contrasts must all be confirmatory")
-            else:
+            elif claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL:
                 required = {
                     ConfirmatoryContrastRole.NO_TASTE_CONTROL,
                     ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO,

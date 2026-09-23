@@ -462,7 +462,11 @@ def _validate_h4_success_usage(
         loop.output_tokens,
         loop.max_input_tokens_observed,
         loop.max_output_tokens_observed,
-        (loop.model_cost_usd if cell.lane_kind is ExecutionLaneKind.API_ONLY else None),
+        (
+            loop.model_cost_usd
+            if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+            else None
+        ),
         loop.development_experiment_count + 1,
     )
     observed = (
@@ -478,7 +482,7 @@ def _validate_h4_success_usage(
         raise ValueError("native H4 successful resource accounting differs")
     if requests > request.maximum_patch_iterations:
         raise ValueError("native H4 successful request count exceeds the arm ceiling")
-    if cell.lane_kind is ExecutionLaneKind.API_ONLY and (
+    if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID} and (
         requests > int(cell.resource.max_requests or 0)
         or loop.input_tokens + loop.output_tokens > int(cell.resource.max_total_tokens or 0)
         or loop.max_input_tokens_observed > int(cell.resource.max_input_tokens_per_call or 0)
@@ -628,7 +632,10 @@ def _validate_h4_terminal_outcome(
     if terminal.usage_accounting == "measured":
         if any(value is None for value in token_telemetry):
             raise ValueError("native H4 measured terminal token usage is incomplete")
-        if (cell.lane_kind is ExecutionLaneKind.API_ONLY and usage.api_cost is None) or (
+        if (
+            cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+            and usage.api_cost is None
+        ) or (
             cell.lane_kind is ExecutionLaneKind.GPU and usage.api_cost is not None
         ):
             raise ValueError("native H4 terminal usage lane kind differs")
@@ -678,7 +685,7 @@ def _validate_h4_terminal_outcome(
     if terminal.usage_accounting == "measured":
         if usage.experiment_count > request.maximum_patch_iterations + 2:
             raise ValueError("native H4 measured experiments exceed the arm ceiling")
-        if cell.lane_kind is ExecutionLaneKind.API_ONLY and (
+        if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID} and (
             int(usage.request_count or 0) > int(cell.resource.max_requests or 0)
             or int(usage.input_tokens or 0) + int(usage.output_tokens or 0)
             > int(cell.resource.max_total_tokens or 0)
@@ -759,7 +766,7 @@ def _h4_authorized_failure_ceiling(
     cell: PlannedEvaluationCell,
     request: H4ArmRunRequest,
 ) -> dict[str, object]:
-    if cell.lane_kind is ExecutionLaneKind.API_ONLY:
+    if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}:
         return {
             "request_count": cell.resource.max_requests,
             "input_tokens": cell.resource.max_total_tokens,

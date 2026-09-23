@@ -574,6 +574,7 @@ class EvaluationOutcomeAssessment(BaseModel):
                 in {
                     ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
                     ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                    ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT,
                 }
                 and self.confirmatory_evidence_complete
                 and self.confirmatory_conclusion_supported
@@ -921,6 +922,7 @@ def inspect_evaluation_results(
                 in {
                     ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
                     ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                    ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT,
                 }
                 and conclusion_supported
             ),
@@ -999,7 +1001,9 @@ def _budget_issues(cell: PlannedEvaluationCell, record: EvaluationCellResult) ->
     usage = record.usage
     resource = cell.resource
     issues: list[str] = []
-    if cell.lane_kind is ExecutionLaneKind.API_ONLY:
+    has_api = cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+    has_gpu = cell.lane_kind in {ExecutionLaneKind.GPU, ExecutionLaneKind.HYBRID}
+    if has_api:
         required = (
             usage.request_count,
             usage.input_tokens,
@@ -1008,9 +1012,7 @@ def _budget_issues(cell: PlannedEvaluationCell, record: EvaluationCellResult) ->
             usage.max_output_tokens_observed,
             usage.api_cost,
         )
-        if (
-            record.schema_version == "1.1" and any(value is None for value in required)
-        ) or usage.gpu_hours is not None:
+        if record.schema_version == "1.1" and any(value is None for value in required):
             issues.append(f"cell:{cell.cell_id}:api-telemetry-incomplete")
         else:
             assert usage.request_count is not None
@@ -1031,8 +1033,10 @@ def _budget_issues(cell: PlannedEvaluationCell, record: EvaluationCellResult) ->
                 issues.append(f"cell:{cell.cell_id}:output-token-call-budget-exceeded")
             if usage.api_cost > (resource.max_cost or 0):
                 issues.append(f"cell:{cell.cell_id}:cost-budget-exceeded")
-    else:
-        if usage.gpu_hours is None or usage.api_cost is not None:
+    if has_gpu:
+        if usage.gpu_hours is None or (
+            cell.lane_kind is ExecutionLaneKind.GPU and usage.api_cost is not None
+        ):
             issues.append(f"cell:{cell.cell_id}:gpu-telemetry-incomplete")
         elif usage.gpu_hours > (resource.max_gpu_hours or 0):
             issues.append(f"cell:{cell.cell_id}:gpu-budget-exceeded")

@@ -86,8 +86,11 @@ class EvaluationCellResource(BaseModel):
         if self.kind is ExecutionLaneKind.API_ONLY:
             if not all(api_values) or any(value is not None for value in gpu_values):
                 raise ValueError("API cell resources require only provider/model/key-env identity")
-        elif not all(gpu_values) or any(value is not None for value in api_values):
-            raise ValueError("GPU cell resources require only host/checkpoint identity")
+        elif self.kind is ExecutionLaneKind.GPU:
+            if not all(gpu_values) or any(value is not None for value in api_values):
+                raise ValueError("GPU cell resources require only host/checkpoint identity")
+        elif not all(api_values) or not all(gpu_values):
+            raise ValueError("hybrid cell resources require complete API and GPU identities")
         return self
 
 
@@ -460,10 +463,27 @@ def _resource_for(
             max_cost=model.max_cost,
         )
     assert lane.gpu_resource is not None
-    snapshot = lane.gpu_resource.model_dump(mode="json")
+    model = _api_model_for(lane, system_id) if lane.kind is ExecutionLaneKind.HYBRID else None
+    snapshot = (
+        {
+            "api_model": model.model_dump(mode="json"),
+            "gpu_resource": lane.gpu_resource.model_dump(mode="json"),
+        }
+        if model is not None
+        else lane.gpu_resource.model_dump(mode="json")
+    )
     return EvaluationCellResource(
         kind=lane.kind,
         resource_sha256=_canonical_sha256(snapshot),
+        provider_id=None if model is None else model.provider_id,
+        model_id=None if model is None else model.model_id,
+        model_revision=None if model is None else model.model_revision,
+        api_key_env=None if model is None else model.api_key_env,
+        max_input_tokens_per_call=(None if model is None else model.max_input_tokens_per_call),
+        max_output_tokens_per_call=(None if model is None else model.max_output_tokens_per_call),
+        max_requests=None if model is None else model.max_requests,
+        max_total_tokens=None if model is None else model.max_total_tokens,
+        max_cost=None if model is None else model.max_cost,
         host_alias=lane.gpu_resource.host_alias,
         checkpoint_id=lane.gpu_resource.checkpoint_id,
         checkpoint_sha256=lane.gpu_resource.checkpoint_sha256,
@@ -513,7 +533,7 @@ def _cell_blockers(
     ):
         if not ready:
             blockers.append(f"task:{task.task_id}:{label}-unverified")
-    if lane.kind is ExecutionLaneKind.API_ONLY:
+    if lane.kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}:
         model = _api_model_for(
             lane,
             system.system_id if lane.comparison_regime is ComparisonRegime.BEST_NATIVE else None,

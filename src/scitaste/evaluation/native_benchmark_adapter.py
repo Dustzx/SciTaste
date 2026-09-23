@@ -1075,7 +1075,8 @@ class NativeBenchmarkCellRunner:
         if isinstance(self.config.backend, LiveRuntimeBackend):
             backend_config = self.config.backend.config
             if (
-                resource.kind is not ExecutionLaneKind.API_ONLY
+                resource.kind
+                not in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
                 or resource.provider_id != backend_config.provider
                 or resource.model_id != backend_config.model
                 or resource.api_key_env != backend_config.api_key_env
@@ -1689,13 +1690,14 @@ def _h4_resource_budget(
     return ResourceBudget(
         gpu_hours=(
             float(cell.resource.max_gpu_hours or 0)
-            if cell.resource.kind is ExecutionLaneKind.GPU
+            if cell.resource.kind in {ExecutionLaneKind.GPU, ExecutionLaneKind.HYBRID}
             else None
         ),
         max_experiments=config.maximum_patch_iterations + 1,
         max_api_cost_usd=(
             float(cell.resource.max_cost or 0)
-            if cell.resource.kind is ExecutionLaneKind.API_ONLY
+            if cell.resource.kind
+            in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             else None
         ),
         compute_constraints=[
@@ -1963,10 +1965,9 @@ def _verify_h4_static_model_resources(
         backend = config.backend.config
         valid = (
             model_profile.live_execution_permitted
-            and not development_inspection.profile.gpu.enabled
-            and not heldout_inspection.profile.gpu.enabled
             and all(
-                cell.resource.kind is ExecutionLaneKind.API_ONLY
+                cell.resource.kind
+                in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
                 and cell.resource.provider_id == backend.provider
                 and cell.resource.model_id == backend.model
                 and cell.resource.api_key_env == backend.api_key_env
@@ -1979,6 +1980,22 @@ def _verify_h4_static_model_resources(
                 <= int(cell.resource.max_total_tokens or 0)
                 and config.maximum_patch_iterations * model_profile.admission.max_response_cost_usd
                 <= float(cell.resource.max_cost or 0)
+                for cell in cells
+            )
+            and all(
+                (
+                    not development_inspection.profile.gpu.enabled
+                    and not heldout_inspection.profile.gpu.enabled
+                )
+                if cell.resource.kind is ExecutionLaneKind.API_ONLY
+                else (
+                    development_inspection.profile.gpu.enabled
+                    and heldout_inspection.profile.gpu.enabled
+                    and development_inspection.profile.gpu.max_gpu_hours
+                    <= float(cell.resource.max_gpu_hours or 0)
+                    and heldout_inspection.profile.gpu.max_gpu_hours
+                    <= float(cell.resource.max_gpu_hours or 0)
+                )
                 for cell in cells
             )
         )
@@ -2337,7 +2354,7 @@ def _conservative_h4_failure_usage(
     cell: PlannedEvaluationCell,
 ) -> EvaluationAdapterUsage:
     resource = cell.resource
-    if cell.lane_kind is ExecutionLaneKind.API_ONLY:
+    if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}:
         return EvaluationAdapterUsage(
             request_count=resource.max_requests,
             input_tokens=resource.max_total_tokens,

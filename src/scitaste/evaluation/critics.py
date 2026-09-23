@@ -209,6 +209,7 @@ class EvaluationCriticSuite:
                 elif lane_claim.estimand_kind in {
                     ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
                     ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                    ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT,
                 }:
                     if not any(item.role is SystemRole.ABLATION for item in selected):
                         problems.append(f"{lane.lane_id}:missing_native_ablation")
@@ -231,6 +232,7 @@ class EvaluationCriticSuite:
                     in {
                         ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
                         ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+                        ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT,
                     }
                 )
                 if requires_preflight and (
@@ -443,7 +445,10 @@ class EvaluationCriticSuite:
             problems.append("executable_commit_unmatched")
         if gate_report.source_tree_clean is not True:
             problems.append("executable_tree_not_clean")
-        if any(lane.kind is ExecutionLaneKind.API_ONLY for lane in manifest.lanes) and (
+        if any(
+            lane.kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+            for lane in manifest.lanes
+        ) and (
             not manifest.retention.retain_raw_provider_responses
         ):
             problems.append("raw_provider_responses_not_retained")

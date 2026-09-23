@@ -557,6 +557,7 @@ def _require_positive_objective_assessment(assessment: EvaluationOutcomeAssessme
         not in {
             ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
             ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+            ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT,
         }
         or assessment.required_confirmatory_comparisons is None
         or assessment.required_confirmatory_comparisons < 1

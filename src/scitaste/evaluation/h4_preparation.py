@@ -551,7 +551,8 @@ def derive_h4_formal_preparation_request(
             {
                 str(cell.resource.api_key_env)
                 for cell in cells
-                if cell.lane_kind is ExecutionLaneKind.API_ONLY
+                if cell.lane_kind
+                in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             }
         )
     )
@@ -993,7 +994,8 @@ def _verify_h4_launcher_runtime(
             {
                 str(cell.resource.api_key_env)
                 for cell in cells
-                if cell.lane_kind is ExecutionLaneKind.API_ONLY
+                if cell.lane_kind
+                in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             }
         )
     )
