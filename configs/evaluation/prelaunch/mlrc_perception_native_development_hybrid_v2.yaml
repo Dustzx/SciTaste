@@ -1,0 +1,169 @@
+schema_version: "1.2"
+manifest_id: mlrc-perception-native-development-hybrid-v2
+protocol_id: mlrc-perception-native-development-hybrid-v2
+protocol_version: "1.0"
+study_scope: pilot
+scientific_question: >-
+  Under the same Qwen3.8-Max research-agent identity, MLRC task bytes,
+  LocPointTransformer random initialization, tools, seed, runtime, and budgets,
+  does enabling the learned SciTaste lifecycle policy change development-set
+  objective progress relative to the otherwise identical native controller?
+claim_allowed: >-
+  This two-cell development execution may demonstrate that the project-level
+  API-agent plus GPU-task-training path is executable and estimate one paired
+  development effect for planning the later frozen multi-task evaluation.
+claim_forbidden: >-
+  This pilot cannot establish title-level effectiveness, benchmark superiority,
+  generality, statistical significance, formal held-out performance, or an
+  external-system comparison. It is one internal matched control, not the paper's
+  main comparison table.
+primary_endpoint: objective_progress
+automated_judge_role: none
+source_commit: f791ea300feb036252abee1fd11d79bf12b5a039
+require_clean_tree: true
+resource_corpus_sha256: b84f109bb91b8d4985c089014f80931e6daf413f627d68a09dff3bd6801124e9
+systems:
+  - system_id: full-scitaste-learned-policy
+    role: scitaste
+    implementation_ref: >-
+      scitaste@f791ea300feb036252abee1fd11d79bf12b5a039:native-h4?condition=learned-policy-on
+    availability: verified
+    real_implementation: true
+  - system_id: native-base-without-learned-taste
+    role: ablation
+    implementation_ref: >-
+      scitaste@f791ea300feb036252abee1fd11d79bf12b5a039:native-h4?condition=learned-policy-off
+    availability: verified
+    real_implementation: true
+tasks:
+  - task_id: perception-temporal-action-loc
+    benchmark_resource_id: mlrc-perception-development
+    split: development-view-source-disjoint-from-taste-training
+    selected_asset_manifest: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+    asset_manifest_sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+    license_status: verified
+    asset_status: verified
+    held_out: true
+    source_group_disjoint: true
+    signal_kind: objective_score
+lanes:
+  - lane_id: qwen38-mlrc-perception-hybrid
+    kind: hybrid
+    scientific_role: matched_backbone
+    comparison_regime: matched_backbone
+    model_effects_confounded: false
+    comparison_claim_boundary: >-
+      The pair isolates the complete learned lifecycle-policy intervention inside
+      SciTaste. It is an internal matched control and provides no comparison with
+      another autonomous-research framework.
+    system_ids:
+      - full-scitaste-learned-policy
+      - native-base-without-learned-taste
+    task_ids: [perception-temporal-action-loc]
+    seeds: [1234567891]
+    repetitions: 1
+    planned_cells: 2
+    api_model:
+      provider_id: alibaba-bailian
+      endpoint: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+      interface: openai-chat-completions
+      model_id: qwen3.8-max
+      model_revision: qwen3.8-max-2026-09-02
+      rolling_alias: true
+      identity_source_url: https://help.aliyun.com/zh/model-studio/qwen3-8-max
+      identity_status: verified
+      api_key_env: DASHSCOPE_API_KEY
+      max_input_tokens_per_call: 16000
+      max_output_tokens_per_call: 8192
+      max_requests: 8
+      max_total_tokens: 96768
+      max_cost: 25.0
+      pricing:
+        currency: CNY
+        as_of: 2026-09-16
+        input_cache_hit_per_million: 1.5
+        input_cache_miss_per_million: 12.0
+        output_per_million: 36.0
+        source_url: https://help.aliyun.com/zh/model-studio/qwen3-8-max
+        status: verified
+    system_api_models: null
+    gpu_resource:
+      host_alias: 3090-2
+      device_count: 8
+      allocated_device_count_per_cell: 1
+      device_name: NVIDIA GeForce RTX 3090
+      minimum_memory_mb_per_device: 24000
+      workload_kind: task_training_random_init
+      checkpoint_id: null
+      checkpoint_source_path: null
+      checkpoint_sha256: null
+      checkpoint_bytes: null
+      initialization_contract_ref: configs/evaluation/task_runtime/mlrc_perception_temporal_action_loc_v3.yaml
+      initialization_contract_sha256: 3dbf84820d6e427ec3f102f9ce650148c7df2a2f0acfb7b3183bb097754bd4e4
+      license_identifier: MLRC-Bench-task-assets
+      local_preflight_status: verified
+      remote_inventory_status: verified
+      remote_inventory_ref: docs/research/data/gpu_host_3090_2_inventory_v2.yaml
+      remote_inventory_sha256: 23d90433a11f8b1521cb7dfdf910ceb5158928f8bcf7b1eaf2edb808bee3fa5d
+      remote_checkpoint_status: null
+      remote_checkpoint_attestation_ref: null
+      remote_checkpoint_attestation_sha256: null
+      max_gpu_hours: 1.0
+      max_storage_bytes: 32212254720
+      network_access: false
+human_review:
+  required: false
+  minimum_reviewers_per_artifact: 0
+  condition_blinded: false
+  conflict_check_required: false
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 0.0
+retention:
+  output_root: outputs/projects/scitaste-self-development/evaluations/mlrc-perception-native-development-hybrid-v2
+  archive_root: archives/scitaste-self-development/evaluations/mlrc-perception-native-development-hybrid-v2
+  maximum_output_bytes: 64424509440
+  retain_raw_provider_responses: true
+  retain_failed_runs: true
+  secrets_forbidden: true
+analysis:
+  primary_outcome: >-
+    Development mean average precision from the frozen task scorer, with any valid
+    failed intention-to-run cell retained at the preregistered task floor.
+  estimand: >-
+    The paired difference between learned-policy-on and learned-policy-off under
+    one fixed API-agent and random-initialized task-training envelope.
+  analysis_unit: One task-by-seed paired trajectory.
+  aggregation_method: >-
+    Preserve both cells, pair by task and seed, report raw development mAP,
+    difference, failures, API tokens and cost, active GPU time, and wall time.
+  uncertainty_method: >-
+    No inferential interval is claimed from one development pair; use the observed
+    failure mode and cost only to prepare a new multi-task formal protocol.
+  power_analysis_ref: null
+  power_analysis_sha256: null
+integrity:
+  preregistration_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  preregistration_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  task_freeze_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  task_freeze_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  failure_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  failure_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  repair_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  repair_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  leakage_audit_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  leakage_audit_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  judge_protocol_ref: null
+  judge_protocol_sha256: null
+launch_order: [qwen38-mlrc-perception-hybrid]
+stop_rules:
+  - Stop before launch unless a fresh read-only inventory exposes one device with the required free memory and at least 32 GiB workspace storage.
+  - Stop on API identity drift, task-byte drift, initialization drift, condition asymmetry, or missing resource telemetry; retain the failed attempt.
+  - Execute the two cells sequentially and do not inspect one arm to edit the other.
+  - Stop after the complete pair; do not promote development mAP to formal held-out evidence.
+approval:
+  approved: true
+  approved_proposal_sha256: 85726b5349a174cdc1dfb65890859cb245823764e4412b82a1941f843a543f74
+  approved_by: project-owner-standing-experiment-authorization
+  approved_at: "2026-09-23T00:00:00+08:00"
