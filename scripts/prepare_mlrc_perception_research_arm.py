@@ -190,6 +190,7 @@ def main() -> int:
     parser.add_argument("--baseline-score", type=float, required=True)
     parser.add_argument("--taste-capsule", type=Path)
     parser.add_argument("--taste-packet", type=Path)
+    parser.add_argument("--research-action-directive", type=Path)
     parser.add_argument(
         "--research-action-type",
         choices=("PROBE", "PILOT", "EXPERIMENT", "ANALYZE", "REFINE", "PIVOT"),
@@ -213,8 +214,13 @@ def main() -> int:
         raise ValueError("only the legacy full condition requires --taste-capsule")
     if (args.condition == "taste-packet") != (args.taste_packet is not None):
         raise ValueError("only the taste-packet condition requires --taste-packet")
-    if args.taste_packet is not None and args.research_action_type is not None:
-        raise ValueError("Taste packet and lifecycle action directives are mutually exclusive")
+    directive_inputs = (
+        args.taste_packet is not None,
+        args.research_action_type is not None,
+        args.research_action_directive is not None,
+    )
+    if sum(directive_inputs) > 1:
+        raise ValueError("research-action directive inputs are mutually exclusive")
 
     repository = Path.cwd().resolve(strict=True)
     output = args.output if args.output.is_absolute() else repository / args.output
@@ -262,6 +268,15 @@ def main() -> int:
             action_type=selected.type.value,
             instruction=selected.description,
         )
+    directive_file_sha256 = None
+    if args.research_action_directive is not None:
+        directive_path = args.research_action_directive.resolve(strict=True)
+        directive_bytes = directive_path.read_bytes()
+        action_directive = BenchmarkResearchActionDirective.model_validate_json(
+            directive_bytes,
+            strict=True,
+        )
+        directive_file_sha256 = _sha256_bytes(directive_bytes)
     if control_packet is not None:
         taste_guidance = _guidance_chunks(render_taste_control_packet(control_packet))
     experiment_feedback = tuple(
@@ -379,6 +394,7 @@ def main() -> int:
         "research_action_directive_sha256": (
             action_directive.directive_sha256 if action_directive is not None else None
         ),
+        "research_action_directive_file_sha256": directive_file_sha256,
         "heldout_opened": False,
         "experiment_executed": False,
     }
