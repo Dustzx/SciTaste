@@ -1,0 +1,119 @@
+schema_version: "2.7"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-23-v10
+audited_on: 2026-09-23
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v9.yaml
+base_source_sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+
+resources_additions:
+  - resource_id: mlrc-perception-development
+    resource_kind: benchmark
+    official_repository: https://github.com/yunx-z/MLRC-Bench
+    repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+    implementation_path: MLAgentBench/benchmarks_base/perception_temporal_action_loc
+    publication_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+    code_license:
+      identifier: MIT
+      scope: >-
+        MLRC-Bench root code at the pinned commit. Perception Test non-software
+        materials remain CC-BY-4.0 and are admitted only for local academic use.
+      official_url: https://raw.githubusercontent.com/yunx-z/MLRC-Bench/0d26417034811d2d4587646c4520cc305ea09dd6/LICENSE
+      sha256: 002c2696d92b5c8cf956c11072baa58eaf9f6ade995c031ea635c6a1ee342ad1
+      review_required: true
+      obligations:
+        - Preserve the MLRC-Bench MIT notice for covered code.
+        - Attribute and cite Perception Test under CC-BY-4.0.
+        - Do not redistribute task data through the SciTaste artifact.
+    datasets:
+      - dataset_id: perception-test-materials
+        official_url: https://github.com/google-deepmind/perception_test
+        revision: 3938d2f1ba3a6b502025741cea4cd73c7b3bdfaf
+        license_identifier: CC-BY-4.0
+        reported_size: exact nine-archive MLRC task package is receipt-bound locally
+        local_copy_present: false
+    lifecycle_stages:
+      - repository-level-implementation
+      - development-execution
+      - objective-scoring
+    native_model_interfaces:
+      - benchmark-defined repository-editing agent
+      - random-initialized LocPointTransformer task training
+      - frozen development mean-average-precision scorer
+    resource_requirements:
+      - one RTX 3090-class GPU for sequential development execution
+      - Python 3.12 isolated runtime
+      - provider credentials for the separately declared research agent
+    gates:
+      official_identity:
+        status: verified
+        evidence: >-
+          The accepted MLRC-Bench paper and pinned official repository identify
+          Temporal Action Localisation as one of the benchmark tasks.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+      repository_pin:
+        status: verified
+        evidence: >-
+          Runtime receipt v3 binds the task source to MLRC-Bench commit
+          0d26417034811d2d4587646c4520cc305ea09dd6.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/runtime-views/mlrc-perception-temporal-action-loc-v3/RUNTIME_RECEIPT.json
+      publication_identity:
+        status: verified
+        evidence: NeurIPS proceedings record MLRC-Bench as an accepted 2025 benchmark paper.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+      code_license:
+        status: verified
+        evidence: >-
+          Exact root MIT bytes are recorded while the task-specific material
+          license is separately preserved rather than treated as MIT code.
+        evidence_url: https://raw.githubusercontent.com/yunx-z/MLRC-Bench/0d26417034811d2d4587646c4520cc305ea09dd6/LICENSE
+      dataset_pin:
+        status: verified
+        evidence: >-
+          Acquisition receipt SHA-256 823dc40826223ae5b0e02cb8807e4a15e30a223c3dcdac4f5a5a6962918aed2e
+          binds every downloaded archive byte and source object.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/RECEIPT.json
+      dataset_license:
+        status: verified
+        evidence: >-
+          License policy SHA-256 d88c818ceacae51ac51a5db2266a10a8224a973dcb7cd596094ed1c09a93a27d
+          admits the Perception materials for local non-commercial academic use
+          under CC-BY-4.0 with attribution and no redistribution.
+        evidence_url: configs/evaluation/acquisition/mlrc_first_preflight_license_policy_v1.yaml
+      source_groups:
+        status: verified
+        evidence: >-
+          The task is frozen as source group perception-test-challenge-2024 and
+          is disjoint from the SciTaste policy-training source groups.
+        evidence_url: docs/research/data/mlrc_first_preflight_asset_inventory_v1.yaml
+      selected_task_manifest:
+        status: verified
+        evidence: >-
+          Acquisition request SHA-256 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+          freezes the exact task assets and bounded local-use policy.
+        evidence_url: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+      task_assets:
+        status: verified
+        evidence: >-
+          Materialization receipt SHA-256 d2421ffde7c71c91f7083db256942d21f894e8489b3c201bda72ca8d3537063d
+          verifies nine archives, their expanded content, and split isolation.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/materializations/mlrc-perception-temporal-action-loc-materialization-v1/RECEIPT.json
+      upstream_licenses:
+        status: verified
+        evidence: >-
+          The task-specific policy retains MLRC code terms and the upstream
+          Perception Test CC-BY-4.0 attribution boundary; it grants no data release.
+        evidence_url: configs/evaluation/acquisition/mlrc_first_preflight_license_policy_v1.yaml
+      executable_signal:
+        status: verified
+        evidence: >-
+          Runtime receipt v3 binds the isolated views and scorer; the upstream
+          development baseline completed with return code 0 and score
+          0.23391874405697224; scorer parity is verified to 1e-15.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/mlrc-perception-upstream-baseline-development-v1/RESULT.json
+    notes:
+      - This resource admits only the Perception development task, not the other six MLRC tasks.
+      - Hidden labels remain scorer-only and are not authorized by this development resource.
+      - Output artifacts may publish aggregate metrics and hashes, never task dataset bytes.
+
+resource_overrides: []

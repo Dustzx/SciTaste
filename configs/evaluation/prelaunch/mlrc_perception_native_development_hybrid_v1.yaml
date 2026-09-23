@@ -21,7 +21,7 @@ primary_endpoint: objective_progress
 automated_judge_role: none
 source_commit: 742d68ab7c3d26eba79c31b2f51722b1152c2eee
 require_clean_tree: true
-resource_corpus_sha256: 1e07b2e7d33bb31557c1c1ddca151d12701586be488362897872c7f55c511dd2
+resource_corpus_sha256: b84f109bb91b8d4985c089014f80931e6daf413f627d68a09dff3bd6801124e9
 systems:
   - system_id: full-scitaste-learned-policy
     role: scitaste
@@ -163,6 +163,6 @@ stop_rules:
   - Stop after the complete pair; do not promote development mAP to formal held-out evidence.
 approval:
   approved: true
-  approved_proposal_sha256: 9aed05f29b779494339c6577a9c54380ecca4cc27c4120ea28bf95868bb72890
+  approved_proposal_sha256: 41695353ee8991f25b1d12b0d2d7cb87b446a58277e88cce4271c8be86b644ff
   approved_by: project-owner-standing-experiment-authorization
   approved_at: "2026-09-23T00:00:00+08:00"

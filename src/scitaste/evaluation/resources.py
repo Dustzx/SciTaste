@@ -136,7 +136,9 @@ class ExternalEvaluationResource(FrozenModel):
 
 
 class ExternalResourceCorpus(FrozenModel):
-    schema_version: Literal["2.0", "2.1", "2.2", "2.3", "2.4", "2.5", "2.6"] = "2.0"
+    schema_version: Literal[
+        "2.0", "2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"
+    ] = "2.0"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -180,7 +182,7 @@ class ExternalResourceOverride(FrozenModel):
 class ExternalResourceCorpusOverlay(FrozenModel):
     """Content-addressed additive or evidence-only revision over one prior corpus."""
 
-    schema_version: Literal["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"] = "2.1"
+    schema_version: Literal["2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"] = "2.1"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -201,7 +203,7 @@ class ExternalResourceCorpusOverlay(FrozenModel):
             raise ValueError("new resources cannot also be overridden")
         if self.schema_version == "2.1" and self.resource_overrides:
             raise ValueError("evaluation resource v2.1 overlays are additions-only")
-        if self.schema_version not in {"2.5", "2.6"} and any(
+        if self.schema_version not in {"2.5", "2.6", "2.7"} and any(
             item.code_license is not None for item in self.resource_overrides
         ):
             raise ValueError(
@@ -310,7 +312,8 @@ def load_external_resource_corpus(path: str | Path) -> ResourceCorpusInspection:
     if not isinstance(payload, dict):
         raise ValueError("evaluation resource corpus must contain a YAML mapping")
     if (
-        payload.get("schema_version") in {"2.1", "2.2", "2.3", "2.4", "2.5", "2.6"}
+        payload.get("schema_version")
+        in {"2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"}
         and "base_source" in payload
     ):
         corpus = _compose_external_resource_overlay(resolved, payload)
@@ -349,6 +352,7 @@ def _compose_external_resource_overlay(
         "2.4": "2.3",
         "2.5": "2.4",
         "2.6": "2.5",
+        "2.7": "2.6",
     }[overlay.schema_version]
     if base.schema_version != expected_base:
         raise ValueError(
