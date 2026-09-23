@@ -1206,10 +1206,26 @@ def _project_controller_matches(root: Path, manifest: E2PrelaunchManifest) -> bo
         program = json.loads(program_path.read_bytes())
     except (OSError, ValueError):
         return False
+    registered_controller = next(
+        (
+            item
+            for item in project.get("runs", [])
+            if item.get("run_id") == manifest.project.controller_run_id
+        ),
+        None,
+    )
     return bool(
         project.get("project_id") == manifest.project.project_id
         and project.get("revision", 0) >= manifest.project.minimum_project_revision
-        and project.get("current_run") == manifest.project.controller_run_id
+        # ``current_run`` is the selected evidence run, not the durable research
+        # program.  Requiring equality made a valid controller disappear as soon
+        # as an evaluation or scoring run was selected.  The controller is current
+        # when its exact registered program run is active and unsuperseded.
+        and isinstance(registered_controller, dict)
+        and registered_controller.get("provider") == "scitaste-native"
+        and registered_controller.get("stage_path") == "program"
+        and registered_controller.get("status") in {"running", "complete"}
+        and registered_controller.get("superseded_by") is None
         and program.get("project_id") == manifest.project.project_id
         and program.get("program_id") == manifest.project.program_id
         and program.get("source_program_file_sha256") == manifest.project.program.sha256

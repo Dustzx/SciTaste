@@ -235,10 +235,19 @@ def _reprojected_state(
 ) -> AdaptivePolicyActivationCampaignState:
     payload = state.model_dump(
         mode="python",
-        exclude={"state_sha256", "finalization"},
+        exclude={
+            "state_sha256",
+            "tasks",
+            "terminal_evidence",
+            "review_evidence",
+            "finalization",
+        },
     )
     payload.update(
         {
+            "tasks": state.tasks,
+            "terminal_evidence": state.terminal_evidence,
+            "review_evidence": state.review_evidence,
             "sequence": state.sequence + 1,
             "status": "finalized",
             "policy_refresh_status": "ready",
