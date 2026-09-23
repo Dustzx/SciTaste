@@ -154,9 +154,22 @@ def _policy(profile_path: Path) -> tuple[Any, NodePolicy]:
     return profile, policy
 
 
-def _validate_replacement(path: str, replacement: str) -> None:
+def _validate_replacement(path: str, replacement: str, original: str) -> None:
     if path.endswith(".py"):
-        ast.parse(replacement, filename=path)
+        original_tree = ast.parse(original, filename=path)
+        replacement_tree = ast.parse(replacement, filename=path)
+        definition_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        original_definitions = {
+            item.name for item in original_tree.body if isinstance(item, definition_types)
+        }
+        replacement_definitions = {
+            item.name for item in replacement_tree.body if isinstance(item, definition_types)
+        }
+        removed = sorted(original_definitions - replacement_definitions)
+        if removed:
+            raise ValueError(
+                f"replacement removes public module definitions from {path}: {removed}"
+            )
     elif path.endswith((".yaml", ".yml")):
         parsed = yaml.safe_load(replacement)
         if not isinstance(parsed, dict):
@@ -362,11 +375,16 @@ def main() -> int:
     arm_source = output / "arm_source"
     shutil.copytree(env_source, arm_source)
     for edit in proposal.edits:
-        _validate_replacement(edit.path, edit.replacement)
         target = (arm_source / edit.path).resolve()
         target.relative_to(arm_source.resolve())
-        if _sha256_bytes(target.read_bytes()) != edit.expected_sha256:
+        original_bytes = target.read_bytes()
+        if _sha256_bytes(original_bytes) != edit.expected_sha256:
             raise ValueError(f"source changed before patch application: {edit.path}")
+        _validate_replacement(
+            edit.path,
+            edit.replacement,
+            original_bytes.decode("utf-8"),
+        )
         target.write_text(edit.replacement, encoding="utf-8")
     receipt = {
         "schema_version": "1.0",
