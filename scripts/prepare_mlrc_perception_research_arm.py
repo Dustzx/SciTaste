@@ -19,6 +19,7 @@ from typing import Any
 
 import yaml
 
+from scitaste.evaluation.h4_execution import build_h4_benchmark_action_menu
 from scitaste.evaluation.task_patch import (
     BenchmarkEditableFileSnapshot,
     BenchmarkPatchContext,
@@ -28,6 +29,7 @@ from scitaste.evaluation.task_patch import (
 from scitaste.evaluation.task_patch_generation import (
     BenchmarkPatchGenerationInput,
     BenchmarkPatchGenerationNode,
+    BenchmarkResearchActionDirective,
     benchmark_directive_from_taste_packet,
     materialize_benchmark_patch_proposal,
 )
@@ -166,7 +168,14 @@ def main() -> int:
     parser.add_argument(
         "--condition",
         required=True,
-        choices=("native-base", "raw-context", "full", "taste-packet"),
+        choices=(
+            "native-base",
+            "raw-context",
+            "full",
+            "taste-packet",
+            "learned-policy-on",
+            "learned-policy-off",
+        ),
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--source", type=Path, default=_DEFAULT_SOURCE)
@@ -181,6 +190,11 @@ def main() -> int:
     parser.add_argument("--baseline-score", type=float, required=True)
     parser.add_argument("--taste-capsule", type=Path)
     parser.add_argument("--taste-packet", type=Path)
+    parser.add_argument(
+        "--research-action-type",
+        choices=("PROBE", "PILOT", "EXPERIMENT", "ANALYZE", "REFINE", "PIVOT"),
+        help="Frozen lifecycle action; exposes the directive but no policy scores.",
+    )
     parser.add_argument(
         "--backend",
         type=Path,
@@ -199,6 +213,8 @@ def main() -> int:
         raise ValueError("only the legacy full condition requires --taste-capsule")
     if (args.condition == "taste-packet") != (args.taste_packet is not None):
         raise ValueError("only the taste-packet condition requires --taste-packet")
+    if args.taste_packet is not None and args.research_action_type is not None:
+        raise ValueError("Taste packet and lifecycle action directives are mutually exclusive")
 
     repository = Path.cwd().resolve(strict=True)
     output = args.output if args.output.is_absolute() else repository / args.output
@@ -235,6 +251,17 @@ def main() -> int:
         if control_packet is not None
         else None
     )
+    if args.research_action_type is not None:
+        selected = next(
+            action
+            for action in build_h4_benchmark_action_menu(iteration=args.iteration)
+            if action.type.value == args.research_action_type
+        )
+        action_directive = BenchmarkResearchActionDirective.create(
+            action_id=selected.action_id,
+            action_type=selected.type.value,
+            instruction=selected.description,
+        )
     if control_packet is not None:
         taste_guidance = _guidance_chunks(render_taste_control_packet(control_packet))
     experiment_feedback = tuple(
@@ -242,7 +269,9 @@ def main() -> int:
         for feedback_path in args.experiment_feedback_file
     )
     input_data = BenchmarkPatchGenerationInput(
-        schema_version="1.2" if control_packet is not None else "1.0",
+        schema_version=(
+            "1.2" if control_packet is not None else "1.1" if action_directive else "1.0"
+        ),
         task_id="perception-temporal-action-loc",
         research_problem=research_problem,
         primary_metric="mean_average_precision",

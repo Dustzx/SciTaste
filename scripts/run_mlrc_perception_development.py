@@ -127,7 +127,15 @@ def main() -> int:
     parser.add_argument(
         "--condition",
         required=True,
-        choices=("upstream-base", "native-base", "raw-context", "full", "taste-packet"),
+        choices=(
+            "upstream-base",
+            "native-base",
+            "raw-context",
+            "full",
+            "taste-packet",
+            "learned-policy-on",
+            "learned-policy-off",
+        ),
     )
     parser.add_argument("--cuda-device", type=int, default=0)
     parser.add_argument("--timeout-seconds", type=int, default=7200)
