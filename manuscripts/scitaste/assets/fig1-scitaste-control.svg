@@ -1,183 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="figure-title figure-description">
-  <title id="figure-title">SciTaste learns a lifecycle policy from reviewed research decisions</title>
-  <desc id="figure-description">External records, tool and experiment outcomes, and human interventions are reconstructed into grounded decision episodes. Independent attribution review admits source-group-bound episodes to an uncertainty-aware pairwise policy. The policy adjusts a closed action set only inside its support and otherwise abstains, while deterministic admission owns project state.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">SciTaste learns outcome-calibrated scientific action values</title>
+  <desc id="desc">Matched action continuations provide downstream utility supervision. An outcome-hidden grounded state is converted into traceable action features, a task-disjoint ridge policy scores feasible actions, and the selected action controls the native research loop.</desc>
   <defs>
-    <marker id="arrow-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#34312c" />
-    </marker>
-    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a65d2e" />
-    </marker>
-    <marker id="arrow-sage" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#68715e" />
-    </marker>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3c3b37"/></marker>
+    <marker id="arrowAccent" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#ad5a27"/></marker>
     <style>
-      .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      .serif { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
-      .label { font-size: 11px; font-weight: 700; letter-spacing: 1.6px; }
-      .heading { font-size: 18px; font-weight: 700; }
-      .body { font-size: 13px; }
-      .small { font-size: 11.5px; }
-      .micro { font-size: 10.5px; }
-      .ink { fill: #24221e; }
-      .soft { fill: #666158; }
-      .faint { fill: #8a847a; }
+      .title{font:700 31px 'Lato',Arial,sans-serif;fill:#252420}.section{font:700 23px 'Lato',Arial,sans-serif;fill:#726f66;letter-spacing:1px}.boxTitle{font:700 26px 'Lato',Arial,sans-serif;fill:#252420}.body{font:400 20px 'Lato',Arial,sans-serif;fill:#4b4943}.small{font:400 18px 'Lato',Arial,sans-serif;fill:#625f57}.accent{font:700 20px 'Lato',Arial,sans-serif;fill:#a95526}.whiteTitle{font:700 26px 'Lato',Arial,sans-serif;fill:#fff}.whiteBody{font:400 19px 'Lato',Arial,sans-serif;fill:#fff8f2}.box{fill:#fbfaf7;stroke:#cbc5b9;stroke-width:2}.source{fill:#f4f0e9;stroke:#c8c0b3;stroke-width:2}.target{fill:#eef3f4;stroke:#98a7aa;stroke-width:2}.method{fill:#fff7f0;stroke:#ad5a27;stroke-width:3}.policy{fill:#ad5a27;stroke:#8e431c;stroke-width:2}.system{fill:#eff2eb;stroke:#6d7762;stroke-width:2}.flow{fill:none;stroke:#3c3b37;stroke-width:3;marker-end:url(#arrow)}.accentFlow{fill:none;stroke:#ad5a27;stroke-width:3;marker-end:url(#arrowAccent)}.feedback{fill:none;stroke:#6d7762;stroke-width:3;stroke-dasharray:10 7;marker-end:url(#arrow)}
     </style>
   </defs>
+  <rect x="1" y="1" width="1598" height="758" rx="22" fill="#fffdf9" stroke="#e3ded4" stroke-width="2"/>
+  <text x="55" y="55" class="title">SCITASTE: LEARN WHICH SCIENTIFIC MOVE PRODUCES BETTER EVIDENCE</text>
+  <line x1="55" y1="76" x2="1545" y2="76" stroke="#d8d1c5" stroke-width="2"/>
 
-  <rect width="1200" height="630" rx="20" fill="#fbfaf7" />
-  <text x="40" y="35" class="sans label" fill="#a65d2e">SCITASTE · LEARN SCIENTIFIC TASTE FROM REVIEWED TRAJECTORIES</text>
-  <line x1="40" y1="51" x2="1160" y2="51" stroke="#ded8ce" />
+  <text x="55" y="116" class="section">A · LEARN FROM MATCHED CONTINUATIONS ON DEVELOPMENT TASKS</text>
+  <rect x="55" y="140" width="325" height="170" rx="18" class="source"/>
+  <text x="82" y="180" class="boxTitle">Freeze a research prefix</text>
+  <text x="82" y="218" class="body">state S + feasible menu A</text>
+  <text x="82" y="250" class="body">same tools, budget, scorer</text>
+  <text x="82" y="282" class="small">task-cluster provenance bound</text>
+  <path d="M380 225 H425" class="flow"/>
 
-  <g id="taste-formation" data-kind="panel">
-    <text x="40" y="78" class="sans label" fill="#8a847a">A · GROUND EXPERIENCE INTO A POLICY</text>
+  <rect x="430" y="140" width="335" height="170" rx="18" class="box"/>
+  <text x="457" y="180" class="boxTitle">Execute every action</text>
+  <text x="457" y="218" class="body">a₁ → Y(a₁)   a₂ → Y(a₂)</text>
+  <text x="457" y="250" class="body">a₃ → Y(a₃), paired seeds</text>
+  <text x="457" y="282" class="small">failures retained at utility zero</text>
+  <path d="M765 225 H810" class="flow"/>
 
-    <g id="high-quality-research" data-kind="entity" data-role="source-evidence">
-      <rect x="40" y="92" width="212" height="104" rx="10" fill="#fffdf9" stroke="#cfc7bb" />
-      <text x="58" y="119" class="serif heading ink">Supervision channels</text>
-      <g class="sans micro soft">
-        <rect x="58" y="135" width="71" height="24" rx="12" fill="#f0ece5" /><text x="93.5" y="151" text-anchor="middle">papers</text>
-        <rect x="136" y="135" width="82" height="24" rx="12" fill="#f0ece5" /><text x="177" y="151" text-anchor="middle">reviews</text>
-        <rect x="58" y="165" width="83" height="24" rx="12" fill="#f0ece5" /><text x="99.5" y="181" text-anchor="middle">tool traces</text>
-        <rect x="148" y="165" width="70" height="24" rx="12" fill="#f0ece5" /><text x="183" y="181" text-anchor="middle">human</text>
-      </g>
-    </g>
+  <rect x="815" y="140" width="355" height="170" rx="18" class="method"/>
+  <text x="842" y="180" class="boxTitle">Ground traceable features</text>
+  <text x="842" y="218" class="body">situation axes + exact anchors</text>
+  <text x="842" y="250" class="body">named numerics + observations</text>
+  <text x="842" y="282" class="small">action interactions · no target outcome</text>
+  <path d="M1170 225 H1215" class="accentFlow"/>
 
-    <path d="M252 144 H292" fill="none" stroke="#34312c" stroke-width="1.7" marker-end="url(#arrow-ink)" />
+  <rect x="1220" y="140" width="325" height="170" rx="18" class="policy"/>
+  <text x="1247" y="180" class="whiteTitle">Fit and freeze Q̂(S,a)</text>
+  <text x="1247" y="218" class="whiteBody">nested task-cluster holdout</text>
+  <text x="1247" y="250" class="whiteBody">sparse-feature ridge policy</text>
+  <text x="1247" y="282" class="whiteBody">content-hashed before test</text>
 
-    <g id="taste-abstraction" data-kind="entity" data-role="abstraction">
-      <rect x="300" y="92" width="214" height="104" rx="10" fill="#fffdf9" stroke="#cfc7bb" />
-      <text x="318" y="119" class="serif heading ink">Reconstruct episodes</text>
-      <text x="318" y="143" class="sans small soft">state · alternatives · evidence</text>
-      <text x="318" y="162" class="sans small soft">action · outcomes · confounders</text>
-      <text x="318" y="183" class="sans micro" fill="#a65d2e">no hindsight reward</text>
-    </g>
+  <text x="55" y="366" class="section">B · SELECT ON A TASK-DISJOINT OUTCOME-HIDDEN STATE</text>
+  <rect x="55" y="393" width="285" height="185" rx="18" class="target"/>
+  <text x="82" y="435" class="boxTitle">Target state S_t</text>
+  <text x="82" y="473" class="body">visible evidence + budget</text>
+  <text x="82" y="505" class="body">frozen feasible menu A_t</text>
+  <text x="82" y="543" class="small">branch outcomes unavailable</text>
+  <path d="M340 485 H390" class="flow"/>
 
-    <path d="M514 144 H554" fill="none" stroke="#34312c" stroke-width="1.7" marker-end="url(#arrow-ink)" />
+  <rect x="395" y="393" width="345" height="185" rx="18" class="method"/>
+  <text x="422" y="435" class="boxTitle">Score feasible actions</text>
+  <text x="422" y="473" class="body">x(S_t,a) → Q̂(S_t,a)</text>
+  <text x="422" y="505" class="body">canonical deterministic arg max</text>
+  <text x="422" y="543" class="small">state hash · model hash · all scores</text>
+  <path d="M740 485 H790" class="accentFlow"/>
 
-    <g id="taste-library" data-kind="entity" data-role="decision-precedent">
-      <rect x="562" y="92" width="238" height="104" rx="10" fill="#2b2925" stroke="#2b2925" />
-      <text x="582" y="119" class="sans micro" fill="#d9c7b7">DUAL ATTRIBUTION REVIEW</text>
-      <text x="582" y="148" class="serif heading" fill="#ffffff">Admitted episodes</text>
-      <text x="582" y="171" class="sans small" fill="#d7d2ca">source-group + split bound</text>
-      <circle cx="771" cy="116" r="8" fill="#a65d2e" />
-      <path d="M767 116 L770 119 L776 111" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-    </g>
+  <rect x="795" y="393" width="285" height="185" rx="18" class="policy"/>
+  <text x="822" y="435" class="whiteTitle">Taste decision</text>
+  <text x="822" y="474" class="whiteBody">recommend one registered</text>
+  <text x="822" y="506" class="whiteBody">scientific action</text>
+  <text x="822" y="541" class="whiteBody">typed control packet</text>
+  <path d="M1080 485 H1130" class="accentFlow"/>
 
-    <path d="M800 144 H840" fill="none" stroke="#34312c" stroke-width="1.7" marker-end="url(#arrow-ink)" />
+  <rect x="1135" y="393" width="410" height="185" rx="18" class="system"/>
+  <text x="1162" y="435" class="boxTitle">SciTaste Native research loop</text>
+  <text x="1162" y="473" class="body">execute → evidence → paper → review</text>
+  <text x="1162" y="505" class="body">same model · tools · task · budget</text>
+  <text x="1162" y="543" class="small">Base omits only the Taste recommendation</text>
 
-    <g id="knowledge-taste-distinction" data-kind="annotation">
-      <rect x="848" y="92" width="312" height="104" rx="10" fill="#f3efe7" stroke="#ded8ce" />
-      <text x="868" y="119" class="sans label" fill="#68715e">LEARNED LIFECYCLE POLICY</text>
-      <text x="868" y="144" class="sans body ink">Pairwise posteriors from reviewed credit.</text>
-      <text x="868" y="166" class="sans body ink">Transfer gates + uncertainty abstention.</text>
-      <text x="868" y="185" class="sans micro soft">Raw retrieval is a control, not the judgment.</text>
-    </g>
-  </g>
+  <path d="M1480 578 V610 H1570 V105 H1385 V135" class="feedback"/>
+  <text x="1140" y="610" class="small">sealed outcomes train only later task-disjoint policies</text>
 
-  <line x1="40" y1="222" x2="1160" y2="222" stroke="#ded8ce" />
-  <text x="40" y="250" class="sans label" fill="#8a847a">B · APPLY OR ABSTAIN AT THE NEXT DECISION</text>
-
-  <g id="research-state" data-kind="entity" data-role="canonical-state">
-    <rect x="40" y="271" width="250" height="221" rx="12" fill="#fffdf9" stroke="#9ea6aa" stroke-width="1.4" />
-    <rect x="40" y="271" width="250" height="48" rx="12" fill="#edf1f2" />
-    <path d="M40 307 H290 V319 H40 Z" fill="#edf1f2" />
-    <text x="58" y="301" class="serif heading ink">ResearchState Sₜ</text>
-    <text x="58" y="342" class="sans small soft">problem · hypothesis · observations</text>
-    <text x="58" y="363" class="sans small soft">claims · evidence · review obligations</text>
-    <text x="58" y="384" class="sans small soft">resource ledger · decision history</text>
-    <line x1="58" y1="402" x2="272" y2="402" stroke="#ded8ce" />
-    <text x="58" y="425" class="sans micro" fill="#68715e">CLOSED, FEASIBLE ACTION SET A(Sₜ)</text>
-    <g class="sans micro ink">
-      <rect x="58" y="438" width="48" height="24" rx="12" fill="#f0ece5" /><text x="82" y="454" text-anchor="middle">probe</text>
-      <rect x="112" y="438" width="78" height="24" rx="12" fill="#f0ece5" /><text x="151" y="454" text-anchor="middle">reformulate</text>
-      <rect x="196" y="438" width="76" height="24" rx="12" fill="#f0ece5" /><text x="234" y="454" text-anchor="middle">experiment</text>
-      <text x="58" y="482" class="sans micro soft">write · review · pivot · stop · …</text>
-    </g>
-  </g>
-
-  <path d="M290 381 H350" fill="none" stroke="#34312c" stroke-width="1.8" marker-end="url(#arrow-ink)" />
-  <text x="320" y="370" text-anchor="middle" class="sans micro soft">candidate</text>
-  <text x="320" y="382" text-anchor="middle" class="sans micro soft">actions</text>
-
-  <g id="taste-controller" data-kind="entity" data-role="decision-owner">
-    <rect x="358" y="271" width="348" height="221" rx="12" fill="#fffdf9" stroke="#a65d2e" stroke-width="2" />
-    <rect x="358" y="271" width="348" height="50" rx="12" fill="#a65d2e" />
-    <path d="M358 307 H706 V321 H358 Z" fill="#a65d2e" />
-    <text x="380" y="302" class="serif heading" fill="#ffffff">Taste Controller + π</text>
-    <text x="680" y="315" text-anchor="end" class="sans micro" fill="#f6e8dc">BOUNDED POLICY</text>
-
-    <g class="sans micro">
-      <rect x="380" y="338" width="142" height="27" rx="13.5" fill="#edf1f2" />
-      <text x="451" y="356" text-anchor="middle" fill="#465158">Base U₀ · facts + budget</text>
-      <rect x="532" y="338" width="152" height="27" rx="13.5" fill="#f4e5d7" />
-      <text x="608" y="356" text-anchor="middle" fill="#8b4d27">Learned Δπ · episodes</text>
-    </g>
-
-    <text x="380" y="392" class="sans small soft">Apply only with</text>
-    <g class="sans micro ink">
-      <text x="380" y="416">Idea + domain + stage support</text><circle cx="557" cy="412" r="2.5" fill="#a65d2e" />
-      <text x="570" y="416">source weight</text>
-      <text x="380" y="437">pairwise probability</text><circle cx="502" cy="433" r="2.5" fill="#a65d2e" />
-      <text x="515" y="437">boundary-qualified support</text>
-    </g>
-    <rect x="380" y="451" width="304" height="26" rx="5" fill="#f7f3ed" />
-    <text x="532" y="469" text-anchor="middle" class="serif body ink">a_t = arg max [ U₀(a) + Δπ(a | S_t) ] · else Δπ = 0</text>
-  </g>
-
-  <path d="M681 196 V258 H622 V271" fill="none" stroke="#a65d2e" stroke-width="1.8" stroke-dasharray="5 5" marker-end="url(#arrow-accent)" />
-  <text x="696" y="245" class="sans micro" fill="#a65d2e">policy + transfer scope</text>
-
-  <path d="M706 337 H774" fill="none" stroke="#a65d2e" stroke-width="2" marker-end="url(#arrow-accent)" />
-  <text x="740" y="325" text-anchor="middle" class="sans micro" fill="#a65d2e">select one</text>
-  <text x="740" y="337" text-anchor="middle" class="sans micro" fill="#a65d2e">action</text>
-
-  <g id="bounded-work" data-kind="entity" data-role="proposal-and-execution">
-    <rect x="782" y="271" width="190" height="91" rx="11" fill="#fffdf9" stroke="#cfc7bb" />
-    <text x="800" y="296" class="sans label" fill="#8a847a">BOUNDED WORK</text>
-    <text x="800" y="322" class="serif heading ink">Worker / model</text>
-    <text x="800" y="344" class="sans micro soft">native · API · external adapter</text>
-  </g>
-
-  <path d="M877 362 V388" fill="none" stroke="#34312c" stroke-width="1.7" marker-end="url(#arrow-ink)" />
-
-  <g id="typed-result" data-kind="entity" data-role="unadmitted-result">
-    <rect x="782" y="396" width="190" height="96" rx="11" fill="#fffdf9" stroke="#cfc7bb" />
-    <text x="800" y="421" class="sans label" fill="#8a847a">PROPOSAL, NOT STATE</text>
-    <text x="800" y="447" class="serif heading ink">Typed result R_t</text>
-    <text x="800" y="470" class="sans micro soft">evidence · provenance · cost</text>
-  </g>
-
-  <path d="M972 444 H1012" fill="none" stroke="#34312c" stroke-width="1.7" marker-end="url(#arrow-ink)" />
-
-  <g id="admission-gate" data-kind="entity" data-role="transition-authority">
-    <rect x="1020" y="335" width="140" height="114" rx="12" fill="#e9ede6" stroke="#68715e" stroke-width="1.8" />
-    <text x="1090" y="363" text-anchor="middle" class="sans label" fill="#68715e">TRANSITION</text>
-    <text x="1090" y="387" text-anchor="middle" class="serif heading ink">Admission</text>
-    <text x="1090" y="407" text-anchor="middle" class="sans micro soft">schema · identity</text>
-    <text x="1090" y="423" text-anchor="middle" class="sans micro soft">evidence · budget</text>
-    <path d="M1077 435 L1086 443 L1104 425" fill="none" stroke="#68715e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-  </g>
-
-  <path d="M1090 335 V228 H681 V196" fill="none" stroke="#68715e" stroke-width="1.5" stroke-dasharray="5 5" marker-end="url(#arrow-sage)" />
-  <rect x="812" y="216" width="216" height="20" rx="10" fill="#fbfaf7" />
-  <text x="920" y="230" text-anchor="middle" class="sans micro" fill="#68715e">outcomes await reviewed causal credit</text>
-
-  <g id="rejected-result" data-kind="annotation">
-    <path d="M1125 449 V479" fill="none" stroke="#9a948a" stroke-width="1.4" marker-end="url(#arrow-ink)" />
-    <rect x="1020" y="486" width="140" height="37" rx="7" fill="#f3efe7" stroke="#ded8ce" />
-    <text x="1090" y="501" text-anchor="middle" class="sans micro soft">reject → failure record</text>
-    <text x="1090" y="514" text-anchor="middle" class="sans micro soft">no state transition</text>
-  </g>
-
-  <path d="M1060 449 V553 H165 V492" fill="none" stroke="#68715e" stroke-width="2" marker-end="url(#arrow-sage)" />
-  <rect x="385" y="541" width="470" height="24" rx="12" fill="#fbfaf7" />
-  <text x="620" y="557" text-anchor="middle" class="sans small" fill="#68715e">accept → commit S_t+1 · preserve evidence and decision lineage</text>
-
-  <line x1="40" y1="585" x2="1160" y2="585" stroke="#ded8ce" />
-  <g id="authority-legend" data-kind="legend" class="sans small">
-    <circle cx="48" cy="607" r="5" fill="#a65d2e" /><text x="62" y="611" class="ink">Reviewed credit learns action preference</text>
-    <circle cx="385" cy="607" r="5" fill="#cfc7bb" /><text x="399" y="611" class="ink">Models and executors propose or perform bounded work</text>
-    <circle cx="836" cy="607" r="5" fill="#68715e" /><text x="850" y="611" class="ink">Deterministic gates own state transitions</text>
-  </g>
+  <rect x="55" y="626" width="1035" height="78" rx="15" fill="#f7f3ec" stroke="#d5cdbf" stroke-width="2"/>
+  <text x="82" y="660" class="accent">TWO ESTIMANDS</text>
+  <text x="270" y="660" class="body">diagnostic: action regret</text>
+  <text x="590" y="660" class="body">system: scorer-owned research progress</text>
+  <text x="270" y="688" class="small">A changed action must mediate any claimed downstream improvement.</text>
 </svg>

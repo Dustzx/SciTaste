@@ -1,10 +1,10 @@
 schema_version: '1.0'
 project_id: scitaste-self-development
-paper_id: scitaste-iclr2027-submission-draft-v23
+paper_id: scitaste-iclr2027-submission-draft-v24
 archetype: empirical-system
 central_question: Does an outcome-grounded, selectively transferring Scientific Taste policy improve the decisions and final research outcomes of a complete autonomous-research system under matched resources?
 central_answer: SciTaste defines and implements the policy and complete native system; the working draft reserves, but does not yet populate, the formal complete-system, external-validity, causal-ablation, and outcome-learning results required for an improvement claim.
-manuscript_sha256: 108bf7862ad7c7f77418c24c679b1b9b43d86b849ba3d77bba786c0ed636ac5f
+manuscript_sha256: 56f1fe312a7bc91fad5a7ad3f0fc82b974f4f13a1aa9f276948d77bca49cedc9
 required_entry_points:
 - title
 - abstract
@@ -92,7 +92,7 @@ carriers:
   target_claim_ids: [claim-selective-policy]
   evidence_ids: []
   artifact_locator: assets/fig1-scitaste-control.pdf
-  artifact_sha256: 9322ddf9d0efe66a0ae21f6e8d24488aa11d75a04ec4c64062ebd1cc2176d988
+  artifact_sha256: 991f758930c49479838f4ebb760416645d2e9588190452b7919f4fee43c4cbf8
   absence_reason: null
 entry_points:
 - location: title
@@ -179,4 +179,4 @@ material_limitations:
   statement: SciTaste self-development is process evidence and cannot establish comparative effectiveness or external generalization.
   affected_claim_ids: [claim-system-effectiveness, claim-external-validity]
   disclosed_in: [Limitations]
-contract_sha256: 18d1a250b97c644aaebd7e4091a8aebc7ada4a11da49a581f813e388617087b2
+contract_sha256: 01823a428691975a4f4fbcf2328d1b00e0af972c047eb0184714373641bdf479

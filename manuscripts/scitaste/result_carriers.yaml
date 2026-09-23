@@ -1,0 +1,120 @@
+schema_version: "1.0"
+paper_id: scitaste-iclr2027-submission-draft-v24
+ordering_principle: scientific-question
+carriers:
+  - carrier_id: matched-external-system-effect
+    placement: main
+    status: available
+    role: supporting
+    scientific_question: Does a bounded Taste intervention improve downstream research quality on unchanged external tasks?
+    claim_scope: causal
+    comparison_design: matched-same-backbone
+    comparison_population: researchclawbench-002-ten-domain-frozen-v1
+    independent_unit: task
+    rows:
+      - researchharness-base
+      - researchharness-plus-scitaste
+    columns:
+      - official-score
+      - paired-effect-with-task-cluster-interval
+      - win-tie-loss
+      - exact-p-value
+      - registered-criterion
+    evidence_ids:
+      - researchclawbench-formal-cohort-v1
+    forbidden_interpretations:
+      - independent-scitaste-native-ranking
+      - comparison-with-public-best-native-submissions
+      - universal-taste-benefit
+
+  - carrier_id: objective-fork-mechanism
+    placement: main
+    status: available
+    role: diagnostic
+    scientific_question: Does the frozen Taste selector choose better next actions from an outcome-hidden state?
+    claim_scope: mechanism
+    comparison_design: shared-prefix-matched-continuations
+    comparison_population: scitastebench-objective-fork-formal-v1
+    independent_unit: task-cluster
+    rows:
+      - stage-static
+      - outcome-calibrated-taste
+    columns:
+      - mean-regret
+      - paired-regret-reduction-with-task-cluster-interval
+      - branch-failure-rate
+      - win-tie-loss
+    evidence_ids:
+      - newtonbench-objective-fork-formal-v1
+    forbidden_interpretations:
+      - end-to-end-system-ranking
+      - treating-decision-states-as-independent-tasks
+      - replacing-the-frozen-result-with-development-selection
+
+  - carrier_id: complete-native-system-comparison
+    placement: main
+    status: planned
+    role: headline
+    scientific_question: Does SciTaste Native improve complete autonomous-research outcomes relative to independent systems on common tasks?
+    claim_scope: competitive
+    comparison_design: common-task-system-comparison
+    comparison_population: pending-frozen-external-task-population
+    independent_unit: task
+    required_rows:
+      - scitaste-native
+      - direct-agent-baseline
+      - two-or-more-independent-auto-research-systems
+    required_columns:
+      - objective-outcome
+      - valid-completion-rate
+      - uncertainty
+      - api-and-gpu-cost
+      - wall-time
+    evidence_ids: []
+    forbidden_interpretations:
+      - substituting-the-researchharness-augmentation-study
+      - mixing-public-snapshot-rows-with-new-executions
+
+  - carrier_id: taste-mechanism-ablation
+    placement: main
+    status: planned
+    role: supporting
+    scientific_question: Which part of Scientific Taste changes action quality beyond equal context and generic memory?
+    claim_scope: mechanism
+    comparison_design: matched-same-backbone
+    comparison_population: pending-source-disjoint-objective-forks
+    independent_unit: task-cluster
+    required_rows:
+      - native-decision
+      - equal-context-raw-or-rag
+      - generic-outcome-memory
+      - mismatched-taste-negative-control
+      - direct-action-value-prediction
+      - full-scitaste
+    required_columns:
+      - mean-regret
+      - paired-effect-with-task-cluster-interval
+      - intervention-coverage
+      - branch-failure-rate
+      - resource-use
+    evidence_ids: []
+    forbidden_interpretations:
+      - presenting-ablation-rows-as-independent-auto-research-systems
+      - counting-decision-states-as-independent-tasks
+      - changing-the-backbone-or-context-budget-between-rows
+
+  - carrier_id: public-best-native-context
+    placement: auxiliary-artifact
+    status: available
+    role: context
+    scientific_question: What score range is visible in the frozen public ResearchClawBench snapshot?
+    claim_scope: descriptive
+    comparison_design: ecological-best-native
+    comparison_population: researchclawbench-public-snapshot-v1
+    independent_unit: public-submission
+    evidence_ids:
+      - researchclawbench-public-leaderboard-snapshot-v1
+    forbidden_interpretations:
+      - causal-taste-effect
+      - controlled-system-superiority
+      - insertion-into-a-matched-table
