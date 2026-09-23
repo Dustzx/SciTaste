@@ -46,6 +46,13 @@ class ExecutionLaneKind(StrEnum):
     HYBRID = "hybrid"
 
 
+class GpuWorkloadKind(StrEnum):
+    """Scientific role of GPU compute; it need not host the research agent."""
+
+    CHECKPOINT_MODEL = "checkpoint_model"
+    TASK_TRAINING_RANDOM_INIT = "task_training_random_init"
+
+
 class ScientificLaneRole(StrEnum):
     MATCHED_BACKBONE = "matched_backbone"
     BEST_NATIVE_SYSTEM = "best_native_system"
@@ -318,16 +325,19 @@ class GpuModelResource(BaseModel):
     device_count: int = Field(gt=0, le=64)
     device_name: str = Field(min_length=1, max_length=200)
     minimum_memory_mb_per_device: int = Field(gt=0)
-    checkpoint_id: str = Field(pattern=_ID)
-    checkpoint_source_path: str = Field(min_length=1, max_length=2_000)
-    checkpoint_sha256: str = Field(pattern=_SHA256)
-    checkpoint_bytes: int = Field(gt=0)
+    workload_kind: GpuWorkloadKind | None = None
+    checkpoint_id: str | None = Field(default=None, pattern=_ID)
+    checkpoint_source_path: str | None = Field(default=None, min_length=1, max_length=2_000)
+    checkpoint_sha256: str | None = Field(default=None, pattern=_SHA256)
+    checkpoint_bytes: int | None = Field(default=None, gt=0)
+    initialization_contract_ref: str | None = Field(default=None, max_length=1_000)
+    initialization_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
     license_identifier: str = Field(min_length=1, max_length=200)
     local_preflight_status: ReadinessStatus
     remote_inventory_status: ReadinessStatus
     remote_inventory_ref: str | None = Field(default=None, max_length=1_000)
     remote_inventory_sha256: str | None = Field(default=None, pattern=_SHA256)
-    remote_checkpoint_status: ReadinessStatus
+    remote_checkpoint_status: ReadinessStatus | None = None
     remote_checkpoint_attestation_ref: str | None = Field(default=None, max_length=1_000)
     remote_checkpoint_attestation_sha256: str | None = Field(default=None, pattern=_SHA256)
     max_gpu_hours: float = Field(gt=0)
@@ -336,6 +346,36 @@ class GpuModelResource(BaseModel):
 
     @model_validator(mode="after")
     def verified_remote_resources_are_content_bound(self) -> GpuModelResource:
+        workload_kind = self.workload_kind or GpuWorkloadKind.CHECKPOINT_MODEL
+        checkpoint_identity = (
+            self.checkpoint_id,
+            self.checkpoint_source_path,
+            self.checkpoint_sha256,
+            self.checkpoint_bytes,
+        )
+        initialization = (
+            self.initialization_contract_ref,
+            self.initialization_contract_sha256,
+        )
+        if workload_kind is GpuWorkloadKind.CHECKPOINT_MODEL:
+            if any(value is None for value in checkpoint_identity):
+                raise ValueError("checkpoint-model GPU resources require an exact checkpoint")
+            if any(value is not None for value in initialization):
+                raise ValueError(
+                    "checkpoint-model GPU resources cannot declare random initialization"
+                )
+            if self.remote_checkpoint_status is None:
+                raise ValueError("checkpoint-model GPU resources require checkpoint readiness")
+        else:
+            if any(value is not None for value in checkpoint_identity):
+                raise ValueError("random-init task training cannot declare an input checkpoint")
+            if any(value is None for value in initialization):
+                raise ValueError("random-init task training requires a content-bound protocol")
+            if self.remote_checkpoint_status is not None:
+                raise ValueError("random-init task training has no remote input checkpoint")
+            _validate_relative_path(
+                str(self.initialization_contract_ref), "initialization contract"
+            )
         inventory = (self.remote_inventory_ref, self.remote_inventory_sha256)
         checkpoint = (
             self.remote_checkpoint_attestation_ref,
@@ -355,6 +395,18 @@ class GpuModelResource(BaseModel):
             if any(value is None for value in checkpoint):
                 raise ValueError("verified remote checkpoint requires content-bound attestation")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_workload_fields(self, handler):  # type: ignore[no-untyped-def]
+        payload = handler(self)
+        for key in (
+            "workload_kind",
+            "initialization_contract_ref",
+            "initialization_contract_sha256",
+        ):
+            if payload.get(key) is None:
+                payload.pop(key, None)
+        return payload
 
 
 class ExecutionLane(BaseModel):
@@ -1232,11 +1284,15 @@ def inspect_prelaunch_manifest(
                     f"API pricing is {model.pricing.status.value}",
                 )
         if lane.gpu_resource is not None:
-            for label, status in (
+            readiness = [
                 ("local_preflight", lane.gpu_resource.local_preflight_status),
                 ("remote_inventory", lane.gpu_resource.remote_inventory_status),
-                ("remote_checkpoint", lane.gpu_resource.remote_checkpoint_status),
-            ):
+            ]
+            if lane.gpu_resource.remote_checkpoint_status is not None:
+                readiness.append(
+                    ("remote_checkpoint", lane.gpu_resource.remote_checkpoint_status)
+                )
+            for label, status in readiness:
                 if status is not ReadinessStatus.VERIFIED:
                     _block(
                         blockers,
@@ -1550,6 +1606,7 @@ __all__ = [
     "ExecutionLaneKind",
     "ExperimentPrelaunchManifest",
     "GpuModelResource",
+    "GpuWorkloadKind",
     "HumanReviewResource",
     "IntegrityContract",
     "PrelaunchApproval",

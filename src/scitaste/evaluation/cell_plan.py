@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer, model_validator
 
 from scitaste.evaluation.prelaunch import (
     ApiModelResource,
@@ -18,6 +18,7 @@ from scitaste.evaluation.prelaunch import (
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
+    GpuWorkloadKind,
     PrelaunchSystem,
     PrelaunchTask,
     ReadinessStatus,
@@ -59,8 +60,10 @@ class EvaluationCellResource(BaseModel):
     max_total_tokens: int | None = Field(default=None, gt=0)
     max_cost: float | None = Field(default=None, gt=0)
     host_alias: str | None = None
+    gpu_workload_kind: GpuWorkloadKind | None = None
     checkpoint_id: str | None = None
     checkpoint_sha256: str | None = Field(default=None, pattern=_SHA256)
+    initialization_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
     max_gpu_hours: float | None = Field(default=None, gt=0)
     max_storage_bytes: int | None = Field(default=None, gt=0)
 
@@ -76,22 +79,52 @@ class EvaluationCellResource(BaseModel):
             self.max_total_tokens,
             self.max_cost,
         )
-        gpu_values = (
+        gpu_base_values = (
             self.host_alias,
-            self.checkpoint_id,
-            self.checkpoint_sha256,
             self.max_gpu_hours,
             self.max_storage_bytes,
         )
+        gpu_workload_kind = self.gpu_workload_kind or GpuWorkloadKind.CHECKPOINT_MODEL
+        gpu_identity_complete = all(gpu_base_values) and (
+            (
+                self.checkpoint_id is not None
+                and self.checkpoint_sha256 is not None
+                and self.initialization_contract_sha256 is None
+            )
+            if gpu_workload_kind is GpuWorkloadKind.CHECKPOINT_MODEL
+            else (
+                self.checkpoint_id is None
+                and self.checkpoint_sha256 is None
+                and self.initialization_contract_sha256 is not None
+            )
+        )
+        any_gpu_value = any(
+            value is not None
+            for value in (
+                *gpu_base_values,
+                self.gpu_workload_kind,
+                self.checkpoint_id,
+                self.checkpoint_sha256,
+                self.initialization_contract_sha256,
+            )
+        )
         if self.kind is ExecutionLaneKind.API_ONLY:
-            if not all(api_values) or any(value is not None for value in gpu_values):
+            if not all(api_values) or any_gpu_value:
                 raise ValueError("API cell resources require only provider/model/key-env identity")
         elif self.kind is ExecutionLaneKind.GPU:
-            if not all(gpu_values) or any(value is not None for value in api_values):
-                raise ValueError("GPU cell resources require only host/checkpoint identity")
-        elif not all(api_values) or not all(gpu_values):
+            if not gpu_identity_complete or any(value is not None for value in api_values):
+                raise ValueError("GPU cell resources require one complete compute identity")
+        elif not all(api_values) or not gpu_identity_complete:
             raise ValueError("hybrid cell resources require complete API and GPU identities")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_gpu_workload_fields(self, handler):  # type: ignore[no-untyped-def]
+        payload = handler(self)
+        for key in ("gpu_workload_kind", "initialization_contract_sha256"):
+            if payload.get(key) is None:
+                payload.pop(key, None)
+        return payload
 
 
 class PlannedEvaluationCell(BaseModel):
@@ -485,8 +518,12 @@ def _resource_for(
         max_total_tokens=None if model is None else model.max_total_tokens,
         max_cost=None if model is None else model.max_cost,
         host_alias=lane.gpu_resource.host_alias,
+        gpu_workload_kind=lane.gpu_resource.workload_kind,
         checkpoint_id=lane.gpu_resource.checkpoint_id,
         checkpoint_sha256=lane.gpu_resource.checkpoint_sha256,
+        initialization_contract_sha256=(
+            lane.gpu_resource.initialization_contract_sha256
+        ),
         max_gpu_hours=lane.gpu_resource.max_gpu_hours,
         max_storage_bytes=lane.gpu_resource.max_storage_bytes,
     )
@@ -543,11 +580,13 @@ def _cell_blockers(
         if model.pricing.status is not ReadinessStatus.VERIFIED:
             blockers.append(f"lane:{lane.lane_id}:api-pricing-unverified")
     if lane.gpu_resource is not None:
-        for label, status in (
+        readiness = [
             ("local", lane.gpu_resource.local_preflight_status),
             ("inventory", lane.gpu_resource.remote_inventory_status),
-            ("checkpoint", lane.gpu_resource.remote_checkpoint_status),
-        ):
+        ]
+        if lane.gpu_resource.remote_checkpoint_status is not None:
+            readiness.append(("checkpoint", lane.gpu_resource.remote_checkpoint_status))
+        for label, status in readiness:
             if status is not ReadinessStatus.VERIFIED:
                 blockers.append(f"lane:{lane.lane_id}:gpu-{label}-unverified")
     return tuple(sorted(set(blockers)))

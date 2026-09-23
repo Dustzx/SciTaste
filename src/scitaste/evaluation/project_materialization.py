@@ -174,9 +174,15 @@ def _gpu_resources(manifest: ExperimentPrelaunchManifest) -> list[str]:
         resource = lane.gpu_resource
         if resource is None:
             continue
+        if resource.checkpoint_id is not None:
+            identity = f"{resource.checkpoint_id}@sha256:{resource.checkpoint_sha256}"
+        else:
+            identity = (
+                "task-training-random-init@sha256:"
+                f"{resource.initialization_contract_sha256}"
+            )
         resources.append(
-            f"{resource.host_alias}/{resource.device_count}x{resource.device_name}/"
-            f"{resource.checkpoint_id}@sha256:{resource.checkpoint_sha256}"
+            f"{resource.host_alias}/{resource.device_count}x{resource.device_name}/{identity}"
         )
     return list(dict.fromkeys(resources))
 
