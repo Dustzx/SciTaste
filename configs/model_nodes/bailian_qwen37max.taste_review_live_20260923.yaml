@@ -1,0 +1,22 @@
+provider: bailian
+base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+model: qwen3.7-max-2026-06-08
+api_key_env: DASHSCOPE_API_KEY
+live_enabled: true
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 8192
+pricing_confirmed: true
+pricing:
+  currency: USD
+  input_usd_per_million_tokens: 12.0
+  cached_input_usd_per_million_tokens: 1.5
+  output_usd_per_million_tokens: 36.0
+  captured_at: 2026-09-23T00:00:00+08:00
+  source: >-
+    Conservative USD liability ceiling using the numeric values of the official
+    Alibaba Cloud Beijing CNY price row without a favorable FX conversion.
+unpriced_engineering_probe: false
+extra_headers: {}
+extra_body:
+  enable_thinking: false

@@ -17,7 +17,7 @@ heldout_feature_directories:
   - pt/sound_localisation_test_audio_features
 heldout_label_locator: pt/challenge_action_localisation_test.json
 heldout_label_sha256: bab04d7562b2d69eba8702e16aa18d2e441df156cad495deff685dc32e82c508
-projection_root: outputs/projects/scitaste-self-development/evaluations/runtime-views/mlrc-perception-temporal-action-loc-v2
+projection_root: outputs/projects/scitaste-self-development/evaluations/runtime-views/mlrc-perception-temporal-action-loc-v3
 python_executable: .venv/bin/python3.12
 python_package_root: outputs/projects/scitaste-self-development/evaluations/runtime-environments/mlrc-perception-python312-v1/packages
 python_package_tree_sha256: 6bbf6a8264ae6fa2151f900ada5daa85f36d6071cad707a5d9459d45dd71600a

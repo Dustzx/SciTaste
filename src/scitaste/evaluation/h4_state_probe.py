@@ -308,6 +308,41 @@ def reduce_h4_feedback_context(
     ]
     latest = improvements[-1] if improvements else None
     best = history[-1].best_directed_progress_after if history else 0.0
+    phase = (
+        "early"
+        if decision_iteration == 1
+        else "late"
+        if decision_iteration >= maximum_patch_iterations
+        else "middle"
+    )
+    if not history:
+        evidence_status = "unassessed"
+        evidence_confidence = "low"
+        next_experiment_value = "high"
+    elif best > 1e-12:
+        # An adopted positive result supports the current candidate.  The
+        # history alone does not prove that all useful follow-ups are exhausted,
+        # so retain medium value for another experiment unless the budget is at
+        # its final decision.
+        evidence_status = "candidate-supported"
+        evidence_confidence = "high"
+        next_experiment_value = "low" if phase == "late" else "medium"
+    elif history[-1].disposition == "failed":
+        evidence_status = "no-candidate"
+        evidence_confidence = "low"
+        next_experiment_value = "high"
+    else:
+        # A reverted result is evidence against the attempted edit, but not a
+        # supported replacement.  Repeated null results near the budget make
+        # another edit lower value without relabelling them as positive support.
+        evidence_status = "candidate-conflicted"
+        repeated_null = len(history) >= 2 and all(
+            item.directed_improvement is not None
+            and abs(item.directed_improvement) <= 1e-12
+            for item in history
+        )
+        evidence_confidence = "high" if repeated_null else "medium"
+        next_experiment_value = "low" if phase == "late" else "medium"
     return TasteEpisodeDecisionContext(
         remaining_experiments=_remaining_bucket(remaining),
         failure_count=_count_bucket(failures),
@@ -322,6 +357,10 @@ def reduce_h4_feedback_context(
             else "flat"
         ),
         best_vs_baseline=("above" if best > 1e-12 else "below" if best < -1e-12 else "equal"),
+        evidence_status=evidence_status,
+        evidence_confidence=evidence_confidence,
+        next_experiment_value=next_experiment_value,
+        trajectory_phase=phase,
     )
 
 

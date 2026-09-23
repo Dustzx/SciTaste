@@ -1,0 +1,10 @@
+{
+  "module": "m2_magnetic_force",
+  "difficulty": "medium",
+  "system": "simple_system",
+  "law_version": "v2",
+  "noise_level": 0,
+  "environment_seed": 7412,
+  "score_seed": 7412,
+  "code_assisted": false
+}

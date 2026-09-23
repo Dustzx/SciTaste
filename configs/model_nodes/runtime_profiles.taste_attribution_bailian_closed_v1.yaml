@@ -1,0 +1,13 @@
+# Two identity-distinct Bailian reviewers. The Qwen3.8-Max trajectory producer
+# is excluded from the panel; this is AI-panel evidence, never human review.
+schema_version: "1.0"
+profile_set_id: taste-attribution-bailian-closed-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_bailian_qwen37max_taste_review_v1.yaml
+    sha256: 487d609a58d888f4044a1932c1123e311f3f0971b4be045c7512843ff0ca38a4
+    profile_sha256: 12bce1d4289ac1a229fce93759ff8d433a19d66730174950dc5a01ff2ebc840a
+  - path: profile_bailian_qwen3max_taste_review_v2.yaml
+    sha256: 4dff0f85ad26ae56214b19dd2e1536a6c60d5bcd7d1b1e0cb70f0089bbf1d986
+    profile_sha256: 2575e3d8a9413dd3633aa20858330aabecf9d012d1284803e8cb35b80255b4aa

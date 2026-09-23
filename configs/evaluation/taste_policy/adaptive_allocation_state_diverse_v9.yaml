@@ -1,0 +1,233 @@
+schema_version: '1.1'
+campaign_id: adaptive-allocation-state-diverse-v9
+project_id: scitaste-self-development
+purpose: >-
+  Learn outcome-blind state-conditional allocation from four early EXPERIMENT
+  and four middle REFINE decisions after removing terminal-score leakage.
+formal_evidence: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_benchmark_execution: false
+predecessor:
+  policy_id: scitaste-self-development-policy-v16
+  family_policy:
+    locator: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-v16-refresh/POLICY.json
+    sha256: 3d47b8b1f49083d4f7a5eaafab823d90c107673e460f8ea77259f2c2fe06f622
+  readiness:
+    locator: outputs/projects/scitaste-self-development/taste/policy/refreshes/scitaste-self-development-policy-v16-refresh/READINESS.json
+    sha256: 60a80c5c8e07aa932a05c40bfdfb27d592aaeb2fa9f098a8ac8f8eb9f0010647
+  decision_family: adaptive-allocation
+  training_episode_count: 10
+  training_source_group_count: 10
+  maximum_feature_support: 7.75
+  minimum_feature_support: 3.0
+frozen_execution:
+  program:
+    locator: configs/evaluation/programs/newtonbench_taste_development_v9.yaml
+    sha256: e874d9122f487a906e22321765f53706d7fc634b4b8dc71554d21c42b2b1ea75
+  limits:
+    locator: configs/evaluation/newtonbench/development_limits_v2.json
+    sha256: 020ce417d505afe313623262de863d5e5cbf2f5f4ec07481e5b87833d1ba9a4a
+  source_identity_registry:
+    locator: outputs/projects/scitaste-self-development/evaluations/source-identities/scitastebench-source-identities-v14/REGISTRY.json
+    sha256: 1f295e11bf235895d0d796edca78c3bedd083700532b376e2ee7c8b485282a09
+    registry_sha256: 1fafcd1b0ee9b17812dbf152f79eb2d4f53e9b3e4aaf2a9362bc5f8a414800ed
+  checkout:
+    locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/newtonbench-source-v1/checkout
+    repository_commit: 912a4ba5f4356ddd06acc16e44460ca30be4abc2
+  agent_and_symbolic_judge:
+    provider_id: alibaba-bailian
+    model_id: qwen3.8-max
+    backend:
+      locator: configs/model_nodes/bailian_qwen38max.newtonbench_development_v1.yaml
+      sha256: 89f5cce5950ecf74f2045b209e18f3ef313827edac978da59e06c4341ce64e9e
+    maximum_calls_per_task: 9
+    maximum_total_tokens_per_task: 120000
+    maximum_output_tokens_per_call: 32768
+    provider_retries: 0
+  tasks:
+  - task_id: gravity-easy-v0-seed-7701
+    locator: configs/evaluation/newtonbench/development_task_gravity_v9.json
+    sha256: 05044866695fe0487b6e00e0f10b729602b456610b8d04d478b442b50b8e6a8b
+    source_group_id: benchmark-task-f6d3e69e719a44b035f6e5c1ae1eada2c654195961d729bc1f2ad10efaf03a9a
+    run_id: 2026-09-23__bailian-qwen38max__newton-gravity-state-diverse-v9__seed-8701
+    protocol_id: newton-gravity-state-diverse-v9
+    agent_seed: 8701
+    judge_seed: 9701
+    taste_seed: 10701
+    episode_target_action: EXPERIMENT
+    episode_target_turn: 2
+  - task_id: coulomb-easy-v1-seed-7702
+    locator: configs/evaluation/newtonbench/development_task_coulomb_v9.json
+    sha256: f1befe34fa2949c66f6a5c3de23645dda417cf55cf5f16edfe1cd10321becefc
+    source_group_id: benchmark-task-a75abb9d4f7cf94571e126dc29c2e847ba5610015f1fcc73f2a0f34471f7ca64
+    run_id: 2026-09-23__bailian-qwen38max__newton-coulomb-state-diverse-v9__seed-8702
+    protocol_id: newton-coulomb-state-diverse-v9
+    agent_seed: 8702
+    judge_seed: 9702
+    taste_seed: 10702
+    episode_target_action: EXPERIMENT
+    episode_target_turn: 2
+  - task_id: sound-easy-v0-seed-7703
+    locator: configs/evaluation/newtonbench/development_task_sound_v9.json
+    sha256: 23e03130209f9e22741d55253255e71ffebb63ddb89c98f8daedfd9c906e58af
+    source_group_id: benchmark-task-fd88106e079a34cb8222dc26149b903fd0b511a2fd787c7f39d3a7db57d4f09e
+    run_id: 2026-09-23__bailian-qwen38max__newton-sound-state-diverse-v9__seed-8703
+    protocol_id: newton-sound-state-diverse-v9
+    agent_seed: 8703
+    judge_seed: 9703
+    taste_seed: 10703
+    episode_target_action: EXPERIMENT
+    episode_target_turn: 2
+  - task_id: radioactive-easy-v2-seed-7704
+    locator: configs/evaluation/newtonbench/development_task_radioactive_v9.json
+    sha256: bdbfa614c8d12b24a3ece8f2707833572d432fb4615d36b66c6317995352d522
+    source_group_id: benchmark-task-004d789ddd37f6a5f457777b8f8188a569bb7925a6c74a553300bc9cad894bf9
+    run_id: 2026-09-23__bailian-qwen38max__newton-radioactive-state-diverse-v9__seed-8704
+    protocol_id: newton-radioactive-state-diverse-v9
+    agent_seed: 8704
+    judge_seed: 9704
+    taste_seed: 10704
+    episode_target_action: EXPERIMENT
+    episode_target_turn: 2
+  - task_id: fourier-medium-v1-seed-7711
+    locator: configs/evaluation/newtonbench/development_task_fourier_v9.json
+    sha256: dd078bfc2ab6f02664f5292379dce2baf11e53eb8b101c60af9386469dfe712b
+    source_group_id: benchmark-task-bcb0433fce86d3e788e9b25848e1827a0380aeb1c2c3356510ad683648666da9
+    run_id: 2026-09-23__bailian-qwen38max__newton-fourier-state-diverse-v9__seed-8711
+    protocol_id: newton-fourier-state-diverse-v9
+    agent_seed: 8711
+    judge_seed: 9711
+    taste_seed: 10711
+    episode_target_action: REFINE
+    episode_target_turn: 4
+  - task_id: magnetic-medium-v2-seed-7712
+    locator: configs/evaluation/newtonbench/development_task_magnetic_v9.json
+    sha256: a701d8b340418a30155e89d4ecc1fb4ddd212992445ca15722b14ac9dc1d879e
+    source_group_id: benchmark-task-d348c647e9850b1b2d8297ac0fb3281e41b65585395c1fe709401251df4c0a80
+    run_id: 2026-09-23__bailian-qwen38max__newton-magnetic-state-diverse-v9__seed-8712
+    protocol_id: newton-magnetic-state-diverse-v9
+    agent_seed: 8712
+    judge_seed: 9712
+    taste_seed: 10712
+    episode_target_action: REFINE
+    episode_target_turn: 4
+  - task_id: hooke-medium-v1-seed-7713
+    locator: configs/evaluation/newtonbench/development_task_hooke_v9.json
+    sha256: b2a836beadc72dd989b732802561dbc65ee4b1ad7fc75bef0d8965f69669d874
+    source_group_id: benchmark-task-818ed61819a196ddacf6814114cd15d5133247c15369d8f611619c65d2736075
+    run_id: 2026-09-23__bailian-qwen38max__newton-hooke-state-diverse-v9__seed-8713
+    protocol_id: newton-hooke-state-diverse-v9
+    agent_seed: 8713
+    judge_seed: 9713
+    taste_seed: 10713
+    episode_target_action: REFINE
+    episode_target_turn: 4
+  - task_id: underdamped-medium-v0-seed-7714
+    locator: configs/evaluation/newtonbench/development_task_underdamped_v9.json
+    sha256: caf6f56421285b901c17a1aea9b1bc63f9f926239665f2bfd3d727f69c04ff12
+    source_group_id: benchmark-task-8ecf9b328bc22321b562b765ac407d44dfe70bd0420aa95a0ef40f4da42b268c
+    run_id: 2026-09-23__bailian-qwen38max__newton-underdamped-state-diverse-v9__seed-8714
+    protocol_id: newton-underdamped-state-diverse-v9
+    agent_seed: 8714
+    judge_seed: 9714
+    taste_seed: 10714
+    episode_target_action: REFINE
+    episode_target_turn: 4
+episode_sampling:
+  unit: one-candidate-per-benchmark-task-source-group
+  rule: preassigned-action-stratum-at-fixed-turn-or-first-approved-stop
+  rule_frozen_before_execution: true
+  terminal_stop_is_not_substituted_when_no-candidate-qualifies: true
+  failures_and_zero-score-trajectories_retained: true
+  no_selection_by_terminal_score_or-credit-direction: true
+review_and_admission:
+  attribution_primary_models:
+  - model_id: Qwen3.7-Max
+    runtime_model_id: qwen3.7-max-2026-06-08
+    execution_mode: live
+    backend:
+      locator: configs/model_nodes/bailian_qwen37max.taste_review_live_20260923.yaml
+      sha256: 4ddcc244d7319c52e4efd36ace12c55e4e200a514998c41f6827e10635c75775
+    profile_set:
+      locator: configs/model_nodes/runtime_profiles.taste_attribution_bailian_closed_v1.yaml
+      sha256: 463427cd2e0e6649e75c0357f66c9fbe64c6c2dde1f8c27b7d8f5633506abdfd
+    profile_id: bailian-qwen37max-taste-review
+  - model_id: Qwen3-Max
+    runtime_model_id: qwen3-max
+    execution_mode: live
+    backend:
+      locator: configs/model_nodes/bailian_qwen3max.taste_review_live_20260916.yaml
+      sha256: 84c6ac6b3a0cc3efa5a65109cc3ef6fc2970c35ff64035b18471f9e340a04d31
+    profile_set:
+      locator: configs/model_nodes/runtime_profiles.taste_attribution_bailian_closed_v1.yaml
+      sha256: 463427cd2e0e6649e75c0357f66c9fbe64c6c2dde1f8c27b7d8f5633506abdfd
+    profile_id: bailian-qwen3max-taste-review
+  family_primary_models: [Qwen3.7-Max, Qwen3-Max]
+  review_contract:
+    locator: configs/evaluation/programs/iclr2027_scitaste_ai_review_amendment_v1.yaml
+    sha256: 131e7885893710dff0271a690444e081c43b297915f770e4bf1e5e3f65030fa2
+  review_authority_package:
+    locator: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
+    sha256: 02d5c550522d2c830cbc9476bdc8ae903de60047af403fab8ddebc428884a2d7
+  required_family: adaptive-allocation
+  family_assignment_outcome_blind: true
+  non_adaptive_assignments_retained_but_excluded_from_adaptive_head: true
+  no_manual_family_override: true
+  maximum_review_generations_per_qualifying_task: 4
+  maximum_retries_per_generation: 0
+policy_refresh:
+  successor_policy_id: scitaste-self-development-policy-v17
+  update_mode: outcome-updated
+  minimum_feature_support: 3.0
+  allow_cross_domain: true
+  rationale_for_cross_domain: >-
+    H4 tests whether prospectively assigned state-conditioned allocation learned
+    on source-disjoint NewtonBench development trajectories transfers to MLRC;
+    target-domain behavior must still pass the frozen outcome-blind state probe.
+  require_schema_version: '1.5'
+  require_ai_review_only: true
+  require_at_least_two_supported_action_types: true
+  lowering_support_threshold_for_activation_forbidden: true
+activation_gate:
+  target_e2_manifest_id: mlrc-perception-native-pair-e2-v6
+  target_e2_manifest:
+    locator: configs/evaluation/prelaunch/mlrc_perception_native_pair_e2_v6.yaml
+    sha256: fb42dbe1f3fc5f04a5df4dcc107acd83bbc1147630ab0386326b61a947426786
+  target_domain: mlrc-bench
+  target_venue: ICLR 2027
+  state_probe_seed: 2301
+  state_probe_maximum_failed_experiments: 2
+  state_probe_maximum_experiments: 5
+  state_probe_research_direction: >-
+    Improve a frozen MLRC Perception benchmark task under identical
+    candidate-action and resource constraints.
+  required:
+  - adaptive-family-support-sufficient
+  - adaptive-head-h4-eligible
+  - evaluation-source-groups-disjoint
+  - outcome-blind-state-probe-treatment-active
+  - outcome-blind-state-probe-feedback-sensitive
+  formal_effect_claim_established: false
+resource_ceiling:
+  trajectory_count: 8
+  api_calls: 72
+  api_total_tokens: 960000
+  api_provider_retries: 0
+  local_review_generations: 0
+  local_review_gpu_hours: 0.0
+  live_review_generations: 32
+  live_review_total_tokens: 1000000
+  live_review_cost_usd: 40.0
+  task_gpu_hours: 0.0
+  maximum_new_disk_bytes: 3221225472
+  downloads_required: false
+stop_rules:
+- Complete all eight frozen task attempts before reviewing any candidate.
+- Retain zero-candidate, failed, and zero-score trajectories without replacement.
+- Reject submission through the prospectively assigned nonterminal target turn.
+- Select only the fixed action and turn assigned before execution; never harvest another turn.
+- Stop the affected generation on provider drift, malformed output, or any retry request.
+- Do not admit an episode without two independent runtime-bound attribution reviews over one frozen packet.
+- Do not route an episode into adaptive-allocation without two outcome-blind family reviews.
+- Do not launch E2 until the successor head passes the target-domain state probe.

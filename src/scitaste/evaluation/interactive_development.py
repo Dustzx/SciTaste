@@ -382,7 +382,21 @@ class DevelopmentTasteGuidanceProvider:
             target_domain=self.protocol.target_domain,
             target_venue=self.protocol.target_venue,
         )
-        actions, preferred_action_type = _development_bootstrap_actions(context)
+        target_turn = self.protocol.episode_target_turn
+        target_action = self.protocol.episode_target_action
+        preferred_override = (
+            target_action
+            if (
+                self.protocol.episode_sampling_rule == "preassigned-action-stratum-v1"
+                and target_action != "STOP"
+                and target_turn == context.turn
+            )
+            else None
+        )
+        actions, preferred_action_type = _development_bootstrap_actions(
+            context,
+            preferred_override=preferred_override,
+        )
         decision = self.controller.decide(
             state=state,
             candidate_actions=actions,
@@ -396,7 +410,6 @@ class DevelopmentTasteGuidanceProvider:
             if selected.type.value == "STOP"
             else selected.description
         )
-        target_turn = self.protocol.episode_target_turn
         if (
             self.protocol.episode_sampling_rule == "preassigned-action-stratum-v1"
             and self.protocol.episode_target_action != "STOP"
@@ -719,6 +732,14 @@ def finalize_interactive_development_episodes(
                 ),
                 score_trend=state.executor_context.get("score_trend", "unknown"),
                 best_vs_baseline=state.executor_context.get("best_vs_baseline", "unknown"),
+                evidence_status=state.executor_context.get("evidence_status", "unknown"),
+                evidence_confidence=state.executor_context.get(
+                    "evidence_confidence", "unknown"
+                ),
+                next_experiment_value=state.executor_context.get(
+                    "next_experiment_value", "unknown"
+                ),
+                trajectory_phase=state.executor_context.get("trajectory_phase", "unknown"),
             ),
             decision_principle=projection.completed_decision.rationale,
             why_preferred=(
@@ -1048,7 +1069,7 @@ def refine_interactive_development_candidate(
         if is_submission
         else (
             f"Compliant {model_action} produced observation {observation_sha256}. "
-            f"{successor_summary} {terminal_summary}"
+            f"{successor_summary}"
         )
     )
     credit_confounder_ids = (
@@ -1078,19 +1099,11 @@ def refine_interactive_development_candidate(
         )
         if is_submission
         else (
-            (
-                "Proposed benefit is limited to producing the retained observation and enabling "
-                "the documented successor update on a trajectory that passed the retained "
-                "objective scorer. It does not assign the shared terminal score to this turn or "
-                "claim that later decisions were caused by the controller alone."
-            )
-            if credit_direction is TasteCreditDirection.BENEFICIAL
-            else (
-                "Proposed harm is limited to spending this bounded allocation without a "
-                "terminally correct result. It does not claim that the action alone caused the "
-                "failure; independent review must decide whether the immediate observation and "
-                "successor update justify this opportunity-cost credit."
-            )
+            "Proposed benefit is limited to producing the retained observation and enabling "
+            "the documented successor update. The terminal score is deliberately excluded "
+            "from this turn-local orientation because later decisions and scientific "
+            "interpretation remain confounded; independent review may still reject the local "
+            "credit when the observation does not support the successor update."
         )
     )
     applicability_primary = (
@@ -1120,7 +1133,7 @@ def refine_interactive_development_candidate(
                     horizon=(
                         "stop adjudication, objective scoring, and conserved experiment budget"
                         if is_submission
-                        else ("immediate observation, successor belief update, and terminal score")
+                        else ("immediate observation and successor belief update")
                     ),
                     polarity=local_polarity,
                     evidence_ids=outcome_evidence_ids,
@@ -1156,14 +1169,7 @@ def refine_interactive_development_candidate(
                         else "the submitted hypothesis passes the retained objective scorer"
                     )
                     if is_submission
-                    else (
-                        "the successor update is unsupported by the immediate observation"
-                        if credit_direction is TasteCreditDirection.BENEFICIAL
-                        else (
-                            "the immediate observation supports a correct successor update and "
-                            "the retained trajectory passes objective scoring"
-                        )
-                    )
+                    else "the successor update is unsupported by the immediate observation"
                 ),
                 (
                     "another experiment has material expected information value under the "
@@ -1339,7 +1345,7 @@ def _scientific_credit_orientation(
         and receipt.objective_score is not None
         and receipt.objective_score.primary_value > 0
     )
-    if is_submission or not objective_supported:
+    if is_submission:
         return (
             (TasteOutcomePolarity.SUPPORTS, TasteCreditDirection.BENEFICIAL)
             if objective_supported
@@ -1369,6 +1375,7 @@ def _interactive_state(
     target_domain: str,
     target_venue: str,
 ) -> ResearchState:
+    evidence_context = _interactive_evidence_context(context)
     return ResearchState(
         revision=context.turn - 1,
         project_id=context.project_id,
@@ -1397,6 +1404,7 @@ def _interactive_state(
             "best_vs_baseline": "unknown",
             "interactive_turn": context.turn,
             "interactive_history_sha256": content_sha256(context.history),
+            **evidence_context,
         },
     )
 
@@ -1409,6 +1417,58 @@ def _remaining_experiment_bucket(value: int) -> Literal["zero", "one", "two-to-t
     if value <= 3:
         return "two-to-three"
     return "four-plus"
+
+
+def _interactive_evidence_context(context: InteractiveResearchContext) -> dict[str, str]:
+    """Project only the previous model-visible belief report into the next lock."""
+
+    phase = (
+        "early"
+        if context.turn <= 2
+        else ("late" if context.remaining_turns <= 2 else "middle")
+    )
+    defaults = {
+        "evidence_status": "unassessed",
+        "evidence_confidence": "low",
+        "next_experiment_value": "high",
+        "trajectory_phase": phase,
+    }
+    if not context.history:
+        return defaults
+    action = context.history[-1].get("model_action")
+    if not isinstance(action, dict):
+        return defaults
+    allowed_statuses = {
+        "unassessed",
+        "no-candidate",
+        "candidate-untested",
+        "candidate-supported",
+        "candidate-conflicted",
+    }
+    status = action.get("evidence_status")
+    return {
+        "evidence_status": str(status) if status in allowed_statuses else "unassessed",
+        "evidence_confidence": _unit_interval_bucket(
+            action.get("evidence_confidence"), default="low"
+        ),
+        "next_experiment_value": _unit_interval_bucket(
+            action.get("next_experiment_value"), default="high"
+        ),
+        "trajectory_phase": phase,
+    }
+
+
+def _unit_interval_bucket(value: object, *, default: str) -> str:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return default
+    numeric = float(value)
+    if not 0.0 <= numeric <= 1.0:
+        return default
+    if numeric < 1.0 / 3.0:
+        return "low"
+    if numeric < 2.0 / 3.0:
+        return "medium"
+    return "high"
 
 
 def _lock_turn(lock: TasteProspectiveDecisionLockReceipt) -> int:
@@ -1452,7 +1512,10 @@ def _outcome_summary(receipt: InteractiveResearchRunReceipt) -> str:
 def _development_bootstrap_actions(
     context: InteractiveResearchContext,
     *,
-    preferred_override: Literal["STOP"] | None = None,
+    preferred_override: Literal[
+        "PROBE", "PILOT", "EXPERIMENT", "ANALYZE", "REFINE", "PIVOT", "STOP"
+    ]
+    | None = None,
 ) -> tuple[tuple[ResearchAction, ...], str]:
     """Give pre-fit development decisions semantic rather than random tie-breaking."""
 

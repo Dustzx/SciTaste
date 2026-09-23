@@ -1,0 +1,10 @@
+{
+  "module": "m6_underdamped_harmonic",
+  "difficulty": "medium",
+  "system": "simple_system",
+  "law_version": "v0",
+  "noise_level": 0,
+  "environment_seed": 7514,
+  "score_seed": 7514,
+  "code_assisted": false
+}

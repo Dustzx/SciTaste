@@ -932,6 +932,12 @@ class LifecycleTastePolicyConfig(BaseModel):
     application_rule: Literal["credible-margin", "posterior-probability"] = (
         "credible-margin"
     )
+    feature_precedence: Literal[
+        "all-matched-weighted-v1", "rich-decision-context-first-v2"
+    ] = Field(
+        default="all-matched-weighted-v1",
+        exclude_if=lambda value: value == "all-matched-weighted-v1",
+    )
     maximum_absolute_adjustment: float = Field(default=1.0, gt=0.0, le=10.0)
     require_stage_support: bool = True
     allow_cross_domain: bool = False
@@ -1613,33 +1619,47 @@ def assess_lifecycle_taste_policy(
     raw: list[tuple[ResearchAction, float, float, float, tuple[str, ...], bool]] = []
     for action in actions:
         candidates = _state_action_features(state, action)
-        matched = tuple(
-            feature
-            for feature, _ in candidates
-            if feature in posterior and posterior[feature].support > 0
-        )
-        weighted = [
-            (posterior[feature], _feature_weight(kind), kind)
+        supported = [
+            (feature, posterior[feature], _feature_weight(kind), kind)
             for feature, kind in candidates
             if feature in posterior and posterior[feature].support > 0
         ]
+        selected = supported
+        if model.config.feature_precedence == "rich-decision-context-first-v2":
+            # The richer fields are deterministic abstractions of the same
+            # trajectory history represented by the coarse counters.  Prefer
+            # them as one conditional scope instead of averaging them with
+            # global and duplicated coarse priors.  Fall back monotonically
+            # when a policy has no support at the more specific scope.
+            evidence = [
+                item for item in supported if _is_evidence_decision_state_feature(item[0])
+            ]
+            rich = [item for item in supported if _is_rich_decision_state_feature(item[0])]
+            decision_state = [item for item in supported if item[3] == "decision-state-action"]
+            selected = evidence or rich or decision_state or supported
+        matched = tuple(feature for feature, _, _, _ in selected)
+        weighted = [(item, weight, kind) for _, item, weight, kind in selected]
         total_weight = sum(weight for _, weight, _ in weighted)
         if total_weight:
             score = sum(item.log_odds * weight for item, weight, _ in weighted) / total_weight
             # Features from one episode are correlated. Treat them as fully
             # correlated for uncertainty instead of manufacturing sample size.
             variance = max(item.log_odds_variance for item, _, _ in weighted)
-            stage_action = tuple(item for item, _, kind in weighted if kind == "stage-action")
-            support = max(
-                item.support for item in stage_action or tuple(item for item, _, _ in weighted)
-            )
+            if model.config.feature_precedence == "all-matched-weighted-v1":
+                stage_action = tuple(
+                    item for item, _, kind in weighted if kind == "stage-action"
+                )
+                support = max(
+                    item.support
+                    for item in stage_action or tuple(item for item, _, _ in weighted)
+                )
+            else:
+                support = max(item.support for item, _, _ in weighted)
         else:
             score = 0.0
             variance = float("inf")
             support = 0.0
-        stage_supported = any(
-            kind == "stage-action" and feature in posterior for feature, kind in candidates
-        )
+        stage_supported = any(kind == "stage-action" for _, _, _, kind in supported)
         raw.append((action, score, variance, support, matched, stage_supported))
 
     reason_codes: list[str] = []
@@ -2223,6 +2243,25 @@ def _parse_decision_state_action_feature(
     if not name or not value:
         return None
     return name, value, action
+
+
+def _is_rich_decision_state_feature(feature: str) -> bool:
+    parsed = _parse_decision_state_action_feature(feature)
+    return parsed is not None and parsed[0] in {
+        "evidence-confidence",
+        "evidence-status",
+        "next-experiment-value",
+        "trajectory-phase",
+    }
+
+
+def _is_evidence_decision_state_feature(feature: str) -> bool:
+    parsed = _parse_decision_state_action_feature(feature)
+    return parsed is not None and parsed[0] in {
+        "evidence-confidence",
+        "evidence-status",
+        "next-experiment-value",
+    }
 
 
 def _posterior(

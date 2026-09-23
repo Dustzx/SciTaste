@@ -187,9 +187,9 @@ class ActivationPredecessor(BaseModel):
     family_policy: ActivationFileBinding
     readiness: ActivationFileBinding
     decision_family: Literal["adaptive-allocation"]
-    training_episode_count: Literal[0]
-    training_source_group_count: Literal[0]
-    maximum_feature_support: Literal[0.0]
+    training_episode_count: int = Field(ge=0)
+    training_source_group_count: int = Field(ge=0)
+    maximum_feature_support: float = Field(ge=0.0, allow_inf_nan=False)
     minimum_feature_support: float = Field(gt=0)
 
 
@@ -401,7 +401,10 @@ class AdaptivePolicyActivationManifest(BaseModel):
                 for count in Counter(target_actions).values()
             )
             or any(
-                (item.episode_target_action == "EXPERIMENT" and item.episode_target_turn != 3)
+                (
+                    item.episode_target_action == "EXPERIMENT"
+                    and item.episode_target_turn not in {2, 3}
+                )
                 or (
                     item.episode_target_action == "REFINE"
                     and (item.episode_target_turn is None or item.episode_target_turn < 4)
@@ -2429,7 +2432,7 @@ def _predecessor_matches(
         and head.config.minimum_feature_support == predecessor.minimum_feature_support
         and max((item.support for item in head.feature_posteriors), default=0.0)
         == predecessor.maximum_feature_support
-        and not readiness.policy_application_ready
+        and not readiness.scientific_effectiveness_established
     )
 
 
