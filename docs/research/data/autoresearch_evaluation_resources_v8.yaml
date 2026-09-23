@@ -1,83 +1,119 @@
 schema_version: "2.5"
-corpus_id: accepted-autoresearch-evaluation-resources-2026-09-12-v8
-audited_on: 2026-09-12
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-23-v8
+audited_on: 2026-09-23
 authorization_scope: metadata-only-no-execution
 base_source: autoresearch_evaluation_resources_v7.yaml
 base_source_sha256: d1c6c741992064e4587c5223183508ca9ea05ad8ecabbb6b14d1e122733d77b9
 
-resource_overrides:
-  - resource_id: agent-laboratory
-    gates:
-      model_mapping:
-        status: verified
-        evidence: >-
-          The pinned entrypoint documents and defaults the main and literature
-          phases to o3-mini, and OpenAI currently resolves that alias to
-          o3-mini-2025-01-31. Credential availability is a separate prelaunch
-          resource gate.
-        evidence_url: https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
-    notes_append:
-      - Best-native o3-mini mapping is distinct from the rejected matched DeepSeek V4.1 translation.
-      - The registered o3-mini snapshot is scheduled for retirement on 2026-10-23 and must be rechecked before launch.
-
-  - resource_id: tiny-scientist
+resources_additions:
+  - resource_id: mlrc-perception-development
+    resource_kind: benchmark
+    official_repository: https://github.com/yunx-z/MLRC-Bench
+    repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+    implementation_path: MLAgentBench/benchmarks_base/perception_temporal_action_loc
+    publication_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
     code_license:
       identifier: MIT
       scope: >-
-        Source covered by the root LICENSE at pinned commit
-        9c4f1a89411e05857c748db9731c33500516e9c6; dependencies, generated
-        code, datasets, templates, and third-party assets retain separate terms.
-      official_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/LICENSE
-      sha256: 389d00652aaea7a870e1128c95df7171580f347856b3993f8a0890f1a1cf09ae
+        MLRC-Bench root code at the pinned commit. Perception Test non-software
+        materials remain CC-BY-4.0 and are admitted only for local academic use.
+      official_url: https://raw.githubusercontent.com/yunx-z/MLRC-Bench/0d26417034811d2d4587646c4520cc305ea09dd6/LICENSE
+      sha256: 002c2696d92b5c8cf956c11072baa58eaf9f6ade995c031ea635c6a1ee342ad1
       review_required: true
       obligations:
-        - Preserve the root MIT copyright and permission notice.
-        - Retain the conflicting Apache package-metadata declaration as a disclosed upstream defect.
-        - Review dependencies, generated code, datasets, templates, and third-party assets separately.
-        - Do not redistribute a built package before the metadata conflict is reviewed.
+        - Preserve the MLRC-Bench MIT notice for covered code.
+        - Attribute and cite Perception Test under CC-BY-4.0.
+        - Do not redistribute task data through the SciTaste artifact.
+    datasets:
+      - dataset_id: perception-test-materials
+        official_url: https://github.com/google-deepmind/perception_test
+        revision: 3938d2f1ba3a6b502025741cea4cd73c7b3bdfaf
+        license_identifier: CC-BY-4.0
+        reported_size: exact nine-archive MLRC task package is receipt-bound locally
+        local_copy_present: false
+    lifecycle_stages:
+      - repository-level-implementation
+      - development-execution
+      - objective-scoring
+    native_model_interfaces:
+      - benchmark-defined repository-editing agent
+      - random-initialized LocPointTransformer task training
+      - frozen development mean-average-precision scorer
+    resource_requirements:
+      - one RTX 3090-class GPU for sequential development execution
+      - Python 3.12 isolated runtime
+      - provider credentials for the separately declared research agent
     gates:
+      official_identity:
+        status: verified
+        evidence: >-
+          The accepted MLRC-Bench paper and pinned official repository identify
+          Temporal Action Localisation as one of the benchmark tasks.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+      repository_pin:
+        status: verified
+        evidence: >-
+          Runtime receipt v3 binds the task source to MLRC-Bench commit
+          0d26417034811d2d4587646c4520cc305ea09dd6.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/runtime-views/mlrc-perception-temporal-action-loc-v3/RUNTIME_RECEIPT.json
+      publication_identity:
+        status: verified
+        evidence: NeurIPS proceedings record MLRC-Bench as an accepted 2025 benchmark paper.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
       code_license:
         status: verified
         evidence: >-
-          The pinned root LICENSE contains an explicit MIT grant and is bound by
-          SHA-256. The conflicting pyproject declaration is a packaging-metadata
-          defect and redistribution-review condition, not evidence that the root
-          source lacks a license.
-        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/LICENSE
-      license_acceptance:
+          Exact root MIT bytes are recorded while the task-specific material
+          license is separately preserved rather than treated as MIT code.
+        evidence_url: https://raw.githubusercontent.com/yunx-z/MLRC-Bench/0d26417034811d2d4587646c4520cc305ea09dd6/LICENSE
+      dataset_pin:
         status: verified
         evidence: >-
-          Non-redistributive academic evaluation of the MIT-covered root source
-          is admitted with notice preservation; all non-root materials retain
-          separate terms and built-package redistribution remains out of scope.
-      model_mapping:
+          Acquisition receipt SHA-256 823dc40826223ae5b0e02cb8807e4a15e30a223c3dcdac4f5a5a6962918aed2e
+          binds every downloaded archive byte and source object.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/RECEIPT.json
+      dataset_license:
         status: verified
         evidence: >-
-          The pinned registry accepts gpt-4o-2024-08-06 and the constructor
-          propagates one model setting across every model-bearing module.
-          Credential availability is a separate prelaunch resource gate; this
-          does not make the rejected DeepSeek matched mapping valid.
-        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/utils/llm.py
-      sandbox:
-        status: blocked
-        evidence: >-
-          Aider, live search, generated-code execution, Docker-to-host fallback,
-          and optional package installation have not passed the SciTaste
-          isolation boundary.
-        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/coder.py
-      failure_resume:
-        status: blocked
-        evidence: >-
-          Failed run directories may be removed and no exact-cell,
-          content-addressed resume contract has been accepted.
-        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/coder.py
-      disclosure_acceptance:
+          License policy SHA-256 d88c818ceacae51ac51a5db2266a10a8224a973dcb7cd596094ed1c09a93a27d
+          admits the Perception materials for local non-commercial academic use
+          under CC-BY-4.0 with attribution and no redistribution.
+        evidence_url: configs/evaluation/acquisition/mlrc_first_preflight_license_policy_v1.yaml
+      source_groups:
         status: verified
         evidence: >-
-          A comparison must preserve the MIT notice, disclose the package
-          metadata conflict and model confounding, and exclude third-party asset
-          redistribution; these obligations are now explicit.
-    notes_append:
-      - Root MIT source use is separated from built-package redistribution and third-party material licenses.
-      - Static inspection confirms one propagated model setting, but not a currently authenticated best-native provider identity.
-      - No checkout, installation, provider call, dataset access, Docker action, or experiment occurred.
+          The task is frozen as source group perception-test-challenge-2024 and
+          is disjoint from the SciTaste policy-training source groups.
+        evidence_url: docs/research/data/mlrc_first_preflight_asset_inventory_v1.yaml
+      selected_task_manifest:
+        status: verified
+        evidence: >-
+          Acquisition request SHA-256 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+          freezes the exact task assets and bounded local-use policy.
+        evidence_url: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+      task_assets:
+        status: verified
+        evidence: >-
+          Materialization receipt SHA-256 d2421ffde7c71c91f7083db256942d21f894e8489b3c201bda72ca8d3537063d
+          verifies nine archives, their expanded content, and split isolation.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/materializations/mlrc-perception-temporal-action-loc-materialization-v1/RECEIPT.json
+      upstream_licenses:
+        status: verified
+        evidence: >-
+          The task-specific policy retains MLRC code terms and the upstream
+          Perception Test CC-BY-4.0 attribution boundary; it grants no data release.
+        evidence_url: configs/evaluation/acquisition/mlrc_first_preflight_license_policy_v1.yaml
+      executable_signal:
+        status: verified
+        evidence: >-
+          Runtime receipt v3 binds the isolated views and scorer; the upstream
+          development baseline completed with return code 0 and score
+          0.23391874405697224; scorer parity is verified to 1e-15.
+        evidence_url: outputs/projects/scitaste-self-development/evaluations/mlrc-perception-upstream-baseline-development-v1/RESULT.json
+    notes:
+      - This resource admits only the Perception development task, not the other six MLRC tasks.
+      - Hidden labels remain scorer-only and are not authorized by this development resource.
+      - Output artifacts may publish aggregate metrics and hashes, never task dataset bytes.
+
+resource_overrides: []

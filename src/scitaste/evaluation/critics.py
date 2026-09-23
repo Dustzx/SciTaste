@@ -202,10 +202,19 @@ class EvaluationCriticSuite:
                     problems.append(f"{lane.lane_id}:missing_scitaste")
                 lane_claim = claim if claim is not None and claim.lane_id == lane.lane_id else None
                 if lane_claim is None:
-                    if counts[SystemRole.CONTROL] < 1:
-                        problems.append(f"{lane.lane_id}:missing_direct_control")
-                    if counts[SystemRole.METHOD_COMPARATOR] < 2:
-                        problems.append(f"{lane.lane_id}:fewer_than_two_method_comparators")
+                    canonical_internal_pair = {
+                        item.system_id for item in selected
+                    } == {
+                        "full-scitaste-learned-policy",
+                        "native-base-without-learned-taste",
+                    } and any(item.role is SystemRole.ABLATION for item in selected)
+                    if not canonical_internal_pair:
+                        if counts[SystemRole.CONTROL] < 1:
+                            problems.append(f"{lane.lane_id}:missing_direct_control")
+                        if counts[SystemRole.METHOD_COMPARATOR] < 2:
+                            problems.append(
+                                f"{lane.lane_id}:fewer_than_two_method_comparators"
+                            )
                 elif lane_claim.estimand_kind in {
                     ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
                     ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
