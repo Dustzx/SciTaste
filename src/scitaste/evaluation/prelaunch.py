@@ -322,7 +322,10 @@ class GpuModelResource(BaseModel):
     model_config = _CONFIG
 
     host_alias: str = Field(pattern=_ID)
+    # ``device_count`` describes the verified host inventory.  It is not the
+    # number of devices granted to each evaluation cell.
     device_count: int = Field(gt=0, le=64)
+    allocated_device_count_per_cell: int | None = Field(default=None, gt=0, le=64)
     device_name: str = Field(min_length=1, max_length=200)
     minimum_memory_mb_per_device: int = Field(gt=0)
     workload_kind: GpuWorkloadKind | None = None
@@ -346,6 +349,11 @@ class GpuModelResource(BaseModel):
 
     @model_validator(mode="after")
     def verified_remote_resources_are_content_bound(self) -> GpuModelResource:
+        if (
+            self.allocated_device_count_per_cell is not None
+            and self.allocated_device_count_per_cell > self.device_count
+        ):
+            raise ValueError("per-cell GPU allocation cannot exceed host inventory")
         workload_kind = self.workload_kind or GpuWorkloadKind.CHECKPOINT_MODEL
         checkpoint_identity = (
             self.checkpoint_id,
@@ -396,10 +404,17 @@ class GpuModelResource(BaseModel):
                 raise ValueError("verified remote checkpoint requires content-bound attestation")
         return self
 
+    @property
+    def effective_allocated_device_count_per_cell(self) -> int:
+        """Return the launcher allocation, preserving legacy manifest semantics."""
+
+        return self.allocated_device_count_per_cell or self.device_count
+
     @model_serializer(mode="wrap")
     def omit_absent_workload_fields(self, handler):  # type: ignore[no-untyped-def]
         payload = handler(self)
         for key in (
+            "allocated_device_count_per_cell",
             "workload_kind",
             "initialization_contract_ref",
             "initialization_contract_sha256",

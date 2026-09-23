@@ -113,3 +113,32 @@ def test_verified_remote_resource_requires_inventory_and_checkpoint_evidence() -
     )
     with pytest.raises(ValidationError, match="checkpoint requires content-bound attestation"):
         GpuModelResource.model_validate(payload)
+
+
+def test_gpu_cell_allocation_is_distinct_from_host_inventory() -> None:
+    payload = {
+        "host_alias": "3090-2",
+        "device_count": 8,
+        "allocated_device_count_per_cell": 1,
+        "device_name": "NVIDIA GeForce RTX 3090",
+        "minimum_memory_mb_per_device": 24_000,
+        "checkpoint_id": "qwen3-vl-2b-instruct",
+        "checkpoint_source_path": "/weights/Qwen3-VL-2B-Instruct",
+        "checkpoint_sha256": CHECKPOINT_SHA256,
+        "checkpoint_bytes": 4_266_653_057,
+        "license_identifier": "Apache-2.0",
+        "local_preflight_status": ReadinessStatus.VERIFIED,
+        "remote_inventory_status": ReadinessStatus.PENDING,
+        "remote_checkpoint_status": ReadinessStatus.PENDING,
+        "max_gpu_hours": 1,
+        "max_storage_bytes": 10_000_000_000,
+        "network_access": False,
+    }
+
+    resource = GpuModelResource.model_validate(payload)
+    assert resource.device_count == 8
+    assert resource.effective_allocated_device_count_per_cell == 1
+
+    payload["allocated_device_count_per_cell"] = 9
+    with pytest.raises(ValidationError, match="cannot exceed host inventory"):
+        GpuModelResource.model_validate(payload)

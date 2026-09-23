@@ -566,7 +566,9 @@ def derive_h4_formal_preparation_request(
         elif lane.gpu_resource is None:
             raise ValueError("H4 GPU lane lacks its registered device resource")
         else:
-            gpu_counts.add(lane.gpu_resource.device_count)
+            gpu_counts.add(
+                lane.gpu_resource.effective_allocated_device_count_per_cell
+            )
     if len(gpu_counts) != 1:
         raise ValueError("H4 request compiler cannot mix launcher GPU counts")
     gpu_count = next(iter(gpu_counts))
@@ -1016,7 +1018,9 @@ def _verify_h4_launcher_runtime(
         else:
             if lane.gpu_resource is None:
                 raise ValueError("H4 GPU lane lacks its frozen resource")
-            gpu_counts.add(lane.gpu_resource.device_count)
+            gpu_counts.add(
+                lane.gpu_resource.effective_allocated_device_count_per_cell
+            )
     if len(gpu_counts) != 1:
         raise ValueError("one H4 campaign cannot mix incompatible GPU launcher counts")
     expected_gpu_count = next(iter(gpu_counts))

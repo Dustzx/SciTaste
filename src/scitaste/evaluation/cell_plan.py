@@ -60,6 +60,7 @@ class EvaluationCellResource(BaseModel):
     max_total_tokens: int | None = Field(default=None, gt=0)
     max_cost: float | None = Field(default=None, gt=0)
     host_alias: str | None = None
+    allocated_device_count_per_cell: int | None = Field(default=None, gt=0, le=64)
     gpu_workload_kind: GpuWorkloadKind | None = None
     checkpoint_id: str | None = None
     checkpoint_sha256: str | None = Field(default=None, pattern=_SHA256)
@@ -102,6 +103,7 @@ class EvaluationCellResource(BaseModel):
             value is not None
             for value in (
                 *gpu_base_values,
+                self.allocated_device_count_per_cell,
                 self.gpu_workload_kind,
                 self.checkpoint_id,
                 self.checkpoint_sha256,
@@ -121,7 +123,11 @@ class EvaluationCellResource(BaseModel):
     @model_serializer(mode="wrap")
     def omit_absent_gpu_workload_fields(self, handler):  # type: ignore[no-untyped-def]
         payload = handler(self)
-        for key in ("gpu_workload_kind", "initialization_contract_sha256"):
+        for key in (
+            "allocated_device_count_per_cell",
+            "gpu_workload_kind",
+            "initialization_contract_sha256",
+        ):
             if payload.get(key) is None:
                 payload.pop(key, None)
         return payload
@@ -518,6 +524,9 @@ def _resource_for(
         max_total_tokens=None if model is None else model.max_total_tokens,
         max_cost=None if model is None else model.max_cost,
         host_alias=lane.gpu_resource.host_alias,
+        allocated_device_count_per_cell=(
+            lane.gpu_resource.allocated_device_count_per_cell
+        ),
         gpu_workload_kind=lane.gpu_resource.workload_kind,
         checkpoint_id=lane.gpu_resource.checkpoint_id,
         checkpoint_sha256=lane.gpu_resource.checkpoint_sha256,
