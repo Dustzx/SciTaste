@@ -1599,8 +1599,7 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
             or venue_control.get("comparison_unit")
             != "claim-argument-and-evidence-portfolio-not-result-table-count"
             or venue_control.get("minimum_recent_same_venue_neighbours") != 2
-            or venue_control.get("pass_band")
-            != "declared-evidence-program-review-comparable"
+            or venue_control.get("pass_band") != "declared-evidence-program-review-comparable"
             or venue_control.get("failure_route") != "experiment-plan-frozen"
             or venue_control.get("acceptance_probability_prediction_allowed") is not False
             or venue_control.get("oral_probability_prediction_allowed") is not False
@@ -1611,14 +1610,8 @@ def _validate_capability_driven_v4(program_payload: Mapping[str, object]) -> Non
         raw_states = lifecycle.get("states") if isinstance(lifecycle, dict) else None
         if not isinstance(raw_states, list):
             raise ValueError("program v10 lacks the complete lifecycle state list")
-        states = {
-            item.get("state_id"): item
-            for item in raw_states
-            if isinstance(item, dict)
-        }
-        evidence_artifacts = states.get("evidence-admission", {}).get(
-            "required_artifacts", []
-        )
+        states = {item.get("state_id"): item for item in raw_states if isinstance(item, dict)}
+        evidence_artifacts = states.get("evidence-admission", {}).get("required_artifacts", [])
         if "venue-competitiveness-assessment" not in evidence_artifacts:
             raise ValueError(
                 "program v10 must gate paper assembly on a venue competitiveness assessment"

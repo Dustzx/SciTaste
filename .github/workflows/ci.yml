@@ -52,6 +52,8 @@ jobs:
         run: python -m ruff format --check .
       - name: Lint
         run: python -m ruff check .
+      - name: Check fresh integrated research workspace
+        run: python workspace/scripts/check_workspace.py
       - name: Run test suite with coverage
         id: tests
         continue-on-error: true

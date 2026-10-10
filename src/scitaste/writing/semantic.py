@@ -32,7 +32,7 @@ class EvidencePaperDraftNode(ModelNode[EvidencePaperDraftInput, EvidencePaperDra
     """Draft full paper content while retaining closed claim/evidence authority."""
 
     node_name = EVIDENCE_PAPER_DRAFT_NODE
-    prompt_version = "evidence-paper-draft-v1"
+    prompt_version = "evidence-paper-draft-v2"
     system_instruction = (
         "Draft a complete venue-oriented research paper only from the supplied claims, evidence, "
         "citations, and limitations. Return the required sections in their declared order and "
@@ -44,9 +44,23 @@ class EvidencePaperDraftNode(ModelNode[EvidencePaperDraftInput, EvidencePaperDra
         "internal identifiers into reader-facing text. "
         "This is a proposal only: do not mutate manuscript files, execute experiments, call "
         "tools, claim venue acceptance, or imply independent review."
+        " Copy expected_input_fingerprint exactly into input_fingerprint. "
+        "Only paragraphs with role limitation may carry limitation_ids; other paragraphs "
+        "may discuss caveats in prose but must keep limitation_ids empty."
     )
     input_model = EvidencePaperDraftInput
     output_model = EvidencePaperDraftProposal
+
+    def _build_request(self, input_data, **kwargs):
+        request = super()._build_request(input_data, **kwargs)
+        return request.model_copy(
+            update={
+                "input_payload": {
+                    **request.input_payload,
+                    "expected_input_fingerprint": input_data.fingerprint,
+                }
+            }
+        )
 
     def _proposal_rejections(
         self,
@@ -430,7 +444,15 @@ class WritingTasteNode(ModelNode[WritingTasteSemanticInput, WritingTasteReviewPr
         "calibration, and material limitations outrank persuasion: never hide counterevidence, "
         "omit a registered material limitation, expand a claim, invent evidence, or treat "
         "selective reporting as stronger writing. Prefer a direct evidence-centered story over "
-        "a project log. When a content-bound venue_taste_context is supplied, use only its "
+        "a project log. Evaluate each paragraph's information level: raw run detail, verified "
+        "finding, scientific claim, or reader-facing carrier. Recommend moving exact task IDs, "
+        "commit hashes, receipts, and implementation chronology out of the main narrative "
+        "unless the detail changes the scientific interpretation; retain them in the project "
+        "record or reproducibility appendix. Do not move uncertainty, adverse results, or "
+        "material limitations merely to make the paper appear stronger. If the headline "
+        "claim lacks a completed supporting carrier, request evidence or narrow the claim; "
+        "do not polish a planned table into a result. When a content-bound "
+        "venue_taste_context is supplied, use only its "
         "applicable principles and archetype duties for venue-specific advice. Treat candidate "
         "principles as hypotheses, never as acceptance rules or numeric figure, table, experiment, "
         "or ablation quotas. Do not infer omitted archetype guidance. Return advisory data only; "

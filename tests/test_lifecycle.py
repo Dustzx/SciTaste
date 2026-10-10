@@ -5,7 +5,16 @@ import json
 from pathlib import Path
 
 from scitaste.lifecycle import assess_project_lifecycle
-from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.project import (
+    IdeaRevisionEvidenceInput,
+    PaperManifest,
+    ProjectIdeaRevisionArtifact,
+    ProjectIdeaRevisionEntry,
+    ProjectManifest,
+    ProjectRun,
+    ProjectRuntime,
+    register_project_idea_revision,
+)
 from scitaste.project.models import content_sha256
 from scitaste.writing.venue import VenueSubmissionAssessment
 
@@ -143,7 +152,7 @@ def test_lifecycle_requires_verified_native_stages_and_review_closure(tmp_path: 
         directory_name="paper-v1",
         expected_revision=snapshot.revision,
     )
-    runtime.select_paper(
+    snapshot = runtime.select_paper(
         "lifecycle-project",
         "paper-v1",
         expected_revision=snapshot.revision,
@@ -166,8 +175,157 @@ def test_lifecycle_requires_verified_native_stages_and_review_closure(tmp_path: 
     assert lifecycle.gates[5].reason_code == "no-review-round"
     assert lifecycle.official_decision_authority is False
 
+    snapshot = runtime.begin_run(
+        "lifecycle-project",
+        ProjectRun(
+            run_id="paper-revision-run",
+            provider="scitaste-native",
+            model="deterministic-writer",
+            condition="review-revision",
+            seed=0,
+            status="complete",
+            evidence_scope="test-only",
+            stage_path="paper_revision",
+        ),
+        expected_revision=snapshot.revision,
+    )
+    revision_root = runtime.projects_root / "lifecycle-project/papers/paper-v2"
+    revision_root.mkdir(parents=True)
+    revised_markdown = markdown + "\nReviewer-bounded revision.\n"
+    (revision_root / "main.md").write_text(revised_markdown, encoding="utf-8")
+    revised_assessment = _submission_assessment(revised_markdown)
+    (revision_root / "SUBMISSION_ASSESSMENT.json").write_text(
+        revised_assessment.model_dump_json(indent=2) + "\n", encoding="utf-8"
+    )
+    snapshot = runtime.register_paper(
+        "lifecycle-project",
+        PaperManifest(
+            paper_id="paper-v2",
+            project_id="lifecycle-project",
+            title="Scientific Taste for Autonomous Research",
+            date="2026-09-12",
+            provider="scitaste-native",
+            model="deterministic-writer",
+            condition="review-revision",
+            task="held-out-task",
+            seed=0,
+            stage=19,
+            status="venue-submission-draft",
+            evidence_scope="test-only",
+            source_run="paper-revision-run",
+            files={
+                "source-markdown": "main.md",
+                "submission-assessment": "SUBMISSION_ASSESSMENT.json",
+            },
+            venue_id="iclr-2027",
+            eligible_for_submission=True,
+            submission_assessment_sha256=revised_assessment.record_sha256,
+            paper_revision_source_paper_directory="paper-v1",
+        ),
+        directory_name="paper-v2",
+        expected_revision=snapshot.revision,
+    )
+    runtime.select_paper(
+        "lifecycle-project",
+        "paper-v2",
+        expected_revision=snapshot.revision,
+        global_latest=False,
+    )
+
+    revised = assess_project_lifecycle(runtime, "lifecycle-project")
+    assert revised.current_paper_directory == "paper-v2"
+    assert revised.gates[2].state == "satisfied"
+    assert revised.idea_to_paper_complete is True
+
     (run_root / "stages/evidence/evidence_summary.json").write_text("tampered\n", encoding="utf-8")
     drifted = assess_project_lifecycle(runtime, "lifecycle-project")
     assert drifted.idea_to_paper_complete is False
     assert drifted.gates[1].reason_code == "native-evidence-unverified"
     assert drifted.gates[2].reason_code == "paper-source-run-lacks-complete-native-lineage"
+
+
+def test_lifecycle_accepts_verified_project_idea_revision_without_discovery_rerun(
+    tmp_path: Path,
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(
+        ProjectManifest(
+            project_id="idea-ledger-project",
+            title="Idea ledger project",
+            research_direction="Use the formal Idea ledger as lifecycle evidence.",
+            status="active",
+        )
+    )
+    snapshot = runtime.begin_run(
+        "idea-ledger-project",
+        ProjectRun(
+            run_id="idea-revision-run",
+            provider="scitaste-native",
+            model="deterministic-controller",
+            condition="idea-refinement",
+            seed=0,
+            status="complete",
+            evidence_scope="test-only",
+            stage_path="idea_refinement",
+        ),
+        expected_revision=snapshot.revision,
+    )
+    project_root = runtime.projects_root / "idea-ledger-project"
+    run_root = project_root / "runs/idea-revision-run/idea_refinement"
+    run_root.mkdir(parents=True, exist_ok=True)
+    narrative = run_root / "IDEA.md"
+    narrative.write_text("# Idea\n\nA falsifiable scientific policy.\n", encoding="utf-8")
+    evidence = run_root / "SOURCE.json"
+    evidence.write_text('{"source":"verified"}\n', encoding="utf-8")
+    artifact = ProjectIdeaRevisionArtifact(
+        project_id="idea-ledger-project",
+        revision_id="accepted-idea-v1",
+        status="accepted",
+        paper_claim_authority=False,
+        novelty_review_complete=True,
+        scientific_effectiveness_established=False,
+        title="A falsifiable scientific policy",
+        research_question="Does the policy improve a held-out decision?",
+        single_thesis="Outcome-grounded selection improves a held-out decision.",
+        scientific_problem="Research agents lack a verified policy for consequential choices.",
+        policy_object="A bounded action-selection policy.",
+        decision_families=("experiment-design", "claim-calibration"),
+        supervision_channels=("delayed-outcome",),
+        subordinate_mechanisms={"grounding": "Bind the policy to exact evidence."},
+        falsifiable_hypotheses=("The policy reduces held-out regret.",),
+        evidence_inputs=(
+            IdeaRevisionEvidenceInput(
+                role="source",
+                locator="runs/idea-revision-run/idea_refinement/SOURCE.json",
+                sha256=hashlib.sha256(evidence.read_bytes()).hexdigest(),
+            ),
+        ),
+        related_work_gap={"gap": "Outcome attribution remains unresolved."},
+        next_gates=("formal-evaluation",),
+        narrative_locator="runs/idea-revision-run/idea_refinement/IDEA.md",
+        narrative_sha256=hashlib.sha256(narrative.read_bytes()).hexdigest(),
+    )
+    record = run_root / "REVISION.json"
+    record.write_text(artifact.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    snapshot = register_project_idea_revision(
+        runtime,
+        "idea-ledger-project",
+        ProjectIdeaRevisionEntry(
+            revision_id="accepted-idea-v1",
+            status="accepted",
+            run_id="idea-revision-run",
+            record_locator="runs/idea-revision-run/idea_refinement/REVISION.json",
+            record_sha256=hashlib.sha256(record.read_bytes()).hexdigest(),
+        ),
+        expected_revision=snapshot.revision,
+    )
+
+    lifecycle = assess_project_lifecycle(runtime, "idea-ledger-project")
+
+    assert lifecycle.gates[0].state == "satisfied"
+    assert lifecycle.gates[0].reason_code == "verified-project-idea"
+    assert lifecycle.gates[0].evidence_locators == (
+        "runs/idea-revision-run/idea_refinement/REVISION.json",
+    )
+    assert lifecycle.gates[1].state == "blocked"
+    assert lifecycle.idea_to_paper_complete is False

@@ -87,13 +87,9 @@ def main() -> int:
         for axis, binding in config.axis_summaries.items()
     }
     completed = {
-        axis: int(summary["completed_response_count"])
-        for axis, summary in summaries.items()
+        axis: int(summary["completed_response_count"]) for axis, summary in summaries.items()
     }
-    admitted = {
-        axis: int(summary["admitted_pair_count"])
-        for axis, summary in summaries.items()
-    }
+    admitted = {axis: int(summary["admitted_pair_count"]) for axis, summary in summaries.items()}
     proposal_count = sum(completed.values())
     admitted_count = sum(admitted.values())
     construction_complete = proposal_count >= config.minimum_proposal_count

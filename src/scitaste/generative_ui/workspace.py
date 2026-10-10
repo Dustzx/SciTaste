@@ -460,6 +460,11 @@ class WorkspaceProjectItem(BaseModel):
     manifest_sha256: Sha256
     has_current_run: bool
     paper_count: int = Field(ge=0)
+    title: str = ""
+    research_direction: str = ""
+    target_venue: str | None = None
+    status: str = ""
+    run_count: int = Field(default=0, ge=0)
 
 
 class ProjectListDocument(BaseModel):
@@ -550,6 +555,11 @@ class WorkspaceSurfaceFactory:
                         manifest_sha256=snapshot.manifest_sha256,
                         has_current_run=snapshot.manifest.current_run is not None,
                         paper_count=len(snapshot.papers),
+                        title=snapshot.manifest.title,
+                        research_direction=snapshot.manifest.research_direction,
+                        target_venue=snapshot.manifest.target_venue,
+                        status=snapshot.manifest.status,
+                        run_count=len(snapshot.manifest.runs),
                     )
                 )
         return ProjectListDocument(projects=tuple(projects))
@@ -723,6 +733,15 @@ class WorkspaceSurfaceFactory:
                     effective_program_sha256=effective_program.program_sha256,
                     control_effect=effective_program.control_effect,
                 )
+                from scitaste.project.planning_intervention import planning_status
+
+                native_status, native_reason = planning_status(self._runtime, publication)
+                directive = directive.model_copy(
+                    update={
+                        "native_planning_status": native_status,
+                        "native_planning_explanation": native_reason or None,
+                    }
+                )
                 payload = evidence_program.model_dump(mode="json")
                 payload["planning_directive"] = directive.model_dump(mode="json")
                 payload["support_ref_ids"] = list(
@@ -742,7 +761,7 @@ class WorkspaceSurfaceFactory:
 
         taste_population_rows: list[dict[str, object]] = []
         taste_population_ids: set[str] = set()
-        for run in snapshot.manifest.runs:
+        for run in reversed(snapshot.manifest.runs):
             inspected_population = _aries_taste_population_for_run(
                 self._runtime.projects_root / snapshot.project_id,
                 run,
@@ -751,9 +770,10 @@ class WorkspaceSurfaceFactory:
                 continue
             population, report_file_sha256 = inspected_population
             if population.population_id in taste_population_ids:
-                raise ProjectSurfaceChangedError(
-                    "project registers multiple ARIES Taste candidate populations"
-                )
+                # A later project revision can rebuild the same population ID.
+                # Show the latest verified registration here; the older run stays
+                # available in the ordinary run explorer and project manifest.
+                continue
             taste_population_ids.add(population.population_id)
             run_ref = run_refs[run.run_id]
             assert run.artifact is not None
@@ -2113,6 +2133,11 @@ class WorkspaceSurfaceFactory:
             if snapshot.manifest.current_paper is not None
             else None
         )
+        # The runtime excludes invalid paper manifests and retains warnings.
+        # A historical pointer to such a draft must not make the whole project
+        # unrenderable or be promoted into an admitted paper row.
+        if current_paper_id not in {paper.directory_name for paper in snapshot.papers}:
+            current_paper_id = None
         for paper in snapshot.papers:
             paper_ref = _evidence_for_locator(
                 binding,
@@ -2225,9 +2250,25 @@ class WorkspaceSurfaceFactory:
                 }
             )
 
+        from scitaste.project.documents import INDEX, load_documents
+
+        project_documents = load_documents(self._runtime.projects_root / snapshot.project_id)
+        document_ref = None
+        if project_documents is not None:
+            document_ref = _evidence_for_locator(binding, EvidenceKind.ARTIFACT, INDEX)
+            document_path = self._runtime.projects_root / snapshot.project_id / INDEX
+            if hashlib.sha256(document_path.read_bytes()).hexdigest() != document_ref.sha256:
+                raise ProjectSurfaceChangedError("Project documents changed during projection")
+            evidence_ref_ids.append(document_ref.evidence_id)
         focus, focus_status, next_gate = _project_focus(snapshot)
         focus_source = "project_manifest"
         focus_ref_ids = [project_ref.evidence_id]
+        if project_documents is not None:
+            focus = project_documents.focus
+            focus_status = "documented-not-live-verified"
+            next_gate = project_documents.summary
+            focus_source = "project_documents"
+            focus_ref_ids = [project_ref.evidence_id, document_ref.evidence_id]
         if evidence_program is not None:
             # The compiled effective program is the current scientific plan. A
             # historical manifest focus remains a fallback only; otherwise the
@@ -2677,6 +2718,9 @@ class WorkspaceSurfaceFactory:
                     evidence_program.model_dump(mode="json")
                     if evidence_program is not None
                     else None
+                ),
+                "project_documents": (
+                    project_documents.model_dump(mode="json") if project_documents else None
                 ),
                 "resource_portfolio": (
                     resource_portfolio.model_dump(mode="json")

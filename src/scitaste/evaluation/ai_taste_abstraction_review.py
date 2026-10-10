@@ -27,7 +27,9 @@ from scitaste.model_nodes.models import NodeResult, NodeResultStatus
 from scitaste.model_nodes.runtime import RuntimeInvocationReceipt, RuntimeOutcome
 from scitaste.taste.semantic_models import (
     GROUNDED_TASTE_ABSTRACTION_NODE,
+    GROUNDED_TASTE_REVISION_NODE,
     GroundedTasteCaseAbstraction,
+    GroundedTasteRevisionInput,
     TasteAbstractionInput,
     validate_grounded_abstraction_against_projection,
 )
@@ -1323,8 +1325,8 @@ def _candidate_from_receipt(
     result = NodeResult[GroundedTasteCaseAbstraction].model_validate(receipt.result)
     if (
         result.status is not NodeResultStatus.ACCEPTED
-        or result.node_name != GROUNDED_TASTE_ABSTRACTION_NODE
-        or result.request.node_name != GROUNDED_TASTE_ABSTRACTION_NODE
+        or result.node_name not in {GROUNDED_TASTE_ABSTRACTION_NODE, GROUNDED_TASTE_REVISION_NODE}
+        or result.request.node_name != result.node_name
         or result.proposal is None
         or result.request.fingerprint != receipt.request_fingerprint
         or result.response.request_fingerprint != receipt.request_fingerprint
@@ -1336,7 +1338,12 @@ def _candidate_from_receipt(
     payload = result.request.input_payload
     if set(payload) != {"context", "input"} or not isinstance(payload["input"], dict):
         raise ValueError("grounded abstraction request does not expose its closed node input")
-    node_input = TasteAbstractionInput.model_validate(payload["input"])
+    input_type = (
+        GroundedTasteRevisionInput
+        if result.node_name == GROUNDED_TASTE_REVISION_NODE
+        else TasteAbstractionInput
+    )
+    node_input = input_type.model_validate(payload["input"])
     if result.proposal.case_id != node_input.case_id:
         raise ValueError("grounded abstraction changed its controller-issued case identity")
     findings = validate_grounded_abstraction_against_projection(result.proposal, node_input)

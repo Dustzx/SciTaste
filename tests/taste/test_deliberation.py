@@ -42,10 +42,62 @@ from scitaste.taste.deliberation import (
 )
 from scitaste.taste.retriever import TasteRetriever
 from scitaste.taste.semantic import (
+    TasteApplicabilityNode,
     TasteDeliberationNode,
     taste_deliberation_from_ledger,
     taste_node_types,
 )
+
+
+@pytest.mark.parametrize("node_type", [TasteApplicabilityNode, TasteDeliberationNode])
+def test_transfer_request_closes_source_boundaries(tmp_path, research_state, node_type):
+    from copy import deepcopy
+
+    from fastjsonschema import JsonSchemaException, validate
+
+    packet = _controller(tmp_path).prepare_taste_deliberation(
+        state=research_state, candidate_actions=_actions()
+    )
+    node = node_type()
+    context = NodeContext(
+        project_id=research_state.project_id,
+        stage=packet.stage,
+        state_snapshot_id=packet.state_snapshot_id,
+        cumulative_api_cost_usd=0,
+        candidate_actions=_actions(),
+    )
+    policy = NodePolicy(
+        policy_id="closed-boundary-fixture",
+        enabled=True,
+        allowed_node_names=[node.node_name],
+        expected_backend="scripted",
+        expected_model="fixture",
+        max_input_tokens=8000,
+        max_output_tokens=8000,
+        max_total_tokens=16000,
+        max_api_cost_usd=0.1,
+        max_latency_ms=1000,
+    )
+    request = node._build_request(
+        packet, context=context, policy=policy, request_id="closed-boundary", seed=0
+    )
+    proposal = _proposal(packet)
+    if node_type is TasteApplicabilityNode:
+        proposal = TasteApplicabilityProposal(
+            decision_id=packet.decision_id, assessments=proposal.assessments
+        )
+    payload = proposal.model_dump(mode="json")
+    validate(request.output_schema, payload)
+    invalid = deepcopy(payload)
+    invalid["assessments"][0]["applicability_supports"][0]["boundary_condition"] = (
+        "A current observation is not an original source condition."
+    )
+    with pytest.raises(JsonSchemaException):
+        validate(request.output_schema, invalid)
+    invalid = deepcopy(payload)
+    invalid["assessments"][0]["applicability_supports"][0]["decision_fact_ids"] = ["unknown"]
+    with pytest.raises(JsonSchemaException):
+        validate(request.output_schema, invalid)
 
 
 class _LiveDeliberationFixtureBackend:
@@ -149,6 +201,59 @@ def _controller(tmp_path, *, include_legacy: bool = False) -> TasteController:
     )
 
 
+def test_single_grounded_precedent_can_be_assessed(tmp_path, research_state):
+    library = TasteLibrary(tmp_path / "single.jsonl")
+    library.add(_case("case-probe", preferred_action="PROBE", source="aaa"))
+    controller = TasteController(mode=TasteMode.AUGMENTED, retriever=TasteRetriever(library))
+    packet = controller.prepare_taste_deliberation(
+        state=research_state, candidate_actions=_actions()
+    )
+    assert len(packet.candidates) == 1
+    assert packet.maximum_selected_cases == 1
+    assert len(packet.current_actions) == 2
+    proposal = _proposal(packet)
+    assert len(proposal.assessments) == 1
+    assert not validate_taste_deliberation(input_data=packet, proposal=proposal)
+    applicability = TasteApplicabilityProposal(
+        decision_id=packet.decision_id, assessments=proposal.assessments
+    )
+    assert len(applicability.assessments) == 1
+    verified = VerifiedTasteDeliberation(
+        invocation_id="single-precedent",
+        backend="scripted",
+        model="fixture",
+        ledger_locator="projects/test-project/runs/fixture/model_nodes/ledger/entry.json",
+        ledger_sha256="a" * 64,
+        input=packet,
+        proposal=proposal,
+    )
+    decision = controller.decide(
+        state=research_state, candidate_actions=_actions(), taste_deliberation=verified
+    )
+    assert decision.taste_deliberation.broad_candidate_case_ids == ("case-probe",)
+    restored = type(decision).model_validate_json(decision.model_dump_json())
+    assert restored.taste_deliberation == decision.taste_deliberation
+
+
+def test_long_research_brief_preserves_all_taste_fact_parts(tmp_path, research_state):
+    brief = "Scientific goal λ; " * 1200 + "FINAL FAILURE AND REVERSAL CONDITIONS"
+    research_state.research_direction = brief
+    controller = _controller(tmp_path)
+    packet = controller.prepare_taste_deliberation(
+        state=research_state, candidate_actions=_actions()
+    )
+    parts = [fact for fact in packet.decision_facts if fact.kind == "direction"]
+    assert len(parts) > 1
+    assert all(len(fact.text) <= 10000 for fact in parts)
+    assert all("parts are not independent evidence" in fact.text for fact in parts)
+    assert "".join(fact.text.split("\n", 1)[1].rsplit("\n", 1)[0] for fact in parts) == brief
+    assert len({fact.fact_id for fact in packet.decision_facts}) == len(packet.decision_facts)
+    repeated = controller.prepare_taste_deliberation(
+        state=research_state, candidate_actions=_actions()
+    )
+    assert packet.decision_facts == repeated.decision_facts
+
+
 def _proposal(input_data: TasteDeliberationInput) -> TasteDeliberationProposal:
     fact_ids = [item.fact_id for item in input_data.decision_facts]
     assessments = []
@@ -182,7 +287,7 @@ def _proposal(input_data: TasteDeliberationInput) -> TasteDeliberationProposal:
     return TasteDeliberationProposal(
         decision_id=input_data.decision_id,
         assessments=tuple(assessments),
-        selected_case_ids=("case-probe", "case-experiment"),
+        selected_case_ids=tuple(candidate.case_id for candidate in input_data.candidates),
         recommended_action_id="probe",
         selection_rationale="Retain source-disjoint precedents on both live actions.",
     )
@@ -598,7 +703,8 @@ def test_controller_uses_verified_deliberation_and_records_ledger_trace(
         taste_deliberation=verified,
     )
 
-    assert decision.retrieved_taste_cases == ["case-probe", "case-experiment"]
+    assert set(decision.retrieved_taste_cases) == {"case-probe", "case-experiment"}
+    assert len(decision.retrieved_taste_cases) == 2
     assert decision.taste_deliberation is not None
     assert decision.taste_deliberation.proposal_sha256 == proposal.fingerprint
     assert decision.taste_deliberation.selected_case_ids == proposal.selected_case_ids

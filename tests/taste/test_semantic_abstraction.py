@@ -30,6 +30,33 @@ from scitaste.taste.semantic import (
 from scitaste.taste.semantic_models import TasteAbstractionInput
 
 
+def test_revision_feedback_cannot_become_source_evidence() -> None:
+    from scitaste.taste.semantic_models import (
+        GroundedTasteCaseAbstraction,
+        GroundedTasteRevisionInput,
+        validate_grounded_abstraction_against_projection,
+    )
+
+    original = _grounded_input()
+    proposal = _grounded_proposal()
+    previous = GroundedTasteCaseAbstraction.model_validate(proposal)
+    packet = GroundedTasteRevisionInput(
+        **original.model_dump(),
+        previous_abstraction=previous,
+        review_findings=("The reviewer asserts an additional benefit without source evidence.",),
+        review_final_sha256="a" * 64,
+    )
+    assert packet.source_projection == original.source_projection
+    assert packet.review_is_scientific_evidence is False
+    proposal["transfer_boundary"]["fails_when"] = previous.transfer_boundary.fails_when[:1]
+    proposal["grounding"][0]["supports"][0]["verbatim_evidence"] = packet.review_findings[0]
+    altered = GroundedTasteCaseAbstraction.model_validate(proposal)
+    assert any(
+        "not verbatim" in finding
+        for finding in validate_grounded_abstraction_against_projection(altered, packet)
+    )
+
+
 def _input(*, outcome: str = "available") -> TasteAbstractionInput:
     source = "A diagnostic probe separated two hypotheses before the costly scale-up."
     return TasteAbstractionInput(
@@ -389,7 +416,9 @@ def test_grounded_abstraction_expands_only_an_exact_ordered_json_outcome_subset(
     )
     payload = _grounded_proposal()
     outcome_claim = next(
-        item for item in payload["grounding"] if item["target"] == "outcome"  # type: ignore[index]
+        item
+        for item in payload["grounding"]
+        if item["target"] == "outcome"  # type: ignore[index]
     )
     outcome_claim["supports"][0]["verbatim_evidence"] = json.dumps(
         [complete_outcomes[0], complete_outcomes[2]],
@@ -404,15 +433,17 @@ def test_grounded_abstraction_expands_only_an_exact_ordered_json_outcome_subset(
     normalized_outcome = next(
         item for item in result.proposal.grounding if item.target.value == "outcome"
     )
-    assert normalized_outcome.supports[0].verbatim_evidence == projection["fields"][
-        "outcome"
-    ]["value"]
+    assert (
+        normalized_outcome.supports[0].verbatim_evidence == projection["fields"]["outcome"]["value"]
+    )
 
 
 def test_grounded_abstraction_drops_only_redundant_wrong_role_support() -> None:
     payload = _grounded_proposal()
     alternatives = next(
-        item for item in payload["grounding"] if item["target"] == "alternatives"  # type: ignore[index]
+        item
+        for item in payload["grounding"]
+        if item["target"] == "alternatives"  # type: ignore[index]
     )
     alternatives["supports"].append(
         {
@@ -487,7 +518,9 @@ def test_grounded_abstraction_restores_json_outcome_over_measurement_metadata() 
     payload = _grounded_proposal()
     payload["outcome_summary"] = None
     outcome = next(
-        item for item in payload["grounding"] if item["target"] == "outcome"  # type: ignore[index]
+        item
+        for item in payload["grounding"]
+        if item["target"] == "outcome"  # type: ignore[index]
     )
     outcome["supports"] = [
         {

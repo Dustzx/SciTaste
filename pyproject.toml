@@ -18,6 +18,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+figures = ["CairoSVG>=2.8,<3"]
+researchharness = [
+  "json5>=0.14,<1",
+  "openai>=2.3,<4",
+  "Pillow>=11.3,<13",
+  "requests>=2.32,<3",
+  "structai>=0.1.23,<1",
+  "tiktoken>=0.12,<1",
+]
 dev = [
   "numpy>=1.24,<3",
   "pytest>=8.0",
@@ -32,8 +41,10 @@ local-gpu = [
   "transformers>=4.57,<4.58",
 ]
 study = [
+  "h5py==3.15.1",
   "matplotlib>=3.7,<4",
   "numpy>=1.24,<3",
+  "opencv-python-headless==4.11.0.86",
   "pandas>=2,<3",
   "scikit-learn>=1.4,<2",
   "scipy>=1.10,<2",
@@ -59,13 +70,19 @@ skip_covered = true
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend-exclude = ["third_party", "outputs"]
+extend-exclude = ["third_party", "outputs", "workspace"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "RUF"]
 ignore = ["UP040", "UP046", "UP047"]
 
 [tool.ruff.lint.per-file-ignores]
+# Research output templates retain full source identifiers and paragraphs.
+"scripts/analyze_researchclawbench_system_pair.py" = ["E501"]
+"scripts/compile_researchclawbench_taste_overlay.py" = ["E501"]
+"scripts/prepare_sensor_external_systems.py" = ["E501"]
+"scripts/prepare_sensor_taste_transfer.py" = ["E501"]
+"src/scitaste/benchmark/sensor_drift_task_data.py" = ["E501"]
 "tests/**/*.py" = ["S101"]
 
 [tool.ruff.format]

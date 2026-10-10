@@ -524,15 +524,11 @@ def _resource_for(
         max_total_tokens=None if model is None else model.max_total_tokens,
         max_cost=None if model is None else model.max_cost,
         host_alias=lane.gpu_resource.host_alias,
-        allocated_device_count_per_cell=(
-            lane.gpu_resource.allocated_device_count_per_cell
-        ),
+        allocated_device_count_per_cell=(lane.gpu_resource.allocated_device_count_per_cell),
         gpu_workload_kind=lane.gpu_resource.workload_kind,
         checkpoint_id=lane.gpu_resource.checkpoint_id,
         checkpoint_sha256=lane.gpu_resource.checkpoint_sha256,
-        initialization_contract_sha256=(
-            lane.gpu_resource.initialization_contract_sha256
-        ),
+        initialization_contract_sha256=(lane.gpu_resource.initialization_contract_sha256),
         max_gpu_hours=lane.gpu_resource.max_gpu_hours,
         max_storage_bytes=lane.gpu_resource.max_storage_bytes,
     )

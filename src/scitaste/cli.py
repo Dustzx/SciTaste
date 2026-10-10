@@ -307,6 +307,10 @@ from scitaste.evaluation.decision_episode_integrity import (
     inspect_track_a_decision_episode_integrity_plan,
     prepare_track_a_decision_episode_integrity_plan,
 )
+from scitaste.evaluation.external_formal_study import (
+    prepare_external_formal_evaluation,
+    prepare_external_formal_result,
+)
 from scitaste.evaluation.interactive_research import load_interactive_research_run_receipt
 from scitaste.evaluation.lifecycle_benchmark_bridge_cli import (
     register_lifecycle_benchmark_bridge_cli,
@@ -391,6 +395,7 @@ from scitaste.full_workflow import (
 from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
 from scitaste.lifecycle import assess_project_lifecycle
+from scitaste.lifecycle_workflow_cli import register_lifecycle_workflow_cli
 from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
 from scitaste.model_node_runtime_cli import register_model_node_runtime_cli
 from scitaste.model_nodes.full_workflow_tool_intelligence import (
@@ -423,6 +428,7 @@ from scitaste.project import (
 )
 from scitaste.project.models import validate_entry_id, validate_relative_locator
 from scitaste.project_substrate_cli import register_project_substrate_cli
+from scitaste.research_cycle_cli import register_research_cycle_cli
 from scitaste.research_program_cli import register_research_program_cli
 from scitaste.resource_cli import register_resource_cli
 from scitaste.review import (
@@ -462,6 +468,7 @@ from scitaste.review.model_report import (
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.research_state import ResearchState
+from scitaste.submission_plan_cli import register_submission_plan_cli
 from scitaste.taste.ai_attribution import (
     ai_review_authority_sha256,
     build_ai_taste_attribution_review_material,
@@ -642,6 +649,8 @@ def _add_paper_scientific_evidence_option(parser: argparse.ArgumentParser) -> No
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="scitaste", description="Scientific taste controller")
+    # Modular commands need the same logging default as inline subcommands.
+    parser.set_defaults(log_level="INFO")
     parser.add_argument("--version", action="version", version="SciTaste 0.1.0")
     commands = parser.add_subparsers(dest="command", required=True)
     add_ui_commands(commands)
@@ -722,6 +731,8 @@ def build_parser() -> argparse.ArgumentParser:
     project = commands.add_parser("project", help="Project-owned run and paper management")
     project_commands = project.add_subparsers(dest="project_command", required=True)
     register_research_program_cli(project_commands)
+    register_research_cycle_cli(project_commands)
+    register_submission_plan_cli(project_commands)
     project_init = project_commands.add_parser("init", help="Create a canonical project tree")
     project_init.add_argument("--project-id", required=True)
     project_init.add_argument("--title", required=True)
@@ -739,6 +750,14 @@ def build_parser() -> argparse.ArgumentParser:
     project_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_status)
     project_status.set_defaults(handler=_handle_project_status)
+
+    project_progress = project_commands.add_parser(
+        "progress", help="Read source-bound Native cycle progress, not scientific completion"
+    )
+    project_progress.add_argument("--project-id", required=True)
+    project_progress.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_progress)
+    project_progress.set_defaults(handler=_handle_project_progress)
 
     project_deadline = project_commands.add_parser(
         "deadline", help="Assign and inspect content-bound venue milestones"
@@ -847,6 +866,7 @@ def build_parser() -> argparse.ArgumentParser:
     project_lifecycle_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_lifecycle_status)
     project_lifecycle_status.set_defaults(handler=_handle_project_lifecycle_status)
+    register_lifecycle_workflow_cli(project_lifecycle_commands)
 
     project_surface = project_commands.add_parser(
         "surface", help="Build trusted project interface bundles"
@@ -934,6 +954,25 @@ def build_parser() -> argparse.ArgumentParser:
     project_evaluation_register.add_argument("--select", action="store_true")
     _add_project_options(project_evaluation_register)
     project_evaluation_register.set_defaults(handler=_handle_project_evaluation_register_prelaunch)
+    project_evaluation_external = project_evaluation_commands.add_parser(
+        "register-external-formal",
+        help="Register a preregistered external formal protocol without executing it",
+    )
+    project_evaluation_external.add_argument("--project-id", required=True)
+    project_evaluation_external.add_argument("--evaluation-id", required=True)
+    project_evaluation_external.add_argument("--protocol", type=Path, required=True)
+    project_evaluation_external.add_argument("--repository-root", type=Path, default=Path("."))
+    project_evaluation_external.add_argument(
+        "--acknowledge-prior-execution-authority",
+        action="store_true",
+        help="confirm that this exact frozen protocol was authorized before its existing run",
+    )
+    project_evaluation_external.add_argument("--expected-revision", type=int, required=True)
+    project_evaluation_external.add_argument("--select", action="store_true")
+    _add_project_options(project_evaluation_external)
+    project_evaluation_external.set_defaults(
+        handler=_handle_project_evaluation_register_external_formal
+    )
     project_evaluation_select = project_evaluation_commands.add_parser(
         "select", help="Select a registered experiment proposal"
     )
@@ -1042,6 +1081,22 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_options(project_evaluation_result_register)
     project_evaluation_result_register.set_defaults(
         handler=_handle_project_evaluation_register_result
+    )
+    project_evaluation_external_result = project_evaluation_commands.add_parser(
+        "register-external-result",
+        help="Replay and register a project-owned external formal result",
+    )
+    project_evaluation_external_result.add_argument("--project-id", required=True)
+    project_evaluation_external_result.add_argument("--evaluation-id", required=True)
+    project_evaluation_external_result.add_argument("--result-id", required=True)
+    project_evaluation_external_result.add_argument("--result", type=Path, required=True)
+    project_evaluation_external_result.add_argument("--integrity-audit", type=Path, required=True)
+    project_evaluation_external_result.add_argument("--evidence-root", type=Path, required=True)
+    project_evaluation_external_result.add_argument("--expected-revision", type=int, required=True)
+    project_evaluation_external_result.add_argument("--select", action="store_true")
+    _add_project_options(project_evaluation_external_result)
+    project_evaluation_external_result.set_defaults(
+        handler=_handle_project_evaluation_register_external_result
     )
     project_evaluation_result_select = project_evaluation_commands.add_parser(
         "select-result", help="Select a verified evaluation result"
@@ -4430,6 +4485,15 @@ def _handle_project_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_project_progress(args: argparse.Namespace) -> int:
+    from scitaste.project.cycle_progress import inspect_cycle_progress
+
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    print(json.dumps(inspect_cycle_progress(runtime.projects_root / snapshot.project_id), indent=2))
+    return 0
+
+
 def _handle_project_deadline_assign(args: argparse.Namespace) -> int:
     runtime = ProjectRuntime(args.outputs_root)
     schedule = load_project_venue_schedule(args.schedule)
@@ -4851,6 +4915,58 @@ def _handle_project_evaluation_register_prelaunch(args: argparse.Namespace) -> i
     return 0
 
 
+def _handle_project_evaluation_register_external_formal(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    if snapshot.revision != args.expected_revision:
+        raise ValueError(
+            f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+        )
+    prepared = prepare_external_formal_evaluation(
+        project_id=args.project_id,
+        evaluation_id=args.evaluation_id,
+        protocol_path=args.protocol,
+        repository_root=args.repository_root,
+        acknowledge_prior_execution_authority=(args.acknowledge_prior_execution_authority),
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "verified-external-formal-publication-plan",
+                    "next_revision": snapshot.revision + 1 + int(args.select),
+                    "selection_requested": args.select,
+                    "bundle": prepared.bundle.model_dump(mode="json"),
+                    "no_new_execution_performed": True,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = publish_project_evaluation(
+        runtime,
+        prepared,
+        expected_revision=args.expected_revision,
+        select=args.select,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "registered-external-formal-protocol",
+                "project_id": args.project_id,
+                "project_revision": snapshot.revision,
+                "evaluation": prepared.bundle.model_dump(mode="json"),
+                "selected": snapshot.manifest.current_evaluation == args.evaluation_id,
+                "no_new_execution_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def _handle_project_evaluation_select(args: argparse.Namespace) -> int:
     runtime = ProjectRuntime(args.outputs_root)
     if args.dry_run:
@@ -5057,6 +5173,62 @@ def _handle_project_evaluation_register_result(args: argparse.Namespace) -> int:
                 "project_revision": snapshot.revision,
                 "result": prepared.bundle.model_dump(mode="json"),
                 "selected": (snapshot.manifest.current_evaluation_result == args.result_id),
+                "no_new_execution_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_evaluation_register_external_result(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    if snapshot.revision != args.expected_revision:
+        raise ValueError(
+            f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+        )
+    prepared = prepare_external_formal_result(
+        runtime,
+        project_id=args.project_id,
+        evaluation_id=args.evaluation_id,
+        result_id=args.result_id,
+        result_path=args.result,
+        audit_path=args.integrity_audit,
+        evidence_root=args.evidence_root,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "verified-external-result-publication-plan",
+                    "next_revision": snapshot.revision + 1 + int(args.select),
+                    "selection_requested": args.select,
+                    "bundle": prepared.bundle.model_dump(mode="json"),
+                    "verification": prepared.assessment.model_dump(mode="json"),
+                    "no_new_execution_performed": True,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = publish_project_evaluation_result(
+        runtime,
+        prepared,
+        expected_revision=args.expected_revision,
+        select=args.select,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "registered-external-formal-result",
+                "project_id": args.project_id,
+                "project_revision": snapshot.revision,
+                "result": prepared.bundle.model_dump(mode="json"),
+                "verification": prepared.assessment.model_dump(mode="json"),
+                "selected": snapshot.manifest.current_evaluation_result == args.result_id,
                 "no_new_execution_performed": True,
             },
             indent=2,
@@ -8128,8 +8300,7 @@ def _handle_evidence_venue_gap(args: argparse.Namespace) -> int:
                         "incomplete_central_claims": [
                             item.claim_id
                             for item in assessment.venue_comparison.claim_arguments
-                            if item.centrality.value == "central"
-                            and not item.complete_for_review
+                            if item.centrality.value == "central" and not item.complete_for_review
                         ],
                         "missing_or_unadmitted_accepted_majority_components": (
                             assessment.venue_comparison.missing_or_unadmitted_accepted_majority_components

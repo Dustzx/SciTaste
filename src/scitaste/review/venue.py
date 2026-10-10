@@ -1030,7 +1030,12 @@ def _project_round(
     all_accept = bool(reports) and all(
         verification.final_recommendation == "accept" for verification in verifications.values()
     )
-    internal_complete = all_verified and all_accept
+    accepted_without_concerns = (
+        bool(reports)
+        and not concerns
+        and all(report.initial_recommendation == "accept" for report in reports.values())
+    )
+    internal_complete = accepted_without_concerns or (all_verified and all_accept)
     expert_count = len(
         {
             report.reviewer.reviewer_id

@@ -16,6 +16,7 @@ from scitaste.project.deadlines import (
     load_project_venue_schedule,
     project_venue_schedule_assignment_required,
     read_project_venue_schedule,
+    retarget_project_venue,
 )
 from scitaste.project.idea_revision import (
     IdeaRevisionEvidenceInput,
@@ -139,6 +140,7 @@ __all__ = [
     "read_project_idea_ledger",
     "read_project_venue_schedule",
     "register_project_idea_revision",
+    "retarget_project_venue",
     "save_deadline_work_program",
     "select_project_idea_revision",
 ]

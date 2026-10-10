@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare one model-proposed MLRC Perception research arm.
+"""Prepare one model-proposed MLRC development research arm.
 
 The three conditions share source bytes, model, patch policy, and experiment
 budget.  They differ only in decision guidance: no precedent, exact raw
@@ -20,6 +20,7 @@ from typing import Any
 import yaml
 
 from scitaste.evaluation.h4_execution import build_h4_benchmark_action_menu
+from scitaste.evaluation.python_edit_boundary import PythonEditBoundary
 from scitaste.evaluation.task_patch import (
     BenchmarkEditableFileSnapshot,
     BenchmarkPatchContext,
@@ -39,6 +40,7 @@ from scitaste.model_nodes.openai_compatible import (
     load_structured_openai_compatible_config,
 )
 from scitaste.model_nodes.profiles import load_model_node_profile
+from scitaste.model_nodes.replay import RecordingStructuredBackend
 from scitaste.project.models import content_sha256
 from scitaste.taste.deliberation import TasteControlPacket, render_taste_control_packet
 
@@ -105,9 +107,14 @@ def _taste_packet(path: Path) -> TasteControlPacket:
     return packet
 
 
-def _snapshot(source: Path) -> BenchmarkPatchContext:
+def _snapshot(
+    source: Path,
+    *,
+    task_id: str = "perception-temporal-action-loc",
+    editable_paths: tuple[str, ...] = _EDITABLE_PATHS,
+) -> BenchmarkPatchContext:
     files = []
-    for relative in _EDITABLE_PATHS:
+    for relative in editable_paths:
         path = source / relative
         raw = path.read_bytes()
         content = raw.decode("utf-8")
@@ -122,13 +129,17 @@ def _snapshot(source: Path) -> BenchmarkPatchContext:
     surface = content_sha256({item.path: item.sha256 for item in files})
     spec = content_sha256(
         {
-            "task_id": "perception-temporal-action-loc",
+            "task_id": task_id,
             "source_commit": "0d26417034811d2d4587646c4520cc305ea09dd6",
-            "editable_paths": list(_EDITABLE_PATHS),
+            "editable_paths": list(editable_paths),
         }
     )
     return BenchmarkPatchContext.create(
-        spec_id="mlrc-perception-development-v1",
+        spec_id=(
+            "mlrc-perception-development-v1"
+            if task_id == "perception-temporal-action-loc"
+            else f"mlrc-{task_id}-development-v1"
+        ),
         spec_fingerprint=spec,
         editable_surface_sha256=surface,
         files=tuple(files),
@@ -179,6 +190,11 @@ def _validate_replacement(path: str, replacement: str, original: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--task",
+        choices=("perception-temporal-action-loc", "meta-learning"),
+        default="perception-temporal-action-loc",
+    )
+    parser.add_argument(
         "--condition",
         required=True,
         choices=(
@@ -191,7 +207,8 @@ def main() -> int:
         ),
     )
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--source", type=Path, default=_DEFAULT_SOURCE)
+    parser.add_argument("--edit-boundary", type=Path)
+    parser.add_argument("--source", type=Path)
     parser.add_argument(
         "--editable-env",
         type=Path,
@@ -239,8 +256,15 @@ def main() -> int:
     output = args.output if args.output.is_absolute() else repository / args.output
     if output.exists() or output.is_symlink():
         raise FileExistsError(output)
-    source_root = args.source if args.source.is_absolute() else repository / args.source
+    source_arg = args.source or (
+        _DEFAULT_SOURCE
+        if args.task == "perception-temporal-action-loc"
+        else _DEFAULT_SOURCE.parent / "meta-learning"
+    )
+    source_root = source_arg if source_arg.is_absolute() else repository / source_arg
     task_root = source_root.resolve(strict=True)
+    if args.task == "meta-learning" and args.editable_env is None:
+        raise ValueError("meta-learning requires an explicit frozen method-only --editable-env")
     env_source = (
         args.editable_env.resolve(strict=True)
         if args.editable_env is not None
@@ -248,7 +272,26 @@ def main() -> int:
     )
     research_problem = (task_root / "scripts" / "research_problem.txt").read_text(encoding="utf-8")
     background = (task_root / "scripts" / "background.txt").read_text(encoding="utf-8")
-    context = _snapshot(env_source)
+    context = _snapshot(
+        env_source,
+        task_id=args.task,
+        editable_paths=(
+            _EDITABLE_PATHS
+            if args.task == "perception-temporal-action-loc"
+            else ("model.py", "helpers_protonet.py", "network.py")
+        ),
+    )
+    task_tag = "perception" if args.task == "perception-temporal-action-loc" else args.task
+    if args.task == "meta-learning":
+        research_problem += (
+            "\n\nEXECUTED DEVELOPMENT CONTRACT (overrides historical split counts/time "
+            "examples above): 20 MetaAlbum development datasets, ten meta-train and ten "
+            "meta-test domains, 1000 official prediction episodes, one 24 GiB GPU, "
+            "1200 seconds total per attempt. Preserve the supplied 20 training episodes, "
+            "validation schedule, seeds and config.json. Only the provided method files "
+            "are editable; imports use the separate unchanged official runtime. "
+            "No held-out set-2 data is available. This is development, not formal testing."
+        )
     patch_policy = BenchmarkPatchPolicy(
         maximum_files_per_patch=4,
         maximum_replacement_bytes_per_file=262_144,
@@ -296,13 +339,24 @@ def main() -> int:
         feedback_path.resolve(strict=True).read_text(encoding="utf-8", errors="replace")[-2_000:]
         for feedback_path in args.experiment_feedback_file
     )
+    boundary = (
+        PythonEditBoundary.model_validate_json(args.edit_boundary.read_text())
+        if args.edit_boundary
+        else None
+    )
+    if boundary is not None:
+        boundary.validate_candidate({row.path: row.content for row in context.files}, {})
     input_data = BenchmarkPatchGenerationInput(
         schema_version=(
             "1.2" if control_packet is not None else "1.1" if action_directive else "1.0"
         ),
-        task_id="perception-temporal-action-loc",
+        task_id=args.task,
         research_problem=research_problem,
-        primary_metric="mean_average_precision",
+        primary_metric=(
+            "mean_average_precision"
+            if args.task == "perception-temporal-action-loc"
+            else "normalized_balanced_accuracy"
+        ),
         metric_direction="higher",
         baseline_development_score=args.baseline_score,
         current_development_score=args.baseline_score,
@@ -327,13 +381,26 @@ def main() -> int:
             "unchanged.",
             "Make one coherent, falsifiable method change rather than a hyperparameter sweep.",
             "The prepared source must remain executable on one 24 GiB GPU.",
+        )
+        + (
+            (
+                "Caller-owned immutable edit boundary: "
+                + boundary.model_dump_json()
+                + ". Preserve all other AST structure, including imports and training helpers. "
+                "Use local imports within permitted methods for added helpers.",
+            )
+            if boundary is not None
+            else ()
         ),
     )
     profile, node_policy = _policy(args.profile.resolve(strict=True))
     backend_config = load_structured_openai_compatible_config(args.backend.resolve(strict=True))
     if (backend_config.provider, backend_config.model) != (profile.provider, profile.model):
         raise ValueError("patch backend identity differs from the model profile")
-    backend = StructuredOpenAICompatibleBackend(backend_config)
+    output.mkdir(parents=True)
+    backend = RecordingStructuredBackend(
+        StructuredOpenAICompatibleBackend(backend_config), output / "recordings.jsonl"
+    )
     node = BenchmarkPatchGenerationNode()
     result = node.run(
         input_data,
@@ -347,9 +414,8 @@ def main() -> int:
         backend=backend,
         policy=node_policy,
         profile=profile,
-        request_id=f"mlrc-perception-{args.condition}-patch-{args.iteration}",
+        request_id=f"mlrc-{task_tag}-{args.condition}-patch-{args.iteration}",
     )
-    output.mkdir(parents=True)
     _write_json(output / "PATCH_INPUT.json", input_data.model_dump(mode="json"))
     _write_json(output / "NODE_RESULT.json", result.model_dump(mode="json"))
     if result.status is not NodeResultStatus.ACCEPTED or result.proposal is None:
@@ -361,7 +427,7 @@ def main() -> int:
     proposal = materialize_benchmark_patch_proposal(
         result.proposal,
         input_data,
-        proposal_id=f"mlrc-perception-{args.condition}-patch-{args.iteration}",
+        proposal_id=f"mlrc-{task_tag}-{args.condition}-patch-{args.iteration}",
         producer=BenchmarkPatchProducer(
             mode="model",
             producer_id="benchmark-research-patch",
@@ -372,6 +438,25 @@ def main() -> int:
         ),
     )
     _write_json(output / "PATCH_PROPOSAL.json", proposal.model_dump(mode="json"))
+    if boundary is not None:
+        try:
+            boundary.validate_candidate(
+                {row.path: row.content for row in context.files},
+                {edit.path: edit.replacement for edit in proposal.edits},
+            )
+        except (SyntaxError, ValueError) as exc:
+            _write_json(
+                output / "ADMISSION_FAILURE.json",
+                {
+                    "stage": "caller-owned-edit-boundary",
+                    "status": "rejected",
+                    "reason": str(exc),
+                    "experiment_executed": False,
+                    "boundary_sha256": content_sha256(boundary.model_dump(mode="json")),
+                },
+            )
+            raise
+        _write_json(output / "EDIT_BOUNDARY.json", boundary.model_dump(mode="json"))
     arm_source = output / "arm_source"
     shutil.copytree(env_source, arm_source)
     for edit in proposal.edits:
@@ -389,6 +474,7 @@ def main() -> int:
     receipt = {
         "schema_version": "1.0",
         "condition": args.condition,
+        "task_id": args.task,
         "evidence_role": "consumed-development-only",
         "formal_evidence_eligible": False,
         "source_commit": "0d26417034811d2d4587646c4520cc305ea09dd6",
@@ -415,6 +501,9 @@ def main() -> int:
         "research_action_directive_file_sha256": directive_file_sha256,
         "heldout_opened": False,
         "experiment_executed": False,
+        "edit_boundary_sha256": content_sha256(boundary.model_dump(mode="json"))
+        if boundary
+        else None,
     }
     receipt["receipt_sha256"] = content_sha256(receipt)
     _write_json(output / "PREPARATION_RECEIPT.json", receipt)

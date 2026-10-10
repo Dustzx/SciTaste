@@ -58,7 +58,16 @@ configs/writing/venues/<venue-version>/
 └── provenance.yaml   # sources, corpus identity, transfer limits, missing controls
 ```
 
-The first complete bundle is `iclr-2027`. Its profile contains five advisory
+The first complete bundle is `iclr-2027`. A provisional `cvpr-2027` bundle
+now also exists: its submission contract pins the official CVPR 2026 author-kit
+bytes while the 2027 author-guidelines page is unavailable and does not invent
+a mandatory statement. Its eight-main-page setting is a prior-year precedent,
+not a verified 2027 rule. Its advisory Writing Taste profile binds the 2027
+call and project editorial inferences, with a held promotion decision and no
+submission authority. It asks for substantive vision tasks, task-native
+results, visual error analysis, real-method/control separation, and bounded
+RSI language rather than prescribing a universal figure or section quota.
+The ICLR profile contains five advisory
 constructs distilled from the current official reviewer guide and fifteen
 candidate principles from the registered ICLR award-paper reference study. The
 profile pins its local provenance bytes, exposes its promotion decision, and
@@ -105,6 +114,32 @@ reproducibility. The integrated policy is:
   camouflage.
 
 ## Implemented architecture
+
+### Project information promotion
+
+A paper is a reader-facing projection of project knowledge, not a dump of run
+records. The reusable [project information-flow contract](PROJECT_INFORMATION_FLOW.md)
+defines the promotion levels. The self-development project now maintains a bounded four-document
+editorial index at
+`outputs/projects/scitaste-self-development/docs/README.md`: scientific case,
+claim-to-evidence ledger, manuscript placement map, and decision log. The
+promotion sequence is raw source → verified finding → calibrated claim →
+reader-facing carrier → manuscript. Its project docs are ignored outputs, while
+this section describes the reusable framework rule.
+
+The deterministic Writing Taste assessor flags exact commit/task identifiers in
+ordinary manuscript sections as `repro-metadata-in-narrative`, and the semantic
+Writing Taste node can recommend moving such detail to an appendix or project
+record. This is advisory: a version identifier may be scientifically necessary,
+and the classifier cannot determine that from syntax alone. Moving a detail must
+not hide an adverse result or a material limitation. A missing headline result
+must trigger an evidence request or a narrower claim, never a prose-only fix.
+
+The current integration does **not** automatically read the four project docs
+into every paper generation call or guarantee atomic updates across them. That
+requires a project-scoped editorial state interface and evidence-aware promotion
+transaction; until then, the docs are the editorial source of truth and paper
+updates require explicit review of their claim and evidence status.
 
 ```text
 registered claims, evidence, limitations, and venue

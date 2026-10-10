@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from itertools import pairwise
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -182,6 +183,15 @@ class BenchmarkPatchGenerationEdit(BaseModel):
 
     path: str = Field(min_length=1, max_length=1_000)
     replacement: str = Field(min_length=1, max_length=_MAX_REPLACEMENT_CHARS)
+    find: str | None = Field(default=None, min_length=1, max_length=_MAX_REPLACEMENT_CHARS)
+
+    def apply_to(self, original: str) -> str:
+        """Resolve a unique exact local edit; never fuzzy-match or guess scope."""
+        if self.find is None:
+            return self.replacement
+        if original.count(self.find) != 1:
+            raise ValueError("local patch must match exactly one source span")
+        return original.replace(self.find, self.replacement, 1)
 
 
 class BenchmarkPatchGenerationOutput(BaseModel):
@@ -189,7 +199,7 @@ class BenchmarkPatchGenerationOutput(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     decision: Literal["propose", "stop"]
     hypothesis: str = Field(min_length=1, max_length=4_000)
     expected_effect: str = Field(min_length=1, max_length=4_000)
@@ -198,14 +208,48 @@ class BenchmarkPatchGenerationOutput(BaseModel):
 
     @model_validator(mode="after")
     def decision_matches_payload(self) -> BenchmarkPatchGenerationOutput:
+        if any(edit.find is not None for edit in self.edits) and self.schema_version == "1.0":
+            raise ValueError("exact local patches require output schema 1.1 or later")
         if self.decision == "propose":
             if not self.edits or self.stop_reason is not None:
                 raise ValueError("propose requires edits and no stop reason")
         elif self.edits or self.stop_reason is None:
             raise ValueError("stop requires a reason and no edits")
-        if len({item.path for item in self.edits}) != len(self.edits):
+        if (
+            len({item.path for item in self.edits}) != len(self.edits)
+            and self.schema_version != "1.2"
+        ):
             raise ValueError("generated benchmark patch paths must be unique")
         return self
+
+    def resolve_files(self, sources: dict[str, str]) -> dict[str, str]:
+        """Apply disjoint local edits against the same immutable source coordinates."""
+        grouped: dict[str, list[BenchmarkPatchGenerationEdit]] = {}
+        for edit in self.edits:
+            if edit.path not in sources:
+                raise ValueError(f"generated path is outside visible source: {edit.path}")
+            grouped.setdefault(edit.path, []).append(edit)
+        resolved = {}
+        for path, edits in grouped.items():
+            original = sources[path]
+            if len(edits) == 1:
+                resolved[path] = edits[0].apply_to(original)
+                continue
+            spans = []
+            for edit in edits:
+                if edit.find is None:
+                    raise ValueError("multiple edits cannot mix full-file and local replacements")
+                edit.apply_to(original)  # Each locator must uniquely match original bytes.
+                start = original.index(edit.find)
+                spans.append((start, start + len(edit.find), edit.replacement))
+            spans.sort()
+            if any(left[1] > right[0] for left, right in pairwise(spans)):
+                raise ValueError("local patch source spans overlap")
+            updated = original
+            for start, end, replacement in reversed(spans):
+                updated = updated[:start] + replacement + updated[end:]
+            resolved[path] = updated
+        return resolved
 
 
 class BenchmarkPatchGenerationNode(
@@ -214,7 +258,7 @@ class BenchmarkPatchGenerationNode(
     """Choose a bounded patch or stop; never invoke tools or execute experiments."""
 
     node_name = BENCHMARK_PATCH_NODE
-    prompt_version = "benchmark-research-patch-v2"
+    prompt_version = "benchmark-research-patch-v4"
     system_instruction = (
         "Act as one bounded autonomous-research iteration. Use the exact visible source, "
         "objective metric, prior development feedback, and only the guidance fields supplied. "
@@ -228,6 +272,12 @@ class BenchmarkPatchGenerationNode(
         "research action. "
         "A proposal remains untrusted until deterministic admission and isolated development "
         "execution. Preserve a substantive scientific hypothesis rather than making cosmetic edits."
+        " For local changes prefer schema_version 1.2 and edits with find equal to one "
+        "unique exact source substring and replacement equal to the new substring, preserving "
+        "indentation. A null/omitted find means replacement is the COMPLETE file, never a "
+        "snippet. Do not omit unchanged file sections in full-file mode. There is no fuzzy "
+        "matching. Multiple edits in one file must target non-overlapping spans of the ORIGINAL "
+        "file, not intermediate edits. Include sufficient unchanged context for uniqueness."
     )
     input_model = BenchmarkPatchGenerationInput
     output_model = BenchmarkPatchGenerationOutput
@@ -246,23 +296,26 @@ class BenchmarkPatchGenerationNode(
         visible = {item.path: item for item in input_data.patch_context.files}
         reasons: list[str] = []
         total_bytes = 0
-        if len(proposal.edits) > input_data.patch_policy.maximum_files_per_patch:
+        try:
+            replacements = proposal.resolve_files(
+                {path: row.content for path, row in visible.items()}
+            )
+        except ValueError as exc:
+            return [str(exc)]
+        if len(replacements) > input_data.patch_policy.maximum_files_per_patch:
             reasons.append("generated edit count exceeds the controller patch policy")
-        for edit in proposal.edits:
-            snapshot = visible.get(edit.path)
-            if snapshot is None:
-                reasons.append(f"generated path was not supplied in patch_context: {edit.path}")
-                continue
-            encoded = edit.replacement.encode("utf-8")
+        for path, replacement in replacements.items():
+            snapshot = visible[path]
+            encoded = replacement.encode("utf-8")
             total_bytes += len(encoded)
-            if "```" in edit.replacement:
-                reasons.append(f"generated replacement contains a Markdown fence: {edit.path}")
-            if "\x00" in edit.replacement:
-                reasons.append(f"generated replacement contains a NUL byte: {edit.path}")
+            if "```" in replacement:
+                reasons.append(f"generated replacement contains a Markdown fence: {path}")
+            if "\x00" in replacement:
+                reasons.append(f"generated replacement contains a NUL byte: {path}")
             if len(encoded) > input_data.patch_policy.maximum_replacement_bytes_per_file:
-                reasons.append(f"generated replacement exceeds the per-file limit: {edit.path}")
+                reasons.append(f"generated replacement exceeds the per-file limit: {path}")
             if hashlib.sha256(encoded).hexdigest() == snapshot.sha256:
-                reasons.append(f"generated replacement is unchanged: {edit.path}")
+                reasons.append(f"generated replacement is unchanged: {path}")
         if total_bytes > input_data.patch_policy.maximum_replacement_bytes_total:
             reasons.append("generated replacements exceed the total byte limit")
         return reasons
@@ -281,17 +334,15 @@ def materialize_benchmark_patch_proposal(
         raise ValueError("a benchmark stop decision cannot become a patch proposal")
     snapshots = {item.path: item for item in input_data.patch_context.files}
     edits: list[BenchmarkPatchEdit] = []
-    for generated in output.edits:
-        try:
-            predecessor = snapshots[generated.path]
-        except KeyError as exc:
-            raise ValueError("generated benchmark patch path was not in its context") from exc
-        replacement_sha256 = hashlib.sha256(generated.replacement.encode("utf-8")).hexdigest()
+    resolved = output.resolve_files({path: row.content for path, row in snapshots.items()})
+    for path, replacement in resolved.items():
+        predecessor = snapshots[path]
+        replacement_sha256 = hashlib.sha256(replacement.encode("utf-8")).hexdigest()
         edits.append(
             BenchmarkPatchEdit(
-                path=generated.path,
+                path=path,
                 expected_sha256=predecessor.sha256,
-                replacement=generated.replacement,
+                replacement=replacement,
                 replacement_sha256=replacement_sha256,
             )
         )

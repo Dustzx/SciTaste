@@ -335,9 +335,7 @@ def prepare_counterfactual_deliberation_inputs(
             objective_preferred_actions=tuple(
                 sorted(item.value for item in result.preferred_actions)
             ),
-            objective_values={
-                item.action.value: item.objective_value for item in result.outcomes
-            },
+            objective_values={item.action.value: item.objective_value for item in result.outcomes},
             objective_observed={
                 item.action.value: item.objective_observed for item in result.outcomes
             },
@@ -347,9 +345,7 @@ def prepare_counterfactual_deliberation_inputs(
             study_id=result.study_id,
             task_cluster_id=binding.task_cluster_id,
             maximum_candidate_cases=(
-                len(population)
-                if maximum_candidate_cases is None
-                else maximum_candidate_cases
+                len(population) if maximum_candidate_cases is None else maximum_candidate_cases
             ),
             population_scores={
                 item.case_id: item.broad_retrieval_score

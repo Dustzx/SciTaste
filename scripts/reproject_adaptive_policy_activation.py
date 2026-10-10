@@ -188,9 +188,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
     )
     reprojected_state = _reprojected_state(state, result)
     save_adaptive_policy_activation_artifact(result, output_dir / "FINALIZATION.json")
-    save_adaptive_policy_activation_artifact(
-        reprojected_state, output_dir / "FINALIZED_STATE.json"
-    )
+    save_adaptive_policy_activation_artifact(reprojected_state, output_dir / "FINALIZED_STATE.json")
 
     _, inspection, handoff, manifest_path = materialize_adaptive_policy_e2_successor(
         manifest,
@@ -260,9 +258,7 @@ def _reprojected_state(
     )
     return AdaptivePolicyActivationCampaignState(
         **payload,
-        state_sha256=content_sha256(
-            unsigned.model_dump(mode="json", exclude={"state_sha256"})
-        ),
+        state_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"state_sha256"})),
     )
 
 
@@ -295,9 +291,7 @@ def _sha256(path: Path) -> str:
 
 
 def _write_json(payload: dict[str, object], path: Path) -> None:
-    path.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def build_parser() -> argparse.ArgumentParser:

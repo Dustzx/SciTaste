@@ -673,9 +673,10 @@ def normalize_scitastebench_development_panel(
             )
             if raw_output.get("batch_id") != batch.batch_id:
                 raise ValueError("development panel provider response names another batch")
-            if raw_output.get("target_outcomes_used", False) is not False or raw_output.get(
-                "benchmark_admission_claimed", False
-            ) is not False:
+            if (
+                raw_output.get("target_outcomes_used", False) is not False
+                or raw_output.get("benchmark_admission_claimed", False) is not False
+            ):
                 raise ValueError("development panel provider response exceeds its authority")
             raw_decisions = raw_output.get("decisions")
             if not isinstance(raw_decisions, list) or len(raw_decisions) != len(
@@ -702,15 +703,11 @@ def normalize_scitastebench_development_panel(
                         original_receipt_outcome=receipt.outcome,
                         provider_resolution=audit["provider_resolution"],
                         canonical_resolution=decision.resolution,
-                        semantic_echo_correction_count=audit[
-                            "semantic_echo_correction_count"
-                        ],
+                        semantic_echo_correction_count=audit["semantic_echo_correction_count"],
                         ineligible_field_nullification_count=audit[
                             "ineligible_field_nullification_count"
                         ],
-                        envelope_field_removal_count=audit[
-                            "envelope_field_removal_count"
-                        ],
+                        envelope_field_removal_count=audit["envelope_field_removal_count"],
                         rationale_truncated=audit["rationale_truncated"],
                         decision=decision,
                     )
@@ -787,19 +784,14 @@ def normalize_scitastebench_development_panel(
             plan_sha256=plan.plan_sha256,
             normalized_at=normalized_at or datetime.now(UTC),
             source_batch_count=len(receipts),
-            source_accepted_batch_count=sum(
-                item.outcome == "accepted" for item in receipts
-            ),
-            source_rejected_batch_count=sum(
-                item.outcome == "rejected" for item in receipts
-            ),
+            source_accepted_batch_count=sum(item.outcome == "accepted" for item in receipts),
+            source_rejected_batch_count=sum(item.outcome == "rejected" for item in receipts),
             source_input_tokens=sum(item.input_tokens for item in receipts),
             source_output_tokens=sum(item.output_tokens for item in receipts),
             source_cost_usd=sum(item.cost_usd or 0.0 for item in receipts),
             normalized_adjudication_count=len(normalized),
             final_eligible_count=sum(
-                item.final_decision is not None and item.final_decision.eligible
-                for item in records
+                item.final_decision is not None and item.final_decision.eligible for item in records
             ),
             semantic_echo_correction_count=sum(
                 item.semantic_echo_correction_count for item in normalized
@@ -889,9 +881,7 @@ def _normalize_adjudication_decision(
             {
                 "position": position,
                 "resolution": (
-                    resolution
-                    if primary.eligible
-                    else AdjudicationResolution.NEITHER_INELIGIBLE
+                    resolution if primary.eligible else AdjudicationResolution.NEITHER_INELIGIBLE
                 ),
                 "rationale": rationale,
             }

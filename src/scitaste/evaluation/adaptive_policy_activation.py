@@ -354,8 +354,7 @@ class AdaptivePolicyActivationManifest(BaseModel):
             len(tasks) * self.review_and_admission.maximum_review_generations_per_qualifying_task
         )
         execution_modes = {
-            item.execution_mode
-            for item in self.review_and_admission.attribution_primary_models
+            item.execution_mode for item in self.review_and_admission.attribution_primary_models
         }
         if len(execution_modes) != 1:
             raise ValueError("activation review panel cannot mix local and live execution")
@@ -705,10 +704,7 @@ class AdaptivePolicyActivationReviewResult(BaseModel):
         accepted_review_count = len(self.attribution_reviews) + len(self.family_reviews)
         if accepted_review_count > generation_count:
             raise ValueError("activation accepted reviews exceed generations")
-        if (
-            self.status != "runtime-failure"
-            and accepted_review_count != generation_count
-        ):
+        if self.status != "runtime-failure" and accepted_review_count != generation_count:
             raise ValueError("activation review result generation count differs")
         complete = self.status == "policy-eligible"
         if complete != bool(
@@ -1042,6 +1038,11 @@ class AdaptivePolicyActivationCampaignState(BaseModel):
                 }
             )
         unsigned = cls.model_construct(state_sha256="0" * 64, **payload)
+        # New states explicitly carry the same default fields that are hashed.
+        # Historical states may omit later optional fields; their validation path
+        # intentionally excludes those fields. Hashing defaults but then omitting
+        # them from this constructor made fresh v1.0 states fail their own seal.
+        payload = unsigned.model_dump(mode="python", exclude={"state_sha256"})
         return cls(
             **payload,
             state_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"state_sha256"})),
@@ -1267,8 +1268,7 @@ def inspect_adaptive_policy_activation(
         and (
             manifest.schema_version == "1.0"
             or all(
-                item.episode_target_action is not None
-                for item in manifest.frozen_execution.tasks
+                item.episode_target_action is not None for item in manifest.frozen_execution.tasks
             )
         )
     )
@@ -1607,9 +1607,7 @@ def issue_adaptive_policy_activation_review(
             > ceiling.local_review_generations
         ):
             raise ValueError("activation remaining local generation ceiling cannot fit review")
-        remaining_gpu_hours = (
-            ceiling.local_review_gpu_hours - state.consumed_local_review_gpu_hours
-        )
+        remaining_gpu_hours = ceiling.local_review_gpu_hours - state.consumed_local_review_gpu_hours
         remaining_live_tokens = 0
         remaining_live_cost = 0.0
         if remaining_gpu_hours <= 0:
@@ -1623,8 +1621,7 @@ def issue_adaptive_policy_activation_review(
             raise ValueError("activation remaining live generation ceiling cannot fit review")
         remaining_gpu_hours = 0.0
         campaign_remaining_live_tokens = ceiling.live_review_total_tokens - (
-            state.consumed_live_review_input_tokens
-            + state.consumed_live_review_output_tokens
+            state.consumed_live_review_input_tokens + state.consumed_live_review_output_tokens
         )
         campaign_remaining_live_cost = (
             ceiling.live_review_cost_usd - state.consumed_live_review_cost_usd
@@ -1659,15 +1656,11 @@ def issue_adaptive_policy_activation_review(
             item.runtime_model_id for item in review.attribution_primary_models
         ),
         maximum_local_generations=(
-            review.maximum_review_generations_per_qualifying_task
-            if review_mode == "local"
-            else 0
+            review.maximum_review_generations_per_qualifying_task if review_mode == "local" else 0
         ),
         maximum_local_gpu_hours=remaining_gpu_hours,
         maximum_live_generations=(
-            review.maximum_review_generations_per_qualifying_task
-            if review_mode == "live"
-            else 0
+            review.maximum_review_generations_per_qualifying_task if review_mode == "live" else 0
         ),
         maximum_live_total_tokens=remaining_live_tokens,
         maximum_live_cost_usd=remaining_live_cost,
@@ -1751,8 +1744,7 @@ def complete_adaptive_policy_activation_review(
         result.local_generation_count > permit.maximum_local_generations
         or result.local_gpu_hours > permit.maximum_local_gpu_hours
         or result.live_generation_count > permit.maximum_live_generations
-        or result.live_input_tokens + result.live_output_tokens
-        > permit.maximum_live_total_tokens
+        or result.live_input_tokens + result.live_output_tokens > permit.maximum_live_total_tokens
         or result.live_cost_usd > permit.maximum_live_cost_usd
         or result.new_disk_bytes > permit.maximum_new_disk_bytes
     ):
@@ -1770,8 +1762,7 @@ def complete_adaptive_policy_activation_review(
         + result.live_input_tokens
         + result.live_output_tokens
         > ceiling.live_review_total_tokens
-        or state.consumed_live_review_cost_usd + result.live_cost_usd
-        > ceiling.live_review_cost_usd
+        or state.consumed_live_review_cost_usd + result.live_cost_usd > ceiling.live_review_cost_usd
         or state.consumed_new_disk_bytes + result.new_disk_bytes > ceiling.maximum_new_disk_bytes
     ):
         raise ValueError("activation review result exceeded its campaign ceiling")
@@ -1814,9 +1805,7 @@ def complete_adaptive_policy_activation_review(
         consumed_live_review_output_tokens=(
             state.consumed_live_review_output_tokens + result.live_output_tokens
         ),
-        consumed_live_review_cost_usd=(
-            state.consumed_live_review_cost_usd + result.live_cost_usd
-        ),
+        consumed_live_review_cost_usd=(state.consumed_live_review_cost_usd + result.live_cost_usd),
         consumed_new_disk_bytes=state.consumed_new_disk_bytes + result.new_disk_bytes,
     )
 
@@ -1973,8 +1962,7 @@ def validate_adaptive_policy_activation_review_authority(
         or permit.schema_version != manifest.schema_version
         or permit.maximum_local_generations
         != (expected_generations if review_mode == "local" else 0)
-        or permit.maximum_live_generations
-        != (expected_generations if review_mode == "live" else 0)
+        or permit.maximum_live_generations != (expected_generations if review_mode == "live" else 0)
         or permit.local_execution_authorized != (review_mode == "local")
         or permit.api_execution_authorized != (review_mode == "live")
         or permit.maximum_retries_per_generation != 0
@@ -2101,8 +2089,7 @@ def _validate_activation_authority(
         or state.consumed_local_review_gpu_hours > ceiling.local_review_gpu_hours
         or state.consumed_live_review_generations > ceiling.live_review_generations
         or (
-            state.consumed_live_review_input_tokens
-            + state.consumed_live_review_output_tokens
+            state.consumed_live_review_input_tokens + state.consumed_live_review_output_tokens
             > ceiling.live_review_total_tokens
         )
         or state.consumed_live_review_cost_usd > ceiling.live_review_cost_usd
@@ -2546,8 +2533,7 @@ def _review_runtime_and_authority_match(
                     or profile.model.split("@", maxsplit=1)[0] != item.model_id
                     or not profile.local_execution_permitted
                     or profile.live_execution_permitted
-                    or profile.generation.max_output_tokens
-                    > int(backend.get("max_new_tokens", 0))
+                    or profile.generation.max_output_tokens > int(backend.get("max_new_tokens", 0))
                 )
             else:
                 mode_invalid = (
@@ -2577,18 +2563,14 @@ def _resource_arithmetic_closed(manifest: AdaptivePolicyActivationManifest) -> b
         and ceiling.api_total_tokens == len(tasks) * model.maximum_total_tokens_per_task
         and (
             (
-                next(
-                    iter({item.execution_mode for item in review.attribution_primary_models})
-                )
+                next(iter({item.execution_mode for item in review.attribution_primary_models}))
                 == "local"
                 and ceiling.local_review_generations
                 == len(tasks) * review.maximum_review_generations_per_qualifying_task
                 and ceiling.live_review_generations == 0
             )
             or (
-                next(
-                    iter({item.execution_mode for item in review.attribution_primary_models})
-                )
+                next(iter({item.execution_mode for item in review.attribution_primary_models}))
                 == "live"
                 and ceiling.local_review_generations == 0
                 and ceiling.live_review_generations

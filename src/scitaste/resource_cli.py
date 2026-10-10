@@ -20,6 +20,30 @@ def register_resource_cli(commands: argparse._SubParsersAction[argparse.Argument
         help="Inspect and maintain shared API/GPU resources above project directories",
     )
     resource_commands = resources.add_subparsers(dest="resource_command", required=True)
+    from scitaste.project.acquired_assets import configure_parser as configure_acquired_assets
+    from scitaste.project.acquisition_selection import configure_resume_parser
+    from scitaste.project.resource_acquisition import configure_parser as configure_acquisition
+
+    configure_resume_parser(
+        resource_commands.add_parser(
+            "materialize-planned-resources",
+            help="Resume accepted resource preparation without replanning or experiments",
+        )
+    )
+
+    configure_acquisition(
+        resource_commands.add_parser(
+            "acquire-workspace-resources",
+            help="Acquire or reuse project resources and prepare a bounded workspace handoff",
+        )
+    )
+
+    configure_acquired_assets(
+        resource_commands.add_parser(
+            "prepare-acquired-assets",
+            help="Bind acquired items to Native workspace resources without execution",
+        )
+    )
 
     inspect = resource_commands.add_parser(
         "inspect",

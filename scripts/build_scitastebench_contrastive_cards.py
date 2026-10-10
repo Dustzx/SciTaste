@@ -284,8 +284,7 @@ def run(args: argparse.Namespace) -> None:
     screens_raw = _read_jsonl(args.screening_items, DevelopmentScreeningItem)
     records_raw = _read_jsonl(args.panel_decisions, DevelopmentPanelDecisionRecord)
     screens = {
-        key: DevelopmentScreeningItem.model_validate(value)
-        for key, value in screens_raw.items()
+        key: DevelopmentScreeningItem.model_validate(value) for key, value in screens_raw.items()
     }
     records = {
         key: DevelopmentPanelDecisionRecord.model_validate(value)
@@ -499,9 +498,7 @@ def run(args: argparse.Namespace) -> None:
     )
     suite_path = args.output / "SUITE.yaml"
     suite_path.write_text(
-        yaml.safe_dump(
-            new_suite.model_dump(mode="json"), sort_keys=False, allow_unicode=True
-        ),
+        yaml.safe_dump(new_suite.model_dump(mode="json"), sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )
     summary = {

@@ -177,7 +177,7 @@ def test_venue_paper_node_and_internal_report_keep_authority_separate() -> None:
 
     assert result.status is NodeResultStatus.ACCEPTED
     assert result.proposal is not None
-    assert result.request.prompt_version == "venue-paper-review-v3"
+    assert result.request.prompt_version == "venue-paper-review-v4"
     contract = result.request.input_payload["closed_world_contract"]
     assert contract == {
         "registered_claim_ids": ["claim-1"],
@@ -564,7 +564,7 @@ def test_internal_report_import_is_bound_to_verified_runtime_entry(
     assert report.model_invocation.entry_sha256 == receipt.entry_sha256
     assert report.model_invocation.result_sha256 is not None
     assert report.model_invocation.request_fingerprint == receipt.request_fingerprint
-    assert report.model_invocation.prompt_version == "venue-paper-review-v3"
+    assert report.model_invocation.prompt_version == "venue-paper-review-v4"
     assert report.reviewer.provider == "scripted"
     assert report.reviewer.model_name == "scripted-reviewer-v1"
 

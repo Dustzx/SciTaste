@@ -16,7 +16,11 @@ from scitaste.model_nodes.runtime import (
     ModelNodeTrigger,
     RuntimeOutcome,
 )
-from scitaste.model_nodes.runtime_config import LiveRuntimeBackend, ModelNodeRuntimeConfig
+from scitaste.model_nodes.runtime_config import (
+    LiveRuntimeBackend,
+    ModelNodeRuntimeConfig,
+    SessionRuntimeBackend,
+)
 from scitaste.model_nodes.schemas import VenuePaperReviewInput, VenuePaperReviewProposal
 from scitaste.project import ProjectRuntime
 from scitaste.project.models import validate_relative_locator
@@ -284,7 +288,7 @@ def build_venue_paper_review_runtime_config(
     material: VenuePaperReviewMaterial,
     *,
     profile: ModelNodeProfile,
-    backend_config: StructuredOpenAICompatibleConfig,
+    backend_config: StructuredOpenAICompatibleConfig | SessionRuntimeBackend,
     seed: int = 0,
 ) -> ModelNodeRuntimeConfig:
     """Build a no-secret, profile-bound invocation config without calling a model."""
@@ -335,7 +339,9 @@ def build_venue_paper_review_runtime_config(
             reason="Internal whole-paper venue review of the exact registered manuscript.",
         ),
         policy=policy,
-        backend=LiveRuntimeBackend(config=backend_config),
+        backend=backend_config
+        if isinstance(backend_config, SessionRuntimeBackend)
+        else LiveRuntimeBackend(config=backend_config),
         seed=seed,
     )
 

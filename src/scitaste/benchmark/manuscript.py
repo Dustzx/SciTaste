@@ -36,6 +36,7 @@ def materialize_manuscript(
     target_dir: Path,
     bibliography_path: Path | None = None,
     asset_roots: tuple[Path, ...] = (),
+    evidence_audited: bool = True,
 ) -> list[Path]:
     """Create a self-contained TeX bundle and compile it when LaTeX is available."""
 
@@ -63,8 +64,9 @@ def materialize_manuscript(
     readme_path = target_dir / "README.md"
     readme_path.write_text(
         "# SciTaste manuscript bundle\n\n"
-        "This bundle was deterministically rendered from the evidence-audited Markdown "
-        "manuscript. No additional language-model call was used.\n\n"
+        "This bundle was deterministically rendered from "
+        + ("evidence-audited Markdown" if evidence_audited else "unreviewed candidate Markdown")
+        + ". No additional language-model call was used.\n\n"
         "Compile locally with `latexmk -xelatex -interaction=nonstopmode "
         "-halt-on-error main.tex`.\n",
         encoding="utf-8",
@@ -571,14 +573,21 @@ def _markdown_table_to_latex(lines: list[str]) -> list[str]:
         "\\small",
         f"\\begin{{tabularx}}{{\\linewidth}}{{{columns}}}",
         "\\toprule",
-        " & ".join(_inline_latex(cell) for cell in normalized[0]) + " \\\\",
+        " & ".join(_table_cell_latex(cell) for cell in normalized[0]) + " \\\\",
         "\\midrule",
     ]
     rendered.extend(
-        " & ".join(_inline_latex(cell) for cell in row) + " \\\\" for row in normalized[1:]
+        " & ".join(_table_cell_latex(cell) for cell in row) + " \\\\" for row in normalized[1:]
     )
     rendered.extend(["\\bottomrule", "\\end{tabularx}", "\\end{table}"])
     return rendered
+
+
+def _table_cell_latex(cell: str) -> str:
+    rendered = _inline_latex(cell)
+    # A literal leading "[" after the preceding row's \\ is otherwise parsed
+    # as its optional vertical spacing argument (e.g. a local artifact link).
+    return "{}" + rendered if rendered.startswith("[") else rendered
 
 
 def _split_markdown_row(line: str) -> list[str]:

@@ -103,6 +103,22 @@ and reduces invalid transitions across the registered tasks.
     assert assessment.scientific_quality_established is False
 
 
+def test_repro_metadata_is_routed_out_of_main_narrative() -> None:
+    manuscript = """# Evaluation
+
+The pilot uses task 002 at commit 01bc2371 and scores paired outcomes.
+
+# Appendix: Reproducibility
+
+The same pilot uses task 002 at commit 01bc2371.
+"""
+    assessment = assess_writing_taste(manuscript)
+    findings = [item for item in assessment.findings if item.code == "repro-metadata-in-narrative"]
+    assert len(findings) == 1
+    assert findings[0].section_name == "Evaluation"
+    assert findings[0].automatic_rewrite_allowed is False
+
+
 def test_writing_taste_assessment_is_self_hashed_and_writable(tmp_path) -> None:
     assessment = assess_writing_taste("# Abstract\nWe propose a method and show a result.\n")
 

@@ -551,8 +551,7 @@ def derive_h4_formal_preparation_request(
             {
                 str(cell.resource.api_key_env)
                 for cell in cells
-                if cell.lane_kind
-                in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+                if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             }
         )
     )
@@ -566,9 +565,7 @@ def derive_h4_formal_preparation_request(
         elif lane.gpu_resource is None:
             raise ValueError("H4 GPU lane lacks its registered device resource")
         else:
-            gpu_counts.add(
-                lane.gpu_resource.effective_allocated_device_count_per_cell
-            )
+            gpu_counts.add(lane.gpu_resource.effective_allocated_device_count_per_cell)
     if len(gpu_counts) != 1:
         raise ValueError("H4 request compiler cannot mix launcher GPU counts")
     gpu_count = next(iter(gpu_counts))
@@ -996,8 +993,7 @@ def _verify_h4_launcher_runtime(
             {
                 str(cell.resource.api_key_env)
                 for cell in cells
-                if cell.lane_kind
-                in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+                if cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             }
         )
     )
@@ -1018,9 +1014,7 @@ def _verify_h4_launcher_runtime(
         else:
             if lane.gpu_resource is None:
                 raise ValueError("H4 GPU lane lacks its frozen resource")
-            gpu_counts.add(
-                lane.gpu_resource.effective_allocated_device_count_per_cell
-            )
+            gpu_counts.add(lane.gpu_resource.effective_allocated_device_count_per_cell)
     if len(gpu_counts) != 1:
         raise ValueError("one H4 campaign cannot mix incompatible GPU launcher counts")
     expected_gpu_count = next(iter(gpu_counts))

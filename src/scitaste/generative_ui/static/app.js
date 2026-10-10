@@ -31,6 +31,7 @@ const candidateRun = document.getElementById("candidate-run");
 const compareRunsButton = document.getElementById("compare-runs");
 const quickIntents = document.getElementById("quick-intents");
 const intentForm = document.getElementById("intent-form");
+const cancelProgramRevision = document.getElementById("cancel-program-revision");
 const intentQuestion = document.getElementById("intent-question");
 const conversationContextMode = document.getElementById("conversation-context-mode");
 const generateWorkspaceButton = document.getElementById("generate-workspace");
@@ -183,6 +184,12 @@ function closeDrawerOnMobile() {
   }
 }
 
+// One navigation home: brand, project controls and history share the drawer.
+projectDrawer.prepend(document.querySelector(".app-header"));
+projectDrawer.insertBefore(document.querySelector(".project-toolbar"), document.querySelector(".drawer-heading"));
+projectDrawer.appendChild(freshness);
+document.querySelector(".header-controls").appendChild(document.getElementById("drawer-close"));
+document.body.classList.add("drawer-shell");
 renderDrawerState();
 
 function browserLocale() {
@@ -1286,6 +1293,198 @@ function renderResearchLandscape(data) {
   return container;
 }
 
+function renderLivingProjectDocuments(documents) {
+  if (!documents) return null;
+  const section = progressSection(documents.focus, documents.summary);
+  const stamp = document.createElement("small");
+  appendText(stamp, `${documents.updated_at} · ${documents.author} · 非实时状态 / not live`);
+  section.appendChild(stamp);
+  for (const phase of documents.phases) {
+    const card = document.createElement("details");
+    const heading = document.createElement("summary");
+    appendText(heading, `${phase.title} · ${phase.status}`);
+    const current = document.createElement("p");
+    appendText(current, phase.current);
+    const steps = document.createElement("ul");
+    for (const step of phase.next_steps) {
+      const row = document.createElement("li");
+      appendText(row, step);
+      steps.appendChild(row);
+    }
+    const refs = document.createElement("small");
+    appendText(refs, phase.references.join(" · "));
+    card.append(heading, current, steps, refs);
+    section.appendChild(card);
+  }
+  return section;
+}
+
+function renderResearchDesktop(data, panels) {
+  const desktop = document.createElement("section");
+  desktop.className = "research-desktop";
+  const program = data.evidence_program;
+  const home = document.createElement("div");
+  home.className = "desktop-home";
+  const intro = document.createElement("div");
+  intro.className = "desktop-intro";
+  const heading = document.createElement("h3");
+  appendText(heading, t("desktop.title"));
+  const headingGroup = document.createElement("div");
+  const projectLabel = document.createElement("small");
+  projectLabel.className = "desktop-project-label";
+  const projectMeta = projectDiscovery?.projects.find(item => item.project_id === activeProjectId);
+  appendText(projectLabel, [projectMeta?.title || activeProjectId, projectMeta?.target_venue].filter(Boolean).join(" · "));
+  headingGroup.append(projectLabel, heading);
+  const meta = document.createElement("p");
+  appendText(meta, program ? t("desktop.plan_status", {
+    completed: program.completed_stage_count, total: program.total_stage_count,
+  }) : (data.project_documents?.focus || t("desktop.no_plan")));
+  intro.append(headingGroup, meta);
+  home.appendChild(intro);
+  const latestMilestone = data.milestones?.at(-1);
+  if (latestMilestone) {
+    const latest = document.createElement("button");
+    latest.type = "button";
+    latest.className = "desktop-latest-progress";
+    const label = document.createElement("strong");
+    appendText(label, t("desktop.latest_progress", {date: latestMilestone.recorded_on}));
+    const summary = document.createElement("span");
+    appendText(summary, latestMilestone.decision);
+    const note = document.createElement("small");
+    appendText(note, t("desktop.progress_boundary"));
+    latest.append(label, summary, note);
+    latest.addEventListener("click", () => openPanel("history"));
+    home.appendChild(latest);
+  }
+  if (program) {
+    const rail = document.createElement("div");
+    rail.className = "desktop-timeline";
+    rail.setAttribute("role", "group");
+    rail.setAttribute("aria-label", t("desktop.timeline"));
+    const detail = document.createElement("section");
+    detail.className = "desktop-node-detail";
+    detail.setAttribute("aria-live", "polite");
+    const buttons = [];
+    const selectPhase = phase => {
+      for (const [id, button] of buttons) button.setAttribute("aria-pressed", String(id === phase.phase_id));
+      detail.replaceChildren();
+      const copy = document.createElement("div");
+      const label = document.createElement("span");
+      label.className = "desktop-node-label";
+      appendText(label, phase.phase_id === program.current_phase_id ? t("desktop.current") : t("desktop.selected"));
+      const title = document.createElement("h4");
+      appendText(title, t(`progress.program.phase.${phase.label_code}`));
+      const status = document.createElement("p");
+      appendText(status, t(`progress.program.state.${phase.state}`, {
+        completed: phase.completed_stage_count, total: phase.stage_count,
+      }));
+      const tasks = document.createElement("ul");
+      tasks.className = "desktop-task-list";
+      for (const id of phase.stage_ids) {
+        const task = document.createElement("li");
+        const key = `desktop.stage.${id}`;
+        appendText(task, hasTranslation(key) ? t(key) : readableCode(id));
+        tasks.appendChild(task);
+      }
+      copy.append(label, title, status, tasks);
+      const actions = document.createElement("div");
+      actions.className = "desktop-node-actions";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      appendText(edit, t("desktop.adjust"));
+      edit.addEventListener("click", () => prepareEvidenceProgramQuestion(program, phase));
+      const inspect = document.createElement("button");
+      inspect.type = "button";
+      inspect.className = "secondary-button";
+      appendText(inspect, t("desktop.plan_details"));
+      inspect.addEventListener("click", () => openPanel("plan"));
+      const note = document.createElement("small");
+      appendText(note, t("desktop.intervention_hint"));
+      actions.append(edit, inspect, note);
+      detail.append(copy, actions);
+    };
+    for (const [index, phase] of program.phases.entries()) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `desktop-phase state-${phase.state}`;
+      const marker = document.createElement("span");
+      marker.className = "desktop-phase-marker";
+      appendText(marker, phase.state === "complete" ? "✓" : index + 1);
+      const title = document.createElement("strong");
+      appendText(title, t(`progress.program.phase.${phase.label_code}`));
+      const status = document.createElement("small");
+      appendText(status, t(`desktop.state.${phase.state}`));
+      button.append(marker, title, status);
+      button.addEventListener("click", () => selectPhase(phase));
+      buttons.push([phase.phase_id, button]);
+      rail.appendChild(button);
+    }
+    home.append(rail, detail);
+    selectPhase(program.phases.find(p => p.phase_id === program.current_phase_id) || program.phases[0]);
+  } else {
+    home.appendChild(panels.direction);
+  }
+  const dock = document.createElement("nav");
+  dock.className = "desktop-dock";
+  dock.setAttribute("aria-label", t("desktop.workspaces"));
+  const body = document.createElement("section");
+  body.className = "desktop-panel";
+  const toolbar = document.createElement("div");
+  toolbar.className = "desktop-panel-toolbar";
+  const back = document.createElement("button");
+  back.type = "button";
+  appendText(back, t("desktop.back"));
+  const panelTitle = document.createElement("h3");
+  toolbar.append(back, panelTitle);
+  const panelContent = document.createElement("div");
+  panelContent.className = "desktop-panel-content";
+  body.append(toolbar, panelContent);
+  const entries = [
+    ["home", "◉"], ["resources", "▦"], ["experiments", "⚗"],
+    ["papers", "▤"], ["taste", "◇"], ["history", "◷"],
+  ];
+  const dockButtons = [];
+  function openPanel(name) {
+    home.hidden = name !== "home";
+    body.hidden = name === "home";
+    for (const [key, button] of dockButtons) button.setAttribute("aria-pressed", String(name === key));
+    panelTitle.textContent = t(`desktop.app.${name}`);
+    panelContent.replaceChildren();
+    if (name === "home" && !program && panels.direction) home.appendChild(panels.direction);
+    if (name !== "home") {
+      const nodes = panels[name] || [];
+      for (const node of nodes.filter(Boolean)) panelContent.appendChild(node);
+      if (!panelContent.childElementCount) appendText(panelContent, t("desktop.empty"));
+    }
+    desktop.dataset.activePanel = name;
+    workspace.scrollTop = 0;
+  }
+  back.addEventListener("click", () => openPanel("home"));
+  for (const [name, icon] of entries) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "desktop-app";
+    const symbol = document.createElement("span");
+    symbol.className = "desktop-app-icon";
+    symbol.setAttribute("aria-hidden", "true");
+    appendText(symbol, icon);
+    const label = document.createElement("strong");
+    appendText(label, t(`desktop.app.${name}`));
+    button.append(symbol, label);
+    button.addEventListener("click", () => openPanel(name));
+    dockButtons.push([name, button]);
+    dock.appendChild(button);
+  }
+  desktop.append(home, dock, body);
+  desktop.addRelatedContent = (name, node) => {
+    panels[name] ||= [];
+    panels[name].push(node);
+    node.remove();
+  };
+  openPanel("home");
+  return desktop;
+}
+
 function renderProjectProgress(data) {
   const container = document.createElement("div");
   container.className = "progress-board";
@@ -1665,7 +1864,6 @@ function renderProjectProgress(data) {
       names: ["state", "reason"],
     }));
   }
-  standing.appendChild(milestones);
 
   const activity = progressSection(
     t("progress.activity.title"),
@@ -1840,45 +2038,26 @@ function renderProjectProgress(data) {
   const detailContent = document.createElement("div");
   detailContent.className = "progress-evidence-vault-content";
   detailContent.append(
-    reviewIterations,
     metadataAuditPlans,
     metadataPopulations,
     metadataScreenings,
     metadataAllocations,
-    referenceSelections,
-    benchmarkQualifications,
-    datasetPackages,
     acquisitions,
     acquisitionReceipts,
     acquisitionQualifications,
     metrics,
     distribution,
-    evaluations,
-    evaluationResults,
-    standing,
-    activity,
   );
   details.append(detailsSummary, detailContent);
-  if (operatingLoop) {
-    container.appendChild(operatingLoop);
-  }
-  if (evidenceProgram) {
-    container.appendChild(evidenceProgram);
-  }
-  if (resourcePortfolio) {
-    container.appendChild(resourcePortfolio);
-  }
-  container.appendChild(hero);
-  if (tastePopulations) {
-    container.appendChild(tastePopulations);
-  }
-  if (tasteDomainExpansions) {
-    container.appendChild(tasteDomainExpansions);
-  }
-  if (tasteSourceReviews) {
-    container.appendChild(tasteSourceReviews);
-  }
-  container.append(nextSteps, direction, lifecycle, details);
+  container.appendChild(renderResearchDesktop(data, {
+    direction,
+    plan: [renderLivingProjectDocuments(data.project_documents), evidenceProgram, direction, operatingLoop, nextSteps],
+    resources: [resourcePortfolio],
+    experiments: [evaluations, evaluationResults, benchmarkQualifications, datasetPackages],
+    papers: [standing, reviewIterations],
+    taste: [tastePopulations, tasteDomainExpansions, tasteSourceReviews, referenceSelections],
+    history: [milestones, hero, activity, lifecycle, details],
+  }));
   return container;
 }
 
@@ -1951,6 +2130,16 @@ function renderProjectOperatingLoop(program, resources) {
     ? "operating_loop.bridge.consumed"
     : "operating_loop.bridge.proposal"));
   bridge.append(bridgeArrow, bridgeLabel, bridgeState);
+  if (program.planning_directive) {
+    const nativeState = document.createElement("small");
+    appendText(nativeState, t(`native_planning.${program.planning_directive.native_planning_status || "awaiting-planning"}`));
+    bridge.appendChild(nativeState);
+    if (program.planning_directive.native_planning_explanation) {
+      const nativeReason = document.createElement("small");
+      appendText(nativeReason, program.planning_directive.native_planning_explanation);
+      bridge.appendChild(nativeReason);
+    }
+  }
 
   const controller = document.createElement("article");
   controller.className = "project-operating-plane controller-plane";
@@ -2007,13 +2196,14 @@ function prepareEvidenceProgramQuestion(program, phase = null) {
   const availableRoutes = program.next_gate_action_routes || [];
   const targetStageId = phase?.stage_ids?.find(
     (stageId) => availableRoutes.some((item) => item.stage_id === stageId),
-  ) || program.current_stage_id;
+  ) || (phase ? phase.stage_ids[0] : program.current_stage_id);
   const phaseName = phase
     ? t(`progress.program.phase.${phase.label_code}`)
     : t(`progress.program.phase.${program.current_phase_id}`);
   intentQuestion.value = t("progress.program.question_prompt", {
     phase: phaseName,
-    stage: readableCode(targetStageId),
+    stage: hasTranslation(`desktop.stage.${targetStageId}`)
+      ? t(`desktop.stage.${targetStageId}`) : readableCode(targetStageId),
   });
   const targetRoute = availableRoutes.find(
     (item) => item.stage_id === targetStageId,
@@ -2025,7 +2215,7 @@ function prepareEvidenceProgramQuestion(program, phase = null) {
     baseProposalId: null,
     baseRecordSha256: null,
   };
-  generateWorkspaceButton.textContent = t("generation.propose_revision");
+  setRevisionComposerMode("generation.propose_revision");
   intentQuestion.focus({preventScroll: true});
   intentForm.scrollIntoView({behavior: "smooth", block: "center"});
 }
@@ -2044,7 +2234,7 @@ function prepareResourceRevision(data, evidenceProgram) {
       baseProposalId: null,
       baseRecordSha256: null,
     };
-    generateWorkspaceButton.textContent = t("generation.propose_revision");
+    setRevisionComposerMode("generation.propose_revision");
   } else {
     clearProgramRevisionContext();
   }
@@ -2065,7 +2255,7 @@ function prepareResourceAttachment(data, evidenceProgram, resource) {
       baseProposalId: null,
       baseRecordSha256: null,
     };
-    generateWorkspaceButton.textContent = t("generation.propose_revision");
+    setRevisionComposerMode("generation.propose_revision");
   } else {
     clearProgramRevisionContext();
   }
@@ -2087,7 +2277,7 @@ function prepareGateRouteQuestion(program, route) {
     baseProposalId: null,
     baseRecordSha256: null,
   };
-  generateWorkspaceButton.textContent = t("generation.propose_revision");
+  setRevisionComposerMode("generation.propose_revision");
   intentQuestion.focus({preventScroll: true});
   intentForm.scrollIntoView({behavior: "smooth", block: "center"});
 }
@@ -2095,6 +2285,12 @@ function prepareGateRouteQuestion(program, route) {
 function clearProgramRevisionContext() {
   activeProgramRevisionContext = null;
   generateWorkspaceButton.textContent = t("generation.submit");
+  cancelProgramRevision.hidden = true;
+}
+
+function setRevisionComposerMode(label) {
+  generateWorkspaceButton.textContent = t(label);
+  cancelProgramRevision.hidden = false;
 }
 
 function prepareProgramRevisionRefinement(record, draft) {
@@ -2108,7 +2304,7 @@ function prepareProgramRevisionRefinement(record, draft) {
     baseProposalId: record.proposal_id,
     baseRecordSha256: record.record_sha256,
   };
-  generateWorkspaceButton.textContent = t("generation.refine_revision");
+  setRevisionComposerMode("generation.refine_revision");
   intentQuestion.focus({preventScroll: true});
   intentForm.scrollIntoView({behavior: "smooth", block: "center"});
 }
@@ -5646,6 +5842,7 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
   ));
   workspace.classList.remove("project-index-workspace");
   workspace.classList.toggle("generated-workspace", generated);
+  workspace.classList.toggle("desktop-workspace", !generated && documentValue.query?.view === "project-progress");
   workspace.replaceChildren();
   if (!preserveTransient) {
     lastProposalReceipt = null;
@@ -5715,6 +5912,18 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
     appendText(button, actionLabel(action));
     button.addEventListener("click", () => submitAction(action));
     actions.appendChild(button);
+  }
+  if (workspace.classList.contains("desktop-workspace")) {
+    const desktop = workspace.querySelector(".research-desktop");
+    if (desktop) {
+      for (const card of cards.values()) {
+        if (!card.contains(desktop)) desktop.addRelatedContent("history", card);
+        else {
+          const actions = card.querySelector(":scope > .component-actions");
+          if (actions) desktop.addRelatedContent("plan", actions);
+        }
+      }
+    }
   }
   renderInteractionWorkbench();
   updateCatalogs(documentValue);
@@ -6392,7 +6601,7 @@ function clearProjectContext(projectId = "") {
   lastArtifactPreview = null;
   lastProposalError = null;
   lastArtifactError = null;
-  activeProgramRevisionContext = null;
+  clearProgramRevisionContext();
   lastProgramRevisionRecord = null;
   lastProgramRevisionDecision = null;
   lastProgramRevisionStale = false;
@@ -6693,6 +6902,14 @@ function renderQuickIntents() {
     const labelKey = quickIntentLabelKeys[descriptor.label_code];
     appendText(label, labelKey ? t(labelKey) : descriptor.label);
     button.appendChild(label);
+    if (descriptor.target_scope === "latest-31") {
+      const scope = document.createElement("small");
+      appendText(scope, t("desktop.intent_scope", {
+        selected: descriptor.target_ids.length,
+        total: descriptor.available_target_count,
+      }));
+      button.appendChild(scope);
+    }
     const cached = modelWarmCacheStatus?.fresh_entries?.some(
       (item) => item.quick_intent_id === descriptor.quick_intent_id,
     );
@@ -6751,9 +6968,10 @@ async function loadQuickIntents(projectId) {
       return;
     }
     quickIntentCatalog = catalog;
-    await loadModelWarmCacheStatus(projectId);
     renderWorkspaceHistory();
     setIntentEnabled(true);
+    // Cache metadata is advisory; do not delay interaction while it loads.
+    void loadModelWarmCacheStatus(projectId);
   } catch (error) {
     quickIntentCatalog = null;
     setIntentEnabled(false);
@@ -7231,7 +7449,7 @@ function renderIntentResult() {
   intentResult.replaceChildren();
   if (intentResultState.kind === "empty") {
     const empty = document.createElement("p");
-    empty.className = "muted";
+    empty.className = "muted generation-empty";
     appendText(empty, t("generation.none"));
     intentResult.appendChild(empty);
     return;
@@ -7404,10 +7622,83 @@ function renderIntentResult() {
   intentResult.appendChild(alert);
 }
 
+function openCreateProjectDialog() {
+  const dialog = document.createElement("dialog");
+  dialog.className = "create-project-dialog";
+  dialog.setAttribute("aria-labelledby", "create-project-heading");
+  const form = document.createElement("form");
+  const heading = document.createElement("h2");
+  heading.id = "create-project-heading";
+  appendText(heading, t("project.create.title"));
+  const hint = document.createElement("p");
+  appendText(hint, t("project.create.hint"));
+  form.append(heading, hint);
+  for (const [name, maxLength, required] of [
+    ["title", 160, true], ["project_id", 120, true],
+    ["research_direction", 2000, true], ["target_venue", 120, false],
+  ]) {
+    const label = document.createElement("label");
+    label.htmlFor = `create-${name}`;
+    appendText(label, t(`project.create.${name === "title" ? "title_field" : name}`));
+    const input = document.createElement(name === "research_direction" ? "textarea" : "input");
+    input.id = `create-${name}`;
+    input.name = name;
+    input.maxLength = maxLength;
+    input.required = required;
+    if (name === "project_id") {
+      input.pattern = "[a-z0-9]+(-[a-z0-9]+)*";
+      input.placeholder = "my-research-project";
+    }
+    form.append(label, input);
+  }
+  const error = document.createElement("div");
+  error.setAttribute("role", "alert");
+  const actions = document.createElement("div");
+  actions.className = "create-project-actions";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "secondary-button";
+  appendText(cancel, t("project.create.cancel"));
+  cancel.addEventListener("click", () => dialog.close());
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  appendText(submit, t("project.create.submit"));
+  actions.append(cancel, submit);
+  form.append(error, actions);
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    submit.disabled = true;
+    cancel.disabled = true;
+    error.replaceChildren();
+    const values = Object.fromEntries(new FormData(form));
+    try {
+      const created = await api("/api/v2/workspace/projects", {
+        method: "POST",
+        body: JSON.stringify({...values, target_venue: values.target_venue.trim() || null}),
+      });
+      dialog.close();
+      history.replaceState({}, "", workspaceHash(defaultQuery(created.project_id)));
+      await loadProjects();
+    } catch (failure) {
+      showError(error, failure);
+    } finally {
+      submit.disabled = false;
+      cancel.disabled = false;
+    }
+  });
+  dialog.addEventListener("cancel", event => { if (submit.disabled) event.preventDefault(); });
+  dialog.addEventListener("close", () => dialog.remove(), {once: true});
+  dialog.appendChild(form);
+  document.body.appendChild(dialog);
+  dialog.showModal();
+}
+
 function renderProjectIndex(discovery, historyMode = "push") {
+  const previouslyOpenProject = activeProjectId;
   clearProjectContext();
   projectDiscovery = discovery;
   workspace.replaceChildren();
+  workspace.classList.remove("desktop-workspace", "generated-workspace");
   workspace.classList.add("project-index-workspace");
   const header = document.createElement("section");
   header.className = "project-index-header";
@@ -7421,17 +7712,48 @@ function renderProjectIndex(discovery, historyMode = "push") {
   header.append(eyebrow, title, summary);
   const grid = document.createElement("div");
   grid.className = "project-index-grid";
-  for (const project of discovery.projects) {
+  const create = document.createElement("button");
+  create.type = "button";
+  create.className = "project-index-card new-project-card";
+  const plus = document.createElement("span");
+  plus.className = "project-card-icon";
+  plus.setAttribute("aria-hidden", "true");
+  appendText(plus, "+");
+  const createTitle = document.createElement("strong");
+  appendText(createTitle, t("project.create.title"));
+  const createHint = document.createElement("span");
+  appendText(createHint, t("project.create.card_hint"));
+  create.append(plus, createTitle, createHint);
+  create.addEventListener("click", openCreateProjectDialog);
+  grid.appendChild(create);
+  const projects = [...discovery.projects].sort((a, b) =>
+    Number(b.project_id === previouslyOpenProject) - Number(a.project_id === previouslyOpenProject));
+  for (const project of projects) {
     const card = document.createElement("article");
     card.className = "project-index-card";
     const heading = document.createElement("h3");
-    appendText(heading, project.project_id);
-    const facts = fixedFields(project, ["revision", "paper_count", "has_current_run"]);
+    appendText(heading, project.title || project.project_id);
+    const identity = document.createElement("small");
+    identity.className = "project-card-identity";
+    appendText(identity, project.project_id);
+    const symbol = document.createElement("span");
+    symbol.className = "project-card-icon";
+    symbol.setAttribute("aria-hidden", "true");
+    appendText(symbol, "◇");
+    const description = document.createElement("p");
+    description.className = "project-card-description";
+    appendText(description, project.research_direction || t("project.create.no_direction"));
+    const facts = document.createElement("p");
+    facts.className = "project-card-facts";
+    appendText(facts, t("project.card.facts", {runs: project.run_count || 0, papers: project.paper_count}));
+    const venue = document.createElement("small");
+    venue.className = "project-card-venue";
+    appendText(venue, project.target_venue || t("project.card.no_venue"));
     const open = document.createElement("button");
     open.type = "button";
     appendText(open, t("project.open_home"));
     open.addEventListener("click", () => loadWorkspace(defaultQuery(project.project_id)));
-    card.append(heading, facts, open);
+    card.append(symbol, venue, heading, identity, description, facts, open);
     grid.appendChild(card);
   }
   workspace.append(header, grid);
@@ -7768,6 +8090,9 @@ function parseWorkspaceHash() {
   } catch {
     return null;
   }
+  if (parts.length === 1 && validProjectId(parts[0])) {
+    return defaultQuery(parts[0]);
+  }
   if (parts.length < 2) {
     return null;
   }
@@ -7835,6 +8160,10 @@ async function api(path, options = {}) {
 
 function setBusy(isBusy) {
   workspace.setAttribute("aria-busy", isBusy ? "true" : "false");
+  if (isBusy) {
+    workspace.dataset.loadingLabel = t("project.loading_evidence");
+    if (!currentDocument) workspace.replaceChildren();
+  }
 }
 
 function showError(container, error) {
@@ -7974,6 +8303,7 @@ localeSelect.addEventListener("change", () => {
   rerenderForLocale();
 });
 globalHomeButton.addEventListener("click", () => {
+  setDrawerPinned(false);
   if (projectDiscovery) {
     renderProjectIndex(projectDiscovery);
   }
@@ -8000,9 +8330,16 @@ topicSearch.addEventListener("input", () => {
   topicSearchQuery = topicSearch.value;
   renderWorkspaceHistory();
 });
-loadButton.addEventListener("click", () => loadWorkspace(defaultQuery(projectSelect.value)));
+loadButton.addEventListener("click", () => {
+  setDrawerPinned(false);
+  loadWorkspace(defaultQuery(projectSelect.value));
+});
 projectSelect.addEventListener("change", () => {
   clearProjectContext(projectSelect.value);
+});
+cancelProgramRevision.addEventListener("click", () => {
+  clearProgramRevisionContext();
+  intentQuestion.focus({preventScroll: true});
 });
 intentForm.addEventListener("submit", (event) => {
   event.preventDefault();

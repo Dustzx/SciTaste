@@ -19,6 +19,8 @@ kiwisolver==1.5.1
 matplotlib==3.11.2
 narwhals==2.26.0
 numpy==2.5.3
+h5py==3.15.1
+opencv-python-headless==4.11.0.86
 packaging==26.3
 pandas==2.3.3
 pillow==12.3.0

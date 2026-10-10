@@ -738,10 +738,7 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError(
                     "official benchmark scoring requires hidden-rubric or mixed task signals"
                 )
-            if (
-                self.automated_judge_role
-                is not AutomatedJudgeRole.OFFICIAL_BENCHMARK_PRIMARY
-            ):
+            if self.automated_judge_role is not AutomatedJudgeRole.OFFICIAL_BENCHMARK_PRIMARY:
                 raise ValueError(
                     "official benchmark scoring requires its disclosed official judge role"
                 )
@@ -772,14 +769,10 @@ class ExperimentPrelaunchManifest(BaseModel):
         if task_freeze_semantics is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION:
             if self.schema_version not in {"1.5", "1.6"}:
                 raise ValueError("prelaunch v1.5 is required for benchmark allocation binding")
-            if (
-                self.study_scope != "formal"
-                or self.primary_endpoint
-                not in {
-                    ScientificEndpointKind.OBJECTIVE_PROGRESS,
-                    ScientificEndpointKind.OFFICIAL_BENCHMARK_SCORE,
-                }
-            ):
+            if self.study_scope != "formal" or self.primary_endpoint not in {
+                ScientificEndpointKind.OBJECTIVE_PROGRESS,
+                ScientificEndpointKind.OFFICIAL_BENCHMARK_SCORE,
+            }:
                 raise ValueError(
                     "benchmark allocation binding requires a formal benchmark endpoint"
                 )
@@ -905,10 +898,7 @@ class ExperimentPrelaunchManifest(BaseModel):
             ):
                 raise ValueError("native Taste controls and treatments must be SciTaste ablations")
             roles = {item.role for item in claim.contrasts}
-            if (
-                claim.estimand_kind
-                is ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT
-            ):
+            if claim.estimand_kind is ConfirmatoryEstimandKind.COMPLETE_SYSTEM_BUNDLE_EFFECT:
                 expected_contrasts = {
                     (
                         "full-scitaste",
@@ -937,9 +927,7 @@ class ExperimentPrelaunchManifest(BaseModel):
                     item.inference_role is not ContrastInferenceRole.CONFIRMATORY
                     for item in claim.contrasts
                 ):
-                    raise ValueError(
-                        "complete-system bundle contrast must be confirmatory"
-                    )
+                    raise ValueError("complete-system bundle contrast must be confirmatory")
             elif claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS:
                 expected_systems = {
                     "full-scitaste",
@@ -1304,9 +1292,7 @@ def inspect_prelaunch_manifest(
                 ("remote_inventory", lane.gpu_resource.remote_inventory_status),
             ]
             if lane.gpu_resource.remote_checkpoint_status is not None:
-                readiness.append(
-                    ("remote_checkpoint", lane.gpu_resource.remote_checkpoint_status)
-                )
+                readiness.append(("remote_checkpoint", lane.gpu_resource.remote_checkpoint_status))
             for label, status in readiness:
                 if status is not ReadinessStatus.VERIFIED:
                     _block(

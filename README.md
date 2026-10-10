@@ -4,7 +4,7 @@
 
 <h1 align="center">SciTaste</h1>
 
-<p align="center"><strong>SciTaste: Improving Autonomous Research through Scientific Taste</strong></p>
+<p align="center"><strong>SciTaste: Learning Scientific Taste for Autonomous Research Decision Making</strong></p>
 
 <p align="center">
   An independent, evidence-native system for deciding what an autonomous researcher should do next.
@@ -41,6 +41,25 @@ is available only as an optional compatibility adapter and external baseline.
 > implemented. Formal matched-system experiments and independent expert review
 > are still pending, so no current result establishes SciTaste's headline
 > effectiveness claim.
+
+## Current focus: Idea Research & Discovery
+
+**Learning Scientific Taste for Efficient Research Idea Discovery** is the current
+implementation focus. Rapid Retrieval → Evidence Synthesis → Idea Construction →
+Taste-guided Refinement brings the early FastResearch retrieval approach into
+SciTaste's existing research system. FastResearch remains a historical directory
+and compatibility identifier, rather than a second product brand.
+
+The five stages are **Idea, Experiment, Writing, Figure, and Review**, joined by
+Shared Scientific Taste. The long-term scope remains unchanged. The research
+questions concern learning Taste, using it in decisions, transferring it across
+stages, and measuring its effectiveness under finite budgets. Retrieval and a
+working interface alone do not establish those claims.
+
+The integrated [research workspace](workspace/README.md) provides literature and
+benchmark discovery, source-bound project progress, shared experience, branch
+comparison, and CCF A/B conference and journal planning. Its default web path
+does not call model APIs or launch research jobs.
 
 ## Why scientific taste?
 

@@ -170,7 +170,8 @@ def test_project_list_is_stable_and_contains_only_authoritative_identity(tmp_pat
     assert first.fingerprint == repeated.fingerprint
     assert first.projects[1].has_current_run is True
     assert first.projects[1].paper_count == 1
-    assert "title" not in first.projects[1].model_dump()
+    assert first.projects[1].title == "Evidence-native workspace"
+    assert first.projects[1].research_direction == "Navigate only registered evidence."
 
 
 def test_all_project_workspace_views_bind_query_and_fresh_evidence(tmp_path: Path) -> None:

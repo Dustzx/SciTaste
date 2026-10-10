@@ -99,15 +99,33 @@ _LIFECYCLE_PHASES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("paper-review-loop", "paper-review-loop", ("revise-and-review-paper",)),
 )
 
-_PHASE_VOCABULARIES = (_LEGACY_PHASES, _LIFECYCLE_PHASES)
+_LIFECYCLE_INDEPENDENT_REVIEW_PHASES = tuple(
+    (
+        phase_id,
+        label,
+        ("freeze-independent-review",) if phase_id == "independent-review" else stages,
+    )
+    for phase_id, label, stages in _LIFECYCLE_PHASES
+)
+
+_PHASE_VOCABULARIES = (
+    _LEGACY_PHASES,
+    _LIFECYCLE_PHASES,
+    _LIFECYCLE_INDEPENDENT_REVIEW_PHASES,
+)
 
 
 def find_iclr_evidence_program_run(snapshot: ProjectSnapshot) -> ProjectRun | None:
-    """Return the latest run explicitly declaring the trusted program projection."""
+    """Return the latest run with a canonical, run-owned program declaration."""
 
     for run in reversed(snapshot.manifest.runs):
         extra = run.model_extra or {}
-        if extra.get("generative_ui_projection") == ICLR_EVIDENCE_PROGRAM_PROJECTION:
+        expected = f"runs/{run.run_id}/{ICLR_EVIDENCE_PROGRAM_STAGE_PATH}/REPORT.json"
+        if (
+            extra.get("generative_ui_projection") == ICLR_EVIDENCE_PROGRAM_PROJECTION
+            and run.stage_path == ICLR_EVIDENCE_PROGRAM_STAGE_PATH
+            and run.artifact == expected
+        ):
             return run
     return None
 

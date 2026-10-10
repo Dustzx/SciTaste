@@ -162,8 +162,7 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
             excluded.update(sampling_fields - self.model_fields_set)
         elif self.schema_version == "1.1":
             if (
-                self.episode_sampling_rule
-                != "earliest-executed-nonterminal-after-observation"
+                self.episode_sampling_rule != "earliest-executed-nonterminal-after-observation"
                 or self.maximum_episode_candidates != 1
                 or self.candidate_credit_projection != "action-local-scientific-v4"
                 or self.episode_target_action is not None
@@ -178,14 +177,8 @@ class InteractiveTasteDevelopmentProtocol(BaseModel):
             or self.maximum_episode_candidates != 1
             or self.candidate_credit_projection != "allocation-local-v5"
             or self.episode_target_action is None
-            or (
-                self.episode_target_action == "STOP"
-                and self.episode_target_turn is not None
-            )
-            or (
-                self.episode_target_action != "STOP"
-                and self.episode_target_turn is None
-            )
+            or (self.episode_target_action == "STOP" and self.episode_target_turn is not None)
+            or (self.episode_target_action != "STOP" and self.episode_target_turn is None)
         ):
             raise ValueError(
                 "interactive development v1.2 requires one prospectively assigned "
@@ -733,9 +726,7 @@ def finalize_interactive_development_episodes(
                 score_trend=state.executor_context.get("score_trend", "unknown"),
                 best_vs_baseline=state.executor_context.get("best_vs_baseline", "unknown"),
                 evidence_status=state.executor_context.get("evidence_status", "unknown"),
-                evidence_confidence=state.executor_context.get(
-                    "evidence_confidence", "unknown"
-                ),
+                evidence_confidence=state.executor_context.get("evidence_confidence", "unknown"),
                 next_experiment_value=state.executor_context.get(
                     "next_experiment_value", "unknown"
                 ),
@@ -930,12 +921,8 @@ def _selected_development_lock_paths(
                 record.decision.proposal.action,
             ):
                 continue
-            local_evidence_available = (
-                record.decision.proposal.action == "submit_hypothesis"
-                or (
-                    record.observation is not None
-                    and index + 1 < len(receipt.turns)
-                )
+            local_evidence_available = record.decision.proposal.action == "submit_hypothesis" or (
+                record.observation is not None and index + 1 < len(receipt.turns)
             )
             if local_evidence_available:
                 return (lock_paths[index],)
@@ -1280,8 +1267,7 @@ def refine_interactive_allocation_candidate(
     if context is None:
         raise ValueError("allocation-local projection requires a decision-state context")
     context_summary = ", ".join(
-        f"{name}={value}"
-        for name, value in context.model_dump(mode="json").items()
+        f"{name}={value}" for name, value in context.model_dump(mode="json").items()
     )
     payload = {
         name: getattr(refined, name)
@@ -1422,11 +1408,7 @@ def _remaining_experiment_bucket(value: int) -> Literal["zero", "one", "two-to-t
 def _interactive_evidence_context(context: InteractiveResearchContext) -> dict[str, str]:
     """Project only the previous model-visible belief report into the next lock."""
 
-    phase = (
-        "early"
-        if context.turn <= 2
-        else ("late" if context.remaining_turns <= 2 else "middle")
-    )
+    phase = "early" if context.turn <= 2 else ("late" if context.remaining_turns <= 2 else "middle")
     defaults = {
         "evidence_status": "unassessed",
         "evidence_confidence": "low",

@@ -75,9 +75,7 @@ class CounterfactualActionIntervention(BaseModel):
             self.rollout_condition_id,
             field_name="counterfactual rollout_condition_id",
         )
-        if (self.action_semantics_profile is None) != (
-            self.action_semantics_sha256 is None
-        ):
+        if (self.action_semantics_profile is None) != (self.action_semantics_sha256 is None):
             raise ValueError("counterfactual action semantics profile and hash must be paired")
         if (
             self.action_semantics_profile is not None
@@ -186,9 +184,7 @@ class CounterfactualActionGuidanceProvider:
             rollout_condition_id=rollout_condition_id,
             rollout_policy_sha256=rollout_policy_sha256,
             action_semantics_profile=action_semantics_profile,
-            action_semantics_sha256=research_action_semantics_sha256(
-                action_semantics_profile
-            ),
+            action_semantics_sha256=research_action_semantics_sha256(action_semantics_profile),
         )
 
     @property
@@ -243,9 +239,7 @@ class CounterfactualActionGuidanceProvider:
                 {
                     "action_type": self.intervention.forced_action.value,
                     "instruction": instruction,
-                    "action_semantics_sha256": (
-                        self.intervention.action_semantics_sha256
-                    ),
+                    "action_semantics_sha256": (self.intervention.action_semantics_sha256),
                     "intervention_sha256": self.intervention.intervention_sha256,
                 }
             ),
@@ -472,11 +466,7 @@ class CounterfactualActionSetResult(BaseModel):
             )
             if observed and score is not None and observed_metric is not None:
                 raw_value = score.metrics[observed_metric]
-                value = (
-                    raw_value
-                    if metric_transform == "identity"
-                    else math.exp(-raw_value)
-                )
+                value = raw_value if metric_transform == "identity" else math.exp(-raw_value)
             else:
                 value = failure_value
             outcomes.append(
@@ -487,15 +477,12 @@ class CounterfactualActionSetResult(BaseModel):
                     status=receipt.status,
                     objective_value=value,
                     objective_observed=observed,
-                    branch_experiment_count=(
-                        receipt.experiment_count - prefix.experiment_count
-                    ),
+                    branch_experiment_count=(receipt.experiment_count - prefix.experiment_count),
                     branch_input_tokens=receipt.input_tokens - prefix.input_tokens,
                     branch_output_tokens=receipt.output_tokens - prefix.output_tokens,
                     branch_api_cost_usd=(
                         receipt.api_cost_usd - prefix.api_cost_usd
-                        if receipt.api_cost_usd is not None
-                        and prefix.api_cost_usd is not None
+                        if receipt.api_cost_usd is not None and prefix.api_cost_usd is not None
                         else None
                     ),
                 )
@@ -581,8 +568,7 @@ class CounterfactualActionSetAdequacy(BaseModel):
             CounterfactualResearchAction
         )
         local_separation = (
-            observed_count >= 2
-            and result.objective_spread > result.practical_equivalence_tolerance
+            observed_count >= 2 and result.objective_spread > result.practical_equivalence_tolerance
         )
         blockers = [
             "single-observed-research-prefix",

@@ -16,12 +16,16 @@ selected for the paper.
 > consequential autonomous-research decisions by assigning delayed research
 > outcomes and human corrections back to the choices that produced them.
 
-This is the single candidate paper idea. Scientific Taste, Generation as
-Content, and Tool Intelligence are not three innovations to stack. The learned
-lifecycle policy is the research object; grounded precedents, Tool Intelligence,
-and Generation as Content are its data, observation, and intervention
-mechanisms. They belong in the paper only to the extent that they help learn or
-evaluate that one policy.
+This is the single candidate paper thesis. Scientific Taste, Generation as
+Content, and Tool Intelligence should not be pitched as three detached product
+features. The learned lifecycle policy is the research object, while Tool
+Intelligence and Generation as Content are two cross-cutting ways of improving
+that object: the former acquires and interprets endogenous process/outcome
+evidence, and the latter exposes the live policy to exogenous human correction.
+Grounded episode reconstruction, boundary-aware decision, and
+outcome-attributed update are learning operators in which both planes
+participate. This unification does not downgrade either plane; it makes their
+scientific role and required incremental evidence precise.
 
 ## Does SciTaste have scientific taste today?
 
@@ -118,12 +122,15 @@ The paper's primary hypothesis should therefore be stated causally:
 > held-out research decisions and downstream research progress over a static
 > controller, pointwise judgment, raw retrieval, and unstructured reflection.
 
-Generation as Content and Tool Intelligence support this hypothesis in
+Generation as Content and Tool Intelligence improve the target policy in
 different ways. GAC obtains otherwise-hidden human corrections and
-counterfactual preferences; Tool Intelligence obtains otherwise-missing
-action-cost and scientific-outcome observations. Neither counts as Taste until
-its trace is bound into a reviewed decision episode, and neither should be a
-co-equal paper claim unless its incremental effect is separately measured.
+counterfactual preferences; Tool Intelligence actively acquires and interprets
+otherwise-missing decision, action-cost, failure, and scientific-outcome
+evidence. Neither trace counts as an admitted Taste update until it is bound
+into a reviewed decision episode. Both are integral method components across
+the lifecycle, and either can support a named contribution when its incremental
+effect on Taste and downstream decisions is separately measured; what is unsafe
+is presenting them as unrelated headline ideas.
 
 ## Taste provenance: lifecycle coverage is not enough
 
@@ -671,8 +678,8 @@ must reside in one irreducible learned object:
 
 Grounding, transfer boundaries, outcome attribution, Tool Intelligence, and
 human intervention are how SciTaste makes this policy trainable and safe; none
-is a substitute for the policy itself. The minimum recognizable method should
-have three supporting operators:
+is a substitute for the policy itself. The minimum recognizable learning loop
+should have three operators:
 
 1. **Episode reconstruction** compiles a multi-artifact source bundle into the
    pre-action state, closed alternative set, decision, grounding, outcome and
@@ -682,6 +689,13 @@ have three supporting operators:
    cases; and
 3. **outcome-attributed update** separates hypothesis, design, execution,
    adaptation and claim outcomes before changing the reusable policy.
+
+These operators are not a replacement for Tool Intelligence or Generation as
+Content and do not form a competing component taxonomy. They describe *what
+transformation the Taste loop performs*. Tool Intelligence and Generation as
+Content describe *how the loop gains endogenous and exogenous intelligence*
+at each transformation and across problem selection, hypothesis formation,
+experiment design, execution, interpretation, stopping, writing, and review.
 
 All three operators now have deterministic repository implementations. That
 establishes method availability, not scientific utility: current demonstrations
@@ -735,8 +749,12 @@ distillation, boundary-aware selection, and outcome-attributed memory evolution.
 The same episode object can be proposed from scientific records, endogenous
 Tool Intelligence traces, or scoped human intervention without erasing source
 authority. Episode reconstruction, transfer-bounded selection, and
-outcome-attributed update are components of the lifecycle-policy learner, not
-three additive novelty claims.
+outcome-attributed update are transformation operators of the lifecycle-policy
+learner. Tool Intelligence and Generation as Content are cross-cutting
+improvement planes that participate in all three: one supplies autonomous
+evidence acquisition and process diagnosis, while the other supplies human
+inspection, correction, and counterfactual supervision. Their value should be
+tested by incremental and interaction ablations under the unified Taste claim.
 
 ### Evidence: causal evaluation from decisions to research outcomes
 

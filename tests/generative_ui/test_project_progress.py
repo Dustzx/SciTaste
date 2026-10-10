@@ -211,7 +211,10 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
     assert data["recent_activity"] == []
-    assert [item["kind"] for item in data["next_step_candidates"]] == ["review_progress"]
+    assert [item["kind"] for item in data["next_step_candidates"]] == [
+        "review_progress",
+        "review_next_gate",
+    ]
     assert "percent" not in json.dumps(data, sort_keys=True).lower()
 
 
@@ -1297,7 +1300,7 @@ def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> Non
         _progress(runtime)
 
 
-def test_strict_manifest_extensions_supply_milestones_or_fail_closed(
+def test_living_documents_supply_focus_and_strict_manifest_milestones_fail_closed(
     tmp_path: Path,
 ) -> None:
     runtime, snapshot = _create_runtime(tmp_path)
@@ -1341,9 +1344,14 @@ def test_strict_manifest_extensions_supply_milestones_or_fail_closed(
 
     first, data = _progress(runtime)
 
-    assert data["focus"] == "bounded-workspace-planner"
-    assert data["focus_source"] == "project_manifest"
-    assert data["next_gate"] == "Independent review of a real project pilot"
+    from scitaste.project.documents import load_documents
+
+    documents = load_documents(runtime.projects_root / "progress-project")
+    assert documents is not None
+    assert data["focus"] == documents.focus
+    assert data["focus_source"] == "project_documents"
+    assert data["focus_status"] == "documented-not-live-verified"
+    assert data["next_gate"] == documents.summary
     assert data["milestone_state"] == "available"
     assert [item["evidence_binding"] for item in data["milestones"]] == [
         "content_addressed",
@@ -1377,8 +1385,9 @@ def test_strict_manifest_extensions_supply_milestones_or_fail_closed(
     )
     second, invalid = _progress(runtime)
 
-    assert invalid["focus"] == "Show only evidence-grounded project progress."
-    assert invalid["focus_status"] is None
+    assert invalid["focus"] == documents.focus
+    assert invalid["focus_source"] == "project_documents"
+    assert invalid["focus_status"] == "documented-not-live-verified"
     assert invalid["milestone_state"] == "unavailable"
     assert invalid["milestones"] == []
     assert first.renderer.surface_fingerprint != second.renderer.surface_fingerprint

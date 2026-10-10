@@ -13,6 +13,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scitaste.schema.actions import ResearchAction
 from scitaste.state.persistence import snapshot_id
 from scitaste.state.research_state import ResearchState
+from scitaste.taste.context_projection import (
+    BOUNDED_RESEARCH_CONTEXT,
+    bounded_decision_fact,
+    project_taste_action,
+)
 from scitaste.taste.retriever import RetrievedTasteCase
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -56,6 +61,7 @@ class TasteDecisionFact(BaseModel):
         "observation",
         "claim",
         "obligation",
+        "scientific-reasoning",
     ]
     text: str = Field(min_length=1, max_length=10_000)
     boundary_candidate: bool = False
@@ -132,7 +138,7 @@ class TasteDeliberationInput(BaseModel):
     stage: str = Field(min_length=1, max_length=100)
     current_actions: tuple[ResearchAction, ...] = Field(min_length=2, max_length=12)
     decision_facts: tuple[TasteDecisionFact, ...] = Field(min_length=3, max_length=80)
-    candidates: tuple[TasteDeliberationCandidate, ...] = Field(min_length=2, max_length=20)
+    candidates: tuple[TasteDeliberationCandidate, ...] = Field(min_length=1, max_length=20)
     maximum_selected_cases: int = Field(default=3, ge=1, le=5)
     relation_label_hidden: Literal[True] = True
     source_outcomes_hidden_from_selector: Literal[True] = True
@@ -220,7 +226,7 @@ class TasteApplicabilityProposal(BaseModel):
 
     schema_version: Literal["1.0"] = "1.0"
     decision_id: str = Field(pattern=_ID)
-    assessments: tuple[TasteCaseTransferAssessment, ...] = Field(min_length=2, max_length=20)
+    assessments: tuple[TasteCaseTransferAssessment, ...] = Field(min_length=1, max_length=20)
 
     @model_validator(mode="after")
     def identities_are_unique(self) -> TasteApplicabilityProposal:
@@ -241,7 +247,7 @@ class TasteDeliberationProposal(BaseModel):
 
     schema_version: Literal["1.0", "1.1"] = "1.1"
     decision_id: str = Field(pattern=_ID)
-    assessments: tuple[TasteCaseTransferAssessment, ...] = Field(min_length=2, max_length=20)
+    assessments: tuple[TasteCaseTransferAssessment, ...] = Field(min_length=1, max_length=20)
     selected_case_ids: tuple[str, ...] = Field(max_length=5)
     recommended_action_id: str | None = Field(
         default=None,
@@ -431,11 +437,16 @@ def build_taste_deliberation_input(
         ):
             continue
         candidates.append(_candidate_projection(result))
-    if len(candidates) < 2:
+    if not candidates:
         raise ValueError(
-            "Taste deliberation requires at least two grounded transfer-bounded candidates"
+            "Taste deliberation requires at least one grounded transfer-bounded candidate"
         )
     facts = _decision_facts(state)
+    if (
+        state.executor_context.get("taste_context", {}).get("decision_context")
+        == BOUNDED_RESEARCH_CONTEXT
+    ):
+        actions = [project_taste_action(action) for action in actions]
     identity = {
         "state_snapshot_id": snapshot_id(state),
         "action_ids": [item.action_id for item in actions],
@@ -1018,6 +1029,51 @@ def _decision_facts(state: ResearchState) -> tuple[TasteDecisionFact, ...]:
     ]
     if state.target_venue:
         raw.append(("venue", state.target_venue))
+    reasoning = state.executor_context.get("research_reasoning", {}).get("frame")
+    if reasoning:
+        raw.append(
+            (
+                "scientific-reasoning",
+                "Model-proposed question, NOT established evidence: "
+                + reasoning["question"]
+                + "\nExplanatory gap: "
+                + reasoning["explanatory_gap"],
+            )
+        )
+        raw.append(
+            (
+                "scientific-reasoning",
+                "Conditional probe preference, NOT execution authority: "
+                + reasoning["preferred_probe_id"]
+                + "\n"
+                + reasoning["selection_reason"]
+                + "\nStop when: "
+                + reasoning["stopping_condition"],
+            )
+        )
+        for probe in reasoning["probes"]:
+            raw.append(
+                (
+                    "scientific-reasoning",
+                    "Proposed diagnostic experiment, NOT measured evidence: "
+                    + json.dumps(
+                        {
+                            "probe_id": probe["probe_id"],
+                            "intervention": probe["intervention"][:1000],
+                            "predictions": [
+                                {
+                                    "hypothesis_id": p["hypothesis_id"],
+                                    "prediction": p["observable_prediction"][:500],
+                                }
+                                for p in probe["predictions"]
+                            ],
+                            "decision_relevance": probe["decision_relevance"][:1000],
+                            "cost_and_feasibility": probe["cost_and_feasibility"][:1000],
+                            "projection": "bounded summary; full frame retained in state",
+                        }
+                    ),
+                )
+            )
     raw.extend(
         ("hypothesis", f"{item.statement} [status={item.status}]")
         for item in state.hypotheses[-12:]
@@ -1041,11 +1097,33 @@ def _decision_facts(state: ResearchState) -> tuple[TasteDecisionFact, ...]:
     seen: set[str] = set()
     for kind, value in raw:
         text = value.strip()
-        identity = f"fact-{hashlib.sha256(f'{kind}:{text}'.encode()).hexdigest()[:20]}"
-        if identity in seen:
-            continue
-        seen.add(identity)
-        facts.append(TasteDecisionFact(fact_id=identity, kind=kind, text=text))
+        if (
+            kind != "direction"
+            and state.executor_context.get("taste_context", {}).get("decision_context")
+            == BOUNDED_RESEARCH_CONTEXT
+        ):
+            text = bounded_decision_fact(text)
+        # Long complete-task briefs must not silently disable the intervention.
+        # Preserve their full content in linked bounded parts, rather than raising
+        # a per-fact validation error or truncating late constraints/limitations.
+        parts = [text]
+        if len(text) > 10000:
+            source_hash = hashlib.sha256(text.encode()).hexdigest()
+            chunks = [text[start : start + 9500] for start in range(0, len(text), 9500)]
+            parts = [
+                f"[Part {index}/{len(chunks)} of one {kind} fact; "
+                f"original SHA256={source_hash}; parts are not independent evidence]\n{chunk}"
+                f"\n[End part {index}/{len(chunks)}]"
+                for index, chunk in enumerate(chunks, 1)
+            ]
+        for part in parts:
+            identity = f"fact-{hashlib.sha256(f'{kind}:{part}'.encode()).hexdigest()[:20]}"
+            if identity in seen:
+                continue
+            if len(facts) >= 80:
+                raise ValueError("Taste decision projection exceeds 80 facts; no silent truncation")
+            seen.add(identity)
+            facts.append(TasteDecisionFact(fact_id=identity, kind=kind, text=part))
     return tuple(facts)
 
 

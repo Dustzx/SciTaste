@@ -178,6 +178,8 @@ class QuickIntentDescriptor(BaseModel):
     label: SafeText
     label_code: SafeIdentifier
     target_ids: tuple[str, ...] = ()
+    available_target_count: int = Field(default=0, ge=0)
+    target_scope: Literal["all", "latest-31"] = "all"
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
     intent_fingerprint: Sha256
 
@@ -283,6 +285,10 @@ class WorkspaceIntentResolver:
 
     def quick_catalog(self, project_id: str) -> QuickIntentCatalog:
         context = self._context(project_id)
+        original_counts = {
+            item.candidate_id: len(item.target_ids)
+            for item in context.progress.next_step_candidates
+        }
         descriptors = tuple(
             QuickIntentDescriptor(
                 quick_intent_id=candidate.candidate_id,
@@ -290,6 +296,10 @@ class WorkspaceIntentResolver:
                 label=_QUICK_LABELS[candidate.kind],
                 label_code=candidate.label_code,
                 target_ids=candidate.target_ids,
+                available_target_count=original_counts[candidate.candidate_id],
+                target_scope="latest-31"
+                if original_counts[candidate.candidate_id] > len(candidate.target_ids)
+                else "all",
                 support_ref_ids=candidate.support_ref_ids,
                 intent_fingerprint=_intent_for_candidate(
                     context,
@@ -369,6 +379,17 @@ class WorkspaceIntentResolver:
         candidates = tuple(
             ProjectProgressCandidateItem.model_validate(item.model_dump(mode="json"))
             for item in progress.next_step_candidates
+        )
+        # Keep one project binding and at most 31 explicit entities per request.
+        # The catalog declares the reduced scope; older records stay in the full
+        # workspace and can be selected individually through its ordinary views.
+        candidates = tuple(
+            item.model_copy(update={"target_ids": item.target_ids[-31:]})
+            if _goal_for_candidate(item)
+            in {IntentGoal.BLOCKER_DIAGNOSIS, IntentGoal.PAPER_EVIDENCE_REVIEW}
+            and len(item.target_ids) > 31
+            else item
+            for item in candidates
         )
         return _IntentContext(
             snapshot=snapshot,

@@ -238,8 +238,9 @@ def test_terminal_scientific_credit_preserves_success_and_failure_sign() -> None
         failure,
         is_submission=False,
     ) == (
-        interactive_development_module.TasteOutcomePolarity.CHALLENGES,
-        interactive_development_module.TasteCreditDirection.HARMFUL,
+        # Nonterminal local credit is separate from signed submission outcomes.
+        interactive_development_module.TasteOutcomePolarity.SUPPORTS,
+        interactive_development_module.TasteCreditDirection.BENEFICIAL,
     )
 
 
@@ -444,10 +445,7 @@ def test_newtonbench_submission_normalizes_the_required_final_law_envelope() -> 
     source = "def discovered_law(x):\n    return x"
 
     assert _normalize_newtonbench_submission(source) == source
-    assert (
-        _normalize_newtonbench_submission(f"<final_law>\n{source}\n</final_law>")
-        == source
-    )
+    assert _normalize_newtonbench_submission(f"<final_law>\n{source}\n</final_law>") == source
     with pytest.raises(ValueError, match="malformed final-law envelope"):
         _normalize_newtonbench_submission(f"analysis\n<final_law>{source}</final_law>")
 

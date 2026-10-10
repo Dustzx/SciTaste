@@ -436,14 +436,17 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
     """Review exact paper content without claiming expert or conference authority."""
 
     node_name = "venue-paper-review"
-    prompt_version = "venue-paper-review-v3"
+    prompt_version = "venue-paper-review-v4"
     system_instruction = (
         "Review the supplied anonymous paper against the four venue questions. Return a concise "
         "summary, concrete strengths and weaknesses, one accept/reject recommendation with one "
         "or two key reasons, questions, and only decision-relevant typed concerns. Do not invent "
         "claims, sections, evidence types, numeric conference scores, reviewer identity, official "
         "authority, experiments, citations, or facts absent from the paper. This is internal "
-        "model feedback, not independent expert review."
+        "model feedback, not independent expert review. If context.metadata contains "
+        "review_format_feedback, correct those output validation errors using the same "
+        "paper and permitted identifiers. It is format feedback, not a request to change "
+        "the review recommendation or to give a more favorable assessment."
     )
     input_model = VenuePaperReviewInput
     output_model = VenuePaperReviewProposal

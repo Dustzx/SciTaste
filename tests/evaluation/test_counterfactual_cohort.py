@@ -46,9 +46,7 @@ def _result(study_id: str, prefix: str, preferred: CounterfactualResearchAction,
     return CounterfactualActionSetResult(
         schema_version="1.0",
         **payload,
-        result_sha256=content_sha256(
-            unsigned.model_dump(mode="json", exclude={"result_sha256"})
-        ),
+        result_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"result_sha256"})),
     )
 
 

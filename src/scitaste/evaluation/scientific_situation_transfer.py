@@ -305,8 +305,7 @@ class ObjectiveForkExecutionContract(BaseModel):
 
     contract_id: str = Field(min_length=1, max_length=200)
     allowed_tools: tuple[str, ...] = Field(min_length=1, max_length=100)
-    budget_limit: float = Field(gt=0.0, allow_inf_nan=False)
-    budget_unit: str = Field(min_length=1, max_length=100)
+    resource_limits: dict[str, float] = Field(min_length=1, max_length=20)
     maximum_steps: int = Field(ge=1)
     timeout_seconds: int = Field(ge=1)
     network_access: bool
@@ -322,6 +321,8 @@ class ObjectiveForkExecutionContract(BaseModel):
     def execution_contract_is_closed(self) -> ObjectiveForkExecutionContract:
         if self.allowed_tools != tuple(sorted(set(self.allowed_tools))):
             raise ValueError("objective-fork allowed tools must be sorted and unique")
+        if any(not math.isfinite(value) or value < 0.0 for value in self.resource_limits.values()):
+            raise ValueError("objective-fork resource limits must be finite and nonnegative")
         if self.seed_block_ids != tuple(sorted(set(self.seed_block_ids))):
             raise ValueError("objective-fork seed blocks must be sorted and unique")
         expected = content_sha256(self.model_dump(mode="json", exclude={"contract_sha256"}))
@@ -353,7 +354,10 @@ class ObjectiveForkScorerContract(BaseModel):
     metric_direction: Literal["higher", "lower"]
     raw_scale_minimum: float = Field(allow_inf_nan=False)
     raw_scale_maximum: float = Field(allow_inf_nan=False)
-    utility_transform: Literal["registered-affine-clip-v1"] = "registered-affine-clip-v1"
+    utility_transform: Literal[
+        "registered-affine-clip-v1",
+        "registered-exp-negative-v1",
+    ] = "registered-affine-clip-v1"
     utility_contract_id: str = Field(min_length=1, max_length=200)
     practical_equivalence_tolerance: float = Field(
         ge=0.0,
@@ -371,6 +375,12 @@ class ObjectiveForkScorerContract(BaseModel):
     def scorer_contract_is_closed(self) -> ObjectiveForkScorerContract:
         if self.raw_scale_maximum <= self.raw_scale_minimum:
             raise ValueError("objective-fork scorer scale must have positive width")
+        if self.utility_transform == "registered-exp-negative-v1" and (
+            self.metric_direction != "lower" or self.raw_scale_minimum != 0.0
+        ):
+            raise ValueError(
+                "exp-negative objective-fork scorers require a lower-is-better nonnegative metric"
+            )
         expected = content_sha256(self.model_dump(mode="json", exclude={"contract_sha256"}))
         if self.contract_sha256 != expected:
             raise ValueError("objective-fork scorer-contract hash mismatch")
@@ -560,10 +570,7 @@ class FormalObjectiveForkSituationCase(BaseModel):
                 raise ValueError("formal objective-fork replicate action definition drifted")
             if (
                 not outcome.objective_observed
-                and abs(
-                    outcome.utility
-                    - self.scorer_contract.intention_to_treat_failure_utility
-                )
+                and abs(outcome.utility - self.scorer_contract.intention_to_treat_failure_utility)
                 > 1e-9
             ):
                 raise ValueError(
@@ -571,27 +578,28 @@ class FormalObjectiveForkSituationCase(BaseModel):
                 )
             if outcome.objective_observed:
                 assert outcome.raw_metric_value is not None
-                scale_width = (
-                    self.scorer_contract.raw_scale_maximum
-                    - self.scorer_contract.raw_scale_minimum
-                )
-                if self.scorer_contract.metric_direction == "higher":
-                    transformed = (
-                        outcome.raw_metric_value - self.scorer_contract.raw_scale_minimum
-                    ) / scale_width
+                if self.scorer_contract.utility_transform == "registered-exp-negative-v1":
+                    transformed = math.exp(-max(outcome.raw_metric_value, 0.0))
                 else:
-                    transformed = (
-                        self.scorer_contract.raw_scale_maximum - outcome.raw_metric_value
-                    ) / scale_width
-                transformed = min(max(transformed, 0.0), 1.0)
+                    scale_width = (
+                        self.scorer_contract.raw_scale_maximum
+                        - self.scorer_contract.raw_scale_minimum
+                    )
+                    if self.scorer_contract.metric_direction == "higher":
+                        transformed = (
+                            outcome.raw_metric_value - self.scorer_contract.raw_scale_minimum
+                        ) / scale_width
+                    else:
+                        transformed = (
+                            self.scorer_contract.raw_scale_maximum - outcome.raw_metric_value
+                        ) / scale_width
+                    transformed = min(max(transformed, 0.0), 1.0)
                 if abs(outcome.utility - transformed) > 1e-9:
                     raise ValueError(
                         "formal objective-fork utility differs from registered scorer transform"
                     )
         for action in self.available_actions:
-            action_outcomes = [
-                item for item in self.replicate_outcomes if item.action_id == action
-            ]
+            action_outcomes = [item for item in self.replicate_outcomes if item.action_id == action]
             compliance_rate = sum(
                 item.action_compliance == "compliant" for item in action_outcomes
             ) / len(action_outcomes)
@@ -608,9 +616,7 @@ class FormalObjectiveForkSituationCase(BaseModel):
                 raise ValueError(
                     "formal objective-fork action estimate differs from its replicate mean"
                 )
-        expected_result = content_sha256(
-            self.model_dump(mode="json", exclude={"result_sha256"})
-        )
+        expected_result = content_sha256(self.model_dump(mode="json", exclude={"result_sha256"}))
         if self.result_sha256 != expected_result:
             raise ValueError("formal objective-fork result hash mismatch")
         return self
@@ -619,9 +625,7 @@ class FormalObjectiveForkSituationCase(BaseModel):
     def create(cls, **values: object) -> FormalObjectiveForkSituationCase:
         payload = {"schema_version": "3.0", **values}
         payload.pop("result_sha256", None)
-        payload["task_binding"] = ObjectiveForkTaskBinding.model_validate(
-            payload["task_binding"]
-        )
+        payload["task_binding"] = ObjectiveForkTaskBinding.model_validate(payload["task_binding"])
         payload["action_definitions"] = tuple(
             ObjectiveForkActionDefinition.model_validate(item)
             for item in payload["action_definitions"]  # type: ignore[union-attr]
@@ -689,8 +693,7 @@ class FormalObjectiveForkSituationCase(BaseModel):
         """Return paired mean difference, sample variance, and seed-block count."""
 
         by_pair = {
-            (item.seed_block_id, item.action_id): item.utility
-            for item in self.replicate_outcomes
+            (item.seed_block_id, item.action_id): item.utility for item in self.replicate_outcomes
         }
         differences = [
             by_pair[(seed_block_id, preferred_action_id)]
@@ -698,9 +701,7 @@ class FormalObjectiveForkSituationCase(BaseModel):
             for seed_block_id in self.execution_contract.seed_block_ids
         ]
         mean = sum(differences) / len(differences)
-        variance = sum((value - mean) ** 2 for value in differences) / (
-            len(differences) - 1
-        )
+        variance = sum((value - mean) ** 2 for value in differences) / (len(differences) - 1)
         return mean, variance, len(differences)
 
 
@@ -762,9 +763,7 @@ class ScientificSituationActionMap(BaseModel):
         unsigned = cls.model_construct(map_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            map_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"map_sha256"})
-            ),
+            map_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"map_sha256"})),
         )
 
 
@@ -971,9 +970,7 @@ class ScientificSituationTransferDecision(BaseModel):
             sorted(self.source_boundary_assessments, key=lambda item: item.source_case_id)
         ):
             raise ValueError("source boundary assessments must be ordered by case ID")
-        if self.admitted_action_map_sha256s != tuple(
-            sorted(set(self.admitted_action_map_sha256s))
-        ):
+        if self.admitted_action_map_sha256s != tuple(sorted(set(self.admitted_action_map_sha256s))):
             raise ValueError("admitted action-map hashes must be sorted and unique")
         if not self.estimates and not self.abstained:
             raise ValueError("a transfer decision without estimates must abstain")
@@ -1588,16 +1585,18 @@ def select_by_scientific_situation(
             )
         if paired_clusters:
             total_weight = sum(item[0] for item in paired_clusters)
-            contrast_mean = sum(
-                weight * difference for weight, difference, _, _ in paired_clusters
-            ) / total_weight
-            between_variance = sum(
-                weight * (difference - contrast_mean) ** 2
-                for weight, difference, _, _ in paired_clusters
-            ) / total_weight
-            effective = total_weight * total_weight / sum(
-                item[0] ** 2 for item in paired_clusters
+            contrast_mean = (
+                sum(weight * difference for weight, difference, _, _ in paired_clusters)
+                / total_weight
             )
+            between_variance = (
+                sum(
+                    weight * (difference - contrast_mean) ** 2
+                    for weight, difference, _, _ in paired_clusters
+                )
+                / total_weight
+            )
+            effective = total_weight * total_weight / sum(item[0] ** 2 for item in paired_clusters)
             within_variance = sum(
                 weight * weight * sampling_variance
                 for weight, _, sampling_variance, _ in paired_clusters

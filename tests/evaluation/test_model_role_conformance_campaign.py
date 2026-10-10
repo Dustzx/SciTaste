@@ -5,6 +5,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from scitaste.evaluation.model_role_conformance_campaign import (
     CampaignReadiness,
     ConformanceRunnerKind,
@@ -23,6 +25,17 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
 CAMPAIGN_SPEC = (
     REPOSITORY_ROOT / "configs/evaluation/model_roles/scitaste_b0_bytebound_campaign_v1.yaml"
 )
+
+
+@pytest.fixture(autouse=True)
+def _do_not_hash_machine_checkpoints(monkeypatch):
+    def unavailable_in_unit_test(_path):
+        raise RuntimeError("Real checkpoint hashing is outside this synthetic unit test")
+
+    monkeypatch.setattr(
+        "scitaste.evaluation.model_role_conformance_campaign.build_local_checkpoint_identity_manifest",
+        unavailable_in_unit_test,
+    )
 
 
 def _registered_project(outputs_root: Path) -> None:

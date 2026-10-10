@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import shutil
+import tempfile
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -16,7 +19,7 @@ from scitaste.model_nodes.openai_compatible import StructuredOpenAICompatibleCon
 from scitaste.model_nodes.profiles import ModelNodeProfile, validate_profile_binding
 from scitaste.model_nodes.runtime import ModelNodeTrigger
 from scitaste.model_nodes.runtime_config import LiveRuntimeBackend, ModelNodeRuntimeConfig
-from scitaste.project import ProjectRuntime
+from scitaste.project import ProjectRun, ProjectRuntime, ProjectSnapshot
 from scitaste.project.models import (
     content_sha256,
     validate_entry_id,
@@ -154,6 +157,66 @@ class PreparedProjectPaperRevisionContext:
     input_data: EvidencePaperRevisionInput
     source_input: EvidencePaperDraftInput
     source_proposal: EvidencePaperDraftProposal
+
+
+class ProjectPaperRevisionContextPublication(BaseModel):
+    """Immutable project-owned handoff from review/evidence to a revision node."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str
+    run_id: str
+    source_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    review_id: str
+    source_adoption_run_id: str
+    target_manuscript_id: str
+    context_locator: Literal["CONTEXT.json"] = "CONTEXT.json"
+    context_file_sha256: str = Field(pattern=_SHA256)
+    context_record_sha256: str = Field(pattern=_SHA256)
+    input_locator: Literal["INPUT.json"] = "INPUT.json"
+    input_file_sha256: str = Field(pattern=_SHA256)
+    input_fingerprint: str = Field(pattern=_SHA256)
+    blocked_concern_ids: tuple[str, ...] = Field(default=(), max_length=320)
+    model_call_performed: Literal[False] = False
+    experiment_execution_performed: Literal[False] = False
+    record_sha256: str = Field(pattern=_SHA256)
+
+    @field_validator("project_id")
+    @classmethod
+    def project_is_safe(cls, value: str) -> str:
+        return validate_project_id(value)
+
+    @field_validator("run_id", "review_id", "source_adoption_run_id", "target_manuscript_id")
+    @classmethod
+    def identifiers_are_safe(cls, value: str, info: object) -> str:
+        return validate_entry_id(value, field_name=str(getattr(info, "field_name", "identifier")))
+
+    @field_validator("blocked_concern_ids")
+    @classmethod
+    def blocked_ids_are_sorted_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("revision-context blocked concern IDs must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def publication_is_self_hashed(self) -> ProjectPaperRevisionContextPublication:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
+        if self.record_sha256 != expected:
+            raise ValueError("paper-revision context publication hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> ProjectPaperRevisionContextPublication:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("record_sha256", None)
+        unsigned = cls.model_construct(record_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            record_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"record_sha256"})
+            ),
+        )
 
 
 def prepare_project_paper_revision_context(
@@ -351,6 +414,158 @@ def prepare_project_paper_revision_context(
     )
 
 
+def publish_project_paper_revision_context(
+    runtime: ProjectRuntime,
+    *,
+    prepared: PreparedProjectPaperRevisionContext,
+    run_id: str,
+    source_commit: str,
+    expected_revision: int,
+) -> tuple[ProjectSnapshot, ProjectPaperRevisionContextPublication]:
+    """Publish an exact revision input as a recoverable, no-model project run."""
+
+    validate_entry_id(run_id, field_name="revision_context_run_id")
+    bundle = prepared.bundle
+    snapshot = runtime.open(bundle.project_id)
+    if snapshot.revision != expected_revision or bundle.project_revision != expected_revision:
+        raise ValueError("project changed after paper-revision context preparation")
+    if any(item.run_id == run_id for item in snapshot.manifest.runs):
+        raise ValueError("paper-revision context run is already registered")
+    context_bytes = (bundle.model_dump_json(indent=2) + "\n").encode()
+    input_bytes = (prepared.input_data.model_dump_json(indent=2) + "\n").encode()
+    publication = ProjectPaperRevisionContextPublication.create(
+        project_id=bundle.project_id,
+        run_id=run_id,
+        source_commit=source_commit,
+        review_id=bundle.review_id,
+        source_adoption_run_id=bundle.source_adoption_run_id,
+        target_manuscript_id=bundle.target_manuscript_id,
+        context_file_sha256=hashlib.sha256(context_bytes).hexdigest(),
+        context_record_sha256=bundle.record_sha256,
+        input_file_sha256=hashlib.sha256(input_bytes).hexdigest(),
+        input_fingerprint=bundle.input_fingerprint,
+        blocked_concern_ids=bundle.blocked_concern_ids,
+    )
+    publication_bytes = (publication.model_dump_json(indent=2) + "\n").encode()
+    snapshot = runtime.begin_run(
+        bundle.project_id,
+        ProjectRun(
+            run_id=run_id,
+            provider="scitaste-native",
+            model="deterministic-revision-context-compiler",
+            condition="review-evidence-to-paper-revision-input",
+            seed=0,
+            status="preparing-paper-revision-context",
+            evidence_scope="revision-input-only-no-model-or-experiment-execution",
+            repository_commit=source_commit,
+            review_id=bundle.review_id,
+            source_adoption_run_id=bundle.source_adoption_run_id,
+            target_manuscript_id=bundle.target_manuscript_id,
+            blocked_concern_ids=list(bundle.blocked_concern_ids),
+            model_calls=0,
+            experiment_execution_performed=False,
+        ),
+        expected_revision=expected_revision,
+    )
+    run_root = runtime.projects_root / bundle.project_id / "runs" / run_id
+    target = run_root / "paper_revision_context"
+    temporary = Path(tempfile.mkdtemp(prefix=".paper-revision-context-", dir=run_root))
+    try:
+        _write_bytes_exclusive(temporary / publication.context_locator, context_bytes)
+        _write_bytes_exclusive(temporary / publication.input_locator, input_bytes)
+        _write_bytes_exclusive(temporary / "MANIFEST.json", publication_bytes)
+        os.replace(temporary, target)
+    except BaseException:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
+    snapshot = runtime.update_run(
+        bundle.project_id,
+        run_id,
+        expected_revision=snapshot.revision,
+        status="complete-paper-revision-context",
+        stage_path="paper_revision_context",
+        artifact=f"runs/{run_id}/paper_revision_context/MANIFEST.json",
+        revision_context_record_sha256=bundle.record_sha256,
+        revision_context_publication_sha256=publication.record_sha256,
+        revision_input_fingerprint=bundle.input_fingerprint,
+    )
+    observed = inspect_project_paper_revision_context(runtime, bundle.project_id, run_id)
+    if observed != publication:
+        raise ValueError("published paper-revision context differs from prepared bytes")
+    return snapshot, observed
+
+
+def inspect_project_paper_revision_context(
+    runtime: ProjectRuntime,
+    project_id: str,
+    run_id: str,
+) -> ProjectPaperRevisionContextPublication:
+    """Reverify a project-owned revision-context handoff and all declared bytes."""
+
+    snapshot = runtime.open(project_id)
+    run = next((item for item in snapshot.manifest.runs if item.run_id == run_id), None)
+    locator = f"runs/{run_id}/paper_revision_context/MANIFEST.json"
+    if (
+        run is None
+        or run.status != "complete-paper-revision-context"
+        or run.artifact != locator
+        or run.stage_path != "paper_revision_context"
+    ):
+        raise ValueError("project run does not identify a complete revision context")
+    stage = runtime.projects_root / project_id / "runs" / run_id / "paper_revision_context"
+    publication = ProjectPaperRevisionContextPublication.model_validate_json(
+        _contained_regular_file(stage, "MANIFEST.json").read_bytes()
+    )
+    if publication.project_id != project_id or publication.run_id != run_id:
+        raise ValueError("paper-revision context identity differs from its project run")
+    context_path = _contained_regular_file(stage, publication.context_locator)
+    input_path = _contained_regular_file(stage, publication.input_locator)
+    context_raw = context_path.read_bytes()
+    input_raw = input_path.read_bytes()
+    context = ProjectPaperRevisionContextBundle.model_validate_json(context_raw)
+    input_data = EvidencePaperRevisionInput.model_validate_json(input_raw)
+    if (
+        hashlib.sha256(context_raw).hexdigest() != publication.context_file_sha256
+        or context.record_sha256 != publication.context_record_sha256
+        or hashlib.sha256(input_raw).hexdigest() != publication.input_file_sha256
+        or input_data.fingerprint != publication.input_fingerprint
+        or context.input_fingerprint != publication.input_fingerprint
+        or context.blocked_concern_ids != publication.blocked_concern_ids
+    ):
+        raise ValueError("paper-revision context bytes differ from their publication")
+    if (
+        getattr(run, "revision_context_record_sha256", None) != publication.context_record_sha256
+        or getattr(run, "revision_context_publication_sha256", None) != publication.record_sha256
+        or getattr(run, "revision_input_fingerprint", None) != publication.input_fingerprint
+        or getattr(run, "model_calls", None) != 0
+        or getattr(run, "experiment_execution_performed", None) is not False
+    ):
+        raise ValueError("paper-revision context run metadata differs")
+    return publication
+
+
+def load_project_paper_revision_context(
+    runtime: ProjectRuntime,
+    project_id: str,
+    run_id: str,
+) -> tuple[
+    ProjectPaperRevisionContextPublication,
+    ProjectPaperRevisionContextBundle,
+    EvidencePaperRevisionInput,
+]:
+    """Load verified revision handoff objects after publication integrity checks."""
+
+    publication = inspect_project_paper_revision_context(runtime, project_id, run_id)
+    stage = runtime.projects_root / project_id / "runs" / run_id / "paper_revision_context"
+    context = ProjectPaperRevisionContextBundle.model_validate_json(
+        _contained_regular_file(stage, publication.context_locator).read_bytes()
+    )
+    input_data = EvidencePaperRevisionInput.model_validate_json(
+        _contained_regular_file(stage, publication.input_locator).read_bytes()
+    )
+    return publication, context, input_data
+
+
 def build_project_paper_revision_runtime_config(
     prepared: PreparedProjectPaperRevisionContext,
     *,
@@ -471,9 +686,42 @@ def _read_admitted_state(
     return state
 
 
+def _contained_regular_file(root: Path, locator: str) -> Path:
+    canonical_root = root.resolve(strict=True)
+    current = canonical_root
+    for part in PurePosixPath(locator).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("paper-revision context paths must not contain symbolic links")
+    path = current.resolve(strict=True)
+    try:
+        path.relative_to(canonical_root)
+    except ValueError as exc:
+        raise ValueError("paper-revision context path escapes its stage") from exc
+    if not path.is_file():
+        raise ValueError("paper-revision context artifact must be a regular file")
+    return path
+
+
+def _write_bytes_exclusive(path: Path, payload: bytes) -> None:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+
+
 __all__ = [
     "PreparedProjectPaperRevisionContext",
     "ProjectPaperRevisionContextBundle",
+    "ProjectPaperRevisionContextPublication",
     "build_project_paper_revision_runtime_config",
+    "inspect_project_paper_revision_context",
+    "load_project_paper_revision_context",
     "prepare_project_paper_revision_context",
+    "publish_project_paper_revision_context",
 ]

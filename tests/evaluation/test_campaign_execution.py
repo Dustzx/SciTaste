@@ -375,6 +375,24 @@ def _five_arm_activation_fixture(
     for task in payload["tasks"]:
         task["license_status"] = "verified"
         task["asset_status"] = "verified"
+    # Freeze the synthetic fixture's actual scorer bytes independently of the
+    # historical study contract, whose original hashes must remain unchanged.
+    outcome_ref = payload["analysis"]["objective_outcome_contract_ref"]
+    outcome_contract = json.loads(Path(outcome_ref).read_text())
+    for task_score in outcome_contract["task_scores"]:
+        binding = task_score["scorer_artifact"]
+        raw = Path(binding["locator"]).read_bytes()
+        binding["sha256"] = hashlib.sha256(raw).hexdigest()
+        binding["size_bytes"] = len(raw)
+    outcome_contract.pop("contract_sha256")
+    outcome_contract["contract_sha256"] = content_sha256(outcome_contract)
+    outcome_bytes = (json.dumps(outcome_contract, sort_keys=True) + "\n").encode()
+    outcome_path = evidence_root / outcome_ref
+    outcome_path.parent.mkdir(parents=True, exist_ok=True)
+    outcome_path.write_bytes(outcome_bytes)
+    payload["analysis"]["objective_outcome_contract_sha256"] = hashlib.sha256(
+        outcome_bytes
+    ).hexdigest()
     manifest = ExperimentPrelaunchManifest.model_validate(payload)
     plan = compile_evaluation_cell_plan(manifest)
     draft = compile_evaluation_campaign_activation(
@@ -426,10 +444,7 @@ def _five_arm_activation_fixture(
     launch_config = EvaluationCampaignLaunchConfig(
         launchers={system.system_id: launcher for system in manifest.systems}
     )
-    for reference in (
-        "configs/evaluation/analysis/native_taste_mechanism_objective_v1.json",
-        "src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py",
-    ):
+    for reference in ("src/scitaste/evaluation/runtime_assets/mlrc_objective_entrypoint.py",):
         destination = evidence_root / reference
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(Path(reference).read_bytes())
@@ -475,9 +490,7 @@ def test_campaign_distinguishes_host_inventory_from_cell_gpu_allocation(
     )
     runner = ProjectEvaluationCampaignRunner(ProjectRuntime(tmp_path / "outputs"), mismatched)
 
-    _launches, blockers = runner._launches(
-        "campaign-project", "allocation-check", plan.cells
-    )
+    _launches, blockers = runner._launches("campaign-project", "allocation-check", plan.cells)
 
     assert set(blockers) == {
         "launcher:native-base:gpu-count-allocation-mismatch",

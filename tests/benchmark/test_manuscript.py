@@ -47,6 +47,14 @@ def test_markdown_to_latex_preserves_math_citations_and_tables() -> None:
     assert "\\bibliography{references}" in tex
 
 
+def test_table_artifact_link_does_not_become_row_spacing() -> None:
+    tex = markdown_to_latex(
+        "## Title\nCell safety\n\n## Results\n| Artifact | Purpose |\n|---|---|\n"
+        "| [split.npz](../outputs/split.npz) | Fixed partition |\n"
+    )
+    assert "{}[split.npz](../outputs/split.npz) & Fixed partition" in tex
+
+
 def test_markdown_to_latex_preserves_relative_heading_depth() -> None:
     tex = markdown_to_latex(
         """## Title

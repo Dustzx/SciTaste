@@ -29,15 +29,10 @@ def _percentile(values: list[float], probability: float) -> float:
     return values[min(round(probability * (len(values) - 1)), len(values) - 1)]
 
 
-def _cluster_interval(
-    values: list[float], *, resamples: int, seed: int
-) -> tuple[float, float]:
+def _cluster_interval(values: list[float], *, resamples: int, seed: int) -> tuple[float, float]:
     rng = random.Random(seed)
     size = len(values)
-    draws = [
-        sum(values[rng.randrange(size)] for _ in range(size)) / size
-        for _ in range(resamples)
-    ]
+    draws = [sum(values[rng.randrange(size)] for _ in range(size)) / size for _ in range(resamples)]
     draws.sort()
     return _percentile(draws, 0.025), _percentile(draws, 0.975)
 
@@ -46,9 +41,9 @@ def _paired_sign_test(improved: int, regressed: int) -> float:
     discordant = improved + regressed
     if discordant == 0:
         return 1.0
-    tail = sum(
-        math.comb(discordant, index) for index in range(min(improved, regressed) + 1)
-    ) / (2**discordant)
+    tail = sum(math.comb(discordant, index) for index in range(min(improved, regressed) + 1)) / (
+        2**discordant
+    )
     return min(1.0, 2.0 * tail)
 
 
@@ -57,8 +52,7 @@ def _index_results(
 ) -> dict[str, dict[str, dict[str, Any]]]:
     return {
         condition: {
-            result["case_id"]: result
-            for result in report["conditions"][condition]["results"]
+            result["case_id"]: result for result in report["conditions"][condition]["results"]
         }
         for condition in conditions
     }
@@ -103,9 +97,7 @@ def analyze(
         )
     )
 
-    indexed = {
-        order: _index_results(report, conditions) for order, report in reports.items()
-    }
+    indexed = {order: _index_results(report, conditions) for order, report in reports.items()}
     case_ids = sorted(indexed["declared"]["base"])
     expected_ids = sorted(case["case_id"] for case in suite["cases"])
     if case_ids != expected_ids:
@@ -118,20 +110,11 @@ def analyze(
     condition_summary: dict[str, Any] = {}
     for condition_index, condition in enumerate(conditions):
         per_case_order_consistent = [
-            int(
-                all(
-                    indexed[order][condition][case_id]["correct"]
-                    for order in reports
-                )
-            )
+            int(all(indexed[order][condition][case_id]["correct"] for order in reports))
             for case_id in case_ids
         ]
         per_case_accuracy = [
-            sum(
-                int(indexed[order][condition][case_id]["correct"])
-                for order in reports
-            )
-            / 2
+            sum(int(indexed[order][condition][case_id]["correct"]) for order in reports) / 2
             for case_id in case_ids
         ]
         lower, upper = _cluster_interval(
@@ -146,13 +129,9 @@ def analyze(
                 token_usage["input_tokens"] += usage.get("input_tokens") or 0
                 token_usage["output_tokens"] += usage.get("output_tokens") or 0
         condition_summary[condition] = {
-            "order_consistent_accuracy": sum(per_case_order_consistent)
-            / len(case_ids),
+            "order_consistent_accuracy": sum(per_case_order_consistent) / len(case_ids),
             "accuracy_by_order": {
-                order: sum(
-                    int(result["correct"])
-                    for result in indexed[order][condition].values()
-                )
+                order: sum(int(result["correct"]) for result in indexed[order][condition].values())
                 / len(case_ids)
                 for order in reports
             },
@@ -170,28 +149,15 @@ def analyze(
             ),
             "token_usage": {
                 **token_usage,
-                "total_tokens": token_usage["input_tokens"]
-                + token_usage["output_tokens"],
+                "total_tokens": token_usage["input_tokens"] + token_usage["output_tokens"],
             },
         }
 
     contrast_summary: dict[str, Any] = {}
-    for contrast_index, (contrast_id, treatment, control, registration) in enumerate(
-        contrasts
-    ):
+    for contrast_index, (contrast_id, treatment, control, registration) in enumerate(contrasts):
         per_case_consistent_delta = [
-            int(
-                all(
-                    indexed[order][treatment][case_id]["correct"]
-                    for order in reports
-                )
-            )
-            - int(
-                all(
-                    indexed[order][control][case_id]["correct"]
-                    for order in reports
-                )
-            )
+            int(all(indexed[order][treatment][case_id]["correct"] for order in reports))
+            - int(all(indexed[order][control][case_id]["correct"] for order in reports))
             for case_id in case_ids
         ]
         per_case_delta = [
@@ -216,8 +182,7 @@ def analyze(
             "treatment": treatment,
             "comparator": control,
             "registration": registration,
-            "order_consistent_accuracy_delta": sum(per_case_consistent_delta)
-            / len(case_ids),
+            "order_consistent_accuracy_delta": sum(per_case_consistent_delta) / len(case_ids),
             "order_consistent_improved_cases": consistent_improved,
             "order_consistent_regressed_cases": consistent_regressed,
             "order_consistent_unchanged_cases": sum(
@@ -231,21 +196,16 @@ def analyze(
             "improved_cases": improved,
             "regressed_cases": regressed,
             "unchanged_cases": sum(value == 0 for value in per_case_delta),
-            "order_averaged_exact_sign_p_two_sided": _paired_sign_test(
-                improved, regressed
-            ),
+            "order_averaged_exact_sign_p_two_sided": _paired_sign_test(improved, regressed),
         }
 
-    preferred_a = sum(
-        case["preferred_action_id"].endswith("-a") for case in suite["cases"]
-    )
+    preferred_a = sum(case["preferred_action_id"].endswith("-a") for case in suite["cases"])
     confirmation_reserve = "confirmation" in reports["declared"]["suite_id"]
     confirmation_supported = bool(
         confirmation_reserve
         and contrast_summary
         and all(
-            item["order_consistent_accuracy_delta"] > 0
-            and item["case_clustered_95pct_ci"][0] > 0
+            item["order_consistent_accuracy_delta"] > 0 and item["case_clustered_95pct_ci"][0] > 0
             for item in contrast_summary.values()
         )
     )

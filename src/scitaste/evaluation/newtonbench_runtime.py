@@ -180,7 +180,7 @@ class NewtonBenchToolbox:
     def fingerprint(self) -> str:
         return content_sha256(
             {
-                "implementation": "scitaste-newtonbench-toolbox-v3",
+                "implementation": "scitaste-newtonbench-toolbox-v5-observed-tool-errors",
                 "task_sha256": self.task_sha256,
                 "environment_sha256": self.environment_sha256,
                 "task_prompt_sha256": content_sha256(self.task_prompt),
@@ -206,13 +206,20 @@ class NewtonBenchToolbox:
                 parameters=request.parameters,
             )
             with _RNG_LOCK, _isolated_random_state(event_seed):
-                value = self.module.run_experiment_for_module(
-                    **request.parameters,
-                    noise_level=self.task.noise_level,
-                    difficulty=self.task.difficulty,
-                    system=self.task.system,
-                    law_version=self.task.law_version,
-                )
+                try:
+                    value = self.module.run_experiment_for_module(
+                        **request.parameters,
+                        noise_level=self.task.noise_level,
+                        difficulty=self.task.difficulty,
+                        system=self.task.system,
+                        law_version=self.task.law_version,
+                    )
+                except (TypeError, ValueError, OverflowError) as exc:
+                    value = {
+                        "experiment_error": type(exc).__name__,
+                        "message": str(exc)[:1_000],
+                        "parameters": request.parameters,
+                    }
             self._experiment_index += 1
             results.append(_json_value(value))
         return {
@@ -519,13 +526,29 @@ def _git(checkout: Path, *arguments: str) -> str:
 
 def _json_value(value: object) -> JsonValue:
     encoded = json.dumps(
-        value,
+        _json_safe(value),
         allow_nan=False,
         ensure_ascii=False,
         separators=(",", ":"),
         default=_json_default,
     )
     return json.loads(encoded)
+
+
+def _json_safe(value: object) -> object:
+    """Preserve a failed numerical measurement as JSON null, not a lost run."""
+
+    if isinstance(value, np.generic):
+        return _json_safe(value.item())
+    if isinstance(value, np.ndarray):
+        return [_json_safe(item) for item in value.tolist()]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
 
 
 def _json_default(value: object) -> object:

@@ -1014,8 +1014,7 @@ def compile_prospective_taste_episode_v2(
         if (
             expected_project_revision != plan.observed_project_revision
             or lock.observed_project_revision != plan.observed_project_revision
-            or lock.observed_project_snapshot_sha256
-            != plan.observed_project_snapshot_sha256
+            or lock.observed_project_snapshot_sha256 != plan.observed_project_snapshot_sha256
             or plan.source_run_id not in {item.run_id for item in snapshot.manifest.runs}
         ):
             raise ValueError("historical projection source identity differs from its frozen plan")

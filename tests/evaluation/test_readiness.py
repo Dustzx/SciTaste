@@ -33,6 +33,8 @@ def _gate_map(bundle: ProjectEvaluationBundle):
 def _replace_bundle(bundle: ProjectEvaluationBundle, **changes: object) -> ProjectEvaluationBundle:
     payload = bundle.model_dump(mode="json", exclude={"bundle_sha256"})
     payload.update(changes)
+    if payload["schema_version"] == "1.0":
+        payload.pop("origin", None)
     payload["bundle_sha256"] = content_sha256(payload)
     return ProjectEvaluationBundle.model_validate(payload)
 

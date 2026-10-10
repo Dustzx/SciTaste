@@ -37,6 +37,7 @@ from scitaste.generative_ui.safety import (
     Sha256,
     declarative_dict,
 )
+from scitaste.project.documents import ProjectDocuments
 from scitaste.schema.actions import MetaAction
 
 _MODEL_CONFIG = ConfigDict(
@@ -2498,6 +2499,10 @@ class ProjectPlanningDirectiveData(BaseModel):
     verification_route: Literal["direct_path"] = "direct_path"
     verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
     controller_consumed: bool = False
+    native_planning_status: Literal[
+        "awaiting-planning", "addressed", "deferred", "conflict", "rejected"
+    ] = "awaiting-planning"
+    native_planning_explanation: SafeText | None = None
     effective_program_sha256: Sha256 | None = None
     control_effect: (
         Literal[
@@ -2773,7 +2778,8 @@ class ProjectResourcePortfolioItem(BaseModel):
     access_state: Literal["configured", "missing", "not_required"]
     connection_metadata_complete: bool | None = None
     local_path_present: bool | None = None
-    required_for: tuple[SafeIdentifier, ...] = Field(default=(), max_length=20)
+    # Registry requirements are bounded descriptive labels, not UI action IDs.
+    required_for: tuple[SafeText, ...] = Field(default=(), max_length=20)
 
 
 class ProjectAvailableResourceItem(BaseModel):
@@ -2894,7 +2900,8 @@ class ProjectProgressBoardData(BaseModel):
     publication_ready: bool
     focus: SafeText
     focus_status: SafeText | None = None
-    focus_source: Literal["project_manifest", "effective_evidence_program"]
+    focus_source: Literal["project_manifest", "effective_evidence_program", "project_documents"]
+    project_documents: ProjectDocuments | None = None
     next_gate: SafeText | None = None
     focus_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
     stage_semantics: SafeText

@@ -253,8 +253,7 @@ def _fit_status_rule(
         experiments = [item[3] for item in rows]
         tokens = [item[4] for item in rows]
         robust = all(
-            regret <= tolerance
-            for regret, tolerance in zip(regrets, tolerances, strict=True)
+            regret <= tolerance for regret, tolerance in zip(regrets, tolerances, strict=True)
         )
         estimates.append(
             CounterfactualPolicyActionEstimate(
@@ -273,9 +272,7 @@ def _fit_status_rule(
         minimum_regret = min(item.maximum_state_regret for item in estimates)
         robust = tuple(item for item in estimates if item.maximum_state_regret == minimum_regret)
         estimates = [
-            item.model_copy(
-                update={"robustly_equivalent_to_state_best": item in robust}
-            )
+            item.model_copy(update={"robustly_equivalent_to_state_best": item in robust})
             for item in estimates
         ]
     direction = results[indices[0]].metric_direction
@@ -285,11 +282,7 @@ def _fit_status_rule(
             item.terminal_failure_rate,
             item.mean_branch_experiment_count,
             item.mean_branch_tokens,
-            (
-                item.mean_objective_value
-                if direction == "lower"
-                else -item.mean_objective_value
-            ),
+            (item.mean_objective_value if direction == "lower" else -item.mean_objective_value),
             item.action.value,
         ),
     )

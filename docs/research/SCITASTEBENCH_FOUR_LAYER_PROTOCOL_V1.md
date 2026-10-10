@@ -1,7 +1,21 @@
 # SciTasteBench four-layer protocol v1
 
-Status: **current benchmark-design authority; execution remains separately
-resource-bound**.
+Status: **historical causal evidence protocol; execution remains separately
+resource-bound**. The current comparative-method structure is
+`ICLR27_EXPERIMENT_MATRIX_V1.md`.
+
+2026-09-24 qualification: this document defines the causal evidence program,
+not a validated dataset release. A later case-level audit found that the first
+NewtonBench development and sealed cohorts had 600-s versus 120-s branch time
+ceilings, and that most held-out states had small or tied action-value gaps.
+See the self-development project's
+`docs/records/SCITASTEBENCH_QUALITY_AUDIT.md` and
+`docs/records/SCITASTEBENCH_NEXT_STUDY.md` before treating the old formal
+result as a clean transfer estimate or opening a new cohort. The P layer uses
+external benchmarks and is not SciTasteBench-owned data. The protocol did not
+specify independent decision-method baselines or a whole-agent SciTasteBench
+task mode; neither can be inferred from its internal Raw/RAG and memory
+controls. The next-study record corrects those gaps.
 
 The machine-readable contract is
 [`iclr2027_scitastebench_four_layer_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitastebench_four_layer_v1.yaml).

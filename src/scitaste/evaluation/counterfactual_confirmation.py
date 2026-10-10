@@ -259,9 +259,7 @@ def analyze_counterfactual_confirmation(
     )
     if not population_valid:
         verdict: Literal["supported", "not-supported", "inadmissible"] = "inadmissible"
-        reasons = (
-            "objective-observation-rate-below-frozen-admission-threshold",
-        )
+        reasons = ("objective-observation-rate-below-frozen-admission-threshold",)
     elif supported:
         verdict = "supported"
         reasons = ("frozen-policy-outperforms-preselected-baseline-with-clustered-uncertainty",)
@@ -360,8 +358,7 @@ def _exhaustive_cluster_bootstrap(
         raise ValueError("cluster bootstrap requires at least one task")
     count = len(cluster_effects)
     estimates = sorted(
-        math.fsum(sample) / count
-        for sample in itertools.product(cluster_effects, repeat=count)
+        math.fsum(sample) / count for sample in itertools.product(cluster_effects, repeat=count)
     )
     low = estimates[int(0.025 * (len(estimates) - 1))]
     high = estimates[math.ceil(0.975 * (len(estimates) - 1))]

@@ -53,6 +53,10 @@ from scitaste.evaluation.prelaunch import (
     ScientificEndpointKind,
     load_prelaunch_manifest,
 )
+from scitaste.evaluation.research_design_binding import (
+    CampaignResearchDesignBinding,
+    validate_research_design_binding,
+)
 from scitaste.evaluation.results import (
     EvaluationCellResult,
     EvaluationCellUsage,
@@ -128,9 +132,10 @@ class EvaluationCampaignLaunchConfig(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     launchers: dict[str, EvaluationCommandLauncher] = Field(min_length=1, max_length=30)
     formal_preparation: EvaluationFormalPreparationBinding | None = None
+    research_design: CampaignResearchDesignBinding | None = None
 
     @model_validator(mode="after")
     def system_ids_are_safe(self) -> EvaluationCampaignLaunchConfig:
@@ -140,11 +145,15 @@ class EvaluationCampaignLaunchConfig(BaseModel):
             raise ValueError("campaign launch config v1.0 cannot bind formal preparation")
         if self.schema_version == "1.1" and self.formal_preparation is None:
             raise ValueError("campaign launch config v1.1 requires formal preparation")
+        if (self.schema_version == "1.2") != (self.research_design is not None):
+            raise ValueError("Design-bound campaign configuration requires schema v1.2")
         return self
 
     @property
     def config_sha256(self) -> str:
         payload = self.model_dump(mode="json")
+        if self.schema_version != "1.2":
+            payload.pop("research_design", None)
         if self.schema_version == "1.0":
             payload.pop("formal_preparation", None)
         return content_sha256(payload)
@@ -490,6 +499,16 @@ class ProjectEvaluationCampaignRunner:
         if max_cells is not None and max_cells < 1:
             raise ValueError("max_cells must be positive")
         inputs = self._inputs(project_id, evaluation_id)
+        if self.launch_config.research_design is not None:
+            idea = inspect_current_idea_revision(self.runtime, project_id).current_binding
+            if idea is None:
+                raise ValueError("Design-bound campaign requires a verified current idea")
+            validate_research_design_binding(
+                self.launch_config.research_design,
+                project_root=self.runtime.projects_root / project_id,
+                idea_sha256=idea.artifact_sha256,
+                plan=inputs.plan,
+            )
         if activation is None:
             selected = self._select_cells(inputs.plan, cell_ids=cell_ids)
             if len(selected) != len(inputs.plan.cells):
@@ -1057,7 +1076,7 @@ class ProjectEvaluationCampaignRunner:
         if not _requires_formal_h4(inputs.plan, selected):
             return []
         binding = self.launch_config.formal_preparation
-        if self.launch_config.schema_version != "1.1" or binding is None:
+        if self.launch_config.schema_version not in {"1.1", "1.2"} or binding is None:
             return ["preparation:native-h4-v1-required"]
         try:
             from scitaste.evaluation.h4_preparation import (
@@ -1396,9 +1415,7 @@ class ProjectEvaluationCampaignRunner:
                     blockers.append(f"launcher:{cell.system_id}:gpu-count-missing")
                 allocation = cell.resource.allocated_device_count_per_cell
                 if allocation is not None and launcher.gpu_count != allocation:
-                    blockers.append(
-                        f"launcher:{cell.system_id}:gpu-count-allocation-mismatch"
-                    )
+                    blockers.append(f"launcher:{cell.system_id}:gpu-count-allocation-mismatch")
                 if cell.lane_kind is ExecutionLaneKind.HYBRID:
                     key_env = cell.resource.api_key_env
                     if key_env not in launcher.pass_environment:
@@ -1849,9 +1866,7 @@ class ProjectEvaluationCampaignRunner:
             output_tokens=usage.output_tokens,
             max_input_tokens_observed=usage.max_input_tokens_observed,
             max_output_tokens_observed=usage.max_output_tokens_observed,
-            api_cost=(
-                usage.api_cost if cell.lane_kind is ExecutionLaneKind.HYBRID else None
-            ),
+            api_cost=(usage.api_cost if cell.lane_kind is ExecutionLaneKind.HYBRID else None),
             gpu_hours=elapsed * launcher.gpu_count / 3600,
             wall_time_hours=elapsed / 3600,
             experiment_count=usage.experiment_count,
@@ -2219,9 +2234,8 @@ def _requires_formal_h4(
         "full-scitaste-learned-policy",
         "native-base-without-learned-taste",
     }
-    return (
-        plan.claim_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
-        and any(cell.system_id in h4_systems for cell in cells)
+    return plan.claim_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL and any(
+        cell.system_id in h4_systems for cell in cells
     )
 
 

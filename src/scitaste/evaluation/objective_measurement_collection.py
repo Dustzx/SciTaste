@@ -635,9 +635,7 @@ def _validate_h4_terminal_outcome(
         if (
             cell.lane_kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             and usage.api_cost is None
-        ) or (
-            cell.lane_kind is ExecutionLaneKind.GPU and usage.api_cost is not None
-        ):
+        ) or (cell.lane_kind is ExecutionLaneKind.GPU and usage.api_cost is not None):
             raise ValueError("native H4 terminal usage lane kind differs")
     elif usage.model_dump(mode="json") != _h4_authorized_failure_ceiling(
         cell,

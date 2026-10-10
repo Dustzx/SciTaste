@@ -300,9 +300,8 @@ def _requires_formal_h4(plan) -> bool:  # type: ignore[no-untyped-def]
         "full-scitaste-learned-policy",
         "native-base-without-learned-taste",
     }
-    return (
-        plan.claim_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
-        and any(item.system_id in systems for item in plan.cells)
+    return plan.claim_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL and any(
+        item.system_id in systems for item in plan.cells
     )
 
 

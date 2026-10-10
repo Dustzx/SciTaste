@@ -107,7 +107,7 @@ class TasteDeliberationTrace(BaseModel):
     ledger_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     input_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    broad_candidate_case_ids: tuple[str, ...] = Field(min_length=2, max_length=20)
+    broad_candidate_case_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
     selected_case_ids: tuple[str, ...] = Field(max_length=5)
     control_packet_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     recommended_action_id: str | None = Field(default=None, min_length=1)

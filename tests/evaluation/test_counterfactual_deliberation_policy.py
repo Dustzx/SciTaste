@@ -47,9 +47,7 @@ def test_real_precedents_prepare_cross_task_outcome_hidden_inputs(tmp_path: Path
         serialized = json.dumps(input_data.model_dump(mode="json"))
         assert len(input_data.candidates) == 3
         assert len(retrieval.population_scores) == 9
-        assert retrieval.selected_case_ids == tuple(
-            item.case_id for item in input_data.candidates
-        )
+        assert retrieval.selected_case_ids == tuple(item.case_id for item in input_data.candidates)
         assert len({item.preferred_action for item in input_data.candidates}) == 3
         assert retrieval.selector_input_sha256 == input_data.fingerprint
         assert not set(target.excluded_same_cluster_case_ids) & {

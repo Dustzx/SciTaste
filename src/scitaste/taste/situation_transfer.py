@@ -122,9 +122,7 @@ def compile_scientific_situation_control_packet(
             findings.append(f"unknown-target-case:{binding.target_taste_case_id}")
             continue
         source_actions = {item.source_action_id for item in binding.action_map.bindings}
-        target_actions = {
-            item.target_action.action_id for item in binding.action_map.bindings
-        }
+        target_actions = {item.target_action.action_id for item in binding.action_map.bindings}
         registered_source_actions = (
             set(source.available_actions)
             if isinstance(source, FormalObjectiveForkSituationCase)
@@ -182,7 +180,7 @@ def compile_scientific_situation_control_packet(
                 )
             )
             continue
-        aligned = (() if decision.selected_action is None else (decision.selected_action,))
+        aligned = () if decision.selected_action is None else (decision.selected_action,)
         opposed = tuple(sorted(action_ids - set(aligned)))
         assessments.append(
             TasteCaseTransferAssessment(

@@ -217,6 +217,11 @@ _HIGH_ATTENTION_PROJECT_STATUS = (
     "passing tests",
     "repository snapshot",
 )
+_REPRO_METADATA_IN_PROSE = (
+    re.compile(r"\b(?:at\s+)?commit\s+[0-9a-f]{7,40}\b", re.IGNORECASE),
+    re.compile(r"\b(?:git\s+)?(?:sha|hash)\s*[:=]?\s*[0-9a-f]{12,64}\b", re.IGNORECASE),
+    re.compile(r"\\texttt\{[^{}]*(?:_[0-9]{3,}|[0-9a-f]{12,})[^{}]*\}"),
+)
 
 
 def assess_writing_taste(
@@ -301,6 +306,33 @@ def assess_writing_taste(
                     source_principle="anti-defensive-writing-derived",
                 )
             )
+        if not _is_reproducibility_section(normalized_name):
+            metadata = tuple(
+                match.group(0)
+                for pattern in _REPRO_METADATA_IN_PROSE
+                for match in pattern.finditer(section.body)
+            )
+            if metadata:
+                findings.append(
+                    _finding(
+                        code="repro-metadata-in-narrative",
+                        dimension=WritingTasteDimension.EVIDENCE_PRIORITIZATION,
+                        level=WritingTasteLevel.SECTION,
+                        severity=WritingTasteSeverity.WARNING,
+                        section_name=section.name,
+                        message=(
+                            "Exact repository or task identifiers appear in scientific prose "
+                            "without an explicit interpretive role."
+                        ),
+                        recommendation=(
+                            "Keep the population and protocol in the argument; route commit "
+                            "hashes, task IDs, and run receipts to an appendix or artifact record "
+                            "unless a version difference changes the claim."
+                        ),
+                        excerpts=metadata[:3],
+                        source_principle="scitaste-information-promotion-v1",
+                    )
+                )
         findings.extend(_defensive_findings(section))
         findings.extend(_high_attention_status_findings(section))
         findings.extend(_paragraph_findings(section))
@@ -580,6 +612,10 @@ def _is_results_section(value: str) -> bool:
 
 def _is_limitation_section(value: str) -> bool:
     return value in {"limitations", "limitations and risks"} or value.startswith("limitations:")
+
+
+def _is_reproducibility_section(value: str) -> bool:
+    return value.startswith(("appendix", "reproducibility", "artifact", "implementation details"))
 
 
 def _compact_excerpt(text: str, *, limit: int = 180) -> str:

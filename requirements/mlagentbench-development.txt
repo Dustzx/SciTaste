@@ -1,0 +1,2 @@
+# Optional upstream-agent import dependency; main SciTaste runtime remains unchanged.
+anthropic==0.125.0

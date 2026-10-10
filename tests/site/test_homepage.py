@@ -97,10 +97,9 @@ def test_homepage_assets_are_bounded_and_readme_uses_the_current_title() -> None
     assert 'id="taste-library"' in taste_loop_source
     assert 'id="taste-controller"' in taste_loop_source
     assert 'id="admission-gate"' in taste_loop_source
-    assert (
-        taste_loop.read_bytes()
-        == (_ROOT / "manuscripts/scitaste/assets/fig1-scitaste-control.svg").read_bytes()
-    )
+    # The public overview and the frozen manuscript figure have independent revisions.
+    manuscript_figure = _ROOT / "manuscripts/scitaste/assets/fig1-scitaste-control.svg"
+    assert "<svg" in manuscript_figure.read_text(encoding="utf-8")
 
     homepage = (_SITE / "index.html").read_text(encoding="utf-8")
     assert "effectiveness claim is not yet established" in homepage
@@ -108,16 +107,15 @@ def test_homepage_assets_are_bounded_and_readme_uses_the_current_title() -> None
     assert "AutoResearchClaw" in homepage
 
     readme = (_ROOT / "README.md").read_text(encoding="utf-8")
-    assert "SciTaste: Improving Autonomous Research through Scientific Taste" in readme
-    assert (
-        "SciTaste: Learning Scientific Taste for Autonomous Research Decision Making" not in readme
-    )
+    assert "SciTaste: Learning Scientific Taste for Autonomous Research Decision Making" in readme
+    assert "Learning Scientific Taste for Efficient Research Idea Discovery" in readme
+    assert "workspace/README.md" in readme
     assert "site/assets/scitaste-mark.svg" in readme
     assert "site/assets/scientific-taste-loop.svg" in readme
     assert "https://dustzx.github.io/SciTaste/" in readme
     assert "actions/workflows/ci.yml/badge.svg" not in readme
     assert "```mermaid" not in readme
-    assert len(readme.splitlines()) <= 180
+    assert len(readme.splitlines()) <= 220
 
 
 def test_pages_workflow_publishes_only_the_static_site() -> None:

@@ -164,9 +164,7 @@ def test_initialize_binds_v10_top_venue_control_program(tmp_path: Path) -> None:
     assert initialized.contract.controller_authorizes_api_calls is False
     assert initialized.contract.controller_authorizes_gpu_work is False
     evidence_phase = next(
-        item
-        for item in initialized.contract.phases
-        if item.phase_id == "evidence-admission"
+        item for item in initialized.contract.phases if item.phase_id == "evidence-admission"
     )
     assert "venue-competitiveness-assessment" in evidence_phase.required_artifact_ids
     assert "project-evaluation-and-top-venue-admission-v1" in (

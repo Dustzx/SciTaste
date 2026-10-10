@@ -1,5 +1,96 @@
 # Evidence-Grounded Generative Research Interface
 
+## Drawer shell, project gallery and progress reconciliation — 2026-09-27
+
+Brand/language, all-project navigation, project selection, evidence tools, history
+and snapshot metadata now share the left drawer. The canvas no longer reserves
+two header bars. The gallery uses project titles, compact descriptions, venue and
+artifact counts; those counts do not assert paper quality or active execution.
+Its first card opens a metadata-only creation form. Authenticated same-origin POST
+to the existing project-list endpoint validates a closed request, delegates atomic
+creation to ProjectRuntime and returns conflict rather than overwriting a project.
+Creation does not configure providers, grant budgets, call models or launch research.
+
+The self-development manifest had current Native run registrations but its declared
+milestones stopped at September 14. A source-hash-checked September 27 bounded
+session-assisted core-delivery milestone was appended through ProjectRuntime,
+advancing revision 1340 to 1341. The home exposes the latest milestone separately
+from the scientific evidence timeline. No historical dossier, experiment result,
+current-run selection, paper selection or scientific completion count was changed.
+This is explicit reconciliation, not a claim of continuous automatic synchronization
+of every repository change. The older scientific dossier still needs its own update.
+
+One focused creation-route check covers authentication, traversal/extra-authority
+rejection, empty project creation, duplicate conflict and list metadata. No full
+test suite, API-model call or GPU experiment was needed for this change.
+
+## Scientific-plan desktop — 2026-09-27
+
+The default project view now centers the registered scientific evidence timeline,
+one selected phase and six workspace launchers: plan, resources, experiments,
+papers/review, Taste/references and project records. Detailed evidence and controls
+remain accessible inside these workspaces instead of extending the landing page.
+Switching launchers reuses the loaded snapshot without fetching or model calls.
+The timeline is dossier progress, not software completion, a refreshed venue plan
+or inferred live GPU telemetry. Projects without a dossier retain their direction
+summary rather than fabricated phases. Generation still uses the existing flexible
+question/workspace flow; the desktop is its navigation shell, not a model-generated
+replacement for verified project state.
+
+Phase adjustment prepares a draft request; it does not publish or execute it. The
+composer exposes an explicit exit from plan-editing mode. Future-phase prompts
+name the selected phase, not an unrelated currently executable stage. Resource
+admission and provider failure remain visible; failed generation leaves the plan
+unchanged. Read-only workspace launchers do not require a working model route.
+
+The live project exceeded the intent contract's 32-binding limit. Blocker/paper
+catalog entries now expose at most 31 targets plus the project, with explicit scope
+and original counts. All older records remain in ordinary project views. Optional
+cache-status loading no longer blocks enabling the question composer.
+
+Browser dogfooding exercised all six launchers, phase selection, return navigation
+and adjustment prefill against the real self-development project. A real revision
+request returned a provider HTTP error, not a successful model revision; no revision
+was accepted/published and no experiment was launched. Large-project initial loading
+and the gap between the historical dossier and newer Native progress remain open.
+The provider returned HTTP 429. An ordinary progress question subsequently created
+a persisted workspace with HTTP 201 via the explicitly labeled deterministic route
+(112 s on this project), not a model-authored answer. Desktop and 390 px layouts were
+inspected; the narrow view scrolls the timeline rather than overflowing the page.
+
+## Live self-development home repair — 2026-09-27
+
+The project-only route opens the default progress view. The current project has
+more than one registration carrying the old ICLR projection tag, two versions of
+one ARIES population ID, a revised independent-review stage label, and resource
+requirements with mixed-case task names. The progress composer now admits the
+latest canonical dossier and latest verified population revision while keeping
+all older and unrelated runs in the project record. Resource requirements remain
+inert display text. The real project-progress API returned HTTP 200 with the
+current registered revision; on this large project its response took about 24 s.
+
+## Native planning intervention bridge — 2026-09-27
+
+The existing accepted/published program revision now enters Native research planning
+as `user_intervention`. The model must respond against the exact publication hash
+with addressed, deferred or conflict and a concrete explanation. An accepted response
+does not mean the proposed work ran. Deferred/conflicting changes cannot select
+execution/acquisition; an unacknowledged or superseded plan cannot start a fresh Native
+run. Existing pending work, explicit continuation and completed delivery are preserved.
+
+The project operating bridge shows Native's planning status separately from the old
+deterministic program-overlay consumption indicator. Status is reconstructed from
+registered result bytes and `INTERVENTION_RECEIPT.json`, with input/result integrity
+checks; it is not prose supplied by the page generator. Chinese/English waiting,
+addressed, deferred, conflict and rejected labels explain the boundary.
+
+Validation: five focused admission/receipt/drift and existing completion tests passed.
+No browser inspection, model request, new scientific experiment or GPU work. The live
+self-development project had no published directive at inspection; do not advertise
+a live user intervention as completed. This first connection uses the existing
+dossier-based UI. Generic Native plan/progress projection, safe-point pause/cancel,
+and observed execution-effect receipts remain subsequent work.
+
 SciTaste's generative interface uses a fixed, trusted application shell and a
 dynamically selected research workspace. The generated object is data, not code:
 it can choose from registered native components and bind those components to a
@@ -947,7 +1038,7 @@ OpenAI-compatible structured planner requires two independent operator inputs:
 
 ```bash
 export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
-export ZAI_API_KEY='read-by-the-provider-backend-only'
+export ZAI_API_KEY="<your-existing-api-key>"
 .venv/bin/scitaste ui serve \
   --outputs-root outputs \
   --planner-config configs/generative_ui/zhipu_glm53_flash.priced_20260908.yaml \

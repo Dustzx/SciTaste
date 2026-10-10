@@ -1,11 +1,24 @@
 # Resource catalog layout
 
-`compute_catalog_v13.yaml` is the current project-superordinate resource index.
+`compute_catalog_v15.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
+
+The v15 project binding prefers remote `4090-2` with storage under `/data/zfx`.
+The old remote 3090 and local GPU remain inventory, not default experiment
+destinations. Existing API/model definitions are retained without asserting a
+fresh availability check. Host access does not reserve GPUs; each launch checks
+occupancy. The runtime registry and self-development binding both use v15.
+
+`execution/mlrc_unlearning_4090_v1.yaml` supplies the prepared unlearning task's
+remote bundle, Python, code and device selection. `prepare_project_research_task
+--remote-resource` embeds its resolved host definition and hash into PLAN.json.
+Native execution and iterative attempts use that frozen envelope. The profile
+is task-specific, contains no credential values and does not reserve a device;
+it is not a generic dataset/model choice or formal experiment authorization.
 
 ```text
 configs/resources/
-├── compute_catalog_v13.yaml
+├── compute_catalog_v15.yaml
 ├── assets/
 │   └── model_asset_catalog_v1.yaml
 ├── api/

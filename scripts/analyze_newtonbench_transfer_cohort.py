@@ -54,8 +54,7 @@ def _taste_exposure(receipt) -> dict[str, object]:
         assessment = decision["lifecycle_taste_policy"]
         active_turns += assessment["recommended_action_id"] is not None
         nonzero_adjustments += sum(
-            abs(float(value)) > 1e-12
-            for value in assessment["action_adjustments"].values()
+            abs(float(value)) > 1e-12 for value in assessment["action_adjustments"].values()
         )
         for reason in assessment["reason_codes"]:
             reason_counts[reason] = reason_counts.get(reason, 0) + 1
@@ -80,8 +79,7 @@ def _paired_bootstrap_interval(
     generator = random.Random(seed)
     count = len(effects)
     estimates = sorted(
-        sum(generator.choice(effects) for _ in range(count)) / count
-        for _ in range(samples)
+        sum(generator.choice(effects) for _ in range(count)) / count for _ in range(samples)
     )
     return estimates[int(0.025 * (samples - 1))], estimates[int(0.975 * (samples - 1))]
 
@@ -90,9 +88,9 @@ def _exact_two_sided_sign_test(native_wins: int, base_wins: int) -> float | None
     discordant = native_wins + base_wins
     if discordant == 0:
         return None
-    tail = sum(
-        math.comb(discordant, index) for index in range(min(native_wins, base_wins) + 1)
-    ) / (2**discordant)
+    tail = sum(math.comb(discordant, index) for index in range(min(native_wins, base_wins) + 1)) / (
+        2**discordant
+    )
     return min(1.0, 2 * tail)
 
 
@@ -101,9 +99,7 @@ def _action_profile(tasks: list[dict[str, object]], arm: str) -> dict[str, objec
     for task in tasks:
         arm_record = task[arm]
         exposure = arm_record["taste_exposure"]
-        actions.extend(
-            action for action in exposure["selected_actions"] if action != "STOP"
-        )
+        actions.extend(action for action in exposure["selected_actions"] if action != "STOP")
     counts = Counter(actions)
     total = len(actions)
     entropy = (
@@ -201,9 +197,7 @@ def analyze(
             else None
         )
         base_rmsle = (
-            base.objective_score.metrics.get("rmsle")
-            if base.objective_score is not None
-            else None
+            base.objective_score.metrics.get("rmsle") if base.objective_score is not None else None
         )
         if isinstance(native_rmsle, (int, float)) and isinstance(base_rmsle, (int, float)):
             rmsle_effects.append(float(base_rmsle) - float(native_rmsle))
@@ -307,9 +301,7 @@ def analyze(
         "paired_bootstrap_95_interval": [interval_low, interval_high],
         "paired_bootstrap_samples": 10_000,
         "paired_bootstrap_seed": 6027,
-        "discordant_pair_exact_p_value": _exact_two_sided_sign_test(
-            native_wins, base_wins
-        ),
+        "discordant_pair_exact_p_value": _exact_two_sided_sign_test(native_wins, base_wins),
         "mean_base_minus_native_rmsle": (
             sum(rmsle_effects) / len(rmsle_effects) if rmsle_effects else None
         ),
@@ -364,9 +356,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cohort-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument(
-        "--evidence-tier", choices=("development", "formal"), default="development"
-    )
+    parser.add_argument("--evidence-tier", choices=("development", "formal"), default="development")
     parser.add_argument("--study-design", type=Path)
     args = parser.parse_args()
     payload = analyze(

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#142d36">
+  <meta name="description" content="SciTaste：全流程科研判断与自主决策，当前聚焦高效 Idea 调研、证据综合与构造。">
+  <title>SciTaste · 科研判断与自主研究</title>
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/experiments.css">
+  <link rel="stylesheet" href="/assets/project-evidence.css">
+  <link rel="stylesheet" href="/assets/progress.css">
+  <link rel="stylesheet" href="/assets/program.css">
+  <script src="/assets/program.js" defer></script>
+  <script src="/assets/progress.js" defer></script>
+  <script src="/assets/project-evidence.js" defer></script>
+  <script src="/assets/experiments.js" defer></script>
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">跳转到内容</a>
+  <div id="nav-backdrop"></div>
+  <aside id="sidebar" class="sidebar" aria-label="主要导航">
+    <a class="brand" href="#/overview"><img src="/assets/logo.svg" alt="" width="36" height="36"><div>SciTaste<span>Scientific Taste · 自主科研</span></div></a>
+    <div class="nav-caption">研究资料</div>
+    <nav id="navigation"></nav>
+    <div class="sidebar-bottom"><span class="live-dot"></span><span>本地资料服务</span><small id="sidebar-date">正在连接</small></div>
+  </aside>
+  <div class="shell">
+    <header class="topbar">
+      <button id="menu-toggle" class="icon-button mobile-only" aria-label="展开导航" aria-expanded="false">☰</button>
+      <div id="breadcrumb" class="breadcrumb">研究总览</div>
+      <div class="global-search"><span class="search-icon" aria-hidden="true">⌕</span><input id="global-search" type="search" autocomplete="off" placeholder="搜索任务、方法或模型…" aria-label="全局搜索"><kbd>/</kbd><div id="global-results" class="search-results" hidden></div></div>
+      <button id="sync-button" class="button button-small" title="同步本地最新资料"><span id="sync-icon" aria-hidden="true">↻</span><span class="sync-label">同步资料</span></button>
+    </header>
+    <main id="main" tabindex="-1"><div class="loading"><span class="loader"></span>正在读取研究资料…</div></main>
+    <footer class="footer"><span>SciTaste · 证据与科研判断</span><span id="footer-status">连接本地资料</span></footer>
+  </div>
+  <div id="compare-bar" hidden></div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="detail-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><div id="dialog-title"></div><button id="dialog-close" class="icon-button" aria-label="关闭详情">×</button></div><div id="dialog-body"></div></dialog>
+</body>
+</html>

@@ -74,8 +74,29 @@ class LocalRuntimeBackend(RuntimeConfigModel):
         return StructuredLocalTransformersBackend(self.config)
 
 
+class SessionRuntimeBackend(RuntimeConfigModel):
+    kind: Literal["session"] = "session"
+    provider: Literal["assistant-session"] = "assistant-session"
+    model: Literal["session-authored"] = "session-authored"
+    directory: Path
+    wait_seconds: float = Field(default=600, ge=0, le=3600)
+    max_requests: int = Field(default=2, ge=1, le=100)
+    max_output_tokens: int = Field(default=16384, ge=1)
+
+    @property
+    def mode(self) -> RuntimeBackendMode:
+        return RuntimeBackendMode.SESSION
+
+    def build(self, request_id: str):
+        from scitaste.model_nodes.session_exchange import SessionStructuredBackend
+
+        return SessionStructuredBackend(
+            self.directory, wait_seconds=self.wait_seconds, max_requests=self.max_requests
+        )
+
+
 RuntimeBackendBinding = Annotated[
-    ScriptedRuntimeBackend | LiveRuntimeBackend | LocalRuntimeBackend,
+    ScriptedRuntimeBackend | LiveRuntimeBackend | LocalRuntimeBackend | SessionRuntimeBackend,
     Field(discriminator="kind"),
 ]
 
@@ -95,7 +116,7 @@ class ModelNodeRuntimeConfig(RuntimeConfigModel):
     def backend_identity_is_pinned(self) -> ModelNodeRuntimeConfig:
         identity = (
             (self.backend.provider, self.backend.model)
-            if isinstance(self.backend, ScriptedRuntimeBackend)
+            if isinstance(self.backend, (ScriptedRuntimeBackend, SessionRuntimeBackend))
             else (
                 (self.backend.config.provider, self.backend.config.model)
                 if isinstance(self.backend, LiveRuntimeBackend)

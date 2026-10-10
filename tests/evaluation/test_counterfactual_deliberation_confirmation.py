@@ -170,7 +170,5 @@ def test_confirmation_contrast_clusters_by_independent_task() -> None:
     )
 
     assert contrast.paired_mean_difference == pytest.approx(0.1)
-    assert contrast.exhaustive_task_cluster_bootstrap_95_interval == pytest.approx(
-        (0.1, 0.1)
-    )
+    assert contrast.exhaustive_task_cluster_bootstrap_95_interval == pytest.approx((0.1, 0.1))
     assert contrast.practical_wins == 2

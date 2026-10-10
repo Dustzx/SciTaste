@@ -72,7 +72,7 @@ from scitaste.generative_ui.resource_configuration import (
     ProjectResourceConfigurationRequest,
     apply_project_resource_configuration,
 )
-from scitaste.generative_ui.safety import ProjectIdentifier
+from scitaste.generative_ui.safety import ProjectIdentifier, SafeText
 from scitaste.generative_ui.taste_review_control import (
     ProjectTasteSourceReviewControlService,
     TasteSourceReviewAuthorizationRequest,
@@ -103,7 +103,12 @@ from scitaste.generative_ui.workspace_store import (
     ResearchWorkspaceTurnDocument,
 )
 from scitaste.project import ProjectRuntime
-from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
+from scitaste.project.models import (
+    ProjectManifest,
+    content_sha256,
+    validate_entry_id,
+    validate_project_id,
+)
 
 _MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -121,6 +126,18 @@ class ProjectDiscoveryItem(BaseModel):
 
     project_id: ProjectIdentifier
     revision: int = Field(ge=0)
+
+
+class ProjectCreationRequest(BaseModel):
+    """User-authored metadata only; never execution or resource authority."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: ProjectIdentifier
+    title: SafeText = Field(min_length=1, max_length=160)
+    research_direction: SafeText = Field(min_length=1, max_length=2000)
+    target_venue: SafeText | None = Field(default=None, max_length=120)
 
 
 class ProjectDiscoveryDocument(BaseModel):
@@ -220,6 +237,23 @@ class GenerativeUIApplication:
         """Return the authenticated project-list view without opening audit state."""
 
         return self._workspace_factory.project_list()
+
+    def create_project(self, payload: dict[str, object]) -> ProjectDiscoveryItem:
+        """Create an empty, uniquely named project through the canonical runtime."""
+
+        request = ProjectCreationRequest.model_validate(payload)
+        with self._request_lock:
+            snapshot = self._runtime.create(
+                ProjectManifest(
+                    project_id=request.project_id,
+                    title=request.title,
+                    research_direction=request.research_direction,
+                    target_venue=request.target_venue,
+                    status="planning",
+                    stage_semantics="native-research-lifecycle",
+                )
+            )
+        return ProjectDiscoveryItem(project_id=snapshot.project_id, revision=snapshot.revision)
 
     def current_workspace(
         self,

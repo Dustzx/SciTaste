@@ -13,3 +13,12 @@ outputs/*
 artifacts/
 dist/
 build/
+
+# Local integrated workspace state; public curated reference catalogues live in data/.
+workspace/.venv/
+workspace/outputs/
+workspace/report/
+workspace/reports/
+workspace/cache/
+workspace/.env*
+workspace/web/assets/projects/

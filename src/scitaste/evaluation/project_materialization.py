@@ -177,15 +177,10 @@ def _gpu_resources(manifest: ExperimentPrelaunchManifest) -> list[str]:
         if resource.checkpoint_id is not None:
             identity = f"{resource.checkpoint_id}@sha256:{resource.checkpoint_sha256}"
         else:
-            identity = (
-                "task-training-random-init@sha256:"
-                f"{resource.initialization_contract_sha256}"
-            )
+            identity = f"task-training-random-init@sha256:{resource.initialization_contract_sha256}"
         inventory = f"{resource.host_alias}/{resource.device_count}x{resource.device_name}"
         if resource.allocated_device_count_per_cell is not None:
-            inventory += (
-                f"/allocated-{resource.allocated_device_count_per_cell}-per-cell"
-            )
+            inventory += f"/allocated-{resource.allocated_device_count_per_cell}-per-cell"
         resources.append(f"{inventory}/{identity}")
     return list(dict.fromkeys(resources))
 

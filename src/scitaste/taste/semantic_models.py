@@ -16,6 +16,7 @@ _SHA256 = r"^[0-9a-f]{64}$"
 
 TASTE_ABSTRACTION_NODE = "taste-abstraction"
 GROUNDED_TASTE_ABSTRACTION_NODE = "grounded-taste-abstraction"
+GROUNDED_TASTE_REVISION_NODE = "grounded-taste-revision"
 
 
 class TasteGroundingTarget(StrEnum):
@@ -68,8 +69,8 @@ class TasteTransferBoundary(BaseModel):
 
     model_config = _CONFIG
 
-    applies_when: tuple[str, ...] = Field(min_length=2, max_length=20)
-    fails_when: tuple[str, ...] = Field(min_length=2, max_length=20)
+    applies_when: tuple[str, ...] = Field(min_length=1, max_length=20)
+    fails_when: tuple[str, ...] = Field(min_length=1, max_length=20)
     counterfactual_probe: str = Field(min_length=1, max_length=4_000)
     deliberately_discarded_details: tuple[str, ...] = Field(min_length=1, max_length=20)
 
@@ -179,6 +180,24 @@ class TasteAbstractionInput(BaseModel):
             raise ValueError("Taste abstraction domain tags must be unique")
         if any(not item or item != item.strip() or len(item) > 200 for item in self.domain_tags):
             raise ValueError("Taste abstraction domain tags must be bounded")
+        return self
+
+
+class GroundedTasteRevisionInput(TasteAbstractionInput):
+    """Revision advice is separate from the unchanged scientific source projection."""
+
+    previous_abstraction: GroundedTasteCaseAbstraction
+    review_findings: tuple[str, ...] = Field(min_length=1, max_length=20)
+    review_final_sha256: str = Field(pattern=_SHA256)
+    review_is_scientific_evidence: Literal[False] = False
+    automatically_admitted: Literal[False] = False
+
+    @model_validator(mode="after")
+    def revision_identity_is_closed(self) -> GroundedTasteRevisionInput:
+        if self.previous_abstraction.case_id != self.case_id:
+            raise ValueError("revision cannot change the source case identity")
+        if any(not item.strip() or len(item) > 40_000 for item in self.review_findings):
+            raise ValueError("revision feedback must be nonempty and bounded")
         return self
 
 

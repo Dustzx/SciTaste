@@ -38,6 +38,51 @@ RUN_ID = "normal-workflow-run"
 CONFIG_ROOT = Path(__file__).resolve().parents[2] / "configs" / "model_nodes"
 
 
+def test_session_pending_resumes_exact_runtime_intent_without_failed_entry(tmp_path):
+    from scitaste.model_nodes.session_exchange import (
+        SessionResponsePending,
+        SessionStructuredBackend,
+    )
+
+    project, revision = _project(tmp_path)
+    values = _values(invocation_id="session-wait", revision=revision)
+    profile_data = values["profile"].model_dump(mode="json", exclude={"fingerprint"})
+    profile_data.update(
+        provider="assistant-session",
+        model="session-authored",
+        live_execution_permitted=False,
+        local_execution_permitted=False,
+    )
+    # Session admission counts conservative UTF-8 bytes rather than tokenizer usage.
+    profile_data["admission"].update(max_input_tokens=8192, max_total_tokens=8704)
+    profile = ModelNodeProfile.model_validate(profile_data)
+    values.update(profile=profile, policy=_policy(profile), backend_mode=RuntimeBackendMode.SESSION)
+    backend = SessionStructuredBackend(tmp_path / "exchange")
+    engine = ModelNodeRuntime(project)
+    with pytest.raises(SessionResponsePending):
+        engine.execute(**values, backend=backend)
+    request = next(backend.directory.glob("*.request.json"))
+    original = request.read_bytes()
+    payload = json.loads(original)
+    request.with_name(request.name.replace(".request.json", ".reply.json")).write_text(
+        json.dumps(
+            {
+                "request_fingerprint": payload["fingerprint"],
+                "source": "assistant-session",
+                "author_reference": "test-fixture-not-research-evidence",
+                "output_payload": _payload(),
+            }
+        )
+    )
+    receipt = engine.execute(**values, backend=backend, resume=True)
+    assert receipt.outcome == RuntimeOutcome.ACCEPTED
+    assert receipt.totals.entry_count == 1
+    assert receipt.totals.failed_count == 0
+    assert receipt.totals.unknown_cost_count == 0
+    assert request.read_bytes() == original
+    assert len(list(backend.directory.glob("*.request.json"))) == 1
+
+
 def _profile() -> ModelNodeProfile:
     return load_model_node_profile_set(CONFIG_ROOT / "runtime_profiles.example.yaml").profiles[
         "short-structured-semantic"
@@ -171,6 +216,71 @@ def _values(*, invocation_id: str, revision: int, request_id: str | None = None)
 
 def _stage(runtime: ProjectRuntime) -> Path:
     return runtime.outputs_root / "projects" / PROJECT_ID / "runs" / RUN_ID / MODEL_NODE_STAGE_PATH
+
+
+def test_review_format_recovery_preserves_both_runtime_charges(tmp_path, monkeypatch):
+    from scitaste.review import format_recovery as recovery
+
+    project, _ = _project(tmp_path)
+    runtime = ModelNodeRuntime(project)
+    receipts = []
+    output = tmp_path / "review-recovery"
+    output.mkdir()
+    bridge = SimpleNamespace(records=output, max_calls=2, max_cost=2)
+    monkeypatch.setattr(
+        recovery,
+        "provider_ledger_accounting",
+        lambda *a: {
+            "calls": len(receipts),
+            "liability_usd": 0.01 * len(receipts),
+            "unresolved_reservations": 0,
+        },
+    )
+
+    def invoke(invocation, feedback):
+        first = not receipts
+        assert bool(feedback) is (not first)
+        values = _values(
+            invocation_id=invocation,
+            request_id=invocation,
+            revision=project.open(PROJECT_ID).revision,
+        )
+        values["context"] = values["context"].model_copy(
+            update={
+                "metadata": {"review_format_feedback": feedback},
+            }
+        )
+        backend = ScriptedStructuredBackend(
+            name="scripted",
+            model="scripted-v1",
+            replies={
+                invocation: ScriptedStructuredReply(
+                    output_payload={} if first else _payload(),
+                    usage=Usage(input_tokens=10, output_tokens=5, cost_usd=0.01),
+                    latency_ms=2,
+                )
+            },
+        )
+        result = runtime.execute(backend=backend, **values)
+        receipts.append(result)
+        return result
+
+    final, invocation = recovery.execute_review_attempts(
+        invoke=invoke, bridge=bridge, output=output
+    )
+    assert final.outcome.value == "accepted"
+    assert invocation == "paper-review-format-retry"
+    retained = [
+        runtime.entry(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            invocation_id=name,
+        )
+        for name in ("paper-review", "paper-review-format-retry")
+    ]
+    assert [r.outcome.value for r in retained] == ["rejected", "accepted"]
+    assert sum(r.cost_effect_usd for r in retained) == pytest.approx(0.02)
+    assert len(list(output.glob("*.receipt.json"))) == 2
 
 
 def test_plan_is_project_scoped_and_mutation_free(tmp_path: Path) -> None:
@@ -913,6 +1023,44 @@ def test_project_revision_change_after_backend_charges_but_rejects_proposal(
     assert rejected.totals.cost_usd == pytest.approx(0.01)
     assert rejected.recording_locator is not None
     assert project.open(PROJECT_ID).revision == revision + 1
+
+
+@pytest.mark.parametrize("change", ["other-run", "own-run", "intent-restored"])
+def test_scoped_revision_preserves_authority_during_parallel_runs(tmp_path, change):
+    project, revision = _project(tmp_path)
+    delegate = _backend("scoped-revision")
+
+    class ConcurrentBackend:
+        name = delegate.name
+        model = delegate.model
+
+        def complete(self, request):
+            response = delegate.complete(request)
+            if change == "other-run":
+                project.begin_run(
+                    PROJECT_ID,
+                    project.open(PROJECT_ID)
+                    .manifest.runs[0]
+                    .model_copy(update={"run_id": "parallel-run"}),
+                    expected_revision=revision,
+                )
+            elif change == "own-run":
+                project.update_run(
+                    PROJECT_ID, RUN_ID, expected_revision=revision, status="cancelled"
+                )
+            else:
+                title = project.open(PROJECT_ID).manifest.title
+                project.update(PROJECT_ID, expected_revision=revision, title="new intent")
+                project.update(PROJECT_ID, expected_revision=revision + 1, title=title)
+            return response
+
+    receipt = ModelNodeRuntime(project, allow_unrelated_run_updates=True).execute(
+        backend=ConcurrentBackend(),
+        **_values(invocation_id="scoped-revision", revision=revision),
+    )
+    expected = RuntimeOutcome.ACCEPTED if change == "other-run" else RuntimeOutcome.REJECTED
+    assert receipt.outcome is expected
+    assert receipt.telemetry.total_tokens == 15
     assert ModelNodeRuntime(project).verify(project_id=PROJECT_ID, run_id=RUN_ID).verified
 
 

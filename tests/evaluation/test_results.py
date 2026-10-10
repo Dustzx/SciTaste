@@ -960,6 +960,8 @@ def test_result_is_registered_under_project_and_revalidated_on_open(
     assert reopened == prepared.bundle
     lifecycle = assess_project_lifecycle(runtime, "result-project")
     assert lifecycle.current_evaluation_result_id == "formal-result-r1"
+    assert lifecycle.gates[1].state == "satisfied"
+    assert lifecycle.gates[1].reason_code == "verified-project-evaluation-result"
     assert lifecycle.scientific_evidence_complete is True
     assert lifecycle.scientific_effectiveness_established is True
     assert lifecycle.paper_scientific_evidence_bound is False

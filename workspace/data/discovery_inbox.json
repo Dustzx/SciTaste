@@ -1,0 +1,4969 @@
+{
+  "items": [
+    {
+      "arxiv_id": "2610.06100",
+      "title": "From Traces to Agentic Worlds: Agentic Language World Models for Interactive Environment Simulation",
+      "url": "https://arxiv.org/abs/2610.06100",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 69
+    },
+    {
+      "arxiv_id": "2610.12126",
+      "title": "SuperNav: An Agentic Navigation System for Any Task in Any Scene",
+      "url": "https://arxiv.org/abs/2610.12126",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 48
+    },
+    {
+      "arxiv_id": "2610.08215",
+      "title": "Learn2Play Bench: How Well Do LLM Agents Learn from Experience in Unfamiliar Environments?",
+      "url": "https://arxiv.org/abs/2610.08215",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 33,
+      "registry_paper_id": "learn2play",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.12299",
+      "title": "Multi-Agent Egocentric World Model with Fine-Grained Embodied Interaction",
+      "url": "https://arxiv.org/abs/2610.12299",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 28
+    },
+    {
+      "arxiv_id": "2610.12374",
+      "title": "AgentGarten: Code Worlds for Evolving Agents",
+      "url": "https://arxiv.org/abs/2610.12374",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 28
+    },
+    {
+      "arxiv_id": "2609.38173",
+      "title": "In-context Robot Learning Made Simple: A Democratized Recipe for Manipulation Tasks",
+      "url": "https://arxiv.org/abs/2609.38173",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 26
+    },
+    {
+      "arxiv_id": "2610.12327",
+      "title": "SparseDecoding: Decoding-Aware Pruning for Accurate and Efficient LLM Inference",
+      "url": "https://arxiv.org/abs/2610.12327",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.12289",
+      "title": "TestPrism: Rethinking Test Evaluation Beyond a Single Reference",
+      "url": "https://arxiv.org/abs/2610.12289",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 13,
+      "registry_paper_id": "testprism",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.06406",
+      "title": "What Did the Agent Actually Do? Evidence-Grounded Oversight for Long-Horizon Agents",
+      "url": "https://arxiv.org/abs/2610.06406",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 11
+    },
+    {
+      "arxiv_id": "2610.12229",
+      "title": "VibeEdit: Image Editing with Canvas Instructions",
+      "url": "https://arxiv.org/abs/2610.12229",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 9
+    },
+    {
+      "arxiv_id": "2610.11322",
+      "title": "USDCraft: Geometrically Grounded Programmatic Modeling of Articulated 3D Assets for Simulation",
+      "url": "https://arxiv.org/abs/2610.11322",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 8
+    },
+    {
+      "arxiv_id": "2610.04977",
+      "title": "Do LLMs Understand Sequential Structure? A Controlled Study of Inference and Generation",
+      "url": "https://arxiv.org/abs/2610.04977",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.12419",
+      "title": "OneSearch-VL: Unified Multimodal Deep Research Agent for Image and Video",
+      "url": "https://arxiv.org/abs/2610.12419",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 6,
+      "registry_paper_id": "onesearch",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.12230",
+      "title": "From Prompting to Composing: A Spatial Canvas Interface for Poster Generation",
+      "url": "https://arxiv.org/abs/2610.12230",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.12461",
+      "title": "OuroWorld: Bringing Any 3D World Alive as Diverse, Endlessly Looping 3D Cinemagraphs",
+      "url": "https://arxiv.org/abs/2610.12461",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2609.35433",
+      "title": "ReSPO: Reshaped Sequence Policy Optimization for Gradient Starvation in Off-Policy Learning",
+      "url": "https://arxiv.org/abs/2609.35433",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.11251",
+      "title": "V-CoLA: Vision Token Compression with Linear Attention",
+      "url": "https://arxiv.org/abs/2610.11251",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2609.39068",
+      "title": "SparseEngine: Sparse-First Inference Engine",
+      "url": "https://arxiv.org/abs/2609.39068",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.12402",
+      "title": "SpaceCast-Bench: Evaluating Predictive Spatial Reasoning in Vision-Language Models",
+      "url": "https://arxiv.org/abs/2610.12402",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 4,
+      "registry_paper_id": "spacecast",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.11366",
+      "title": "SpatialOPSD: Self-Distilling Spatial Intelligence from Verified Coding Agent Traces",
+      "url": "https://arxiv.org/abs/2610.11366",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 4,
+      "registry_paper_id": "spatialopsd",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.07730",
+      "title": "SanSi: A Looped Typed Decision Model for System 1.5 Thinking",
+      "url": "https://arxiv.org/abs/2610.07730",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.11816",
+      "title": "Chaos in the Text: Revealing the Modality Preference in Mixed-Modality Retrievers",
+      "url": "https://arxiv.org/abs/2610.11816",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.12343",
+      "title": "Reasoning-Informed Visual Editing",
+      "url": "https://arxiv.org/abs/2610.12343",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 3
+    },
+    {
+      "arxiv_id": "2610.12458",
+      "title": "OmniCapBench: A Deep-Structured Evaluation Framework for Fine-Grained Audio-Visual Captioning",
+      "url": "https://arxiv.org/abs/2610.12458",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.12360",
+      "title": "Accurate but Not Humble: Evaluating Epistemic Humility in LLM Agents under Knowledge Conflict",
+      "url": "https://arxiv.org/abs/2610.12360",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 2,
+      "registry_paper_id": "epistemic",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.12403",
+      "title": "ViSkill: Reinforcing VLM Agents with Evolving Visual-Native Skills",
+      "url": "https://arxiv.org/abs/2610.12403",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 2,
+      "registry_paper_id": "viskill",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.11570",
+      "title": "Scaling to Tens of Thousands of Test-Time Iterations with Loop-Native Attention Residuals",
+      "url": "https://arxiv.org/abs/2610.11570",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.12355",
+      "title": "Distilling Routed 3D Privilege for Spatial Reasoning in Vision-Language Models",
+      "url": "https://arxiv.org/abs/2610.12355",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 1
+    },
+    {
+      "arxiv_id": "2610.09639",
+      "title": "On-Policy Distillation Teaches New Skills but Not New Knowledge",
+      "url": "https://arxiv.org/abs/2610.09639",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 0
+    },
+    {
+      "arxiv_id": "2610.12452",
+      "title": "BrickBench: Evaluating Agentic Brick Design",
+      "url": "https://arxiv.org/abs/2610.12452",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 0
+    },
+    {
+      "arxiv_id": "2610.12369",
+      "title": "Embodied Turing Machines: Stateful Code for Robot Recursive Self-Improvement",
+      "url": "https://arxiv.org/abs/2610.12369",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-08T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 0
+    },
+    {
+      "arxiv_id": "2610.02959",
+      "title": "TerraVis: Towards Evaluation of World-Grounded Visual Consistency in Text-to-Image Generation via MLLM Workflows",
+      "url": "https://arxiv.org/abs/2610.02959",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-09"
+      ],
+      "hf_upvotes": 0
+    },
+    {
+      "arxiv_id": "2609.38169",
+      "title": "STEPQuant: When and Where Errors Matter in Delta-Rule Recurrent State Quantization",
+      "url": "https://arxiv.org/abs/2609.38169",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 103
+    },
+    {
+      "arxiv_id": "2610.10528",
+      "title": "Long-WAM: Scaling the Context of World-Action Models",
+      "url": "https://arxiv.org/abs/2610.10528",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 94
+    },
+    {
+      "arxiv_id": "2610.08699",
+      "title": "nanoMuse: An Open-Source Personal Agent for Every Device You Own",
+      "url": "https://arxiv.org/abs/2610.08699",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 93
+    },
+    {
+      "arxiv_id": "2610.08621",
+      "title": "Recursive Game Creator: An Agentic Product-Level Experience-Oriented Game Harness",
+      "url": "https://arxiv.org/abs/2610.08621",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 83
+    },
+    {
+      "arxiv_id": "2610.08077",
+      "title": "Self-Retrospection Distillation: Turning Post-hoc Experiences into Prior Foresight",
+      "url": "https://arxiv.org/abs/2610.08077",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 80
+    },
+    {
+      "arxiv_id": "2610.09823",
+      "title": "UltraText Bench: A Comprehensive Bilingual Benchmark for Evaluating Visual Text Rendering in Image Generation",
+      "url": "https://arxiv.org/abs/2610.09823",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 78
+    },
+    {
+      "arxiv_id": "2610.07967",
+      "title": "DecepEval: A Benchmark for Evaluating Deception in LLM Agents",
+      "url": "https://arxiv.org/abs/2610.07967",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 66
+    },
+    {
+      "arxiv_id": "2610.04299",
+      "title": "Questioning the Questions: Sustaining Self-Evolution in Reasoning Models",
+      "url": "https://arxiv.org/abs/2610.04299",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 65
+    },
+    {
+      "arxiv_id": "2610.06293",
+      "title": "VepAgent: Bridging Causal-Transition via Tool-Augmented Reinforcement Learning for Video Event Prediction",
+      "url": "https://arxiv.org/abs/2610.06293",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 54
+    },
+    {
+      "arxiv_id": "2610.02054",
+      "title": "UniWAM: Unified World-Action Model",
+      "url": "https://arxiv.org/abs/2610.02054",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 52
+    },
+    {
+      "arxiv_id": "2610.10539",
+      "title": "Tetris3D: 3D Scene Generation With Objects That Fit Together",
+      "url": "https://arxiv.org/abs/2610.10539",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 42
+    },
+    {
+      "arxiv_id": "2609.40360",
+      "title": "Semifactual Credit-Augmented Policy Optimization",
+      "url": "https://arxiv.org/abs/2609.40360",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 37
+    },
+    {
+      "arxiv_id": "2610.10444",
+      "title": "RunningTab: Direct Workspace Interaction with Environment-Side Tabs",
+      "url": "https://arxiv.org/abs/2610.10444",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "curated",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 34,
+      "registry_paper_id": "runningtab",
+      "primary_read_on": "2026-10-09"
+    },
+    {
+      "arxiv_id": "2610.08760",
+      "title": "WorldSonus: Bringing Sound to Worlds",
+      "url": "https://arxiv.org/abs/2610.08760",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 33
+    },
+    {
+      "arxiv_id": "2609.39306",
+      "title": "ReSAIL: Mitigating Collapse in Iterative Agent Self-Distillation",
+      "url": "https://arxiv.org/abs/2609.39306",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 32
+    },
+    {
+      "arxiv_id": "2610.10409",
+      "title": "RobotWorld: Benchmarking Multimodal Agents for Robot Use Across Diverse Tasks and Embodiments",
+      "url": "https://arxiv.org/abs/2610.10409",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 30
+    },
+    {
+      "arxiv_id": "2610.08995",
+      "title": "PhysEvo: Astra Can Act, Let It",
+      "url": "https://arxiv.org/abs/2610.08995",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 28
+    },
+    {
+      "arxiv_id": "2609.33678",
+      "title": "SWE-Game: Can Coding Agents Build the Games We Want?",
+      "url": "https://arxiv.org/abs/2609.33678",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 25
+    },
+    {
+      "arxiv_id": "2610.00994",
+      "title": "VIEScore2: Unified Image Evaluation with Spatially Grounded Explanations",
+      "url": "https://arxiv.org/abs/2610.00994",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 25
+    },
+    {
+      "arxiv_id": "2610.09484",
+      "title": "MIMESIS: Learning User Simulators as Training Environments for Interactive Agents",
+      "url": "https://arxiv.org/abs/2610.09484",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2610.04722",
+      "title": "NAMVIS: Next-Scale Autoregressive Multi-View Image Synthesis",
+      "url": "https://arxiv.org/abs/2610.04722",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2610.05034",
+      "title": "Agentic RAG Evaluation: Budget Allocation Across Questions, Trajectories, and Reads",
+      "url": "https://arxiv.org/abs/2610.05034",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2610.08963",
+      "title": "On KL-Regularized Policy Optimization",
+      "url": "https://arxiv.org/abs/2610.08963",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2610.09920",
+      "title": "Inverting Multi-Vector Visual Document Indices",
+      "url": "https://arxiv.org/abs/2610.09920",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2610.10437",
+      "title": "Q-Learning with Scalar Adjoint Matching",
+      "url": "https://arxiv.org/abs/2610.10437",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 17
+    },
+    {
+      "arxiv_id": "2610.07226",
+      "title": "Minimal Witness Reinforcement Learning",
+      "url": "https://arxiv.org/abs/2610.07226",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 17
+    },
+    {
+      "arxiv_id": "2610.10047",
+      "title": "AdSpark: A Large-Scale Dataset and Benchmark for Product-Centric Advertisement Video Generation",
+      "url": "https://arxiv.org/abs/2610.10047",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 17
+    },
+    {
+      "arxiv_id": "2610.03036",
+      "title": "WebFovea: When the Model Is Right but the Click Is Wrong -- Reliable Round Trips for Vision-Based Web Agents on Live Websites",
+      "url": "https://arxiv.org/abs/2610.03036",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 17
+    },
+    {
+      "arxiv_id": "2610.09684",
+      "title": "From Pareto to Preference: Personalized Test-Time Scaling via Amortized Agentic Policy Discovery",
+      "url": "https://arxiv.org/abs/2610.09684",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.05289",
+      "title": "Mobile-4DGS: Unified Static-Dynamic Real-time Mobile Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2610.05289",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.07862",
+      "title": "A self-learning scientific agent for X-ray diffraction",
+      "url": "https://arxiv.org/abs/2610.07862",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.10497",
+      "title": "QuadTok: Quadtree Visual Tokenizer for Autoregressive Image Generation",
+      "url": "https://arxiv.org/abs/2610.10497",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.09127",
+      "title": "CADFather: Autonomous CAD Reconstruction through Coordinated Tool Use",
+      "url": "https://arxiv.org/abs/2610.09127",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 10
+    },
+    {
+      "arxiv_id": "2610.07250",
+      "title": "Internalizing Agent Experience into Diffusion Model Weights via On-Policy Context Distillation",
+      "url": "https://arxiv.org/abs/2610.07250",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 10
+    },
+    {
+      "arxiv_id": "2610.06505",
+      "title": "Improving Proactive AI Assistance with Hierarchical Procedural Understanding",
+      "url": "https://arxiv.org/abs/2610.06505",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 9
+    },
+    {
+      "arxiv_id": "2610.10460",
+      "title": "Composing What Each Teacher Learned: Multi-Teacher On-Policy Distillation through Teacher-Relative Shifts",
+      "url": "https://arxiv.org/abs/2610.10460",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 8
+    },
+    {
+      "arxiv_id": "2609.33659",
+      "title": "Learning Multimodal Embeddings with Evidence-Aligned Readout",
+      "url": "https://arxiv.org/abs/2609.33659",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-27T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 8
+    },
+    {
+      "arxiv_id": "2610.05336",
+      "title": "SheetSage2: Coherent Lead-Sheet Transcription with Synthetic Supervision",
+      "url": "https://arxiv.org/abs/2610.05336",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.09832",
+      "title": "SkillForge: Co-Evolving Skills and Agents via Dynamic Skill Lifecycles",
+      "url": "https://arxiv.org/abs/2610.09832",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.10164",
+      "title": "UniSkill: Learning Actor-Aligned Skill Proposals for an Evolving Policy",
+      "url": "https://arxiv.org/abs/2610.10164",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.10533",
+      "title": "EngramEdit: Decoupled Knowledge Updates in LLMs through Conditional Memory",
+      "url": "https://arxiv.org/abs/2610.10533",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.02396",
+      "title": "Inherit-MAS: Test-Time Evolution of Multi-Agent Systems through Workflow and Execution Inheritance",
+      "url": "https://arxiv.org/abs/2610.02396",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.03799",
+      "title": "StepCAD: Mesh-to-CAD Code Generation via LLM Policy and Geometry-Guided Search",
+      "url": "https://arxiv.org/abs/2610.03799",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.09457",
+      "title": "DSReg: Provably Recovering Individual World Latents without Reconstruction",
+      "url": "https://arxiv.org/abs/2610.09457",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "Latent/JEPA/Diffusion"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 3
+    },
+    {
+      "arxiv_id": "2609.36995",
+      "title": "Salt++: Context-Aligned Post-Training for Few-Step Streaming Multimodal Generation",
+      "url": "https://arxiv.org/abs/2609.36995",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 3
+    },
+    {
+      "arxiv_id": "2610.10388",
+      "title": "RoboQuest: Generalist Physical Agents that Search, Inspect and Test",
+      "url": "https://arxiv.org/abs/2610.10388",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 3
+    },
+    {
+      "arxiv_id": "2610.10845",
+      "title": "Real Long-Term Memory for AI: A 50-Million-Token Window That Is Faster and Cheaper Than Recompute",
+      "url": "https://arxiv.org/abs/2610.10845",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.08902",
+      "title": "Agent Plasticity: Measuring Self-Improvement Through Experience",
+      "url": "https://arxiv.org/abs/2610.08902",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.10515",
+      "title": "RoboJEPA: Scaling Robotic Latent World Models",
+      "url": "https://arxiv.org/abs/2610.10515",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "Latent/JEPA/Diffusion",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.04012",
+      "title": "Beyond the Parameter Monolith: Reconstructive Memories, Executable Skills, and Residual Assembly for Language Models",
+      "url": "https://arxiv.org/abs/2610.04012",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.05003",
+      "title": "How corner is a corner case? Percentile control for highway scenario generation",
+      "url": "https://arxiv.org/abs/2610.05003",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.07258",
+      "title": "Lineage-Aware Memory Governance: A Derivation-Gated Framework for Privacy-Preserving Column-Level Access Control in Enterprise AI Agents",
+      "url": "https://arxiv.org/abs/2610.07258",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2609.38466",
+      "title": "PAMI: Part Anchored Motion for Text to Human-Object Interaction Generation",
+      "url": "https://arxiv.org/abs/2609.38466",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.09683",
+      "title": "System Switch: When Should a Fast Decision Model Stop and Think?",
+      "url": "https://arxiv.org/abs/2610.09683",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2605.09742",
+      "title": "TIDES: Implicit Time-Awareness in Selective State Space Models",
+      "url": "https://arxiv.org/abs/2605.09742",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.02832",
+      "title": "FastOPD: On-Policy Distillation for Lightweight VLA Deployment",
+      "url": "https://arxiv.org/abs/2610.02832",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.02368",
+      "title": "Rethinking World-Action Model for Compositional and In-Context Robotic Manipulation",
+      "url": "https://arxiv.org/abs/2610.02368",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2609.30541",
+      "title": "AutoResearch at Production Scale: Failure Modes and a Multi-Agent Framework",
+      "url": "https://arxiv.org/abs/2609.30541",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-24T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 1
+    },
+    {
+      "arxiv_id": "2610.09228",
+      "title": "Co-Evolving Robot Orchestrators and Policies through Deployment",
+      "url": "https://arxiv.org/abs/2610.09228",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-08"
+      ],
+      "hf_upvotes": 1
+    },
+    {
+      "arxiv_id": "2610.07767",
+      "title": "TRACE: Rollout-Guided Quantization-Aware Training for FP4 Reinforcement Learning of MoE Language Models",
+      "url": "https://arxiv.org/abs/2610.07767",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 90
+    },
+    {
+      "arxiv_id": "2610.03543",
+      "title": "DuoMatching: Joint-Marginal Distribution Matching for Few-Step Video Generation",
+      "url": "https://arxiv.org/abs/2610.03543",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 81
+    },
+    {
+      "arxiv_id": "2610.05030",
+      "title": "EVISKILL: Grounding Skill Evolution in Replayable Evidence",
+      "url": "https://arxiv.org/abs/2610.05030",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 41
+    },
+    {
+      "arxiv_id": "2610.07753",
+      "title": "From Evidence to Action: How Tool-Using Agents Fail",
+      "url": "https://arxiv.org/abs/2610.07753",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 40
+    },
+    {
+      "arxiv_id": "2610.05140",
+      "title": "AutoSciBench: Autonomous Benchmark Generation for Evaluating Scientific Agents",
+      "url": "https://arxiv.org/abs/2610.05140",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 32
+    },
+    {
+      "arxiv_id": "2610.07043",
+      "title": "TRIAGE: Direction-Aware Mismatch Stabilization of Native NVFP4 Reinforcement Learning",
+      "url": "https://arxiv.org/abs/2610.07043",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 30
+    },
+    {
+      "arxiv_id": "2609.37334",
+      "title": "Taming VLAs under Robot Execution Errors: Self-Compensation and Stress Testing",
+      "url": "https://arxiv.org/abs/2609.37334",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 29
+    },
+    {
+      "arxiv_id": "2610.05912",
+      "title": "MiniCorp: The Last Mile of the AI Agent Firm",
+      "url": "https://arxiv.org/abs/2610.05912",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 26
+    },
+    {
+      "arxiv_id": "2610.09455",
+      "title": "RLHND: Video Foundation Models as Physically Grounded Hand Trackers for Robot Learning",
+      "url": "https://arxiv.org/abs/2610.09455",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 22
+    },
+    {
+      "arxiv_id": "2609.29792",
+      "title": "TimeBraid: Unifying Time Series and Language for Understanding and Forecasting",
+      "url": "https://arxiv.org/abs/2609.29792",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-24T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2610.01892",
+      "title": "Selection-Based Structured Reasoning: Toward Efficient Multimodal Search Agents",
+      "url": "https://arxiv.org/abs/2610.01892",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 17
+    },
+    {
+      "arxiv_id": "2610.04596",
+      "title": "DiffGate: Difficulty-Gated Teacher Guidance for On-Policy Distillation",
+      "url": "https://arxiv.org/abs/2610.04596",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.01218",
+      "title": "AGO AI Quality Gate: Evidence-First Release Decisions for Retrieval-Augmented Generation",
+      "url": "https://arxiv.org/abs/2610.01218",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.08430",
+      "title": "NeMo-DCR: Bit-Exact Delta-Compressed Refit for Scalable Agentic RL at Trillion-Parameter Scale",
+      "url": "https://arxiv.org/abs/2610.08430",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 14
+    },
+    {
+      "arxiv_id": "2609.34117",
+      "title": "SlimWise: Decoupling Expert Pruning Across Prefill and Decode for Efficient MoE Serving",
+      "url": "https://arxiv.org/abs/2609.34117",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 13
+    },
+    {
+      "arxiv_id": "2610.07342",
+      "title": "Rationale-Guided Policy Optimization: Learning to Reason with Adaptive Rationale Scaffolding",
+      "url": "https://arxiv.org/abs/2610.07342",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2609.32921",
+      "title": "Adaptive Latent Capacity for World Models",
+      "url": "https://arxiv.org/abs/2609.32921",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-26T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA",
+        "Latent/JEPA/Diffusion"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.00948",
+      "title": "GUI-HARVEST: Self-Improving GUI Agents through Evidence-Driven Harness Evolution",
+      "url": "https://arxiv.org/abs/2610.00948",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.07969",
+      "title": "EmbodiedSmith: Scaling Embodied Data through Recursive Self-Improvement Flywheel in Simulation",
+      "url": "https://arxiv.org/abs/2610.07969",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.08791",
+      "title": "World Models' Last Exam in Physics",
+      "url": "https://arxiv.org/abs/2610.08791",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.04933",
+      "title": "DiVeR: Decision-Critical Verifier Learning for VLA Test-Time Scaling",
+      "url": "https://arxiv.org/abs/2610.04933",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 11
+    },
+    {
+      "arxiv_id": "2610.08778",
+      "title": "Sherpa: Teaching LLMs to Teach Adaptively",
+      "url": "https://arxiv.org/abs/2610.08778",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 10
+    },
+    {
+      "arxiv_id": "2610.02858",
+      "title": "Harness-Aware Distillation for Small Language Model Agents",
+      "url": "https://arxiv.org/abs/2610.02858",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 9
+    },
+    {
+      "arxiv_id": "2610.07641",
+      "title": "Hiding Tool Latency in On-Device Cascaded Voice Agent through Speculative Execution",
+      "url": "https://arxiv.org/abs/2610.07641",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 9
+    },
+    {
+      "arxiv_id": "2609.40127",
+      "title": "Learning Functional Subspaces for Neural Network Compression",
+      "url": "https://arxiv.org/abs/2609.40127",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 8
+    },
+    {
+      "arxiv_id": "2610.07510",
+      "title": "Understanding and Enhancing Backdoor Persistency in LLM Agent Post-Training",
+      "url": "https://arxiv.org/abs/2610.07510",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 8
+    },
+    {
+      "arxiv_id": "2610.08048",
+      "title": "DAEDALUS: Bootstrapping Agent Memory from Self-Generated Tasks",
+      "url": "https://arxiv.org/abs/2610.08048",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.06844",
+      "title": "Learning to Read the Contextual Tokens in Diffusion Transformers",
+      "url": "https://arxiv.org/abs/2610.06844",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.05842",
+      "title": "HLA: Expressive Hybrid Linear Attention via Chunk-Wise Dynamic Mixing",
+      "url": "https://arxiv.org/abs/2610.05842",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.08630",
+      "title": "Towards In-Parameter Memory Augmentation for Large Language Models",
+      "url": "https://arxiv.org/abs/2610.08630",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.08773",
+      "title": "AdvSim2Real : Training Web Agents Against Adaptive Prompt Injection in a Web World Model",
+      "url": "https://arxiv.org/abs/2610.08773",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T17:56:43.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.06960",
+      "title": "DistScene: Object-to-Scene Distillation for 3D Scene Generation",
+      "url": "https://arxiv.org/abs/2610.06960",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.07832",
+      "title": "Harness Engineering for Software Engineering via Modular Executable Dev-Primitives",
+      "url": "https://arxiv.org/abs/2610.07832",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.09243",
+      "title": "We Query, Therefore We Compute: On Oracle Computation beyond the Machine, with an Application to Agents",
+      "url": "https://arxiv.org/abs/2610.09243",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-07T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2609.35378",
+      "title": "Multilinguality in Hybrid Attention LLMs",
+      "url": "https://arxiv.org/abs/2609.35378",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.07785",
+      "title": "Attacca: Goal-Directed Control under State Continuity for Long-Horizon Embodied Agents",
+      "url": "https://arxiv.org/abs/2610.07785",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.07588",
+      "title": "Personal-Agent Mediated Recommendation with Cross-Platform User History",
+      "url": "https://arxiv.org/abs/2610.07588",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.08761",
+      "title": "VeriFine: Scaling Verification for Self-Improvement in Embodied Reasoning",
+      "url": "https://arxiv.org/abs/2610.08761",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.08779",
+      "title": "ALIVE: Interaction-Aligned Object Insertion for First-Frame-Guided Video Editing",
+      "url": "https://arxiv.org/abs/2610.08779",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.08244",
+      "title": "Sensor-Language-Action Models",
+      "url": "https://arxiv.org/abs/2610.08244",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.07348",
+      "title": "Stepped MoE: Segment-Level Routing with Configurable Inference Complexity",
+      "url": "https://arxiv.org/abs/2610.07348",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.04002",
+      "title": "Do Language Models Need a Trainable Input Embedding Table? Fixed Minimal Token Codes at 1.7B-Class Scale",
+      "url": "https://arxiv.org/abs/2610.04002",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.06191",
+      "title": "Judged Useless, Queried Anyway: Tool-Using Agents Rarely Turn Their Own Evidence Judgments into Stopping Decisions",
+      "url": "https://arxiv.org/abs/2610.06191",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.02188",
+      "title": "DMAD: Distribution Matching as Adversarial Distillation for Fast Visual Generation",
+      "url": "https://arxiv.org/abs/2610.02188",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 3
+    },
+    {
+      "arxiv_id": "2609.39096",
+      "title": "DeCoPrune: Efficient KV-Cache Pruning for Autoregressive Video Diffusion via Denoising Consistency",
+      "url": "https://arxiv.org/abs/2609.39096",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 3
+    },
+    {
+      "arxiv_id": "2610.05166",
+      "title": "A Safe Action Is Not Enough: Feasible-Future Decoding for Vision-Language-Action Policies",
+      "url": "https://arxiv.org/abs/2610.05166",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 3
+    },
+    {
+      "arxiv_id": "2610.07332",
+      "title": "Structuring MoE Expert Selection for Agentic Reinforcement Learning",
+      "url": "https://arxiv.org/abs/2610.07332",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.05949",
+      "title": "Technical Report on the Turba Fertilizer Machine Learning Stack in Morocco",
+      "url": "https://arxiv.org/abs/2610.05949",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T08:04:09.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.07557",
+      "title": "CheckerBench: Can Long-Horizon Agents Synthesize Static-Analysis Checkers?",
+      "url": "https://arxiv.org/abs/2610.07557",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-06T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.01921",
+      "title": "Cross-Lingual Alignment for Decoder-Only Models using MoE Routers",
+      "url": "https://arxiv.org/abs/2610.01921",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.06104",
+      "title": "Conditional Trajectory Peaks: Single-Pass Multimodal Policies over Action Chunks",
+      "url": "https://arxiv.org/abs/2610.06104",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.06090",
+      "title": "Execution-Aligned Progressive Noise for Consistent Asynchronous Replanning in Generative Robot Policies",
+      "url": "https://arxiv.org/abs/2610.06090",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2609.39822",
+      "title": "Toward Real-Time VLAs: Stage-Aware Two-Step Flow Denoising and System-Level Evaluation",
+      "url": "https://arxiv.org/abs/2609.39822",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2609.39870",
+      "title": "Magic-W0: A Structured World-Action Foundation Model for Physical Intelligence",
+      "url": "https://arxiv.org/abs/2609.39870",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.00417",
+      "title": "Source Identification Is Not Fitness Testing: Measuring the Limits of Synthetic-Data Attribution",
+      "url": "https://arxiv.org/abs/2610.00417",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2610.04605",
+      "title": "ConEx: Human-Interpretable Saliency Maps via Concept-Aware Attribution",
+      "url": "https://arxiv.org/abs/2610.04605",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 2
+    },
+    {
+      "arxiv_id": "2609.13730",
+      "title": "JumpStart Your Policy Learning with Lessons from 160,000 Training Runs",
+      "url": "https://arxiv.org/abs/2609.13730",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-25T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-07"
+      ],
+      "hf_upvotes": 1
+    },
+    {
+      "arxiv_id": "2610.05608",
+      "title": "Kandinsky 6.0 Video: Foundation Models for Synchronized Video and Audio Generation",
+      "url": "https://arxiv.org/abs/2610.05608",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 158
+    },
+    {
+      "arxiv_id": "2610.06647",
+      "title": "LoGRA: Scaling LLM Reinforcement Learning with Low-Rank Gradient Sketches",
+      "url": "https://arxiv.org/abs/2610.06647",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 120
+    },
+    {
+      "arxiv_id": "2610.04198",
+      "title": "ALoDLM: Adaptively Looped Diffusion Language Models",
+      "url": "https://arxiv.org/abs/2610.04198",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "Latent/JEPA/Diffusion",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 74
+    },
+    {
+      "arxiv_id": "2610.05162",
+      "title": "Memadapter: Counterfactual Adaptation Against Memory-induced Sycophancy",
+      "url": "https://arxiv.org/abs/2610.05162",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 59
+    },
+    {
+      "arxiv_id": "2610.03120",
+      "title": "In-Distribution Forcing for Long Video Generation at Test Time",
+      "url": "https://arxiv.org/abs/2610.03120",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 49
+    },
+    {
+      "arxiv_id": "2609.37267",
+      "title": "Foundations of Proactive Agents: Principles, Technical Layers, and Proactivity-Gym",
+      "url": "https://arxiv.org/abs/2609.37267",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 40
+    },
+    {
+      "arxiv_id": "2610.04292",
+      "title": "LMBuild: Evaluating LLM Agents for Generating Buildable and Functional Structures",
+      "url": "https://arxiv.org/abs/2610.04292",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 38
+    },
+    {
+      "arxiv_id": "2610.04109",
+      "title": "SEER: Self-Evolving Event Reasoning and Retrieval for Time Series Forecasting",
+      "url": "https://arxiv.org/abs/2610.04109",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 32
+    },
+    {
+      "arxiv_id": "2610.06648",
+      "title": "Representation-Space MMD for Diffusion Language Models",
+      "url": "https://arxiv.org/abs/2610.06648",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "Latent/JEPA/Diffusion",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 31
+    },
+    {
+      "arxiv_id": "2610.05719",
+      "title": "When to Switch: Reliable Action-Chunk Extension for Vision-Language-Action Models",
+      "url": "https://arxiv.org/abs/2610.05719",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 31
+    },
+    {
+      "arxiv_id": "2610.02331",
+      "title": "World Editing: Intervening on Executable Worlds at Increasing Depth",
+      "url": "https://arxiv.org/abs/2610.02331",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 29
+    },
+    {
+      "arxiv_id": "2609.24890",
+      "title": "OSWorld-Pro: Process-based Evaluation for Computer Use Agents",
+      "url": "https://arxiv.org/abs/2609.24890",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-21T16:55:24.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 28
+    },
+    {
+      "arxiv_id": "2609.39490",
+      "title": "OmniReasoning: Pushing the Limits of Audio-Visual Joint Reasoning",
+      "url": "https://arxiv.org/abs/2609.39490",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 27
+    },
+    {
+      "arxiv_id": "2610.05076",
+      "title": "Self-Generated Feedback Destabilizes Test-Time Training: A Causal Decomposition of Long-Horizon Adaptation",
+      "url": "https://arxiv.org/abs/2610.05076",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 25
+    },
+    {
+      "arxiv_id": "2610.06577",
+      "title": "Optimizing the Optimizer: Language Models Discover Faster Molecular Relaxation",
+      "url": "https://arxiv.org/abs/2610.06577",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 24
+    },
+    {
+      "arxiv_id": "2610.05107",
+      "title": "SearchJev: A Fast and Calibrated System-1 Model for Search Agents",
+      "url": "https://arxiv.org/abs/2610.05107",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 23
+    },
+    {
+      "arxiv_id": "2610.00923",
+      "title": "CANOPY: Adaptive-Granularity Evidence Compression for Multimodal RAG",
+      "url": "https://arxiv.org/abs/2610.00923",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 23
+    },
+    {
+      "arxiv_id": "2610.05303",
+      "title": "ASCENT: Online Test-Time Training of Long-Horizon Agents via Self-Distillation of Verified Experience",
+      "url": "https://arxiv.org/abs/2610.05303",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 23
+    },
+    {
+      "arxiv_id": "2610.05622",
+      "title": "UndoBench: Separating Task Competence from Recovery Capability in Tool-Using AI Agents",
+      "url": "https://arxiv.org/abs/2610.05622",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 21
+    },
+    {
+      "arxiv_id": "2609.36684",
+      "title": "ProgressCompass: Embodied Progress Reward Models Are Lost Without the Right Context",
+      "url": "https://arxiv.org/abs/2609.36684",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 20
+    },
+    {
+      "arxiv_id": "2610.05739",
+      "title": "HLA-WM: Hybrid Linear Attention for Long-Horizon Video World Models",
+      "url": "https://arxiv.org/abs/2610.05739",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 20
+    },
+    {
+      "arxiv_id": "2610.04929",
+      "title": "RobotUse: Allocating Computation, Context, and Decisions",
+      "url": "https://arxiv.org/abs/2610.04929",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2610.06617",
+      "title": "RealtimeWAM: One-Step Asynchronous World Action Models",
+      "url": "https://arxiv.org/abs/2610.06617",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2610.06361",
+      "title": "Capability-Driven Self-Evolution of Agent Memory",
+      "url": "https://arxiv.org/abs/2610.06361",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2610.05750",
+      "title": "Beyond Semantic Similarity: Performance and Costs of Agentic Retrieval for Complex Tasks",
+      "url": "https://arxiv.org/abs/2610.05750",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2610.04616",
+      "title": "PerturBot: Breaking Shortcut Priors in Vision-Language-Action Models with Perturbative Training",
+      "url": "https://arxiv.org/abs/2610.04616",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2609.39420",
+      "title": "QuantCode Model: Specializing Language Models for Executable Algorithmic Trading Code",
+      "url": "https://arxiv.org/abs/2609.39420",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2610.04318",
+      "title": "Rethinking Long-Video Efficiency: A Joint Allocation Perspective on Frames, Pixels, and Front-End Latency",
+      "url": "https://arxiv.org/abs/2610.04318",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 17
+    },
+    {
+      "arxiv_id": "2609.34227",
+      "title": "When Does Selection Replace Extraction? A Pre-Registered Test of Agent Memory with a Typed Decision Model",
+      "url": "https://arxiv.org/abs/2609.34227",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2609.36691",
+      "title": "Video2Skill: From Streaming Experience to Reusable Embodied Skills",
+      "url": "https://arxiv.org/abs/2609.36691",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.05894",
+      "title": "Noise Out, Bias In: Targeted Bias Injection in Diffusion Language Models via Closed-Loop Activation Steering",
+      "url": "https://arxiv.org/abs/2610.05894",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "Latent/JEPA/Diffusion"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.05870",
+      "title": "Certification of Real Images through Calibrated Content Authentication",
+      "url": "https://arxiv.org/abs/2610.05870",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.02320",
+      "title": "DeskForge: Dense Supervision from Desktop Environments for Computer-Use Agents",
+      "url": "https://arxiv.org/abs/2610.02320",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 15
+    },
+    {
+      "arxiv_id": "2610.02191",
+      "title": "The Missing Primitive: Diagnosing and Repairing Mathematical Reasoning in Large Language Models",
+      "url": "https://arxiv.org/abs/2610.02191",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 14
+    },
+    {
+      "arxiv_id": "2610.02076",
+      "title": "LLM-as-Jev: LLMs Are Already Jev-Style Decision Models -- When and How to Fine-Tune Them",
+      "url": "https://arxiv.org/abs/2610.02076",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 13
+    },
+    {
+      "arxiv_id": "2610.06666",
+      "title": "What Matters for Latent Reasoning with Flow Matching",
+      "url": "https://arxiv.org/abs/2610.06666",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "Latent/JEPA/Diffusion",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 13
+    },
+    {
+      "arxiv_id": "2610.02150",
+      "title": "From Knowledge Access to Source Learning: Developing Source-Specific Competence",
+      "url": "https://arxiv.org/abs/2610.02150",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.04137",
+      "title": "Dynamic Harness Search: Building Multi-Agent Systems Per-Query via Prediction",
+      "url": "https://arxiv.org/abs/2610.04137",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2610.04226",
+      "title": "PaLoRA: Paced Low-Rank Adaptation for Continual Learning",
+      "url": "https://arxiv.org/abs/2610.04226",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 10
+    },
+    {
+      "arxiv_id": "2605.21318",
+      "title": "TextReg: Mitigating Prompt Distributional Overfitting via Regularized Text-Space Optimization",
+      "url": "https://arxiv.org/abs/2605.21318",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 9
+    },
+    {
+      "arxiv_id": "2610.03872",
+      "title": "Training Numerical Intelligence via Auto-Diagnosis and Skill Discovery",
+      "url": "https://arxiv.org/abs/2610.03872",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 9
+    },
+    {
+      "arxiv_id": "2609.32423",
+      "title": "PluginRSI: Recursive Improvement of Agent Harnesses with Reusable Plugins",
+      "url": "https://arxiv.org/abs/2609.32423",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-26T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 8
+    },
+    {
+      "arxiv_id": "2610.03252",
+      "title": "COSMI: COmpositional Synthesis of Multi-object Interactions",
+      "url": "https://arxiv.org/abs/2610.03252",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2609.35652",
+      "title": "MM-ABC: Towards Generalist Mobile Manipulation via Seeing, Coordinating and Imagining",
+      "url": "https://arxiv.org/abs/2609.35652",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.02480",
+      "title": "MEA: A Reward-Driven Multi-Agent System for Faithful Model Explanations",
+      "url": "https://arxiv.org/abs/2610.02480",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2609.37496",
+      "title": "GeoSET: Generalist Foundation Model for SAR-to-EO Image Translation",
+      "url": "https://arxiv.org/abs/2609.37496",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-26T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.05033",
+      "title": "Code2Games: Enabling Coding Agents for Gaming World Generation",
+      "url": "https://arxiv.org/abs/2610.05033",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-04T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.02999",
+      "title": "OmniConfess: Eliciting Token Confessions to Mitigate Omni-Modal Hallucination",
+      "url": "https://arxiv.org/abs/2610.02999",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.06679",
+      "title": "Closing the Context Gap: Activation Alignment for Tabular In-Context Learning",
+      "url": "https://arxiv.org/abs/2610.06679",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.05790",
+      "title": "FairRSFM: A Biome-Aware Benchmark and Debiasing Framework for Remote Sensing Foundation Models",
+      "url": "https://arxiv.org/abs/2610.05790",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2609.23136",
+      "title": "Intent Interpretation at RIC Timescales: Jev Decision Models versus Large Language Models in 6G Open RAN",
+      "url": "https://arxiv.org/abs/2609.23136",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2609.31662",
+      "title": "Learning Steadily: Accumulating Relative Point Margin Scores for Face Image Quality Assessment",
+      "url": "https://arxiv.org/abs/2609.31662",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-15T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.02459",
+      "title": "OpenRUA: Robot-Use Agents Are Zero-Shot Visuomotor Policies",
+      "url": "https://arxiv.org/abs/2610.02459",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.02417",
+      "title": "The AI Theorist reveals excitonic structure in α-RuCl_3",
+      "url": "https://arxiv.org/abs/2610.02417",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.04749",
+      "title": "Agentic discovery of blood biomarker from distilled private health records",
+      "url": "https://arxiv.org/abs/2610.04749",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-03T20:30:38.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2605.16817",
+      "title": "Adaptive Fused Prior Transfer for Controllable Generative Image Compression",
+      "url": "https://arxiv.org/abs/2605.16817",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.06693",
+      "title": "Adapting prior-data fitted networks for tabular anomaly detection",
+      "url": "https://arxiv.org/abs/2610.06693",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.06184",
+      "title": "Arm-wise Compositional Generalization in Dual-Arm Vision-Language-Action Models",
+      "url": "https://arxiv.org/abs/2610.06184",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.06850",
+      "title": "InterMimicGen: Scaling Humanoid Loco-Manipulation through Self-Evolving Motion Imitation",
+      "url": "https://arxiv.org/abs/2610.06850",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-05T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 5
+    },
+    {
+      "arxiv_id": "2610.03123",
+      "title": "Foresight: planning future perception in streaming VLMs without retraining",
+      "url": "https://arxiv.org/abs/2610.03123",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.03617",
+      "title": "DEPICT: Scoring Text-to-Image Alignment by Answer Agreement",
+      "url": "https://arxiv.org/abs/2610.03617",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-06"
+      ],
+      "hf_upvotes": 4
+    },
+    {
+      "arxiv_id": "2610.01780",
+      "title": "RealCompanion: Benchmarking Human Understanding from Reasoning over Longitudinal Real-World Conversations",
+      "url": "https://arxiv.org/abs/2610.01780",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 275
+    },
+    {
+      "arxiv_id": "2609.38879",
+      "title": "Does Learning Protein Folding Generalize to Broader Reasoning?",
+      "url": "https://arxiv.org/abs/2609.38879",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 120
+    },
+    {
+      "arxiv_id": "2609.38839",
+      "title": "FrameMorrow: Future-guided Frame Selection with Prospective Tokens for Long-Horizon Video Generation",
+      "url": "https://arxiv.org/abs/2609.38839",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 112
+    },
+    {
+      "arxiv_id": "2609.38078",
+      "title": "MotorMind: Scaffolding General Vision Language Models for Zero-Shot Robot Manipulation",
+      "url": "https://arxiv.org/abs/2609.38078",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 111
+    },
+    {
+      "arxiv_id": "2610.02826",
+      "title": "Scaling Trajectories for Complex Tasks through Recursive Self-Rewrite",
+      "url": "https://arxiv.org/abs/2610.02826",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 103
+    },
+    {
+      "arxiv_id": "2610.02508",
+      "title": "World Action Modeling with Progressive Visual Planning",
+      "url": "https://arxiv.org/abs/2610.02508",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 96
+    },
+    {
+      "arxiv_id": "2610.02381",
+      "title": "Latent-MOPD: Latent Multi-Teacher On-Policy Distillation",
+      "url": "https://arxiv.org/abs/2610.02381",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 70
+    },
+    {
+      "arxiv_id": "2609.39071",
+      "title": "LexReward: A Taxonomy-Driven Reward Framework for Legal Language Models",
+      "url": "https://arxiv.org/abs/2609.39071",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 64
+    },
+    {
+      "arxiv_id": "2610.03665",
+      "title": "Pivot-SD: Efficient Self-Distillation for Masked Diffusion Language Models",
+      "url": "https://arxiv.org/abs/2610.03665",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "Latent/JEPA/Diffusion",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 62
+    },
+    {
+      "arxiv_id": "2609.34715",
+      "title": "PDE-JEPA: Predictive Representation Learning of Latent Dynamics Modeling for Parametric PDEs",
+      "url": "https://arxiv.org/abs/2609.34715",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "Latent/JEPA/Diffusion",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 62
+    },
+    {
+      "arxiv_id": "2610.02840",
+      "title": "PointWAM: 3D World Action Modeling for Dexterous Robotic Manipulation",
+      "url": "https://arxiv.org/abs/2610.02840",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 61
+    },
+    {
+      "arxiv_id": "2610.03574",
+      "title": "HyperBrowseComp: A Multilingual and Multimodal Stress Test for Web-Browsing Agents",
+      "url": "https://arxiv.org/abs/2610.03574",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 60
+    },
+    {
+      "arxiv_id": "2610.00531",
+      "title": "Science or Slop?: Benchmarking and Mitigating Scientific Slop in AI-Generated Papers",
+      "url": "https://arxiv.org/abs/2610.00531",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 59
+    },
+    {
+      "arxiv_id": "2610.00972",
+      "title": "VeriHarness: Scaling Agentic Verification for Long-Horizon Tasks",
+      "url": "https://arxiv.org/abs/2610.00972",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 58
+    },
+    {
+      "arxiv_id": "2610.02298",
+      "title": "EditHero: A Benchmark for Long-Horizon Part-Level 3D Editing and Vibe Modeling",
+      "url": "https://arxiv.org/abs/2610.02298",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 58
+    },
+    {
+      "arxiv_id": "2610.02521",
+      "title": "Spatial Memory Intelligence: Endowing World Models with Understanding-Driven Long-Term Memory",
+      "url": "https://arxiv.org/abs/2610.02521",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 57
+    },
+    {
+      "arxiv_id": "2610.02304",
+      "title": "SimuVerity: Benchmarking Agents for Engineering-Grade Simulink Model Generation",
+      "url": "https://arxiv.org/abs/2610.02304",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 54
+    },
+    {
+      "arxiv_id": "2610.03632",
+      "title": "World Embedding Benchmark",
+      "url": "https://arxiv.org/abs/2610.03632",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 53
+    },
+    {
+      "arxiv_id": "2610.03367",
+      "title": "Multilingual GSM-Symbolic: What determines capability transfer across languages?",
+      "url": "https://arxiv.org/abs/2610.03367",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 51
+    },
+    {
+      "arxiv_id": "2610.01257",
+      "title": "Science Utopia? Closed-Loop LLM Simulation of Academic Research Ecosystems",
+      "url": "https://arxiv.org/abs/2610.01257",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 45
+    },
+    {
+      "arxiv_id": "2610.03195",
+      "title": "Source Preference in the Wild: How LLM Agents Favor Items by Source, and How to Reduce It",
+      "url": "https://arxiv.org/abs/2610.03195",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 45
+    },
+    {
+      "arxiv_id": "2610.03695",
+      "title": "Language Models that Play Chess and Explain Their Moves",
+      "url": "https://arxiv.org/abs/2610.03695",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 37
+    },
+    {
+      "arxiv_id": "2609.38123",
+      "title": "HelixWorld: A Real-time Interactive Audio-Visual World Model",
+      "url": "https://arxiv.org/abs/2609.38123",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 37
+    },
+    {
+      "arxiv_id": "2609.36529",
+      "title": "Triadic Linear Attention: Three-Dimensional Recurrent States for Long-Context Sequence Modeling",
+      "url": "https://arxiv.org/abs/2609.36529",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 37
+    },
+    {
+      "arxiv_id": "2610.02824",
+      "title": "MetaRubric: Learning to Reward for Rubric-Based Reinforcement Learning",
+      "url": "https://arxiv.org/abs/2610.02824",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 33
+    },
+    {
+      "arxiv_id": "2610.03664",
+      "title": "ProAR: Learning Prospective Reasoning with Autoregressive Video Models",
+      "url": "https://arxiv.org/abs/2610.03664",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 32
+    },
+    {
+      "arxiv_id": "2610.03715",
+      "title": "4DCodeBench: Benchmarking Agents on Inverse Graphics of Dynamic Scenes",
+      "url": "https://arxiv.org/abs/2610.03715",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 30
+    },
+    {
+      "arxiv_id": "2609.39820",
+      "title": "Learning from Runtime Feedback through Failure-Bank Self-Evolution for Vision-Language-Action Models",
+      "url": "https://arxiv.org/abs/2609.39820",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "RSI/自改进/TTA",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 29
+    },
+    {
+      "arxiv_id": "2610.03675",
+      "title": "FrugalEvo: Towards Cost-Aware LLM-Guided Program Evolution",
+      "url": "https://arxiv.org/abs/2610.03675",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 28
+    },
+    {
+      "arxiv_id": "2610.02126",
+      "title": "Local Support Learning",
+      "url": "https://arxiv.org/abs/2610.02126",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 28
+    },
+    {
+      "arxiv_id": "2609.36887",
+      "title": "WEFT: Scaling Tool-Use Post-Training for General-Purpose Agents",
+      "url": "https://arxiv.org/abs/2609.36887",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 24
+    },
+    {
+      "arxiv_id": "2609.30467",
+      "title": "Where Does Retrieval-Based Open-Ended Evaluation Fail? Automatic Taxonomy Induction from Long-Form Medical Answer Factuality Verification",
+      "url": "https://arxiv.org/abs/2609.30467",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-24T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 22
+    },
+    {
+      "arxiv_id": "2609.38096",
+      "title": "Tail-Influence Sampling for CVaR Policy Evaluation",
+      "url": "https://arxiv.org/abs/2609.38096",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2609.34895",
+      "title": "LVMT: Video Mask Transformer for Long-term Video Segmentation",
+      "url": "https://arxiv.org/abs/2609.34895",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-29T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 19
+    },
+    {
+      "arxiv_id": "2609.26425",
+      "title": "QuantWM: Temporally Consistent 2-Bit KV Cache Quantization for Video World Models",
+      "url": "https://arxiv.org/abs/2609.26425",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2609.39050",
+      "title": "Covert Assistance: Helpful LLM Agents Evade Oversight in Multi-Agent Systems",
+      "url": "https://arxiv.org/abs/2609.39050",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2610.02788",
+      "title": "Skill2Real: Agentic Skill Learning for Zero-Shot Sim-to-Real Robot Manipulation",
+      "url": "https://arxiv.org/abs/2610.02788",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 18
+    },
+    {
+      "arxiv_id": "2609.33804",
+      "title": "MinkowskiPE: Minkowski Positional Encoding for Spatiotemporal Perception",
+      "url": "https://arxiv.org/abs/2609.33804",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-27T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2610.02388",
+      "title": "Octrees as an Explicit 3D Language",
+      "url": "https://arxiv.org/abs/2610.02388",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-01T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 16
+    },
+    {
+      "arxiv_id": "2609.26590",
+      "title": "GTR: Gated Token Recurrence for Efficient Dense Prediction",
+      "url": "https://arxiv.org/abs/2609.26590",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-23T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 15
+    },
+    {
+      "arxiv_id": "2610.02710",
+      "title": "Self-Supervised Scaling of Terminal Environments for Scientific Domains",
+      "url": "https://arxiv.org/abs/2610.02710",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 13
+    },
+    {
+      "arxiv_id": "2609.34826",
+      "title": "WM-VLM: Probing Internal World Models for Interleaved Visual-Textual Reasoning",
+      "url": "https://arxiv.org/abs/2609.34826",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-28T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2609.32046",
+      "title": "Receiver-Conditioned Latent Communication gives 94% CacheBack",
+      "url": "https://arxiv.org/abs/2609.32046",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-25T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2609.33463",
+      "title": "Rethinking Token Reweighting for SFT: Suppress, Reverse, and Extrapolate Learned Features",
+      "url": "https://arxiv.org/abs/2609.33463",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-27T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 12
+    },
+    {
+      "arxiv_id": "2609.32182",
+      "title": "KeyRec: Bounded Visual Memory for Streaming and Long-Video Understanding",
+      "url": "https://arxiv.org/abs/2609.32182",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-26T00:00:00.000Z",
+      "topics": [
+        "视觉证据/空间/图表",
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 11
+    },
+    {
+      "arxiv_id": "2609.39394",
+      "title": "Can Computation from Earlier Problems Help LLMs Solve New Ones?",
+      "url": "https://arxiv.org/abs/2609.39394",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 9
+    },
+    {
+      "arxiv_id": "2610.02772",
+      "title": "Improving Atomic-Fact Recall via Focused Views in Unstructured Knowledge Editing",
+      "url": "https://arxiv.org/abs/2610.02772",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 8
+    },
+    {
+      "arxiv_id": "2609.32759",
+      "title": "The Extender: A Log-Structured Transformer",
+      "url": "https://arxiv.org/abs/2609.32759",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-26T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 7
+    },
+    {
+      "arxiv_id": "2610.04116",
+      "title": "CUAWright: A Minimal Unified Interface for Digital Agents",
+      "url": "https://arxiv.org/abs/2610.04116",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-10-02T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "新benchmark/评分"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 6
+    },
+    {
+      "arxiv_id": "2610.00722",
+      "title": "JEPA-TTT: Persistent Test-Time Training of Latent World Models for Planning under Dynamics Shifts",
+      "url": "https://arxiv.org/abs/2610.00722",
+      "first_seen": "2026-10-09",
+      "paper_published_at": "2026-09-30T00:00:00.000Z",
+      "topics": [
+        "记忆/Agent/技能",
+        "RSI/自改进/TTA",
+        "Latent/JEPA/Diffusion"
+      ],
+      "state": "needs_primary_read",
+      "score_status": "not_extracted",
+      "acceptance_status": "not_verified",
+      "last_seen": "2026-10-09",
+      "feed_dates": [
+        "2026-10-05"
+      ],
+      "hf_upvotes": 3
+    }
+  ],
+  "runs": [
+    {
+      "as_of": "2026-10-09",
+      "days": 7,
+      "requests": [
+        {
+          "url": "https://huggingface.co/api/daily_papers?date=2026-10-09&limit=100&sort=publishedAt",
+          "status": "ok",
+          "entries": 38,
+          "sha256": "31962c5c37e9023a3a87062a066b0c25585c78e38c0efa6f70daaa6443fa06d9"
+        },
+        {
+          "url": "https://huggingface.co/api/daily_papers?date=2026-10-08&limit=100&sort=publishedAt",
+          "status": "ok",
+          "entries": 71,
+          "sha256": "82c87e660bfb47250996d12cd1beb75c4917558e3ed890f4420a56e15cfa42f4"
+        },
+        {
+          "url": "https://huggingface.co/api/daily_papers?date=2026-10-07&limit=100&sort=publishedAt",
+          "status": "ok",
+          "entries": 73,
+          "sha256": "cf4c56d194f778e02f9e0c0a52a49d3c626c9f6b166f79f02ad6b8d79825a167"
+        },
+        {
+          "url": "https://huggingface.co/api/daily_papers?date=2026-10-06&limit=100&sort=publishedAt",
+          "status": "ok",
+          "entries": 81,
+          "sha256": "79b316d29671899831d6ffbe788df7782570695a436eaf398a2d4a222d2c1f08"
+        },
+        {
+          "url": "https://huggingface.co/api/daily_papers?date=2026-10-05&limit=100&sort=publishedAt",
+          "status": "ok",
+          "entries": 65,
+          "sha256": "9ebaaecd4d92ed1d2c1d8c8d776395dd7edc16f405aa249f37276bd7e728a480"
+        },
+        {
+          "url": "https://huggingface.co/api/daily_papers?date=2026-10-04&limit=100&sort=publishedAt",
+          "status": "ok",
+          "entries": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "url": "https://huggingface.co/api/daily_papers?date=2026-10-03&limit=100&sort=publishedAt",
+          "status": "ok",
+          "entries": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "id": "screenspot_pro",
+          "url": "https://gui-agent.github.io/grounding-leaderboard/results/screenspot_pro.json",
+          "checked_on": "2026-10-09",
+          "sha256": "78bdb52432e27d4814ad944e5c11d7322b06b0d26729c446ef7c841460cf2788",
+          "changed": false,
+          "bytes": 449206,
+          "needs_review": false,
+          "status": "ok"
+        },
+        {
+          "id": "mathvision_board",
+          "url": "https://mathllm.github.io/mathvision/",
+          "checked_on": "2026-10-09",
+          "sha256": "4f50613509b976da1a6197298a180f02064fd5d2d842b757c1277c8064e95467",
+          "changed": false,
+          "bytes": 247343,
+          "needs_review": false,
+          "status": "ok"
+        },
+        {
+          "id": "omnidocbench_readme",
+          "url": "https://raw.githubusercontent.com/opendatalab/OmniDocBench/main/README.md",
+          "checked_on": "2026-10-09",
+          "sha256": "a799f3dabee0d8e2be9f990fc325c3fefadb8d7f8d0cf56148406547d495a3ad",
+          "changed": false,
+          "bytes": 96525,
+          "needs_review": false,
+          "status": "ok"
+        },
+        {
+          "id": "qwen38_card",
+          "url": "https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/README.md",
+          "checked_on": "2026-10-09",
+          "sha256": "57e4bdb258ee1a7d2635c5174ebd4e56abe392505cdb5f8bbb356b0dc4293641",
+          "changed": false,
+          "bytes": 65012,
+          "needs_review": false,
+          "status": "ok"
+        },
+        {
+          "id": "bfcl_board",
+          "url": "https://gorilla.cs.berkeley.edu/leaderboard.html",
+          "checked_on": "2026-10-09",
+          "sha256": "ef72a8621b6ea1b8aa1d1b7691f73cc3079fd38e86f599c9a38cb626c911fc29",
+          "changed": false,
+          "bytes": 16207,
+          "needs_review": false,
+          "status": "ok"
+        }
+      ],
+      "new_items": 259,
+      "promotion": "none; manual primary-source verification required"
+    }
+  ],
+  "as_of": "2026-10-09"
+}

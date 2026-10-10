@@ -1,16 +1,52 @@
 # SciTasteBench and external validation: ICLR 2027 study design
 
-Status: current scientific design; formal data have not been opened. A frozen
-30-proposal, source-disjoint feasibility test admitted zero reconstructed
-boundary pairs and therefore killed that data-unit design under its preregistered
-gate. SciTasteBench now uses scorer-owned executable objective forks as its
-primary unit. All reconstructed pairs and the earlier negative selector runs
-remain consumed development material rather than paper results. No confirmation
-population is frozen.
+2026-09-24 qualification: this is a **historical mechanism-study design**, not
+the current authority for a complete SciTasteBench method comparison. It
+specified SciTaste controls but omitted independent decision methods and a
+whole-agent task mode. The corrected matrix is
+`ICLR27_EXPERIMENT_MATRIX_V1.md`; the next study is in the self-development
+project's `docs/records/SCITASTEBENCH_NEXT_STUDY.md`. The first objective-fork
+development and sealed cohorts differed in branch time ceiling (600 s versus
+120 s). The sealed
+within-cohort result remains valid, but the comparison cannot isolate
+same-budget task transfer. A later data-quality audit also found many tied
+action values and objective-unobserved continuations. The self-development
+project's `docs/records/SCITASTEBENCH_NEXT_STUDY.md` now governs the next
+matched-contract study; this historical design is retained for provenance.
 
-SciTasteBench is the mechanism instrument for the SciTaste method paper. It is
-not intended to make SciTasteBench itself the entire contribution, and it cannot
-establish end-to-end autonomous-research utility by itself.
+Status: historical scientific design as of 2026-09-20. A frozen 30-proposal,
+source-disjoint feasibility test admitted zero reconstructed boundary pairs and
+therefore killed that data-unit design under its preregistered gate.
+SciTasteBench now uses scorer-owned executable objective forks as its primary
+unit. The first 30-state sealed transfer population has completed and rejected
+the original sparse selector. That population is now disclosed historical
+evidence. A conservative axis-only committee was frozen from all evidence
+available at that boundary. On the second 30-state, configuration-disjoint
+population it abstained from all overrides, yielding the same 0.1791 mean regret
+as the stage-static policy. The result is retained as a formal null rather than
+used to retune that population.
+
+Outcome Learning is implemented as a chronological three-arm comparison:
+reviewed outcome update, no update, and shuffled credit. Its opened-population
+development run improved over no update but not shuffled credit. The subsequent
+fresh formal population fixed its m0--m4 update / m5--m9 evaluation boundary
+before execution and completed 270 continuations. Updated regret was 0.0413,
+versus 0.0334 for no update and 0.0427 for shuffled credit. Because the update
+did not beat both controls, the formal Outcome Learning claim is rejected.
+
+That failure produced a concrete v2 hypothesis: preserve the historical policy
+and learn a residual correction, with leave-one-task-group-out agreement and a
+minimum-advantage gate before any override. Parameters chosen on an earlier
+chronological replay reduced later regret from 0.1443 to 0.0819. Holding those
+choices fixed on the already opened v7 population reduced regret from 0.2186 to
+0.1452, compared with 0.1862 for shuffled credit. These two development results
+justify, but do not replace, one fresh preregistered confirmation.
+
+The implemented SciTasteBench fork instance is a mechanism instrument for the
+SciTaste method paper. It is not itself a validated cross-method benchmark or
+an end-to-end Auto Research leaderboard. A future whole-agent task mode could
+support direct system comparison if real methods and independent scoring are
+added; unchanged external benchmarks remain necessary for validation.
 
 ![SciTasteBench construction and causal evaluation](../figures/scitastebench-paper-overview.svg)
 
@@ -24,11 +60,12 @@ establish end-to-end autonomous-research utility by itself.
 3. When a Taste-induced choice is executed, does it improve an externally scored
    research outcome under the same budget?
 
-SciTasteBench answers the first two questions and tests feedback learning. Public
-Auto Research tasks answer the third. A positive result in either evaluation is
-insufficient without the other.
+SciTasteBench answers the first two questions through Objective Fork Judgment
+and Outcome Learning. Public Auto Research benchmarks answer the third. The
+external tasks and systems are not a SciTasteBench "agent track," and a positive
+result in either evidence layer is insufficient without the other.
 
-## The released unit is an executable fork, not a question
+## The proposed release unit is an executable fork, not a question
 
 ![Anatomy of one SciTasteBench objective fork](../figures/scitastebench-objective-fork.svg)
 

@@ -14,8 +14,10 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.model_nodes.models import NodePolicy
 from scitaste.model_nodes.profiles import ModelNodeProfile
 from scitaste.model_nodes.runtime_config import (
+    LiveRuntimeBackend,
     RuntimeBackendBinding,
     ScriptedRuntimeBackend,
+    SessionRuntimeBackend,
 )
 
 
@@ -33,8 +35,12 @@ class DiscoverySemanticRuntimeConfig(BaseModel):
     def backend_identity_is_pinned(self) -> DiscoverySemanticRuntimeConfig:
         identity = (
             (self.backend.provider, self.backend.model)
-            if isinstance(self.backend, ScriptedRuntimeBackend)
-            else (self.backend.config.provider, self.backend.config.model)
+            if isinstance(self.backend, (ScriptedRuntimeBackend, SessionRuntimeBackend))
+            else (
+                (self.backend.config.provider, self.backend.config.model)
+                if isinstance(self.backend, LiveRuntimeBackend)
+                else (self.backend.config.provider, self.backend.config.model_identity)
+            )
         )
         if identity != (self.policy.expected_backend, self.policy.expected_model):
             raise ValueError("semantic backend identity differs from the policy")

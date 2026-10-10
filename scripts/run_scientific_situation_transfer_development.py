@@ -190,9 +190,7 @@ def _request(
     records: list[tuple[PopulationBinding, InteractiveResearchPrefix]],
     policy_fingerprint: str,
 ) -> tuple[StructuredModelRequest, dict[str, dict[str, str]]]:
-    visible = {
-        binding.study_id: _visible_fields(prefix) for binding, prefix in records
-    }
+    visible = {binding.study_id: _visible_fields(prefix) for binding, prefix in records}
     request = StructuredModelRequest(
         request_id=f"{config.study_id}-extract-{batch_number:02d}",
         node_name="scientific-situation-extractor",
@@ -330,9 +328,7 @@ def main() -> int:
     config_path = args.config.resolve(strict=True)
     config_path.relative_to(root)
     config_raw = _bytes(config_path)
-    config = ScientificSituationTransferDevelopmentConfig.model_validate(
-        yaml.safe_load(config_raw)
-    )
+    config = ScientificSituationTransferDevelopmentConfig.model_validate(yaml.safe_load(config_raw))
     lock_path = _bound(root, config.population_lock)
     backend_path = _bound(root, config.extractor_backend)
     state_root = (root / config.state_root).resolve(strict=True)

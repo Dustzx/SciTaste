@@ -1,7 +1,9 @@
 # SciTaste ICLR 2027 evaluation contract
 
-Status: **proposal for author approval; no API, GPU, remote-environment, human-study,
-or formal-cell execution is authorized by this document**.
+Status: **current evaluation contract**. Completed evidence is reported below;
+new API, GPU, remote-environment, human-study, or formal-cell execution still
+requires a content-bound executable protocol rather than authority from this
+document alone.
 
 The current main execution authority is the capability-driven
 [`AutoResearch program v4`](research/SCITASTE_CAPABILITY_DRIVEN_AUTORESEARCH_PROGRAM_V4.md).
@@ -11,6 +13,20 @@ independently by task-excluded capability gates. Qwen3-VL-2B is only a cheap
 lower-bound candidate; the local and remote inventories are candidate floors,
 and task-fit downloads may extend them. The former v3 plan and the Qwen v11
 prepilot remain immutable history and do not authorize a new run.
+
+The paper-facing separation of external methods, matched causal attribution,
+mechanism ablations, and diagnostics is authoritative in
+[`ICLR27_EXPERIMENT_MATRIX_V1.md`](research/ICLR27_EXPERIMENT_MATRIX_V1.md).
+In particular, Raw/RAG, generic memory, mismatched Taste, and policy-gate
+removals are controls or ablations rather than competing Auto Research methods.
+An independently implemented direct decision policy is a legitimate
+decision-method baseline. The current SciTasteBench fork study still lacks
+independent decision methods and a task mode for complete agent systems; the
+corrected matrix records both gaps.
+The ResearchClawBench public-agent snapshot supplies the current real-method
+ecological comparison; formal V7 supplies the separate matched Taste estimate.
+The independent first-party SciTaste Native route is E2-v6 on MLRC-Bench; its
+static handoff is ready, but its current adaptive-allocation treatment is not.
 
 The resource-independent title strategy is
 [`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md).
@@ -196,14 +212,153 @@ adjudication, and materializes a pair only if the production retriever passes al
 parity and contamination checks. This is protocol and product readiness, not a
 claim that the v11 task-specific sources or reviews have been collected.
 
-## Track A: four-layer Scientific Taste evidence
+### Current executable complete-system study
+
+ResearchClawBench now supplies the first actually executable Track B/C bridge.
+At benchmark commit `01bc2371…`, it contains 40 expert-curated tasks across ten
+scientific domains, a hidden-target protocol, an official multimodal scorer,
+and public results for real autonomous-research systems. The completed first
+population used every official `_001` task; the prospective conditional-policy
+confirmation uses every official `_002` task. Each population contains one task
+per domain and ten independent task units, and the two are never pooled.
+`Math_000` received one Taste-compilation-only development call
+before its multi-object-tracking identity was recognized. No autonomous agent
+or GPU execution followed, and RRMOT was not touched. That partial output is
+quarantined, is inadmissible for method development, confirmation, benchmark
+membership, and paper claims, and must not be resumed or retried.
+
+The registered primary comparison is `ResearchHarness + SciTaste packet -
+unmodified ResearchHarness` under the same ResearchHarness, model revision,
+visible task bytes, tools, arm limits, and hidden-target boundary. Historical
+artifact IDs call these arms `full-scitaste` and `native-base`; those IDs do not
+make either arm the independent SciTaste Native executor. Arm order alternates
+by registered task index.
+Failed and timed-out agents remain in the analysis at the registered failure
+score; a completed report without a judge score blocks completion. The primary
+endpoint is the task-mean paired official-score difference with a task bootstrap
+interval and exact sign-flip test. Repeated seeds are not counted as additional
+independent evidence.
+
+The public leaderboard is frozen separately and admits every non-ResearchHarness
+agent with all ten selected task scores. The `_002` projection yields 14 real
+framework rows from snapshot `5d538e01…`; Ligase, AutoSciRub, Qiushi Engine,
+InnoClaw 2.0, and EvoLab are the five highest means on that exact task subset.
+Those best-native scores are ecological context only: their models, budgets,
+configurations, and submission dates differ, so they are never pooled with or
+described as the matched causal estimate. The projection is retained under
+`researchclawbench-leaderboard-20260923-v3` and can be regenerated from the
+frozen JSON without another network request.
+
+`researchclawbench-scitaste-system-formal-v1` stopped during Taste compilation:
+the declared DeepSeek credential returned HTTP 402, before any autonomous
+research trajectory. That attempt is immutable infrastructure-failure evidence.
+`formal-v2` preserves the population, conditions, endpoint, judge, and thresholds,
+but declares Bailian `qwen3.8-max-2026-09-02` as the research model and binds the
+provider-independent PDF-chunking repair. Its exact task hashes, runtime-source
+hashes, package hashes, resource ceilings, claim rule, and RRMOT isolation are in
+`configs/evaluation/formal/researchclawbench_scitaste_system_formal_v2.yaml`.
+
+The V2 research trajectories remain admissible, but its Zhipu judge returned
+HTTP 429 insufficient-balance errors for every attempted rubric request. The
+upstream scorer silently represented those provider failures as zero scores;
+SciTaste now rejects that state as `invalid-judge-score`. Before observing any
+valid arm score, `formal-v3` froze a scoring-only amendment: it reuses the exact
+V2 trajectories, retains every scientific threshold, and runs the unmodified
+official scorer with the multimodal Bailian
+`qwen3.7-max-2026-06-08` in a separate hash-bound evidence layer. Agent
+trajectories are not rerun, and V2's invalid zero files remain infrastructure
+evidence rather than scientific measurements.
+
+Formal V3 scoring is now complete: all 20 agent arms have valid source-bound
+score receipts and all ten task pairs pass registration and parity checks. Full
+SciTaste averaged 21.532 official-score points versus 20.865 for Native Base.
+The paired gain was +0.667 points with a 95% task-bootstrap interval of
+[-1.933, 2.947], an exact two-sided sign-flip p-value of 0.6289, and six wins in
+ten tasks. The result is a valid formal null under the frozen rule: it meets the
+60% win-rate threshold but not the two-point minimum effect or positive
+uncertainty bound. The project-owned result and all score receipts live beneath
+`outputs/projects/scitaste-self-development/evaluations/researchclawbench-formal-evidence/`;
+the compact execution archive is retained separately from remote caches and
+trace directories.
+
+That null result is now used as development evidence rather than hidden or
+pooled. The next complete-system confirmation is frozen as `formal-v4` on the
+ten untouched `_002` tasks. It tests a materially narrower treatment: at most
+four source-grounded principles and three actions in a 7,000-byte packet, no
+recommended first action, observable trigger and blocker conditions for every
+action, explicit support/failure branches, and mandatory fallback to the native
+plan under ambiguity. The cohort launcher validates those receipt properties
+before either arm can start. V3 outcomes and all `_001` tasks are development
+data; V4 is a new population and retains the same matched base, research model,
+official scorer, endpoint, and positive-claim thresholds.
+
+The first V4 overlay launch stopped entirely at Python import because one
+transitive local compiler module was absent from the remote bundle. All ten
+processes exited in under 0.16 seconds, before provider transport, output
+materialization, trajectories, or scores. The failed index is retained and the
+protocol carries a zero-consumption deployment amendment that adds the two
+hash-bound compiler dependencies without changing scientific design.
+
+The dependency-repaired V4 treatment stage then produced one admissible packet
+and nine schema-length rejections. No autonomous agent or scoring process had
+started. Because the compiler raised before persisting those rejected provider
+responses, V4 is terminal and cannot support the confirmation. Formal V5 fixes
+that evidence-ordering bug, keeps the exact 7,000-byte total cap and the same
+claim/action-count limits, and relaxes only per-field container lengths. It
+adopts the immutable accepted Material response without another call or semantic
+change; the other nine tasks each receive one V5 generation attempt. Any V5
+rejection is persisted before failure and cannot be silently retried.
+
+V5 persisted ten structurally accepted responses: five fit the 7,000-byte
+Markdown packet ceiling and five exceeded it. No research arm or score opened.
+The excess came from repeated rendering labels and whitespace rather than
+additional policy fields. Formal V6 therefore replays all ten immutable V5
+responses through `compact-lossless-v1`: every semantic field is retained
+byte-for-byte, only formatting syntax is removed, and all packets fall between
+5,440 and 6,903 bytes. V6 is the sole executable confirmation; it performs no
+new compiler-model calls and V4/V5 remain non-result operational evidence.
+
+V6 then completed eight valid arm receipts before `/home` reached zero free
+bytes. `Material_002` Native Base terminated with ENOSPC and every arm without a
+valid receipt remains infrastructure evidence, not a scientific zero. Formal
+V7 is a resume-only amendment: it hash-verifies and reuses the eight valid V6
+arms, keeps all partial V6 workspaces immutable, reruns exactly the twelve
+missing arms, and changes no task, packet, model, judge, tool, budget, order,
+endpoint, or claim threshold. A 40 GB free-space gate now blocks launch before
+an expensive arm can start.
+
+V7 is complete and project-admitted. All 20 arms and all ten task pairs passed
+integrity checks. ResearchHarness plus SciTaste scored 18.135 versus 17.290 for
+unmodified ResearchHarness, for a mean paired difference of +0.845, a 95%
+task-bootstrap interval of [-2.225, 4.765], an exact sign-flip p-value of
+0.7324, and three wins in ten tasks. The positive claim rule failed. The result
+is retained as a formal null and cannot be described as an independent
+SciTaste-Native-versus-framework comparison.
+
+This study tests a bounded SciTaste Taste intervention on ResearchHarness; it
+does not test the complete independent SciTaste Native executor and does not activate
+`perceptual-visual-relexing`. Its identity is a separate downstream research
+idea and the preferred post-closure, idea-to-paper completeness test for
+SciTaste—not an alias, component, or current benchmark task. It activates only
+after `scitaste project lifecycle status` reports
+`top_venue_evidence_loop_complete=true` for `scitaste-self-development`; a
+completed system experiment alone cannot unlock it. RRMOT remains outside the
+execution scope and must not be modified by either study. Any candidate task whose
+description concerns multi-object tracking or the reserved perceptual research
+direction is deterministically excluded before a future confirmation split is
+opened.
+
+## Track A: SciTasteBench mechanism evidence
 
 The current design is frozen in
 [`SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md`](research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md).
-SciTasteBench no longer denotes only a flat decision suite. SA tests source and
-abstraction, D tests held-out decisions, L tests reviewed delayed credit, and P
-bridges to complete externally scored projects. SA--L are mechanism evidence;
-P owns objective title authority. Their endpoints are never pooled.
+SciTasteBench no longer denotes a flat decision suite. Its two paper-facing
+tracks are D, Objective Fork Judgment on held-out decisions, and L, Outcome
+Learning from reviewed delayed credit. SA source/abstraction checks qualify the
+inputs to those tracks but are not a third benchmark score. P denotes the
+separate external-project evidence layer and is not a SciTasteBench agent track.
+External objective outcomes own title authority; their endpoints are never
+pooled with SciTasteBench regret or learning measurements.
 
 SciTasteBench v2 must use held-out, source-disjoint cases derived from real
 research decisions rather than only authored synthetic prompts. It must cover

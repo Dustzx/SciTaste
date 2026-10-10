@@ -122,7 +122,7 @@ def run(
         task_sha256=source_toolbox.task_sha256,
         toolbox_sha256=source_toolbox.fingerprint,
         resource_envelope_sha256=limits.fingerprint,
-        research_agent_sha256=source_agent.fingerprint,
+        research_agent_sha256=source_agent.policy_fingerprint,
     )
     save_interactive_research_prefix(prefix, output_root / "PREFIX.json")
 

@@ -133,7 +133,10 @@ def test_metadata_update_preserves_extensions_and_blocks_alias_shortcuts(tmp_pat
 
     assert snapshot.revision == 1
     assert snapshot.manifest.status == "blocked"
-    assert snapshot.manifest.model_extra == {"custom_gate": {"passed": False}}
+    assert snapshot.manifest.model_extra == {
+        "custom_gate": {"passed": False},
+        "model_node_revision_scope": {"project": 1, "runs": {}},
+    }
     with pytest.raises(ValueError, match="select_run"):
         runtime.update(
             "typed-project",

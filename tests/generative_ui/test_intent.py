@@ -123,7 +123,10 @@ def test_quick_catalog_is_derived_from_available_project_evidence(tmp_path: Path
         )
     )
     empty_catalog = WorkspaceIntentResolver(empty).quick_catalog("empty-project")
-    assert [item.goal for item in empty_catalog.intents] == [IntentGoal.PROGRESS_REVIEW]
+    assert [item.goal for item in empty_catalog.intents] == [
+        IntentGoal.PROGRESS_REVIEW,
+        IntentGoal.NEXT_STEP_REVIEW,
+    ]
 
 
 def test_quick_and_equivalent_free_question_resolve_to_same_canonical_intent(

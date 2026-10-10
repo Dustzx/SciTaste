@@ -96,8 +96,7 @@ def _read_jsonl(path: Path, model: type[BaseModel]) -> dict[str, BaseModel]:
             continue
         item = model.model_validate_json(line)
         key = str(
-            getattr(item, "intake_candidate_id", None)
-            or getattr(item, "source_group_id", None)
+            getattr(item, "intake_candidate_id", None) or getattr(item, "source_group_id", None)
         )
         rows[key] = item
     return rows
@@ -268,8 +267,10 @@ def _precedent_for(
 def _manifest_release_ids(path: Path) -> tuple[str, ...]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     values = payload.get("release_case_ids")
-    if not isinstance(values, list) or not values or not all(
-        isinstance(item, str) and item for item in values
+    if (
+        not isinstance(values, list)
+        or not values
+        or not all(isinstance(item, str) and item for item in values)
     ):
         raise ValueError(f"release manifest {path} has no valid release_case_ids")
     if len(values) != len(set(values)):
@@ -503,10 +504,7 @@ def run(args: argparse.Namespace) -> None:
         item
         for item in agreed
         if records[item].final_decision is not None
-        and agreement_family_counts[
-            records[item].final_decision.taste_judgment_family.value
-        ]
-        >= 2
+        and agreement_family_counts[records[item].final_decision.taste_judgment_family.value] >= 2
     ]
     excluded_release: tuple[str, ...] = ()
     excluded_manifest_sha256: str | None = None
@@ -552,8 +550,7 @@ def run(args: argparse.Namespace) -> None:
         release = sorted(release, key=lambda value: _rank("confirmation-order", value))
         if args.release_size and len(release) != args.release_size:
             raise ValueError(
-                f"remaining-agreements produced {len(release)} cases, expected "
-                f"{args.release_size}"
+                f"remaining-agreements produced {len(release)} cases, expected {args.release_size}"
             )
 
     release_source_groups = {records[item].source_group_id for item in release}
@@ -609,9 +606,7 @@ def run(args: argparse.Namespace) -> None:
             "option-b": f"{candidate_id}-b",
         }
         preferred_id = option_ids[preferred_option]
-        other_id = option_ids[
-            "option-b" if preferred_option == "option-a" else "option-a"
-        ]
+        other_id = option_ids["option-b" if preferred_option == "option-a" else "option-a"]
         task, stage = _task_and_stage(decision.decision_context_family.value)
         source_payload = _visible_payload(screen, record)
         source_sha = content_sha256(source_payload)
@@ -672,9 +667,7 @@ def run(args: argparse.Namespace) -> None:
                 taste_precedent_source_group_ids=(records[matched_id].source_group_id,),
                 placebo_taste_principle=labels_a[mismatched_id].transferable_principle,
                 placebo_precedent_ids=(f"taste-{mismatched_id}",),
-                placebo_precedent_source_group_ids=(
-                    records[mismatched_id].source_group_id,
-                ),
+                placebo_precedent_source_group_ids=(records[mismatched_id].source_group_id,),
                 source_group_id=record.source_group_id,
                 source_ref=f"scitastebench-development-intake/{candidate_id}",
                 source_sha256=source_sha,

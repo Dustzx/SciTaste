@@ -734,7 +734,16 @@ def test_h4_pair_rejects_workspace_receipt_drift() -> None:
 
 def test_h4_state_probes_use_golden_contexts_and_falsify_static_policy() -> None:
     probes = canonical_h4_state_probes()
-    assert [item.expected_context.model_dump(mode="json") for item in probes] == [
+    legacy_fields = {
+        "remaining_experiments",
+        "failure_count",
+        "no_improvement_streak",
+        "score_trend",
+        "best_vs_baseline",
+    }
+    assert [
+        item.expected_context.model_dump(mode="json", include=legacy_fields) for item in probes
+    ] == [
         {
             "remaining_experiments": "four-plus",
             "failure_count": "zero",

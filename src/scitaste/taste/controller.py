@@ -742,6 +742,11 @@ def _model_decision_context(
         "target_domain": state.target_domain,
         "target_venue": state.target_venue,
         "current_stage": state.current_stage.value,
+        **(
+            {"scientific_reasoning": state.executor_context["research_reasoning"]["frame"]}
+            if state.executor_context.get("research_reasoning")
+            else {}
+        ),
         "hypotheses": [
             {
                 "hypothesis_id": item.hypothesis_id,

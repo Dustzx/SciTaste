@@ -689,6 +689,21 @@ class StructuredInteractiveResearchAgent:
             }
         )
 
+    @property
+    def policy_fingerprint(self) -> str:
+        """Identity shared by stochastic replicates of the same agent policy."""
+
+        return content_sha256(
+            {
+                "implementation": "structured-interactive-research-agent-v1",
+                "provider": self.backend.name,
+                "model": self.backend.model,
+                "backend_configuration_sha256": self.backend_configuration_sha256,
+                "policy_id": self.policy_id,
+                "prompt_version": self.prompt_version,
+            }
+        )
+
     def decide(
         self,
         context: InteractiveResearchContext,
@@ -708,10 +723,16 @@ class StructuredInteractiveResearchAgent:
         )
         action_constraint = (
             " The controller has constrained this turn to exactly these executable actions: "
-            f"{', '.join(allowed_actions)}. Do not emit any other action."
+            f"{', '.join(allowed_actions)}. Do not emit any other action. For "
+            "run_experiments, return at least one experiment and set code and submission to "
+            "null. For run_code, return experiments=[] and submission=null. For "
+            "submit_hypothesis, return experiments=[] and code=null."
             if guidance.allowed_agent_actions is not None
             else ""
         )
+        experiment_only = allowed_actions == ("run_experiments",)
+        code_only = allowed_actions == ("run_code",)
+        submission_only = allowed_actions == ("submit_hypothesis",)
         request = StructuredModelRequest(
             request_id=f"{context.run_id}-turn-{context.turn:03d}",
             node_name="interactive-research-action",
@@ -763,9 +784,14 @@ class StructuredInteractiveResearchAgent:
                     },
                     "experiments": {
                         "type": "array",
-                        "maxItems": min(
-                            context.max_experiments_per_turn,
-                            context.remaining_experiments,
+                        "minItems": 1 if experiment_only else 0,
+                        "maxItems": (
+                            min(
+                                context.max_experiments_per_turn,
+                                context.remaining_experiments,
+                            )
+                            if experiment_only or len(allowed_actions) > 1
+                            else 0
                         ),
                         "items": {
                             "type": "object",
@@ -774,8 +800,24 @@ class StructuredInteractiveResearchAgent:
                             "additionalProperties": False,
                         },
                     },
-                    "code": {"type": ["string", "null"]},
-                    "submission": {"type": ["string", "null"]},
+                    "code": (
+                        {"type": "string", "minLength": 1}
+                        if code_only
+                        else (
+                            {"type": "null"}
+                            if len(allowed_actions) == 1
+                            else {"type": ["string", "null"]}
+                        )
+                    ),
+                    "submission": (
+                        {"type": "string", "minLength": 1}
+                        if submission_only
+                        else (
+                            {"type": "null"}
+                            if len(allowed_actions) == 1
+                            else {"type": ["string", "null"]}
+                        )
+                    ),
                     "rationale": {"type": "string"},
                     "evidence_status": {
                         "type": "string",
@@ -1192,11 +1234,20 @@ class InteractiveResearchLoop:
                 prefix.resource_envelope_sha256,
                 self.limits.fingerprint,
             ),
-            "research agent": (prefix.research_agent_sha256, self.agent.fingerprint),
         }
         for label, (observed, expected) in commitments.items():
             if observed != expected:
                 raise ValueError(f"interactive prefix {label} commitment differs")
+        policy_fingerprint = getattr(
+            self.agent,
+            "policy_fingerprint",
+            self.agent.fingerprint,
+        )
+        if prefix.research_agent_sha256 not in {
+            self.agent.fingerprint,
+            policy_fingerprint,
+        }:
+            raise ValueError("interactive prefix research agent commitment differs")
         if prefix.turn_count >= self.limits.max_turns:
             raise ValueError("interactive prefix leaves no branch decision turn")
         if prefix.experiment_count >= self.limits.max_experiments:
@@ -1269,8 +1320,15 @@ class InteractiveResearchLoop:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             api_cost_usd=api_cost_usd,
-            terminal_error=terminal_error,
+            terminal_error=_bounded_terminal_error(terminal_error),
         )
+
+
+def _bounded_terminal_error(value: str | None) -> str | None:
+    if value is None or len(value) <= 4_000:
+        return value
+    suffix = f" ... [sha256={hashlib.sha256(value.encode()).hexdigest()}]"
+    return value[: 4_000 - len(suffix)] + suffix
 
 
 def raw_response_sha256(raw_response: str) -> str:
@@ -1298,6 +1356,16 @@ def _normalize_interactive_agent_payload(
         return payload, ()
     normalized = dict(payload)
     repairs: list[str] = []
+    experiments = normalized.get("experiments")
+    if isinstance(experiments, list):
+        repaired_experiments: list[object] = []
+        for index, experiment in enumerate(experiments):
+            if isinstance(experiment, dict) and experiment and "parameters" not in experiment:
+                repaired_experiments.append({"parameters": experiment})
+                repairs.append(f"experiments.{index}:wrap-direct-parameters")
+            else:
+                repaired_experiments.append(experiment)
+        normalized["experiments"] = repaired_experiments
     for field_name in ("evidence_confidence", "next_experiment_value"):
         value = normalized.get(field_name)
         if not isinstance(value, str):

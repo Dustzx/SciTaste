@@ -87,8 +87,12 @@ from scitaste.writing.venue_taste import (
 _PAPER_REVISION_CONTEXT_EXPORTS = {
     "PreparedProjectPaperRevisionContext",
     "ProjectPaperRevisionContextBundle",
+    "ProjectPaperRevisionContextPublication",
     "build_project_paper_revision_runtime_config",
+    "inspect_project_paper_revision_context",
+    "load_project_paper_revision_context",
     "prepare_project_paper_revision_context",
+    "publish_project_paper_revision_context",
 }
 
 
@@ -144,6 +148,7 @@ __all__ = [
     "PreparedProjectPaperRevisionContext",
     "ProjectPaperAdoptionBundle",
     "ProjectPaperRevisionContextBundle",
+    "ProjectPaperRevisionContextPublication",
     "SectionDeliveryContract",
     "SemanticWritingTasteFinding",
     "VenueWritingTasteContext",
@@ -163,14 +168,17 @@ __all__ = [
     "build_project_paper_revision_runtime_config",
     "build_venue_writing_taste_context",
     "inspect_project_paper_adoption",
+    "inspect_project_paper_revision_context",
     "inspect_venue_writing_taste",
     "load_project_paper_adoption_source",
+    "load_project_paper_revision_context",
     "materialize_accepted_paper_draft",
     "materialize_paper_scientific_evidence",
     "paper_draft_proposal_sha256",
     "prepare_project_paper_adoption",
     "prepare_project_paper_revision_context",
     "publish_project_paper_adoption",
+    "publish_project_paper_revision_context",
     "render_evidence_paper_markdown",
     "require_selected_scientific_evidence",
     "review_narrative",

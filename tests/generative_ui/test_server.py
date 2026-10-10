@@ -110,6 +110,33 @@ def _headers(token: str = _TOKEN) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_create_project_is_metadata_only_and_never_overwrites(tmp_path: Path) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    payload = {
+        "project_id": "new-research",
+        "title": "A new research project",
+        "research_direction": "Study transferable research decisions.",
+        "target_venue": "CVPR 2027",
+    }
+    with _running_server(runtime) as base, httpx.Client(base_url=base) as client:
+        route = "/api/v2/workspace/projects"
+        assert client.post(route, json=payload).status_code == 401
+        assert not runtime.projects_root.exists()
+        for invalid in ({**payload, "project_id": "../escape"}, {**payload, "execute": True}):
+            assert client.post(route, json=invalid, headers=_headers()).status_code == 400
+        response = client.post(route, json=payload, headers=_headers())
+        assert response.status_code == 201
+        original = runtime.open(payload["project_id"])
+        assert original.manifest.status == "planning"
+        assert original.manifest.runs == []
+        duplicate = client.post(route, json={**payload, "title": "Overwrite"}, headers=_headers())
+        assert duplicate.status_code == 409
+        assert runtime.open(payload["project_id"]).manifest_sha256 == original.manifest_sha256
+        listing = client.get(route, headers=_headers()).json()["projects"]
+        assert listing[0]["title"] == payload["title"]
+        assert listing[0]["run_count"] == 0
+
+
 def _event(renderer: dict[str, object], *, event_id: str = "http-event") -> dict[str, object]:
     snapshot = renderer["snapshot"]
     assert isinstance(snapshot, dict)

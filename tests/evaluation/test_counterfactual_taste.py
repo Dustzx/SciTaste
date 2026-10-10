@@ -181,14 +181,9 @@ def test_prefix_matched_branches_produce_objective_action_preference() -> None:
             assert len(receipt.turns) == prefix.turn_count
         else:
             assert receipt.status == "completed"
-            intervention_audit = receipt.turns[1].guidance.audit[
-                "counterfactual_intervention"
-            ]
+            intervention_audit = receipt.turns[1].guidance.audit["counterfactual_intervention"]
             assert intervention_audit["forced_action"] == action.value
-            assert (
-                intervention_audit["action_semantics_profile"]
-                == "hidden-law-discovery-v1"
-            )
+            assert intervention_audit["action_semantics_profile"] == "hidden-law-discovery-v1"
             assert len(intervention_audit["action_semantics_sha256"]) == 64
             if action is CounterfactualResearchAction.REFINE:
                 instruction = receipt.turns[1].guidance.guidance.instruction

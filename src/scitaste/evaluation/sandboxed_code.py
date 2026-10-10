@@ -178,6 +178,63 @@ class BubblewrapPythonCodeRunner:
         ]
 
 
+class ScientificPythonPolicy(SandboxedPythonPolicy):
+    schema_version: Literal["1.1"] = "1.1"
+    implementation: Literal["bubblewrap-scientific-python-v1"] = "bubblewrap-scientific-python-v1"
+    runtime_root: str
+    package_versions: dict[str, str]
+
+
+class ScientificPythonCodeRunner(BubblewrapPythonCodeRunner):
+    """Expose only the selected Python runtime, never the surrounding project.
+
+    A separate runtime binding supports the project's Python 3.12 installation and
+    its NumPy/SciPy packages. No credential environment, worktree or network is bound.
+    """
+
+    def __init__(self, *, runtime_root, python_executable, **limits):
+        import importlib.metadata
+
+        root = Path(runtime_root).resolve(strict=True)
+        executable = _executable(python_executable, "Python")
+        if root in {Path("/"), Path.home(), Path("/home"), Path("/tmp")}:
+            raise ValueError("A dedicated Python runtime directory is required")
+        if not executable.is_relative_to(root / "bin") or not (root / "lib").is_dir():
+            raise ValueError("Python must belong to the declared isolated runtime")
+        # Reuse bounded process/output handling, but use a separately versioned policy.
+        super().__init__(python_executable="/usr/bin/python3", **limits)
+        values = self.policy.model_dump(exclude={"policy_sha256"})
+        values.update(
+            schema_version="1.1",
+            implementation="bubblewrap-scientific-python-v1",
+            python_path=str(executable),
+            python_sha256=_sha256_file(executable),
+            runtime_root=str(root),
+            package_versions={
+                name: importlib.metadata.version(name) for name in ("numpy", "scipy")
+            },
+        )
+        self.policy = ScientificPythonPolicy.create(**values)
+
+    def _command(self):
+        command = super()._command()
+        position = command.index("--proc")
+        command[position:position] = [
+            "--ro-bind",
+            self.policy.runtime_root,
+            self.policy.runtime_root,
+        ]
+        command[command.index("--chdir") : command.index("--chdir")] = [
+            "--setenv",
+            "OPENBLAS_NUM_THREADS",
+            "1",
+            "--setenv",
+            "OMP_NUM_THREADS",
+            "1",
+        ]
+        return command
+
+
 def _executable(path: str | Path, label: str) -> Path:
     resolved = Path(path).resolve(strict=True)
     if not resolved.is_file() or not os.access(resolved, os.X_OK):

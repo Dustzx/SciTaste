@@ -1,5 +1,22 @@
 # SciTaste self-iteration case
 
+October 7 capability iteration follows a substantive failure in the actual paper
+cycle: an independent reviewer requests computation on retained predictions, yet
+author revision previously exposed only prose edits. Feedback now distinguishes
+scientific work from text work and compiles a separate source-bound Native followup.
+The first live inquiry-policy assignment computes all paired regret/tie-rule
+contrasts without refitting, evolves evidence-bound tie/pool explanations and
+delivers report, independent review, revision and PDF within 1643.23 seconds.
+The reviewer finds the numerical concern substantially addressed, while novelty
+and community significance remain unestablished. Six accepted consultations
+abstain, no inquiry packet is adopted, and two run-local gaps remain pending.
+Separately,
+a prepared-source worker supervises actual qualification, abstraction and independent
+reviews into a frozen successor. Its first replay reuses closed receipts and adds
+no new scientific data or calls. Existing assessed assignments/libraries remain
+unchanged. C35–C36 in the project evidence ledger own the detailed results and
+limits; neither code completion nor successor admission proves Taste effectiveness.
+
 SciTaste's own development is a useful dogfooding case because each milestone
 contains a problem, competing actions, evidence, costs, a selected intervention,
 and an observable outcome. It is used for workflow usability and auditability,

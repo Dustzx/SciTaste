@@ -136,9 +136,7 @@ class ExternalEvaluationResource(FrozenModel):
 
 
 class ExternalResourceCorpus(FrozenModel):
-    schema_version: Literal[
-        "2.0", "2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"
-    ] = "2.0"
+    schema_version: Literal["2.0", "2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"] = "2.0"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -312,8 +310,7 @@ def load_external_resource_corpus(path: str | Path) -> ResourceCorpusInspection:
     if not isinstance(payload, dict):
         raise ValueError("evaluation resource corpus must contain a YAML mapping")
     if (
-        payload.get("schema_version")
-        in {"2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"}
+        payload.get("schema_version") in {"2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"}
         and "base_source" in payload
     ):
         corpus = _compose_external_resource_overlay(resolved, payload)

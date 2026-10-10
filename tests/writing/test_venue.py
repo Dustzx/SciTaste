@@ -70,6 +70,31 @@ def test_template_inspection_and_materialization_are_content_bound(tmp_path: Pat
     assert (tmp_path / "bundle" / "venue.sty").read_bytes() == b"% exact style\n"
 
 
+def test_venue_without_mandated_statements_does_not_invent_one(tmp_path: Path) -> None:
+    config_path = _template(tmp_path)
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    config["required_statements"] = []
+    config["recommended_statements"] = []
+    config["statement_page_limits"] = {}
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    inspection = inspect_venue_template(config_path)
+
+    assessment = assess_venue_submission(
+        (
+            "## Title\nA Vision Result\n\n## Abstract\nA single paragraph.\n\n"
+            "# Conclusion\nA bounded result.\n"
+        ),
+        "",
+        template=inspection,
+        compiled=True,
+        main_text_pages=8,
+    )
+
+    assert assessment.required_statements == ()
+    assert assessment.statement_order_valid is True
+    require_venue_submission_ready(assessment)
+
+
 def test_template_inspection_rejects_unsafe_unregistered_archive_member(tmp_path: Path) -> None:
     config_path = _template(tmp_path, extra={"../escape.txt": b"blocked"})
 

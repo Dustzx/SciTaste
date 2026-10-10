@@ -687,6 +687,14 @@ def inspect_taste_episode_admission(
             "AI Taste primary reviewers did not receive the same frozen packet",
         )
     for review in ai_reviews:
+        if candidate.attribution_producer_id == "model-attribution-draft" and (
+            not review.producer_model_id or not review.producer_run_id
+        ):
+            _admission_add(
+                findings,
+                "attribution-producer-identity-missing",
+                "Model-drafted attribution requires producer identity on each AI review",
+            )
         _inspect_ai_review_artifacts(review, evidence_root=evidence_root, findings=findings)
     producer_ids = {candidate.producer_id}
     if candidate.attribution_producer_id is not None:
@@ -929,14 +937,12 @@ class LifecycleTastePolicyConfig(BaseModel):
     minimum_feature_support: float = Field(default=3.0, ge=0.0, le=10_000.0)
     credible_z: float = Field(default=1.6448536269514722, ge=0.0, le=5.0)
     minimum_pairwise_probability: float = Field(default=0.6, ge=0.5, le=0.99)
-    application_rule: Literal["credible-margin", "posterior-probability"] = (
-        "credible-margin"
-    )
-    feature_precedence: Literal[
-        "all-matched-weighted-v1", "rich-decision-context-first-v2"
-    ] = Field(
-        default="all-matched-weighted-v1",
-        exclude_if=lambda value: value == "all-matched-weighted-v1",
+    application_rule: Literal["credible-margin", "posterior-probability"] = "credible-margin"
+    feature_precedence: Literal["all-matched-weighted-v1", "rich-decision-context-first-v2"] = (
+        Field(
+            default="all-matched-weighted-v1",
+            exclude_if=lambda value: value == "all-matched-weighted-v1",
+        )
     )
     maximum_absolute_adjustment: float = Field(default=1.0, gt=0.0, le=10.0)
     require_stage_support: bool = True
@@ -1329,8 +1335,8 @@ class LifecycleTastePolicyModel(BaseModel):
             for item in self.feature_posteriors
             if item.feature_kind == "decision-state-action" and item.support > 0
         )
-        context_actions: dict[tuple[str, str], list[LifecycleTasteFeaturePosterior]] = (
-            defaultdict(list)
+        context_actions: dict[tuple[str, str], list[LifecycleTasteFeaturePosterior]] = defaultdict(
+            list
         )
         values_by_name: dict[str, set[str]] = defaultdict(set)
         for item in adaptive:
@@ -1631,9 +1637,7 @@ def assess_lifecycle_taste_policy(
             # them as one conditional scope instead of averaging them with
             # global and duplicated coarse priors.  Fall back monotonically
             # when a policy has no support at the more specific scope.
-            evidence = [
-                item for item in supported if _is_evidence_decision_state_feature(item[0])
-            ]
+            evidence = [item for item in supported if _is_evidence_decision_state_feature(item[0])]
             rich = [item for item in supported if _is_rich_decision_state_feature(item[0])]
             decision_state = [item for item in supported if item[3] == "decision-state-action"]
             selected = evidence or rich or decision_state or supported
@@ -1646,12 +1650,9 @@ def assess_lifecycle_taste_policy(
             # correlated for uncertainty instead of manufacturing sample size.
             variance = max(item.log_odds_variance for item, _, _ in weighted)
             if model.config.feature_precedence == "all-matched-weighted-v1":
-                stage_action = tuple(
-                    item for item, _, kind in weighted if kind == "stage-action"
-                )
+                stage_action = tuple(item for item, _, kind in weighted if kind == "stage-action")
                 support = max(
-                    item.support
-                    for item in stage_action or tuple(item for item, _, _ in weighted)
+                    item.support for item in stage_action or tuple(item for item, _, _ in weighted)
                 )
             else:
                 support = max(item.support for item, _, _ in weighted)
@@ -1702,9 +1703,7 @@ def assess_lifecycle_taste_policy(
             reason_codes.append("missing-stage-support")
         if probability is None or probability < model.config.minimum_pairwise_probability:
             reason_codes.append("uncertain-pairwise-probability")
-        if model.config.application_rule == "credible-margin" and (
-            lower is None or lower <= 0
-        ):
+        if model.config.application_rule == "credible-margin" and (lower is None or lower <= 0):
             reason_codes.append("credible-margin-crosses-zero")
         if not reason_codes:
             recommended = first[0].action_id

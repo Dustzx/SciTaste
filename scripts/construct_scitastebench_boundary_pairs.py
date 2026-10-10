@@ -463,9 +463,7 @@ def _normalize_output_payload(
 
 
 def _validation_error_fingerprint(error: ValidationError) -> str:
-    fields = sorted(
-        ".".join(str(part) for part in item["loc"]) for item in error.errors()
-    )
+    fields = sorted(".".join(str(part) for part in item["loc"]) for item in error.errors())
     return "invalid-fields:" + ",".join(fields[:12])
 
 
@@ -926,8 +924,7 @@ def main() -> int:
     if completed_response_count != expected_batch_count and not args.allow_partial:
         raise ValueError("cannot compile a partial boundary construction package")
     omitted_candidate_count = sum(
-        item["reason"].startswith("constructor response omitted candidate")
-        for item in rejections
+        item["reason"].startswith("constructor response omitted candidate") for item in rejections
     )
     if not pairs:
         summary = {
@@ -937,8 +934,7 @@ def main() -> int:
             "completed_response_count": completed_response_count,
             "expected_response_count": expected_batch_count,
             "complete": (
-                completed_response_count == expected_batch_count
-                and omitted_candidate_count == 0
+                completed_response_count == expected_batch_count and omitted_candidate_count == 0
             ),
             "omitted_candidate_count": omitted_candidate_count,
             "admitted_pair_count": 0,

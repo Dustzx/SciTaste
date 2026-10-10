@@ -24,6 +24,79 @@ from scitaste.taste.trajectory_reconstruction import (
 )
 
 
+def test_native_tool_loop_captures_before_execution_and_attaches_after(
+    tmp_path,
+    research_state,
+    monkeypatch,
+):
+    import json
+    from types import SimpleNamespace
+
+    from scitaste.backends.base import PreferenceResponse
+    from scitaste.executor.research_tools import ResearchToolEnvironment
+    from scitaste.research_tool_loop import run_research_tool_loop
+    from scitaste.taste.controller import TasteController
+    from scitaste.taste.research_tool_capture import ResearchToolTasteCapture
+
+    runtime, _, idea, plan, state, _ = _foundation(tmp_path, research_state)
+    monkeypatch.setattr(
+        "scitaste.taste.research_tool_capture.inspect_current_idea_revision",
+        lambda *_: SimpleNamespace(current_binding=idea),
+    )
+    capture = ResearchToolTasteCapture(runtime=runtime, plan=plan)
+    workspace = tmp_path / "candidate"
+    workspace.mkdir()
+    (workspace / "model.py").write_text("value = 1\n")
+    environment = ResearchToolEnvironment(
+        workspace=workspace,
+        log_root=tmp_path / "tools",
+        research_problem="Inspect",
+        experiment=lambda _: pytest.fail("stop cannot launch an experiment"),
+    )
+
+    class Backend:
+        name = "fixture"
+
+        def rank(self, request):
+            return PreferenceResponse(
+                request_id=request.request_id,
+                request_fingerprint=request.fingerprint,
+                selected_action_id="stop-0",
+                rationale="Stop",
+                confidence=1,
+                backend=self.name,
+                model="fixture",
+            )
+
+    result = run_research_tool_loop(
+        state=state,
+        controller=TasteController(
+            utility_enabled=False,
+            critics_enabled=False,
+            preference_backend=Backend(),
+        ),
+        proposer=lambda *_: {
+            "tool": "Read File",
+            "arguments": {"file_name": "model.py"},
+            "rationale": "Inspect",
+        },
+        environment=environment,
+        workspace=tmp_path / "loop",
+        artifact_root=tmp_path,
+        taste_capture=capture,
+    )
+    assert result["status"] == "controller-finished"
+    root = capture.root / "taste_capture/decision-000"
+    lock = json.loads((root / "LOCK.json").read_text())
+    outcome = json.loads((root / "OUTCOME.json").read_text())
+    assert outcome["lock_sha256"] == lock["lock_sha256"]
+    assert outcome["observed_at"] > lock["captured_at"]
+    completed = json.loads((root / "COMPLETED.json").read_text())
+    assert completed["completed_decision"]["actual_outcome"]["status"] == "SUCCEEDED"
+    predecision = json.loads((capture.root / plan.decision_log_locator).read_text())
+    assert predecision["actual_outcome"] is None
+
+
 def _foundation(tmp_path: Path, research_state):
     runtime = ProjectRuntime(tmp_path / "outputs")
     project = runtime.create(

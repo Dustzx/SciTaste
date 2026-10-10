@@ -59,9 +59,7 @@ def test_action_contrast_rejects_broad_ties_and_missing_branch_outcomes() -> Non
     )
     missing = CounterfactualDeliberationTarget.model_construct(
         objective_values=values,
-        objective_observed={
-            action: action not in {"REFINE", "STOP"} for action in values
-        },
+        objective_observed={action: action not in {"REFINE", "STOP"} for action in values},
         objective_preferred_actions=("ANALYZE",),
     )
 

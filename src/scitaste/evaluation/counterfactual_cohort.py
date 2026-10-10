@@ -41,9 +41,7 @@ class CounterfactualCohortState(BaseModel):
     objective_observed_count: int = Field(ge=0, le=7)
     objective_failure_count: int = Field(ge=0, le=7)
     preferred_actions: tuple[CounterfactualResearchAction, ...] = Field(min_length=1)
-    observed_preferred_actions: tuple[CounterfactualResearchAction, ...] = Field(
-        default=()
-    )
+    observed_preferred_actions: tuple[CounterfactualResearchAction, ...] = Field(default=())
     objective_spread: float = Field(ge=0.0, allow_inf_nan=False)
     observed_objective_spread: float = Field(ge=0.0, allow_inf_nan=False)
     practical_equivalence_tolerance: float = Field(ge=0.0, allow_inf_nan=False)
@@ -61,9 +59,7 @@ class CounterfactualCohortState(BaseModel):
         if self.objective_failure_count != self.action_count - self.objective_observed_count:
             raise ValueError("counterfactual failure count does not close")
         expected_end_to_end = self.objective_spread > self.practical_equivalence_tolerance
-        expected_scientific = (
-            self.observed_objective_spread > self.practical_equivalence_tolerance
-        )
+        expected_scientific = self.observed_objective_spread > self.practical_equivalence_tolerance
         if self.end_to_end_choice_sensitive != expected_end_to_end:
             raise ValueError("counterfactual end-to-end sensitivity differs from the result")
         if self.scientific_choice_sensitive != expected_scientific:
@@ -91,9 +87,7 @@ class CounterfactualCohortState(BaseModel):
         domain_id: str,
         phase: CounterfactualTrajectoryPhase,
     ) -> CounterfactualCohortState:
-        observed_outcomes = tuple(
-            item for item in result.outcomes if item.objective_observed
-        )
+        observed_outcomes = tuple(item for item in result.outcomes if item.objective_observed)
         observed_utilities = {
             item.action: (
                 item.objective_value
@@ -109,25 +103,18 @@ class CounterfactualCohortState(BaseModel):
                     (
                         action
                         for action, utility in observed_utilities.items()
-                        if observed_best - utility
-                        <= result.practical_equivalence_tolerance
+                        if observed_best - utility <= result.practical_equivalence_tolerance
                     ),
                     key=lambda item: item.value,
                 )
             )
-            observed_spread = max(observed_utilities.values()) - min(
-                observed_utilities.values()
-            )
+            observed_spread = max(observed_utilities.values()) - min(observed_utilities.values())
         else:
             observed_preferred = ()
             observed_spread = 0.0
         observed_count = len(observed_outcomes)
-        end_to_end_sensitive = (
-            result.objective_spread > result.practical_equivalence_tolerance
-        )
-        scientific_sensitive = (
-            observed_spread > result.practical_equivalence_tolerance
-        )
+        end_to_end_sensitive = result.objective_spread > result.practical_equivalence_tolerance
+        scientific_sensitive = observed_spread > result.practical_equivalence_tolerance
         return cls(
             state_id=state_id,
             domain_id=domain_id,
@@ -268,8 +255,7 @@ def summarize_counterfactual_development_cohort(
     if any(result.project_id != project_id for result in results):
         raise ValueError("counterfactual cohort results target another project")
     metric_contracts = {
-        (result.primary_metric, result.metric_direction, result.failure_value)
-        for result in results
+        (result.primary_metric, result.metric_direction, result.failure_value) for result in results
     }
     if len(metric_contracts) != 1:
         raise ValueError("counterfactual cohort results use different metric contracts")

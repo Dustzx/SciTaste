@@ -9,7 +9,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from scitaste.project import ProjectRuntime, ProjectSnapshot
+from scitaste.project import (
+    ProjectRuntime,
+    ProjectSnapshot,
+    inspect_current_idea_revision,
+)
 from scitaste.project.models import content_sha256, validate_relative_locator
 from scitaste.review import inspect_venue_review
 from scitaste.writing.venue import VenueSubmissionAssessment
@@ -139,19 +143,36 @@ def assess_project_lifecycle(
     project_root = runtime.projects_root / project_id
     discovery = _verified_native_stages(runtime, snapshot, project_root, "discovery")
     evidence = _verified_native_stages(runtime, snapshot, project_root, "evidence")
+    idea_locators = _verified_idea_locators(runtime, snapshot, discovery)
+    evidence_locators = _verified_evidence_locators(runtime, snapshot, evidence)
     paper_directory, paper_gate, submission_gate = _paper_gates(snapshot, project_root)
+    (
+        evaluation_result_id,
+        scientific_evidence_complete,
+        scientific_effectiveness_established,
+        paper_scientific_evidence_bound,
+    ) = _scientific_evidence_status(runtime, snapshot, paper_directory)
     paper_source_run = _paper_source_run(snapshot, paper_directory)
-    lineage_locator = (
+    native_lineage = (
         (discovery[paper_source_run], evidence[paper_source_run])
         if paper_source_run in discovery and paper_source_run in evidence
         else ()
     )
+    registered_lineage = _registered_evidence_lineage(
+        idea_locators=idea_locators,
+        evidence_locators=evidence_locators,
+        paper_directory=paper_directory,
+        paper_scientific_evidence_bound=paper_scientific_evidence_bound,
+    )
+    lineage_locator = native_lineage or registered_lineage
     lineage_gate = LifecycleGate(
         gate_id="lineage",
         state="satisfied" if lineage_locator else "blocked",
         reason_code=(
             "paper-source-run-binds-idea-and-evidence"
-            if lineage_locator
+            if native_lineage
+            else "paper-binds-verified-idea-and-evaluation-evidence"
+            if registered_lineage
             else "paper-source-run-lacks-complete-native-lineage"
         ),
         evidence_locators=lineage_locator,
@@ -159,24 +180,33 @@ def assess_project_lifecycle(
     review_gate, response_gate, independent_gate, review_id, review_status = _review_gates(
         runtime, snapshot, paper_directory
     )
-    (
-        evaluation_result_id,
-        scientific_evidence_complete,
-        scientific_effectiveness_established,
-        paper_scientific_evidence_bound,
-    ) = _scientific_evidence_status(runtime, snapshot, paper_directory)
+    external_formal_result_pending = _external_formal_result_pending(runtime, snapshot)
     gates = (
         _stage_gate(
             "idea",
-            tuple(discovery.values()),
-            "verified-native-discovery",
-            "native-idea-unverified",
+            idea_locators,
+            (
+                "verified-project-idea"
+                if any(locator.endswith("/REVISION.json") for locator in idea_locators)
+                else "verified-native-discovery"
+            ),
+            "project-idea-unverified",
         ),
         _stage_gate(
             "evidence",
-            tuple(evidence.values()),
-            "verified-native-evidence",
-            "native-evidence-unverified",
+            evidence_locators,
+            (
+                "verified-project-evaluation-result"
+                if any(locator.startswith("evaluation-results/") for locator in evidence_locators)
+                else "verified-native-evidence"
+            ),
+            (
+                "project-evidence-unverified"
+                if snapshot.manifest.current_evaluation_result is not None
+                else "external-formal-result-unregistered"
+                if external_formal_result_pending
+                else "native-evidence-unverified"
+            ),
         ),
         lineage_gate,
         paper_gate,
@@ -225,6 +255,105 @@ def assess_project_lifecycle(
         official_decision_authority=False,
         scientific_effectiveness_established=scientific_effectiveness_established,
     )
+
+
+def _registered_evidence_lineage(
+    *,
+    idea_locators: tuple[str, ...],
+    evidence_locators: tuple[str, ...],
+    paper_directory: str | None,
+    paper_scientific_evidence_bound: bool,
+) -> tuple[str, ...]:
+    """Accept the registry path when the paper binds exact verified evidence.
+
+    Native single-run lineage remains valid, but an imported formal study is a
+    separate scientific transaction.  Its immutable paper sidecar is the
+    correct join rather than pretending that discovery, benchmark execution,
+    and writing occurred inside one run directory.
+    """
+
+    if not paper_scientific_evidence_bound or paper_directory is None or not idea_locators:
+        return ()
+    formal = tuple(
+        locator for locator in evidence_locators if locator.startswith("evaluation-results/")
+    )
+    if not formal:
+        return ()
+    return (
+        idea_locators[-1],
+        formal[-1],
+        f"papers/{paper_directory}/SCIENTIFIC_EVIDENCE_BINDING.json",
+    )
+
+
+def _external_formal_result_pending(
+    runtime: ProjectRuntime,
+    snapshot: ProjectSnapshot,
+) -> bool:
+    evaluation_id = snapshot.manifest.current_evaluation
+    if evaluation_id is None or snapshot.manifest.current_evaluation_result is not None:
+        return False
+    try:
+        evaluation = runtime.open_evaluation(snapshot.project_id, evaluation_id)
+    except (OSError, TypeError, ValueError):
+        return False
+    return evaluation.origin == "external-formal-study"
+
+
+def _verified_idea_locators(
+    runtime: ProjectRuntime,
+    snapshot: ProjectSnapshot,
+    discovery: dict[str, str],
+) -> tuple[str, ...]:
+    """Unify the native-discovery and project Idea-revision entry paths.
+
+    A project may enter experimentation through the composable discovery
+    workflow or through the immutable Idea-revision ledger.  Both are
+    authoritative SciTaste paths; lifecycle projection must not require an
+    otherwise redundant discovery rerun when the current Idea artifact and all
+    of its declared inputs already revalidate.
+    """
+
+    locators = set(discovery.values())
+    try:
+        report = inspect_current_idea_revision(runtime, snapshot.project_id)
+    except (OSError, TypeError, ValueError):
+        report = None
+    if (
+        report is not None
+        and report.project_revision == snapshot.revision
+        and report.current_binding is not None
+        and report.artifact_verified
+        and report.input_evidence_verified
+        and report.method_development_binding_available
+    ):
+        locators.add(report.current_binding.record_locator)
+    return tuple(sorted(locators))
+
+
+def _verified_evidence_locators(
+    runtime: ProjectRuntime,
+    snapshot: ProjectSnapshot,
+    native_evidence: dict[str, str],
+) -> tuple[str, ...]:
+    """Unify native evidence stages with the selected formal result registry.
+
+    Result selection alone is insufficient: the bundle is reopened, all bound
+    bytes and the recorded assessment are replayed, and only complete,
+    headline-eligible scientific evidence enters the lifecycle gate.
+    """
+
+    locators = set(native_evidence.values())
+    result_id = snapshot.manifest.current_evaluation_result
+    if result_id is None:
+        return tuple(sorted(locators))
+    try:
+        result = runtime.open_evaluation_result(snapshot.project_id, result_id)
+    except (OSError, TypeError, ValueError):
+        return tuple(sorted(locators))
+    if result.scientific_evidence_complete and result.headline_eligible:
+        locators.add(f"evaluation-results/{result_id}/RESULT.json")
+    return tuple(sorted(locators))
 
 
 def _scientific_evidence_status(
@@ -433,10 +562,31 @@ def _paper_gates(
 
 
 def _paper_source_run(snapshot: ProjectSnapshot, paper_directory: str | None) -> str | None:
-    if paper_directory is None:
-        return None
-    entry = next((item for item in snapshot.papers if item.directory_name == paper_directory), None)
-    return entry.manifest.source_run if entry is not None else None
+    """Resolve a revision paper back to the native run that produced its source.
+
+    Stage 19 papers correctly name the revision invocation as ``source_run``.
+    Their immutable manifest also names the reviewed source paper.  Follow only
+    that registered chain; cycles, missing papers, and malformed extension
+    fields remain unverified instead of being guessed through filenames.
+    """
+
+    by_directory = {item.directory_name: item for item in snapshot.papers}
+    current = paper_directory
+    visited: set[str] = set()
+    while current is not None and current not in visited:
+        visited.add(current)
+        entry = by_directory.get(current)
+        if entry is None:
+            return None
+        source_run = entry.manifest.source_run
+        extra = entry.manifest.model_extra or {}
+        predecessor = extra.get("paper_revision_source_paper_directory")
+        if predecessor is None:
+            return source_run
+        if not isinstance(predecessor, str):
+            return None
+        current = predecessor
+    return None
 
 
 def _review_gates(

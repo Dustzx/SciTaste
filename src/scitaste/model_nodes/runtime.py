@@ -56,6 +56,7 @@ from scitaste.model_nodes.schemas import (
     VenuePaperReviewInput,
     VenuePaperReviewProposal,
 )
+from scitaste.model_nodes.session_exchange import SessionResponsePending
 from scitaste.model_nodes.tool_intelligence import (
     StructuredRepairInput,
     StructuredRepairOutput,
@@ -81,6 +82,7 @@ class RuntimeBackendMode(StrEnum):
     LIVE = "live"
     LOCAL = "local"
     REPLAY = "replay"
+    SESSION = "session"
 
 
 def _is_actual_generation_mode(mode: RuntimeBackendMode) -> bool:
@@ -343,9 +345,11 @@ class ModelNodeRuntime:
         *,
         before_backend: BeforeBackendHook | None = None,
         node_types: Mapping[str, ModelNodeRegistration] | None = None,
+        allow_unrelated_run_updates: bool = False,
     ) -> None:
         self.project_runtime = project_runtime
         self.before_backend = before_backend
+        self.allow_unrelated_run_updates = allow_unrelated_run_updates
         self.node_types = dict(_NODE_TYPES)
         for name, registration in (node_types or {}).items():
             if name in self.node_types:
@@ -596,6 +600,13 @@ class ModelNodeRuntime:
         project_id = values["project_id"]
         run_id = values["run_id"]
         expected_revision = values["expected_project_revision"]
+        revision_scope = None
+        if self.allow_unrelated_run_updates and not resume:
+            captured_revision, revision_scope = self.project_runtime.model_node_scope(
+                project_id, run_id
+            )
+            if captured_revision != expected_revision:
+                raise ProjectRevisionConflictError("stale project revision at scope capture")
         self._validate_project_run(
             project_id,
             run_id,
@@ -824,6 +835,14 @@ class ModelNodeRuntime:
             pending_dir = pending_root / f"{invocation_id}--{time.time_ns()}--{os.getpid()}"
             pending_dir.mkdir(parents=True, exist_ok=False)
             _write_model_exclusive(pending_dir / "intent.json", intent, owned_root=stage)
+            if revision_scope is not None:
+                _write_bytes_exclusive(
+                    pending_dir / "revision-scope.json",
+                    json.dumps(
+                        {"project_revision": expected_revision, "scope_sha256": revision_scope}
+                    ).encode(),
+                    owned_root=stage,
+                )
         try:
             if self.before_backend is not None and not (
                 pending_resume is not None and pending_resume.backend is not None
@@ -831,10 +850,17 @@ class ModelNodeRuntime:
                 self.before_backend(intent)
 
             def before_call() -> None:
+                checked_revision = expected_revision
+                if revision_scope is not None:
+                    current_revision, current_scope = self.project_runtime.model_node_scope(
+                        project_id, run_id
+                    )
+                    if current_scope == revision_scope:
+                        checked_revision = current_revision
                 self._validate_project_run(
                     project_id,
                     run_id,
-                    expected_revision=expected_revision,
+                    expected_revision=checked_revision,
                     create_stage=True,
                 )
                 _write_bytes_exclusive(
@@ -868,6 +894,7 @@ class ModelNodeRuntime:
                 project_id=project_id,
                 run_id=run_id,
                 expected_revision=intent.project_revision,
+                revision_scope=revision_scope,
             )
             entry = self._entry_from_result(
                 index=len(entries),
@@ -876,6 +903,10 @@ class ModelNodeRuntime:
                 recording_path=recording_path,
                 replayed=intent.backend_mode is RuntimeBackendMode.REPLAY,
             )
+        except SessionResponsePending:
+            # No response or API charge exists. Keep the pending intent for exact
+            # runtime resume instead of publishing a false terminal failure.
+            raise
         except NodeNotApplicableError as exc:
             entry = RuntimeLedgerEntry.create(
                 index=len(entries),
@@ -1136,6 +1167,14 @@ class ModelNodeRuntime:
                 blockers.append("profile does not permit local execution")
             if not allow_local:
                 blockers.append("caller did not opt in to local execution")
+        if intent.backend_mode is RuntimeBackendMode.SESSION:
+            if (intent.profile.provider, intent.profile.model) != (
+                "assistant-session",
+                "session-authored",
+            ) or not getattr(backend, "session_enabled", False):
+                blockers.append("session mode requires an explicit session backend and identity")
+            if intent.profile.live_execution_permitted or intent.profile.local_execution_permitted:
+                blockers.append("session profile cannot authorize remote or local model execution")
         backend_config = getattr(backend, "config", None) if backend is not None else None
         backend_output_limit = (
             getattr(backend_config, "max_output_tokens", None)
@@ -1163,8 +1202,15 @@ class ModelNodeRuntime:
         project_id: str,
         run_id: str,
         expected_revision: int,
+        revision_scope: str | None = None,
     ) -> NodeResult[Any]:
         try:
+            if revision_scope is not None:
+                current_revision, current_scope = self.project_runtime.model_node_scope(
+                    project_id, run_id
+                )
+                if current_scope == revision_scope:
+                    expected_revision = current_revision
             self._validate_project_run(
                 project_id,
                 run_id,

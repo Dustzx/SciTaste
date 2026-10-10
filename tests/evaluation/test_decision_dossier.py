@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -100,13 +101,23 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
     )
 
 
-def test_repository_dossier_verifies_every_bound_artifact_without_external_action() -> None:
+def _current_artifact_drift(dossier):
+    return {
+        item.artifact_id
+        for item in dossier.artifacts
+        if not Path(item.path).is_file()
+        or hashlib.sha256(Path(item.path).read_bytes()).hexdigest() != item.sha256
+    }
+
+
+def test_repository_dossier_reports_current_artifact_drift_without_external_action() -> None:
     dossier = load_experiment_decision_dossier(DOSSIER_PATH).dossier
 
     report = inspect_experiment_decision_dossier(dossier, evidence_root=".")
 
-    assert report.artifact_bindings_verified is True
-    assert report.artifact_findings == ()
+    drift = _current_artifact_drift(dossier)
+    assert report.artifact_bindings_verified is (not drift)
+    assert {item.artifact_id for item in report.artifact_findings} == drift
     assert report.exact_cell_count == 18
     assert report.design_only_track_ids == ("scientific-taste-decisions",)
     assert report.next_stage_ids == (
@@ -179,23 +190,22 @@ def test_decision_dossier_cli_is_read_only_and_can_save_a_report(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     output = tmp_path / "REPORT.json"
+    dossier = load_experiment_decision_dossier(DOSSIER_PATH).dossier
+    drift = _current_artifact_drift(dossier)
 
-    assert (
-        main(
-            [
-                "evaluation",
-                "decision-dossier",
-                "--manifest",
-                str(DOSSIER_PATH),
-                "--evidence-root",
-                ".",
-                "--require-artifacts",
-                "--output",
-                str(output),
-            ]
-        )
-        == 0
-    )
+    assert main(
+        [
+            "evaluation",
+            "decision-dossier",
+            "--manifest",
+            str(DOSSIER_PATH),
+            "--evidence-root",
+            ".",
+            "--require-artifacts",
+            "--output",
+            str(output),
+        ]
+    ) == (1 if drift else 0)
     payload = json.loads(capsys.readouterr().out)
     saved = json.loads(output.read_text(encoding="utf-8"))
     assert payload["paper_title"] == (
@@ -203,7 +213,7 @@ def test_decision_dossier_cli_is_read_only_and_can_save_a_report(
     )
     assert payload["exact_cell_count"] == 18
     assert payload["report"] == str(output)
-    assert saved["artifact_bindings_verified"] is True
+    assert saved["artifact_bindings_verified"] is (not drift)
     assert saved["tracks"][0]["model"]["kind"] == "unselected"
     assert saved["tracks"][0]["budget"]["compute_unallocated"] is True
     assert saved["tracks"][1]["matrix"]["planned_cells"] == 12

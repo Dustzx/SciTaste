@@ -259,9 +259,7 @@ def main() -> int:
     package_bytes = (package.model_dump_json(indent=2) + "\n").encode()
     _write(output / "PACKAGE.json", package_bytes)
     reason_counts = Counter(
-        reason.split(":", maxsplit=1)[-1]
-        for item in rejected
-        for reason in item["reasons"]
+        reason.split(":", maxsplit=1)[-1] for item in rejected for reason in item["reasons"]
     )
     summary = {
         "schema_version": "1.0",
@@ -273,9 +271,7 @@ def main() -> int:
         "candidate_pair_count": len(pairs),
         "admitted_pair_count": len(admitted),
         "rejected_pair_count": len(rejected),
-        "context_counts": dict(
-            Counter(pair.decision_context_family.value for pair in admitted)
-        ),
+        "context_counts": dict(Counter(pair.decision_context_family.value for pair in admitted)),
         "domain_counts": dict(Counter(pair.domain for pair in admitted)),
         "rejection_reason_counts": dict(reason_counts),
         "boundary_cue_control_count": len(config.boundary_cue_controls),

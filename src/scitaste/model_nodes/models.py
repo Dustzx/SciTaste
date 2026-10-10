@@ -15,6 +15,7 @@ from pydantic import (
     JsonValue,
     computed_field,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -255,8 +256,17 @@ class StructuredModelResponse(BaseModel):
     usage: Usage
     prompt_cache_input_tokens: int = Field(default=0, ge=0)
     cost_provenance: ModelCostProvenance | None = None
+    session_provenance: dict[str, JsonValue] | None = None
     tool_calls: list[ToolCallProposal] = Field(default_factory=list)
     cached: bool = False
+
+    @model_serializer(mode="wrap")
+    def serialize_with_optional_session_provenance(self, handler):
+        payload = handler(self)
+        # Preserve historical provider/replay serialization and ledger hashes.
+        if self.session_provenance is None:
+            payload.pop("session_provenance", None)
+        return payload
 
     @model_validator(mode="after")
     def raw_response_hash_matches(self) -> StructuredModelResponse:

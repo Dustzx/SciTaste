@@ -10,8 +10,13 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from scitaste.model_nodes.models import NodeContext, NodePolicy
+from scitaste.model_nodes.models import (
+    NodeContext,
+    NodePolicy,
+    StructuredModelRequest,
+)
 from scitaste.model_nodes.nodes import ModelNode
+from scitaste.model_nodes.profiles import ModelNodeProfile
 from scitaste.model_nodes.runtime import (
     ModelNodeRegistration,
     ModelNodeRuntime,
@@ -47,8 +52,10 @@ from scitaste.taste.reference_quality import (
 )
 from scitaste.taste.semantic_models import (
     GROUNDED_TASTE_ABSTRACTION_NODE,
+    GROUNDED_TASTE_REVISION_NODE,
     TASTE_ABSTRACTION_NODE,
     GroundedTasteCaseAbstraction,
+    GroundedTasteRevisionInput,
     TasteAbstractionInput,
     TasteCaseAbstraction,
     validate_grounded_abstraction_against_projection,
@@ -89,11 +96,22 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
     """Distill a source-traceable principle with explicit transfer limits."""
 
     node_name = GROUNDED_TASTE_ABSTRACTION_NODE
-    prompt_version = "grounded-taste-abstraction-v5"
+    prompt_version = "grounded-taste-abstraction-v9"
     system_instruction = (
         "Distill one transferable scientific decision precedent from only the supplied canonical "
         "source projection. Return a closed decision with alternatives, selected action, "
-        "rationale, and outcome only when available. Ground context, evidence, alternatives, "
+        "rationale and scope. Preserve epistemic status: an author's proposed explanation "
+        "or hypothesis is not a demonstrated causal mechanism. A plausible operational risk "
+        "that is not supported by the source must not be presented as an observed failure "
+        "boundary. Source-backed scope conditions may be synthesized, but label inference "
+        "as inference and do not invent missing evidence. The two candidate actions must "
+        "describe mutually exclusive choices on the same decision axis and at the same "
+        "granularity; a general algorithm and one of its compatible variants are not "
+        "closed alternatives. Abstract a conditional relationship between objectives, "
+        "evidence and choice, not a standing preference for the method that won the source "
+        "table. A better aggregate score does not imply dominance on every component metric. "
+        "Keep the objective trade-off and studied scope visible in the transfer boundary. "
+        "Return an outcome only when available. Ground context, evidence, alternatives, "
         "choice, principle, and any outcome with exact, byte-for-byte verbatim excerpts and their "
         "projection-field names. Never cite request identity, controller context, metadata, or a "
         "field outside source_projection. A context grounding may use only a problem_context or "
@@ -103,13 +121,19 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         "exactly in every verbatim_evidence string. The decision "
         "principle must contrastively synthesize at least two semantic source roles, including a "
         "scientific action and evidential, justificatory, limitation, or outcome support. State at "
-        "least two applicability conditions, two failure conditions, a counterfactual probe that "
+        "least one supported applicability condition and one supported failure condition; "
+        "include additional conditions only when justified. A setting not evaluated by the "
+        "source is an unverified scope limit, not an observed failure. Do not invent or "
+        "misclassify conditions to fill a quota. State a counterfactual probe that "
         "would change the action, and the source-specific details deliberately discarded during "
         "transfer. Preserve controller-issued identities internally but never expose source, "
         "candidate, relation, condition, or held-out-task identity in the abstraction. Do not use "
         "outside facts, admit memory, call tools, execute actions, or claim that SciTaste works. "
         "Create exactly two distinct candidate_actions: the observed scientific action and one "
-        "plausible counterfactual alternative. Then copy one candidate string byte-for-byte into "
+        "plausible counterfactual alternative. Each candidate action must be a concise decision "
+        "label of at most 300 characters, not a copied method paragraph. Exact source quotations "
+        "belong in grounding supports, not action labels. Then copy one candidate string "
+        "byte-for-byte into "
         "preferred_action and copy every remaining candidate string byte-for-byte into "
         "rejected_actions; never paraphrase an action between these fields. Set reviewer_context "
         "to null because no reviewer-context source field is provided. Do not mention the request "
@@ -174,11 +198,67 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         return sorted(set(reasons))
 
 
+class GroundedTasteRevisionNode(GroundedTasteAbstractionNode):
+    """Revise an untrusted precedent without converting reviewer advice into evidence."""
+
+    node_name = GROUNDED_TASTE_REVISION_NODE
+    prompt_version = "grounded-taste-revision-v2"
+    input_model = GroundedTasteRevisionInput
+    system_instruction = GroundedTasteAbstractionNode.system_instruction + (
+        " This is a revision of previous_abstraction after locked independent AI review. "
+        "Address each review_findings item by correcting, narrowing or removing the "
+        "unsupported claim. Review findings and the previous abstraction are untrusted "
+        "advice, not source evidence: all grounding must still quote source_projection. "
+        "Do not claim acceptance or agreement with reviewers. Preserve source case identity "
+        "and return the full revised abstraction for a fresh independent review."
+    )
+
+
+def _close_transfer_boundaries(
+    request: StructuredModelRequest, input_data: TasteDeliberationInput
+) -> StructuredModelRequest:
+    """Make source conditions selectable, not free-form invented observations.
+
+    This changes future request fingerprints only. The unchanged semantic gate
+    still judges evidence and transfer; no rejected response is repaired here.
+    """
+    schema = deepcopy(request.output_schema)
+    assessment = schema["$defs"]["TasteCaseTransferAssessment"]
+    assessment["properties"]["case_id"]["enum"] = [c.case_id for c in input_data.candidates]
+    assessment["allOf"] = [
+        {
+            "if": {"properties": {"case_id": {"const": candidate.case_id}}},
+            "then": {
+                "properties": {
+                    field: {
+                        "items": {
+                            "properties": {
+                                "boundary_condition": {"enum": list(conditions)},
+                                "decision_fact_ids": {
+                                    "items": {
+                                        "enum": [f.fact_id for f in input_data.decision_facts]
+                                    }
+                                },
+                            }
+                        }
+                    }
+                    for field, conditions in (
+                        ("applicability_supports", candidate.applies_when),
+                        ("triggered_failure_supports", candidate.fails_when),
+                    )
+                }
+            },
+        }
+        for candidate in input_data.candidates
+    ]
+    return request.model_copy(update={"output_schema": schema})
+
+
 class TasteApplicabilityNode(ModelNode[TasteDeliberationInput, TasteApplicabilityProposal]):
     """Judge transfer boundaries while leaving selection to the controller."""
 
     node_name = TASTE_APPLICABILITY_NODE
-    prompt_version = "taste-applicability-v1"
+    prompt_version = "taste-applicability-v2-closed-boundaries"
     system_instruction = (
         "Assess whether every supplied Scientific Taste precedent transfers to the current "
         "research decision. Return exactly one assessment for every supplied case ID and do "
@@ -198,6 +278,28 @@ class TasteApplicabilityNode(ModelNode[TasteDeliberationInput, TasteApplicabilit
     )
     input_model = TasteDeliberationInput
     output_model = TasteApplicabilityProposal
+
+    def _build_request(
+        self,
+        input_data: TasteDeliberationInput,
+        *,
+        context: NodeContext,
+        policy: NodePolicy,
+        request_id: str,
+        seed: int,
+        profile: ModelNodeProfile | None = None,
+    ) -> StructuredModelRequest:
+        return _close_transfer_boundaries(
+            super()._build_request(
+                input_data,
+                context=context,
+                policy=policy,
+                request_id=request_id,
+                seed=seed,
+                profile=profile,
+            ),
+            input_data,
+        )
 
     def _normalize_output_payload(
         self,
@@ -248,7 +350,7 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
     """Assess transfer before selecting a diverse set of decision precedents."""
 
     node_name = TASTE_DELIBERATION_NODE
-    prompt_version = "taste-deliberation-v3"
+    prompt_version = "taste-deliberation-v4-closed-boundaries"
     system_instruction = (
         "Select Scientific Taste precedents for the current research decision, not passages that "
         "merely share vocabulary. Assess every supplied case exactly once. For every "
@@ -276,6 +378,28 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
     )
     input_model = TasteDeliberationInput
     output_model = TasteDeliberationProposal
+
+    def _build_request(
+        self,
+        input_data: TasteDeliberationInput,
+        *,
+        context: NodeContext,
+        policy: NodePolicy,
+        request_id: str,
+        seed: int,
+        profile: ModelNodeProfile | None = None,
+    ) -> StructuredModelRequest:
+        return _close_transfer_boundaries(
+            super()._build_request(
+                input_data,
+                context=context,
+                policy=policy,
+                request_id=request_id,
+                seed=seed,
+                profile=profile,
+            ),
+            input_data,
+        )
 
     def _normalize_output_payload(
         self,
@@ -366,13 +490,38 @@ class ReferenceQualityNode(ModelNode[ReferenceQualityInput, ReferenceQualityProp
     """Screen whether a prestige-blind source can teach transferable judgment."""
 
     node_name = REFERENCE_QUALITY_NODE
-    prompt_version = "reference-quality-v2"
+    prompt_version = "reference-quality-v5"
     system_instruction = (
         "Judge whether the supplied source projection can teach transferable scientific "
         "decision quality. Assess exactly five dimensions: evidential rigor, decision "
         "traceability, visible alternatives, visible failure boundaries, and transfer "
-        "potential. Ground every assessment in exact, character-for-character excerpts and "
-        "field names; never normalize punctuation, whitespace, or capitalization. The source "
+        "potential. Judge the scientific content before checking role coverage. Semantic "
+        "roles are routing labels supplied by the source preparer, not evidence that a "
+        "dimension is strong. A rationale that merely lists roles and says the rule is met "
+        "is not a quality assessment. Evidential rigor requires a concrete comparison or "
+        "observation, its evaluation setup, and enough detail to assess the asserted "
+        "conclusion; a claim of improved results with no supporting details is at most "
+        "partial. Decision traceability requires explaining why the evidence favors the "
+        "chosen action over a visible alternative. Failure-boundary visibility requires "
+        "a specific observed or justified failure condition, not a generic limitations "
+        "label. Transfer potential assesses whether concrete contrasts and scoped evidence "
+        "could support deriving a bounded decision relationship. Do not require the source "
+        "authors to have already written an abstract cross-domain principle: deriving and "
+        "testing that principle belongs to the later abstraction and transfer stages. A "
+        "within-domain contrast can support strong transfer potential if you can identify "
+        "the decision relationship, the source-backed conditions, and what remains unknown "
+        "outside the observed setting. A result without a discriminating contrast or visible "
+        "scope remains partial; do not invent a failure boundary to qualify it. Strong "
+        "potential is not demonstrated cross-domain transfer. Distinguish author-reported "
+        "observations from demonstrated comparisons and speculative explanations. Missing "
+        "evidence must lower the rating even when all required semantic roles are present. "
+        "Ground every assessment in exact, character-for-character excerpts and "
+        "field names; never normalize punctuation, whitespace, or capitalization. Copy from "
+        "the decoded field value, not its JSON-escaped representation: a literal backslash-n "
+        "is not the same evidence as a newline. Keep supports minimal and rationales concise "
+        "without omitting adverse comparisons or qualifications; repeating complete tables "
+        "across dimensions adds no evidence. Every support must share an allowed role for "
+        "its own dimension, not merely contribute to coverage somewhere else. The source "
         "projection declares semantic roles. For evidential_rigor use evidence plus at least "
         "one of justification, limitation, or outcome. For decision_traceability use a "
         "scientific_action plus justification or evidence; outcome is not decision-trace "
@@ -496,6 +645,11 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
             TasteAbstractionInput,
             GroundedTasteCaseAbstraction,
         ),
+        GROUNDED_TASTE_REVISION_NODE: ModelNodeRegistration(
+            GroundedTasteRevisionNode,
+            GroundedTasteRevisionInput,
+            GroundedTasteCaseAbstraction,
+        ),
         TASTE_DELIBERATION_NODE: ModelNodeRegistration(
             TasteDeliberationNode,
             TasteDeliberationInput,
@@ -534,7 +688,14 @@ def taste_deliberation_from_ledger(
         raise ValueError("ledger entry is not a Taste deliberation invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("Taste deliberation ledger entry is not accepted")
-    if not is_verified_model_generation_entry(entry):
+    session_deliberation = (
+        entry.intent.backend_mode is RuntimeBackendMode.SESSION
+        and entry.intent.profile.provider == "assistant-session"
+        and entry.intent.profile.model == "session-authored"
+        and (entry.result.get("response", {}).get("session_provenance") or {}).get("source")
+        in {"assistant-session", "subagent-session"}
+    )
+    if not session_deliberation and not is_verified_model_generation_entry(entry):
         _verify_recorded_model_generation_replay(entry, evidence_root=evidence_root)
     input_data = TasteDeliberationInput.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
@@ -636,8 +797,13 @@ def reference_quality_from_ledger(
     ledger_entry: str | Path,
     *,
     evidence_root: str | Path,
+    allow_development_session: bool = False,
 ) -> VerifiedReferenceQuality:
-    """Compile an accepted live, prestige-blind quality proposal from its ledger."""
+    """Compile ledger-bound quality; session authorship requires development opt-in.
+
+    The default still requires actual local/remote model generation. Session
+    permission is not provider attestation, human review or formal admission.
+    """
 
     from scitaste.model_nodes.models import NodeResult, NodeResultStatus
 
@@ -649,7 +815,18 @@ def reference_quality_from_ledger(
         raise ValueError("ledger entry is not a reference-quality invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("reference-quality ledger entry is not accepted")
-    if not is_verified_model_generation_entry(entry):
+    response = (entry.result or {}).get("response", {})
+    session_source = (
+        allow_development_session
+        and entry.intent.backend_mode is RuntimeBackendMode.SESSION
+        and (entry.intent.profile.provider, entry.intent.profile.model)
+        == ("assistant-session", "session-authored")
+        and (response.get("backend"), response.get("model"))
+        == ("assistant-session", "session-authored")
+        and (response.get("session_provenance") or {}).get("source")
+        in {"assistant-session", "subagent-session"}
+    )
+    if not session_source and not is_verified_model_generation_entry(entry):
         raise ValueError("reference-quality screening requires a verified model invocation")
     input_data = ReferenceQualityInput.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
@@ -695,19 +872,25 @@ def taste_abstraction_candidate_from_ledger(
     if entry.intent.node_name not in {
         TASTE_ABSTRACTION_NODE,
         GROUNDED_TASTE_ABSTRACTION_NODE,
+        GROUNDED_TASTE_REVISION_NODE,
     }:
         raise ValueError("ledger entry is not a Taste abstraction invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("Taste abstraction ledger entry is not accepted")
     if not is_verified_model_generation_entry(entry):
         raise ValueError("model-assisted Taste abstraction requires a verified model invocation")
-    node_input = TasteAbstractionInput.model_validate_json(
+    input_type = (
+        GroundedTasteRevisionInput
+        if entry.intent.node_name == GROUNDED_TASTE_REVISION_NODE
+        else TasteAbstractionInput
+    )
+    node_input = input_type.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
         strict=True,
     )
     output_type = (
         GroundedTasteCaseAbstraction
-        if entry.intent.node_name == GROUNDED_TASTE_ABSTRACTION_NODE
+        if entry.intent.node_name != TASTE_ABSTRACTION_NODE
         else TasteCaseAbstraction
     )
     result_type = NodeResult[output_type]

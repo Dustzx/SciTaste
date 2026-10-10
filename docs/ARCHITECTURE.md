@@ -1,5 +1,1171 @@
 # Architecture
 
+The `workspace/` product entry integrates Idea discovery, literature/benchmark
+evidence, local project report projections, branch comparison, shared experience
+and CCF A/B submission planning with the native `src/scitaste` runtime. The public
+layout resolves that runtime from its repository parent; the earlier local nested
+layout remains compatible. `GET /api/venues` serves a versioned, ETag-bound local
+catalogue. A manual source sync updates conference metadata without model calls;
+journal catalogue provenance/version remains separate. Web refresh never starts
+research. Project outputs, credentials and original API responses stay local.
+Internal origin and project identifiers are retained for existing deep links.
+
+Native v4 (`CompetitiveHarnessProfile`) is an opt-in successor to the source-bound
+handoff harness, not a mutation of frozen v1/v2/v3 contracts. The same model
+proposal request receives a bounded competitive-search procedure: declare a
+finite strong-control panel and primary selection rule, retain public predictions,
+use at most one hypothesis-led refinement, keep the complete public champion,
+then freeze before one confirmation. Known methods remain controls; public
+performance is not scientific novelty. Cache advice requires exact input,
+configuration and code identities and never grants permission to reuse hidden
+labels or another task's fitted parameters. The policy is procedural advice,
+not a verified fit cache or a runtime-certified count of refinement panels. Actual
+adoption, trials and score gains require the run's tool and frozen-source evidence.
+
+Forecast score collection remains strict over every declared target method.
+An explicitly selected cached-output layout can recover an already successful,
+hash-sealed inference whose top-level public/cache auxiliaries caused collection
+failure. It recognizes only exact declared public outputs, code-identical
+submission metadata and hash-named cache files. Existing four-field targets are
+copied byte-for-byte. An explicitly selected timing-layout recovery separates only
+two known timing diagnostics while proving identical dtype, shape and array bytes
+for every series ID, forecast, validity flag and total second. Original containers
+and both hashes remain retained. Unknown fields, methods or auxiliary names fail.
+No source execution, fitting or primary selection is repeated. Original failure,
+first manuscript and recovery remain separate. Reserved-series checks receive
+the same complete target projection after actual research termination, so later
+scores cannot influence the original author endpoint.
+
+Project-document publication revalidates complete models before writing: Pydantic
+`model_copy(update=...)` alone does not enforce bounded reference lists. Condensed
+working documents link the evidence ledger and result manifests rather than
+accumulating every low-level receipt; archival evidence remains intact.
+
+
+## Source-aligned complete research and manuscript evidence — 2026-10-09
+
+Actual framework outcome collection consumes ARC's `SESSION_CLOSED.json`, native
+stage records and first stage-17 draft, rather than expecting a synthetic Native
+report. MLR's original confirmation and missing paper remain separate from an
+actual retained-CLI-thread/unchanged-writer delivery continuation. Frozen source
+is read-only; inherited time and recovery requests remain charged. Deterministic
+paper rendering registers the genuine upstream manuscript without another writer
+or model call. Native review/revision delivers new paper versions while preserving
+unresolved scientific concerns, exact first-paper assessments and original errors.
+
+Future applicability requests enumerate each source case's original transfer
+conditions and current fact IDs. This bounds flexible judgments without weakening
+the semantic evidence gate. Historical malformed assessments and abstentions are
+not relabeled. Pending review display compatibility permits only exact old JSON
+whitespace compaction and exact sensor column packing of unchanged bound bytes;
+it cannot renew scientific execution authority or excuse changed paper evidence.
+
+The temporal sensor task uses a prospectively fixed train/public/confirmation
+split and complete multiclass endpoints. Native treatment conditions share a
+frozen harness; actual pinned external implementations retain their own stages.
+Session roles supply emitted model requests only. Original failures and charged
+continuations remain separate assignments; a recovered result never repairs the
+original treatment contrast. Probe references are admitted before action selection
+through the existing bounded proposal-correction boundary.
+
+First-manuscript claim inventories are extracted without outcome assets, then
+separate roles assess them against own-arm released evidence. Required conclusions
+retain a fixed denominator; bounded atomic inventories are not exhaustive error
+rates or expert gold. Sensor confirmations can be losslessly column-packed for
+review/revision, preserving every score, class vector and provenance value rather
+than dropping controls. Project submission plans own progress and readiness;
+execution, model judgments and compiled PDFs do not establish scientific benefit.
+
+## Adaptive operational procedures — 2026-10-08
+
+The Native controller can select a typed `Execute Program` in explicit v2/v3
+harnesses. Paired composition/interpretation judgments travel in the existing
+proposal, not a new judge call. At most one code or confirmation boundary precedes
+scientific interpretation; each registered child tool retains the ordinary Native
+guards, observations and cost. Failure or missing promised evidence returns control
+to the researcher. Typed judgments do not grant authority or calibrated confidence.
+
+`executor.artifact_handoff` implements v3 source-bound atomic dependency publication.
+A declared trusted observer alone can consume confirmation, under isolation and
+experiment accounting. Both failed originals and unchanged-source continuations
+remain distinct. New harness bindings are explicit in preparation; old v1 frozen
+profiles remain byte-compatible. This operational system revision is separate from
+Taste-policy attribution and does not establish recursive scientific improvement.
+
+## Scientific measurement contracts — 2026-10-08
+
+`benchmark.scientific_design` binds open research questions to competing
+explanations, discriminating controls, permitted conclusions, strong subject-domain
+references and exposure boundaries. Its read-only audit detects missing declared
+comparisons and mismatched evidence; it does not certify task difficulty or a
+scientific mechanism. Subject-domain controls are not AutoResearch competitors.
+
+`benchmark.scientific_claims` separates a fixed denominator of required scientific
+conclusions from passage-bound atomic assertions. Explicit evidence supports,
+contradicts or leaves an assertion unresolved; omitted requirements stay missing.
+Additional assertions cannot dilute the required denominator. Independently
+reproducing artifacts and judging novelty remain separate. Blind model packets
+withhold system bindings, other responses and author diagnostic labels, not all
+possible stylistic clues. Curated assertion inventories are not exhaustive audits.
+
+`benchmark.native_external_evaluation` executes the pinned MLR-Bench upstream
+`overall_review` function and original response extractor, transporting its model
+requests through session replies with inspected media and explicit relocation
+receipts. AST loading preserves selected definition bytes without importing the
+provider SDK. This component-level execution is not the complete MLRJudge pipeline,
+provider parity, an official leaderboard score or formal admission. Existing
+research trajectories and original manuscript bytes are never regenerated.
+
+## Inquiry and experience maintenance — 2026-10-07
+
+`project.paper_feedback` routes actual independent concerns into text, retained-data
+analysis, evidence acquisition or new experiments without granting execution or
+scientific closure. `project.review_research` binds its own completed source run and
+paper flow, exposes only declared public artifacts and compiles a separate Native
+postprocessing assignment. It cannot overwrite the original system comparison.
+
+`project.source_maintenance` supervises a prepared source through real qualification,
+abstraction and independent session reviews into a separately frozen successor.
+Existing source chains are reverified, unfinished phases are not blindly replayed,
+and library activation remains a separate authorized freeze. The current repository
+worker needs an explicit code root and external model/review suppliers; discovery,
+project-global scheduling and unattended activation remain missing.
+
+`taste.inquiry_transfer` distinguishes source-premise testing from method eligibility
+inside the existing Native proposal. The opt-in policy binds every original premise,
+exact committed evidence and a declared reasoning probe; unknown conditions may
+motivate inquiry but grant no execution authority. The generic loop requires explicit
+admission. Only this new version retrieves using the evolving question/gap.
+
+`taste.maintenance` consumes verified deliberations into a bounded, deduplicated
+run-local gap queue and exposes the current gap to the next proposal. No qualified
+pool, inapplicable source and unresolved premise are distinct from tool/model failure.
+Existing acquisition/quality/abstraction/review paths can produce a successor, whose
+new freeze does not mutate active assignments. Pending actions are not running work;
+unattended search and activation remain missing. Queue creation and source admission
+do not establish scientific gains.
+
+## Sealed whole-research evidence synthesis — 2026-10-04
+
+`benchmark.evidence_synthesis` reads only explicit public campaign, assignment,
+sealed-result and manuscript-seal bindings. A task is counted once; every assigned
+arm stays in its denominator, including missing papers and failed confirmation.
+Manuscript hashes must match their original assessments. Native measurements,
+uncalibrated AI claim judgments, writing grades and unknown resource usage remain
+different fields; the reader never selects a favorable method or fills missing
+measurements. Separately indexed input recoveries retain original failures and
+cannot become extra tasks or upgrade development to formal evidence. This is a
+publication buffer, not another experiment, admission gate, or method ranking.
+
+The official MLR-Bench topic provisioner additionally permits a prospectively
+declared three-real-system assignment, binding optional reviewed Native experience
+before execution. A short topic mapping and bounded metadata transport are
+configuration, not replacements for upstream stages. Session responses remain
+model-role observations with unknown provider identity/usage, not supplier receipts.
+
+Official topic briefs need no authored dataset export, while SciTasteBench still
+requires its frozen public assets. Collection records exact manuscript timepoints;
+an explicit first-paper endpoint reads the original report-import binding or
+upstream first draft, not a later revision. Default terminal views may show a
+recovered delivery but retain its original failure binding. The Native observer
+treats exit 75 as a model handoff, waits for that retained request's reply, and
+continues the same coordinator without regenerating research or report evidence.
+The original time/response ceilings still govern all waiting and continuation.
+
+`benchmark.claim_calibration` supplies actual structured model requests containing
+only bounded scientific evidence and opaque statement identities. Author-defined
+expected labels stay outside those requests. A frozen source/specification contract
+binds counterbalanced wording passes, complete per-statement judgments, confusion
+counts and paired status flips. Repeated wordings are not independent research
+tasks; passing numerical, inferential and omission checks does not validate a
+writing/novelty judge or admit a formal benchmark population.
+
+## Public execution contracts and paper evidence — 2026-10-04
+
+Future reviewer-shift campaigns explicitly mount the same public `PROTOCOL.json`
+as discovery. The existing five-file cohorts do not acquire this metadata silently;
+the transfer manifest is unchanged, avoiding duplicate export basenames. The service
+accepts only the declared public protocol bound to the campaign's researcher assets,
+never arbitrary private metadata.
+
+`writing.confirmation_evidence` verifies the Native run, campaign, own-arm service
+receipt, pre-scoring execution, frozen source and predictions before supplying
+public receipts to a new paper cycle. Review receives explicitly selected bounded
+research artifacts in its immutable projection; revision receives the same bound
+evidence. Neither loads private labels, other arms or credentials. A score-only
+`source_execution_verified=false` flag is not a contradiction of a successful
+service execution. Formal admission, scientific validity and venue readiness remain
+separate and are not promoted. Existing cycle contracts keep their original exact
+evidence set, including during pending-session resume.
+
+The two original missing-protocol failures permit one separately registered
+confirmation-only recovery. It binds the original failure, release and scientific
+source; adds only identical already-public metadata; and uses its own explicit
+offline CPU ceiling. No researcher source repair, new hypothesis, source refreeze,
+model call or replacement of the original failed assignment occurs. Its elapsed
+time and results are engineering-recovery evidence, not original-lifecycle success
+or a clean formal ranking. Manuscript export similarly uses explicit analysis-stage
+figure roots when a final native stage omits copied assets; original text stays the
+grading authority and every copied figure is hashed.
+
+Source-quality prompt v5 clarifies exact decoded-substring evidence, compatible
+roles for every support and concise nonredundant presentation. It does not weaken
+the closed source-only input or scientific rules. The new selection-methodology
+source preserves its exact July 2020 preprint version, rather than importing final
+conference-version claims; its initial size/quote-routing rejection and any one
+format-only correction remain separately retained. Qualification cannot by itself
+establish task applicability, library admission or scientific effectiveness.
+`SessionReply.from_proposal` serializes typed new proposals without computed receipt
+fields; it does not rewrite a retained response, strip declared scientific fields,
+or bypass schema/grounding checks. Explicit transport corrections retain the old
+failure and bind the exact original proposal without generating a new judgment.
+
+## Natural reviewer-shift research plane — 2026-10-03
+
+The official source acquisition and deterministic task authoring are separate
+from researcher execution. Only official supervised partitions are eligible;
+reviewer-hash selection precedes outcomes and all held-out labels stay outside
+framework mounts. Frozen procedures receive train/development/query texts, not
+the author pack or confirmation labels. All declared methods must emit exact-ID
+normalized five-class probabilities; overall and user-percentile accuracies are
+distinct endpoints. Research-only source permissions remain attached to the pack.
+The project lifecycle forwards explicitly selected proposal/decision Taste context
+to Native, retaining legacy defaults. Prospective Native OFF preparation checks
+that no parent arm has started and shares its task, total ceilings, skills and
+harness; the lack of verified session identity/randomness forbids a causal efficacy
+claim. Scientific admission and actual effects are independent of adapter success.
+Concurrent project updates may invalidate a read-only review's revision snapshot.
+The paper coordinator can reuse that bounded session advice only after the existing
+recovery verifies every bound manuscript/packet artifact and semantic obligation.
+Original rejection and recovery provenance remain separate; changed scientific
+inputs, semantic rejection and execution-authority conflicts still stop the flow.
+
+## Current Native execution composition — 2026-10-03
+
+New Native plans bind a first-party procedural-skill catalog and verification
+policy to the execution harness. The existing proposal request loads at most two
+relevant procedures and may carry cost-sensitive route advice; Scientific Taste
+still owns action selection. The handler validates the selected action, arguments,
+path scope and launcher-owned authority before tool execution. Protected inputs
+remain read-only in isolated code execution. Legacy frozen plans are unchanged.
+This is core execution infrastructure, not a separate research controller or a
+scientific gain claim. Generation as Content is its parallel typed intervention
+plane; policy-level RSI holds the harness/skills fixed for attribution. Detailed
+contracts and limitations live in `TOOL_INTELLIGENCE.md` instead of another long ADR.
+
+Unknown model-supplied optional skill hints are retained as rejected annotations;
+they do not invalidate an otherwise authorized action or create a new skill.
+Historical Taste-request replay revalidates nested computed fingerprints without
+rewriting the packet. Original interruptions and stale-revision rejections remain
+separate from continuation evidence; neither recovery mechanism weakens execution
+permissions, scientific source freezes or the original task clock.
+
+Native proposal formatting recovery checks real tool arguments before execution
+and permits only the existing one budgeted model correction. Reporting descendants
+may inherit an explicit confirmation only through unchanged task/Taste/clock lineage
+and byte-identical frozen submission; no second target inference is authorized.
+Paper review/revision share task-specific bounded scientific views: population
+group-column packing preserves every value/null, while any omitted condition or
+trajectory display remains source-hashed and unavailable for further inference.
+An input-construction failure before a model request can resume once under its
+original paper/review identity; failed records and science-quality judgments remain.
+
+Future known pre-tool recovery retains the exact proposal/selection state and
+candidate binding in `executor.native_prepared_turn`; actual tool deadlines remain
+independent. `executor.native_terminal_delivery` admits an explicitly observed
+terminal report-only disposition, never research replay. Original failed results,
+unconsumed requests and scientific gaps remain intact. This is not arbitrary
+mid-tool crash recovery or permission to regenerate completed evidence.
+
+The complete-task data plane additionally supports weight-space research subjects:
+official CIFAR observations and independently retained trained-CNN checkpoints,
+development-only labelled queries, bounded labelled calibration, then label-redacted
+confirmation after source freeze. All declared methods and contexts score jointly;
+contexts share query images and training blocks, rather than model pairs, define
+replication. Remote subject generation is separate authoring cost, not training the
+SciTaste controller or a research-system result. The same prospective campaign may
+assign genuine pinned MLR-Agent alongside Native and AutoResearchClaw. Its original
+stages and real coding CLI own scientific actions; the common service only executes
+frozen submissions and supplies feedback. Missing native post-paper review stays
+missing. A source projection's existing scientific context must have a grounding
+role before qualification; that schema gate cannot create scientific evidence.
+
+If an ARC launcher dies before its native close receipt, an explicit observer first
+checks process absence and the clean source pin. Its closure identifies the launcher
+exit evidence, unknown native exit/cause, and conservatively charged elapsed time;
+it is never called a native successful receipt. A separately bound recovery preserves
+the completed stage prefix and deducts all original consumption and coordination gaps.
+Completed manuscripts can be assessed before other arms finish. Such a partial seal
+retains every assigned row and its pending/failed status, grades only terminal papers,
+and remains incomplete. Later identical assessment inputs can reuse the accepted
+response with provenance; this is not a new scientific sample or a second review.
+
+The administrative Native deadline guard charges offline session-resume gaps to
+the original launch timestamp. It matches only the actual worker owning the bound
+output, signals only that worker and its descendants at the research cutoff, and
+preserves any existing native result. A forced stop has an observer-authored
+failure receipt, never a native scientific-completion receipt or a fresh paper
+budget. This does not change a consumed controller, source snapshot or task.
+
+New Native launches project byte-identical task/committed evidence duplicates as
+explicit references, without compressing unmatched scientific statements or changing
+hypotheses. A partial history excerpt cannot replace the complete observation.
+Session requests carry their schema separately and retain the exact pending proposal
+prompt across waits; changes to science, history, tools, source policy or generation
+settings invalidate reuse. Resume accounting includes inactive gaps since the original
+contract timestamp. These changes apply to future launches, not the closed weight-space
+controller. Verified administrative stops can admit report-only artifact recovery:
+the observer/contract hashes and worker absence are checked, all unanswered requests
+remain charged and explicitly unconsumed, and research execution is never reopened.
+The original failure and prior paper-delivery attempt remain immutable.
+An unrelated project-progress revision can reject a concurrent read-only paper
+review without invalidating its scientific input. Future paper cycles admit that
+unchanged advice only after rechecking the exact review packet, registered paper
+manifest, every paper artifact and proposal semantics. The runtime rejection remains
+retained; this does not waive revision checks on executable research nodes. Explicit
+paper-cycle recovery can reuse a completed bound report without copying or regenerating
+the research evidence again.
+
+Terminal external-framework manuscripts can be rendered and registered as portable
+Markdown/TeX/PDF artifacts without new model calls or scientific rewriting. Original
+manuscript bytes remain the assessment authority; export provenance binds every
+copied figure and the campaign. Registration-only recovery reuses an existing successful
+render and does not select it as the project's main paper.
+
+## Project submission planning boundary
+
+`project.submission_plan` adds generic delivery planning above individual research
+programs: internal target, responsible roles, deliverables, dependency DAG and
+content-bound completion evidence. It reuses `DeadlineWorkPlanDraft` graph validation;
+the project's authoritative venue calendar remains independent. Canonical state is
+the manifest's bounded `submission_plan`, updated under its revision lock. One
+Markdown view and one bounded archive container avoid per-update file accumulation.
+The CLI/read seam is `project submission-plan set/status`; absent plans stay explicitly
+unconfigured. Near the internal deadline, optional work is deferred; changed evidence
+invalidates completion and dependent readiness. None of these operations executes
+research, admits formal evidence, marks publication readiness or submits a paper.
+
+This is platform/project capability, not a paper novelty claim. The self-development
+plan instantiates Scientific Taste experiments and writing objectives separately;
+Tool Intelligence remains core execution infrastructure; Generation as Content
+is the parallel support/intervention plane. Neither is substituted for the paper's
+Scientific Taste contribution.
+Existing bounded project documents expose phase summaries to generation consumers;
+no second research controller or new UI branch is introduced here.
+
+Retained report import can explicitly separate a named appendix from scientific
+main text. The boundary must be unique outside fenced blocks; source partition
+hashes and the registered companion appendix are retained, and only existing
+figure paths are normalized. This does not summarize, rewrite or discard evidence.
+An explicit failed-delivery continuation can select a fresh paper identity while
+preserving the original failed bundle and inheriting its wall/reply ceiling.
+Research-source freezes and independent confirmation are unaffected. Independent
+paper assessment and target confirmation status remain distinct in progress views.
+
+## Complete-task data plane
+
+The opt-in `source-passages-v1` proposal context is a separate raw-literature
+control: the campaign binds original text and verbatim quote hashes, the runtime
+checks them before use, and the packet cannot authorize execution or assert local
+applicability. No conditional library/deliberation is enabled in that control.
+New microscopy studies can give raw/conditional arms identical complete source
+texts while retaining identical task data, harness and total ceilings. A shared
+12,000-byte ceiling does not claim equal information/tokens. Failure-inclusive
+collection retains all method/budget curves and secondary recovery separately,
+never selecting a confirming winner as the primary procedure after scoring.
+Concurrent prospective capture retries mixed Idea/project revision reads with a
+finite bound, rather than accepting a stale digest or weakening the Idea gate.
+
+Review and author revision now share a bounded scientific view for recognized
+microscopy confirmations. It deduplicates constant score metadata, retains all
+method/budget means and each field's PSNR/SSIM/frequency error, binds the complete
+original bytes, and declares omitted reference-error fields. It neither changes
+scores nor grants inferences from omitted values; unknown oversized artifacts
+fail closed. A revision that failed its input cap before producing any model
+request can recover once with the identical source/review/command identity.
+The failed attempt remains retained and no independent review is repeated.
+Explicit startup-recovered paper provenance must bind original failure,
+original/recovery assignments and the exact consumed source contract; sharing a
+campaign name alone is insufficient. Original completion remains failure-inclusive.
+
+Native research now supports separately frozen pre-proposal and post-proposal Taste
+context versions. Reviewed conditional lessons can shape questions and competing
+probes without exposing source outcome labels or claiming applicability; the existing
+post-proposal gate still binds transfer to current observations. Long implementation
+text may be projected with complete action hashes without altering the executable
+candidate. Task restrictions remain lossless and missing context cannot become evidence.
+Legacy assignments retain their default behavior. New source snapshots precede the
+first action; retrospective exact captures are labeled after-terminal. See
+`research/EVIDENCE_GUIDED_RESEARCH_REASONING.md` for flags and scientific boundaries.
+
+Session envelopes may echo a matching request ID; a different ID or fingerprint still
+fails closed. ARC transport accepts only the optional `1.0` schema marker and captures
+the actual consumed UTF-8 reply before validation. Recovery retains original failures,
+charges repair gaps against the original ceiling, and resumes native stages rather
+than synthesizing decisions. Report-only recovery may use an explicitly fresh owned
+delivery directory, never overwrite failed artifacts. Progress always observes current
+closure; independent grades attach only to the exact sealed paper bytes. A later
+revision retains an earlier grade as historical rather than inheriting it.
+
+`benchmark.microscopy_task_data` adds real source-bound computational restoration.
+Identity-only 16-input/34-reference frame splits remove direct reference overlap;
+whole-FOV partitions preserve repeat/patch grouping. Source-freeze precedes target
+modality fitting/calibration/query release. The reusable staged exporter retains
+its graph defaults and checks explicit domain identity when used for microscopy.
+
+Microscopy inference isolates each target query budget in a separate offline
+process, with read-only frozen code and designated fitting/calibration artifacts.
+No other-budget query, raw archive or private reference is mounted. Predictions
+and input/source hashes are retained before one joint score. Per-FOV PSNR/SSIM,
+MSE, reference-noise diagnostics and fixed frequency proxies are separate; none
+certifies biological fidelity or causal dose. Original FMD pretrained weights may
+have seen this new split and are not allowed. Code execution/measurement validity,
+formal admission and whole-research framework assignment remain distinct claims.
+The first authoring inference exposed a relative output transport error. A separate
+recovery retains the original contract/output files and reuses complete prediction
+bytes, rather than repeating inference or altering scientific source. Its before-score
+hash capture is explicit about the original receipt's missing output hash entries.
+
+Future comparison generation identifies a revised submission contract: every local
+dependency, including upstream-generated experiment helpers, belongs in the declared
+source freeze. A stage sandbox dependency is not automatically available in the
+independent evaluator. For microscopy, the prediction directory's top-level NPZs
+must exactly match declared current-budget methods; auxiliary fit artifacts belong
+in a separate subdirectory. The current exact-set collector is unchanged. These
+instruction clarifications follow two retained pre-score development failures;
+they never mutate an existing campaign, frozen source or absent confirmation score.
+
+`benchmark.molecular_task_data` extends the data plane to force-risk research.
+Source-index-only sampling preserves actual molecular chronology; split identities
+are retained before force-array access. Public fitting/calibration budgets are 800/200
+configurations, with no additional labeled validation hidden outside the budget.
+Source freeze gates aspirin's fitting/calibration and redacted query assets. All
+declared prediction/control packets must cover the exact target frame identities.
+Private scoring keeps per-frame force MAE, selective error, rejected/tail error,
+label-blind tie handling and temporal diagnostics separate. Coordinates/atom order
+are preserved; original noisy forces/energies never enter public exports.
+
+Fixed nearest-exemplar references execute with read-only inputs, network disabled
+and no GPU/optimizer/model API. They are supervised memory-based inference, not
+research frameworks or validated force fields. Weak/adverse results remain evidence.
+Publication registers pack/reference artifacts and updates the existing bounded
+project resources phase, not idea/paper/current-run state. Formal eligibility,
+scientific validity and stronger-model experiments remain separate obligations.
+The common research provisioner now handles graph and molecular staged bundles,
+inlines the correct target prediction contract for both real systems, and retains
+domain metrics in outcome collection. Confirmation still uses read-only source and
+target views, with no evaluator code repair. Preparing an assignment never reports
+it as an executed scientific episode.
+
+The MLR-Agent adapter pins its clean upstream source and executes its original
+idea/literature/proposal/experiment/paper sequence. Its experiment agent is the
+installed real Codex CLI, not a researcher role-play. A loopback session bridge
+supports native chat and Responses SSE; model roles can request only tools offered
+by the CLI, which remains responsible for actual execution. Fabricated tool outputs
+are rejected. Provider identity, tokens and cost remain unknown; native model names
+are compatibility aliases, not verified backbone claims. Nullable usage is a legacy
+SDK compatibility measure, never measured zero usage.
+
+The launcher isolates credentials, other projects and GPU devices, records source,
+CLI and public-asset hashes, and preserves failures and recovery overhead. The graph
+assignment reuses the same staged confirmation service. This third-framework addition
+is post-hoc developmental evidence, not a matched formal ranking. Upstream has no
+review/revision stage; the adapter records absence rather than inventing one.
+Actual native completion reused a CLI-created manuscript at upstream writing;
+the external blind assessment is not a native writer or revision stage.
+
+`benchmark.graph_task_data` adds a staged graph-research contract. Discovery assets
+exclude target inputs; transfer release first snapshots the submitted program,
+hypotheses and fit/selection rules. A confirmation packet covers all predeclared
+methods and controls before a locally one-shot score is retained. Exact integer
+node coverage and normalized probabilities are required; binary ROC-AUC remains
+separate from multiclass accuracy. Exports and hashes do not prove that frozen code
+was executed or enforce network isolation. Formal eligibility remains false.
+
+The graph builder preserves official source bytes and masks but exposes only split
+0 permitted labels. Reference execution is separate from data freeze, with incremental
+predictions, convergence warnings and public-validation-only judge anchors. Numerical
+and scope anchors validate narrow evidence checking, not causal/new-method judgments.
+Benchmark authors' reference access is distinct from fresh researcher treatments.
+
+`prepare_graph_framework_comparison` binds public assets to both actual frameworks.
+Native shell calls use `executor.workspace_sandbox`; the external launcher isolates
+its entire pinned pipeline. `serve_graph_confirmation` freezes READY submissions,
+executes the snapshot offline with a redacted target mount and no private labels,
+then publishes the all-method confirmation packet. It never repairs submitted code.
+New service launches retain a pre-scoring inference receipt binding process exit,
+frozen release and output hashes; the collector verifies it before judge exposure.
+Old runs are not backfilled. New task briefs inline the exact public submission
+schema for both systems, avoiding dependence on truncated native tool observations.
+`open_research_results` collects these objective outcomes separately from framework
+completion, original paper-rubric ratings and four explicit task-claim judgments.
+Claim judgments remain uncalibrated AI assessments. Native report/review/revision
+is queued inside the declared lifecycle budget; final independent grading has its
+own disclosed assessment budget and does not feed back into research.
+Session manuscript revisions use a 32 KiB conservative byte-admission bound, not
+a claimed provider token count. `writing.recover_revision` can materialize unchanged
+retained advice after the exact legacy byte-budget rejection, only after original
+request/response, paper, review and evidence bindings plus semantic checks pass.
+The rejected receipt and scientific concerns remain; recovery grants no approval.
+Researcher literature access remains network-enabled and instruction-restricted.
+
+The ARC adapter supports an explicitly campaign-bound short `research_title` plus
+the byte-preserved brief through native `prompts.extra_prompts`. Legacy whole-brief
+topic runs remain unchanged and flagged as potentially confounded by long searches.
+
+`benchmark.full_task_data` separates task data from the formal treatment-bound
+`FullTaskSuite` contract. `scripts.build_full_task_data` freezes author-generated
+question/claim protocols and real-source partitions, then executes the published
+reference CLI. It retains original bytes, transformed-file hashes, source rights
+declarations, environment and executed command. Reference models do not count as
+research-system baselines. Raw sources stay evaluator-private because they include
+withheld labels. Public export copies an explicit hash-bound allowlist, never a
+whole task-authoring tree. Runtime mounts/network isolation remain executor duties.
+
+Objective scoring requires exact prediction row coverage and finite outputs, retaining
+task-native units and grouped denominators. Review evidence uses only public validation
+observations. Claim aggregation fixes required slots but does not certify supplied
+AI judgments as gold or verify arbitrary evidence references. The first data pack is
+candidate-unassigned; `FullTaskSuite` admission cannot be bypassed by claiming that
+data materialization also verifies a framework adapter or scientific validity.
+
+## Benchmark-owned open research tasks
+
+Native session continuation uses a new sibling workspace and an exclusive parent
+claim, retains the full committed history and workspace hashes, and subtracts inherited
+request/time consumption. Pending model responses or uncommitted tools prevent terminal
+continuation. Scientific-update prevalidation is non-mutating: a typed, model-correctable
+rejection gets one budgeted retry; corrupted source identity is never repaired this way.
+The authoritative loop still validates before execution. Assessment requests reload
+their computed fingerprint through explicit verification, and sealed assessment resume
+does not reseal or silently change submissions. Engineering recovery is separate from
+the original benchmark result.
+
+Internal review uses an explicit 16 KiB output admission bound in session mode;
+provider-mode output limits remain token-based. The legacy 4,096-byte mismatch can
+recover unchanged, schema/semantics-validated feedback as advisory-only: the original
+rejected runtime receipt is never rewritten as accepted. Failed paper coordinator
+attempts have separate bound recovery receipts and do not regenerate completed research
+or review. Identical independent assessment requests may reuse a verified response,
+with a source-hash reuse receipt instead of an extra model generation.
+
+`benchmark.open_research` binds original external briefs/rubrics to explicit budgets
+and real-framework assignments. Native `open-research-benchmark` workspaces preserve
+the public topic without a prewritten project study/hypothesis. Source bytes and
+resource allocations are verified before execution. ARC's launcher accepts the same
+bound brief and requires an explicit wall limit instead of a hidden 90-minute default.
+`benchmark.open_research_results` observes both arms, requires terminal submissions
+before assessment, and consumes source-rubric session grades without imputing missing
+scores. It does not turn a text-only adaptation into official multimodal MLRJudge.
+
+Evidence-guided research reasoning is carried by the existing design and Native tool
+loop, not a second scheduler. `evidence.research_reasoning` grounds model-proposed
+competitive hypotheses and conditional probes in quoted observations; controller
+selection remains authoritative and executors only perform selected actions. Frames
+persist through decision snapshots and canonical-state handoff, with bounded active
+context and explicit archival. See
+[reasoning integration](research/EVIDENCE_GUIDED_RESEARCH_REASONING.md) for semantics
+and limits; schema acceptance is not scientific validation or learned Taste benefit.
+
+## Real external framework, model-only session transport — 2026-09-30
+
+`backends.framework_session_http` retains exact upstream chat requests and accepts
+fingerprint-bound subagent completions over an authenticated loopback endpoint.
+It neither selects research actions nor executes tools. Persistent request identity
+distinguishes identical repeated calls, and receipts retain unknown usage as null.
+`scripts.run_autoresearchclaw_session` invokes the clean pinned native pipeline from
+stage 1 with no stage overrides, in an outer isolated CPU environment. Native
+experiment/paper/review stages remain upstream-owned. Formal task scorers and a
+matched SciTaste comparison are separate; native completion alone proves neither.
+
+Native continuation copies and hashes existing upstream artifacts, derives the
+next stage from the completed prefix, and deducts consumed request/wall budgets.
+It cannot resume an active run or change its topic/framework/experiment limit.
+Missing native literature dependencies use an isolated Python 3.12 overlay rather
+than downgrading the shared environment. `scripts.publish_native_framework_progress`
+projects observed stage records and terminal receipts into the bounded project
+interface, preserving other phases and never inferring an independent scientific
+score from an upstream `done` status.
+
+## Complete-task benchmark contracts — 2026-09-30
+
+`benchmark.full_task` is separate from the old fixed-choice diagnostic runner.
+It binds public problem material, private scorers, scientific source families,
+real framework provenance, research budgets, and lifecycle artifacts. Shared
+framework code is not scientific-task lineage. Objective score availability and
+paper/review/revision completion are independent; unknown usage remains null.
+Initial-request exports use a pre-outcome role allowlist and reject unqualified
+releases or public/private overlap. Local hash/receipt checks establish integrity,
+not the truth of an adjudication or scientific benchmark quality. The companion
+`scripts.scitastebench_full_task` audits or exports manifests; it neither launches
+research nor copies private data. Actual complete-task adapter qualification and
+fresh task admission remain separate work, not inferred from passing this contract.
+
+## Single-candidate research package collection — 2026-09-30
+
+The common collector supports iterative reservation-backed attempts and legacy
+single-candidate ML runs. Single-candidate sources are verified against the bundle
+manifest hash retained in the execution binding before entering report synthesis.
+The two paths preserve their original result files and summaries; a one-shot run
+is not relabelled as iterative research. Shared-task and tool-interface equality
+remain required for comparison. Native meta execution now forwards GPU selection.
+Session proposal packets expose the exact single/batch parser schema. Package run
+amendments append recovery rows without replacing original failed runs. Optional
+score-detail collection reads the original remote score file and verifies its hash
+against the measured receipt; collection recomputes the parsed metric correspondence.
+The trusted meta ingestion entrypoint disables CuDNN following the observed remote
+convolution failure; the backend is explicit in new execution receipts. Candidate
+code and official scorer remain unchanged. Fixed-candidate runtime recovery binds
+the original failed execution and public amendment, spends only remaining execution
+time and is not represented as a new agent decision. Original runner bundles survive.
+CPU limits now distinguish aggregate thread time from elapsed time: four-slot
+execution has a CPU ceiling of four times its wall cap, while the existing wall
+timeout still terminates the process group. Per-command resource receipts retain
+child user/system CPU seconds, wrapper return code and wall-timeout attribution.
+These prospective receipts do not retroactively prove the cause of older exit 137.
+
+## Verified package delivery to project progress — 2026-09-30
+
+`project.package_progress` projects completed ML research packages into the existing
+bounded project-document interface. It verifies delivery, revision and source hashes,
+preserves Idea notes, and keeps scored configurations, internal model receipts,
+execution failures and unknown costs separate. Recommendations remain text, never
+execution authority or scientific approval. No experiment or model call occurs.
+Publication uses a compare-and-swap check under the document lock to reject concurrent
+edits, and unchanged content/source hashes retain the previous publication timestamp
+for idempotency. The standalone publisher supports recovery after interrupted handoff;
+the delivery CLI exposes explicit opt-in synchronization for future reports.
+
+## Full ML research comparison through session transport — 2026-09-29
+
+The Native iterative research runner and pinned MLAgentBench ResearchAgent runner
+now accept explicit session execution, shared task files and selected remote GPU
+indices. Session mode never loads API configuration or binds API credentials;
+SSH credentials remain confined to the trusted experiment launcher. Provider-mode
+behavior is retained, not silently used as fallback. Optional provider continuation
+and implementation-review paths are rejected in session mode until explicitly adapted.
+
+Both runners reuse IterativeResearchToolEnvironment: candidate source is frozen per
+attempt, completed evidence permits revision, unchanged candidates are not rerun,
+and missing resource accounting blocks new experiments. SerializedExperiment uses
+a shared local launch lock and persistent ownership for ambiguous remote outcomes;
+it coordinates these launchers, not other users' remote jobs. The full-task collector
+binds all attempt outcomes, scientific metric components, contracts and tool traces,
+checks the matched task/tool interface, and feeds the common synthesis/delivery chain.
+Report generation is a disclosed common adapter rather than upstream-native writing.
+Collection also accepts an explicitly declared single-system scientific follow-up;
+it still binds source, task and observations, but does not manufacture a comparator.
+Public protocol and previous review context can be hash-bound inputs, with disclosed
+prior-result access. Per-attempt replica receipt counts and errors remain distinct
+from controller runs and complete scientific scores.
+The synthesis packet also freezes candidate sources against reservation hashes and
+includes collected process, score and replica receipts. An operator runtime advisory,
+when present, is bound with its diagnostic evidence; it cannot silently become an
+agent-discovered scientific improvement. Failed remote executions expose only bounded
+candidate-worker traceback tails, never arbitrary host files or hidden scorer inputs.
+
+## Session research, review and delivery — 2026-09-29
+
+The session exchange accepts fingerprint-bound replies with actual subagent provenance.
+Researchers see their own proposal/preference/Taste packets; a separate judge receives
+only frozen scoring requests. Report authors receive hashed results, contracts and
+tool traces; fresh-context reviewers see that report and its supplied evidence, while
+revision consumes the critique without treating it as automatic scientific authority.
+
+Package aggregation keeps provider usage and session counts distinct; session tokens
+and cost remain unknown. The synthesis CLI requires exactly one execution mode and
+supports all three roles without an API backend. The delivery CLI verifies the evidence
+hash and exact revision receipt before reusing the Markdown/TeX/PDF renderer and
+registering a development artifact. Neither generation nor compilation selects the
+main paper, certifies submission readiness, or changes experiment scores.
+
+Native and external session runners emit SESSION_CLOSED.json in the researcher exchange
+after controller termination and before judging. A responder should wait for this
+explicit close, not stop on authoring a final-answer proposal: action preference may
+still be pending. The marker contains no hidden judge inputs or outputs.
+
+An unqueried session may receive one separately registered continuation after a format
+failure. The predecessor must have zero tools, queries and code calls, no submission,
+the same task and Taste binding, and unspent request budget. An exclusive successor
+reservation prevents repeated continuations. Prior failure remains in primary results.
+
+## Shared numerical tools and evidence synthesis — 2026-09-29
+
+ScientificPythonCodeRunner extends the network-disabled bubblewrap runner with a
+declared read-only Python runtime and retained package versions. All compared arms
+receive the same code/query limits; Run Code is analysis, not an environment query.
+The runtime mount excludes project evidence and credentials; resource/time/output
+bounds remain enforced. Common terminal delivery is frozen before execution and
+preserves the controller's original terminal record independently of final scoring.
+
+Source expansion binds original NIST evidence, source-quality invocation, grounded
+abstraction and independent provider reviews before library compilation. The new
+package synthesis script consumes an immutable result hash through stateless report,
+independent review and revision calls, producing buffer artifacts only. It cannot
+promote results into a paper, edit scores, rerun tasks or establish scientific success.
+
+## Research concurrency and provider isolation — 2026-09-29
+
+Fresh Taste model nodes can opt into run-scoped revision comparison. ProjectRuntime
+persists authority/own-run revision stamps, so unrelated run registration or completion
+does not invalidate an otherwise unchanged immutable decision input. Project intent,
+selected aliases, own-run edits and edit-then-restore all remain invalidating changes.
+Default model nodes and resumed invocations retain the strict global revision gate.
+The scope hash is retained with the pending invocation; this does not relax source
+binding or authorize mutable external inputs.
+
+Shared Newton runners now support explicitly enabled DeepSeek/GLM transport with
+stateless requests, shared per-arm call/liability limits and separate final judging.
+Provider-reported tokens are retained; liability estimates are not invoices. Empty
+Native recovery is limited to runs with no selected/executed tool and inherits the
+original provider ledger. Historical result directories and charged responses stay
+immutable. Reviewed-library compilation anchors provenance time to the accepted set,
+making new compilation deterministic; legacy frozen timestamps remain unchanged.
+
+### ADR-305: Session quality has explicit development scope
+
+An accepted session node is not automatically provider-verified source quality.
+`reference_quality_from_ledger` defaults to the existing local/remote requirement;
+only explicit development callers may admit source-bound session responses after
+ledger verification and provenance checks. Reviewed development compilation records
+the quality backend/model and session authorship. This never bypasses the independent
+abstraction review chain or creates formal/human validity. The new session runner
+binds quality and abstraction to the same retained source projection and evidence ID.
+
+### ADR-304: A common living-document contract precedes generated presentation
+
+ProjectRuntime scaffolds a bounded `docs/project` interface. Published typed summaries
+generate two working Markdown documents per phase and preserve past packets in one
+hash-addressed archive. Generation as Content receives only the current packet with
+snapshot-bound evidence. Executable evidence programs retain precedence; summaries
+are non-executable context, not approvals. Existing legacy docs are not moved or
+deleted. See `PROJECT_DOCUMENT_INTERFACE.md` for limits and maintenance policy.
+
+### ADR-303: Development treatment must derive from its reviewed source chain
+
+The shared Newton Native entry point takes an accepted review set, source-quality
+result and deliberation profile together, rather than trusting a caller-supplied
+JSONL flag. It recompiles through `reviewed_development_cases` before reserving an
+experiment, freezes the compiled library/profile, and records source-result hashes.
+This certifies the existing development provenance checks, not domain relevance or
+formal admission. Relevance and transfer boundaries still pass through the existing
+grounded deliberation controller, which can fall back to intrinsic selection. No
+source means no treatment: incomplete inputs are rejected rather than silently
+running a no-Taste arm under a treatment name. Additional deliberation requests are
+disclosed; matching experiment-query limits does not imply equal model cost.
+
+### ADR-302: Shared research tools do not imply a stock baseline or matched tokens
+
+The pinned upstream MLAgentBench ResearchAgent keeps its own research policy while
+the session bridge replaces model transport and the Newton environment supplies
+experiment/final-answer tools. It is explicitly an adapted external system, not a
+stock benchmark implementation. Native uses the same public tool contract, with
+batched query costs charged from actual environment counters. Raw observations are
+not execution-result scores. A controller stop records abstention rather than a
+scorable invented hypothesis. Final submissions freeze before a separate judge
+exchange; judges never supply observations back to the researcher. Session model
+identity is declared, not independently attested; actual token usage/cost are unknown.
+Shared query/turn caps therefore do not establish matched token/compute budgets.
+Consumed development tasks and missing applicable Taste cannot support formal
+held-out, Full SciTaste, or whole idea-to-paper claims.
+
+### ADR-301: Operational progress is source-bound observation, not control authority
+
+Native cycle boundaries publish a project-owned immutable observation and atomically
+advance a per-cycle pointer. Readers validate event hashes, project identity and
+current source/contract bytes. Drift/corruption stays visible instead of falling back
+to a misleading older completion. Observations explicitly disclaim process liveness,
+scientific completion and execution permission. Existing run/paper selections and
+scientific phase counts are unchanged. New next-planning requests freeze one observed
+boundary as evidence; session resumes retain its bytes and legacy pending requests
+retain their original inputs. This is operational state propagation, not live remote
+monitoring or a new scientific result.
+
+### ADR-300: Project creation owns metadata, not research authority
+
+The gallery may create projects through a closed, authenticated metadata request.
+ProjectRuntime retains path validation, atomic scaffolding and no-overwrite behavior.
+No run, resource binding, model budget or execution authorization is accepted by
+this endpoint. Existing cookie-origin checks also govern creation. Gallery metadata
+is rendered as text and artifact counts are not quality indicators. The drawer owns
+global navigation; the research canvas retains project-specific evidence views.
+
+Recent engineering milestones and scientific-plan progress are distinct projections.
+Source-bound run completion may support a new declared milestone, but must never
+automatically tick scientific phases or replace a current experiment/paper selection.
+
+### ADR-299: Scientific-plan desktop separates orientation from evidence detail
+
+The default project home presents a source-bound timeline and one selected phase.
+Workspace icons expose existing verified components on demand, retaining their
+actions without duplicating them on the home. Navigation moves existing DOM nodes
+and does not mutate project state. The source dossier remains authoritative; its
+progress must not be confused with engineering completeness or live device status.
+The shell remains deterministic while questions use the existing generated surface
+protocol. Plan editing is explicit and cancellable; draft generation never grants
+execution. Overlarge blocker/paper intents expose their bounded target scope rather
+than relaxing the 32-binding contract or making the whole composer unavailable.
+
+### ADR-298: Published interface intent enters Native at planning boundaries
+
+Native research planning loads the latest verified Generation as Content publication
+as a neutral ExperimentProgramControl, binds it in the input and retained contract,
+and requires an exact publication-bound response. Addressed, deferred and conflict
+are planning dispositions, not execution results. Deferred/conflicting responses may
+not select execution or acquisition. No directive expands budgets or tool authority.
+
+Before a fresh project-cycle or direct Native execution, the bound design must have
+an accepted response to the current publication; superseded or unaware plans require
+replanning. Pending runs and explicit continuations retain their existing boundaries;
+this is not mid-tool cancellation. Delivery of completed work is not invalidated.
+
+The existing evidence-program interface projects verified registered planning receipts
+separately from its deterministic program-overlay state. It displays waiting,
+addressed, deferred, conflict or rejected with the planner's explanation. The receipt
+binds input/result bytes and the original publication, and never claims execution.
+This connects the existing dossier-based intervention surface, not yet a generic
+live task monitor or arbitrary pause/resume interface for every Native run.
+
+### ADR-297: Evidence-synthesis delivery and explicit figure-format recovery
+
+A retained Native report may be grounded in successful file reads without executing
+code. Its receipt distinguishes retained-source observations from execution
+observations; neither grants scientific approval or a new experiment. Generating a
+new experiment report still requires code/execution records. Report-only workspace
+preparation may reuse its exact child reservation only after the failed directory
+has been explicitly preserved and the destination is empty; execution continuations
+cannot use this exception. Inherited decision history is kept, while restoration
+compares the current trajectory only with its current-segment decisions.
+
+Malformed terminal FigureContracts remain immutable. An explicitly supplied
+session-authored repair binds the terminal result and original contract hashes,
+retains authorship/reason, validates the corrected contract and cannot change target
+claims. Figure delivery and subsequent imports bind that repair's hash. This is
+assisted format recovery, not an uninterrupted generation claim or visual approval.
+
+Native terminal accounting includes final model liabilities and active wall duration
+in the inherited cumulative state. Session tokens/cost remain unknown; conservative
+API liabilities are not reported as invoices.
+
+### ADR-296: Optional explanatory figures are source-bound delivery derivatives
+
+Native may emit a FigureContract targeting existing canonical claims. Terminal state
+and contract hashes are sealed in the execution result; a separate delivery directory
+uses existing semantic layout, deterministic visual critique/object patching and
+editable exports. CairoSVG consumes only our generated SVG to produce a manuscript
+PDF asset. The paper importer verifies the execution binding and all artifact hashes,
+and preserves conceptual status and original claim statuses. It does not mutate the
+experiment report or confer scientific approval. Existing paper versions require an
+exact figure receipt match; changes require a new paper version. Unresolved critique
+or partial figure preparation is retained for diagnosis rather than overwritten.
+
+### ADR-295: Scientific interpretations are optional grounded proposal content
+
+Native action batches may include typed interpretations of committed result IDs.
+The source quote must occur in the retained result, metric values come only from
+that result, and new claims start unsupported with no supplied evidence links.
+The existing InterpretationCritic and EvidenceLoop operate on a deep copy of the
+whole canonical graph; invalid submissions never partially mutate live state.
+Without structured measured replication provenance, the interpretation remains
+uncertain. Exit status or model confidence alone cannot establish claim support.
+Exact replay is idempotent; conflicting source/claim interpretations reject. Model
+authorship remains development interpretation, not independent/formal validation.
+Evidence route output is advice to the next controller decision, not tool authority.
+Canonical terminal state is hash-bound in execution results and passed to next planning.
+
+Interpretation recovery is a separate deterministic derivation from a consumed
+response and retained terminal state/trajectory. Source text is matched before JSON
+transport escaping. Recovery output cannot overlap the execution directory, existing
+derived state cannot be overwritten with different content, and original execution
+status is immutable. This avoids replaying experiments to repair a postprocessing
+boundary; a recovered graph is not an uninterrupted-execution claim.
+
+### ADR-294: Native state inheritance preserves science and cumulative budgets
+
+An optional project-owned predecessor is schema-validated and content/snapshot-bound
+at both cycle and executor boundaries. Its canonical scientific fields and histories
+survive the handoff; process-local executor handles do not. The chosen run enters
+Evidence, with prior use plus a declared run allocation bounded by prior remaining
+budget. Session checkpoints count only decisions after the bound predecessor, while
+canonical history retains both segments. Observations get predecessor-scoped IDs.
+New tool observations do not automatically become supporting scientific evidence.
+
+The original project ceiling is retained separately in executor context, alongside
+the current run allocation. New allocations check cumulative usage against the
+original ceiling, not the exhausted cap of the preceding allocation. Interpretation
+projects only compatible claims/evidence into strict assessment models and preserves
+all canonical records; omitted assessment coverage remains explicit and cannot
+silently overwrite previously established claim status.
+
+### ADR-293: Initial acquisition is a planning step, not experiment authority
+
+Objective intake binds declared acquisition options in its immutable model command.
+After an accepted selection, separate materialization enablement invokes the existing
+source/license/budget-bound resource service. This permits enabling or recovering
+resource work without recalling the model or changing its selected items. Intake
+exposes the resulting workspace-resource locator/hash for a fresh planning decision;
+it never substitutes a study or treats download authorization as execution authority.
+
+### ADR-292: Preserve paper model waits across lifecycle wrappers
+
+The paper coordinator retains an atomic pending-stage pointer when a session node
+exits 75 with retained pending evidence. Native report lifecycle preserves that
+exit code rather than converting it to a generic subprocess failure. The project
+coordinator requires both the explicit code and a retained no-API node wait before
+exposing a paper-stage pending status. Completed execution is not relaunched.
+Other failures remain visible; resume still uses unchanged commands/contracts and
+bounded attempt receipts. This does not authorize replay of unknown tool effects.
+
+Actual paper wait recovery exposed nested computed profile/policy fingerprints in
+retained facade packets. Old packets are read without modification: computed fields
+are separated, the strict request is parsed, and recomputed fingerprints must match.
+New packets omit computed fields. The same real review/revision sequence resumed
+and built its PDF; arbitrary process-kill recovery remains a separate boundary.
+
+### ADR-291: Completeness planning may validate a gap and must consult configured Taste
+
+Completeness-first previously prohibited every execution selection, including runs
+needed to validate integration itself. A typed `next_work_item.validation` now binds
+one declared Native task/workspace study to the actual supplied gap and observable
+functional outcomes. Campaigns, unavailable executors and unbound selections remain
+rejected; execution stays separately authorized and efficacy claims remain false.
+
+Initial and next planning receive the same optional library/profile as execution.
+The library is frozen, retrieval forms a closed pool, and the existing Taste
+deliberation node checks transfer boundaries. Only a validated control packet or
+explicit abstention reaches scientific design; raw retrieved documents do not become
+planning authority. The same API budget or session request cap covers consultation
+and design. This direct-node advice does not confer memory admission or formal review
+authority. Legacy provider-format retries with Taste require a fresh bounded plan.
+
+Task compilation uses planning-owned identities rather than a shared `prepared-task`
+run ID. An explicit compiler receipt locates its plan, with legacy locator fallback.
+Accepted task selection can finish interrupted deterministic preparation without new
+model calls; prior partial artifacts are preserved and changed inputs reject reuse.
+
+### ADR-290: An objective and a prepared plan share the existing research entry
+
+`project research-cycle` accepts either a prepared plan or an objective with declared
+task/resource options. Initial planning uses the existing ResearchDesignNode and
+compiler. Intake preserves its exact command/source binding and bounded session
+resume attempts; downstream execution uses only the explicit compiler receipt,
+design hash and Native executor identity. Workflow-only or rejected plans do not
+become fallback experiments. Execution enablement is independent of compilation.
+Subsequent planning remains a proposal, not an automatically authorized new study.
+
+### ADR-289: Resume known pre-tool waits, not uncertain side effects
+
+Native session timeout exits 75 with an append-only checkpoint and an atomic pending
+pointer. The checkpoint binds contract, code, plan, treatment, pending request,
+committed state/trajectory and every workspace file. Resumption holds a process lock,
+reuses the sampling plan and original model requests, and never rewrites a committed
+action. Taste records and pending facade requests are reused by decision index.
+An orphan decision or any drift rejects recovery; this is not arbitrary mid-tool
+crash recovery. Runtime request caps bound the number of model handoffs, while the
+project coordinator allows three process attempts per pending Native request.
+Terminal results cannot re-enter pending recovery. Active process durations accumulate;
+time spent offline waiting for the operator is not reported as execution time.
+
+### ADR-288: Session wait is not a terminal review outcome
+
+SessionResponsePending preserves the model runtime's pending intent and is propagated
+instead of converted into FAILED. Review uses the stored facade request on resume;
+input/profile drift rejects reuse. Revision uses its immutable input and source-bound
+contract. Stage locks serialize callers; pending exit 75 is explicit. The paper flow
+allocates bounded continuation receipts under an unchanged original command and does
+not overwrite initial attempts. This covers waiting for absent responses, not arbitrary
+post-execution crashes, rejected responses or Native tool side-effect reconciliation.
+
+### ADR-287: A pending session plan is recoverable work, not a failed experiment
+
+The project coordinator distinguishes retained SESSION_PENDING from terminal RESULT.
+An exact-command continuation revalidates the exchange and canonical request hash,
+preserves original start/exit receipts and allocates one of three new process-attempt
+identities. The planner holds a separate nonblocking lock through response waiting and
+consumption; the coordinator continues to hold its project-cycle lock. Original input
+and contract retention reject drift. Pending state is exposed without claiming a
+completed plan, and completed execution/paper stages are not relaunched. This policy
+currently covers planning waits, not arbitrary Native tool interruptions.
+
+### ADR-286: Session generation is a separate lifecycle execution mode
+
+Native proposals and preferences share an input-bound SessionStructuredBackend with
+bounded requests/waits; no provider records are fabricated. The runtime has SESSION
+mode requiring an explicit session backend and fixed session identity with live/local
+model permissions disabled. Session Taste deliberations may inform current decisions,
+but this does not widen actual-provider-generation requirements for learning/admission.
+Unknown real session tokens/cost remain in provenance; API liability is zero.
+
+Paper review and revision use their ordinary schema, source and evidence validators
+with session backends. Internal session review is not independent expert review.
+The coordinator forwards session mode and may reuse a verified explicit paper flow;
+completed retained reports preserve their session identity and original artifacts.
+Missing session reports do not silently fall back to an API. Historical non-session
+StructuredModelResponse serialization excludes the new optional provenance field to
+preserve original ledger hashes. Interrupted waits are retained, not yet guaranteed
+resumable throughout the lifecycle; that is the next core integration boundary.
+
+### ADR-285: Session-authored model responses retain their own provenance
+
+SessionStructuredBackend exports normal StructuredModelRequest objects and accepts
+fingerprint-bound session replies under assistant-session/session-authored identity.
+It does not emulate a provider or read API credentials. Research planning uses the
+same schema and semantic validator as live requests and retains pending inputs for
+exact continuation. Responses record source, author and an explicitly unverified
+model label. Session token counts/cost remain unknown; usage values used for admission
+are conservative UTF-8 byte bounds and incremental API cost, not measured session
+telemetry. Runtime-wide integration and other lifecycle nodes are not implied by the
+successful planning case. Execution authority stays outside the model response.
+
+### ADR-284: Accepted planning and completed resource preparation are separate boundaries
+
+Materialization verifies the persisted accepted proposal equals DESIGN.json and
+rechecks its original acquisition option binding. Handoff is persisted before
+resource work; failures/pending states append to ACQUISITION_OUTCOMES.jsonl, while
+only preparation success publishes ACQUISITION_RESULT.json. Resume reuses the same
+resource job and never invokes the planning model. Native post-paper cycles invoke
+this boundary even when a plan RESULT already exists. Workflow status distinguishes
+resource pending from plan acceptance. Original status snapshots remain immutable;
+append-only history plus an atomically replaced CURRENT snapshot represent further
+transitions without overwriting scientific evidence. Actual evidence covers reuse
+of an accepted completed handoff, not a newly interrupted network transaction.
+
+### ADR-283: Model acquisition selection is constrained separately from study execution
+
+ResearchDesignInput exposes declared acquisition option metadata; a proposal may
+select one option and unique licensed item IDs. This route is exclusive with study
+provisioning, but allowed alongside a completeness work item. Binding hashes cover
+option, pinned request and template; materialization rechecks them before invoking
+the bounded scheduler. The model cannot edit URLs, license/use restrictions, budgets
+or network switches. Planner handoff and network enablement are separate options;
+Native next planning forwards the same interface. Actual model-acquisition-handoff-v1
+used one provider call and reused an existing receipt, producing a resource bundle
+without download, ingestion, formal selection or experiment execution.
+
+### ADR-282: Acquisition scheduling composes existing transactions and Native assets
+
+A project resource job binds request bytes, selected item IDs, use constraints,
+template and total download ceiling. It holds a process lock, reuses completed
+acquisition receipts, and invokes the existing atomic downloader only when network
+is explicitly enabled. Requests above the configured allowance (at most 10 GB) are
+not launched. Download approval still has download-only scope. Each invocation makes
+at most one acquisition attempt, with at most three retained attempts; no automatic
+network retry loop or destructive cleanup is added. The handoff prepares a resource
+bundle but never ingests or executes. Completed cached jobs recheck receipt, manifest
+and asset hashes. Real local evidence covers receipt reuse, not new network traffic.
+
+### ADR-281: Acquired bytes become declared assets without inheriting execution authority
+
+The acquired-assets preparation service binds request/receipt identity, selected
+item origin/version, license status/scope, size and retained file hash. It emits
+canonical data/references/code targets accepted by existing Native provisioning,
+optionally replacing only the asset manifest in a project-owned resource template.
+Preparation registers provenance in the project; it does not download, unpack,
+ingest, select formal tasks or run code. Original acquisition restrictions and
+explicit use constraints remain visible to subsequent planning. Unknown/missing
+items require actual acquisition, not fabricated readiness. The first live local
+handoff uses an already acquired public task configuration as a reference only.
+
+### ADR-280: Review retry attempts remain first-class runtime invocations
+
+Unlike direct planning/revision wrappers, lifecycle review re-enters the ordinary
+ModelNodeFacade for its one optional format retry. The original paper-review entry
+and paper-review-format-retry entry each charge normal runtime accounting and share
+one capped provider bridge (two calls, unchanged USD 2 ceiling). Correction feedback
+is appended only as context metadata; paper bytes, review criteria and authority
+remain unchanged. Node rejection reasons and runtime blockers must both permit
+format recovery; budget/semantic/unknown errors are not retry signals. Import binds
+the accepted invocation rather than assuming the first invocation succeeded. The
+legacy conservative evidence-flag recovery applies only to the original attempt,
+whose saved provider response it was designed to validate. One scripted-runtime
+fixture proves two retained entries and summed charges, not live review quality.
+
+### ADR-279: Shared direct-node recovery does not bypass runtime accounting
+
+Direct planning/revision nodes use a common format-only wrapper. Each response or
+typed unresolved error and retry decision is retained; one changed repair prompt
+gets its own request fingerprint while input/evidence and provider ledger remain
+unchanged. Initial and explicit-child attempts share a total two-call allowance and
+the existing USD ceiling. Semantic rejections/unknown failures/unresolved reservations
+do not authorize retry. This helper is not used behind ModelNodeRuntime: runtime
+receipts must charge all attempts before review can use equivalent recovery. One
+focused fixture covers format recovery, accepted negative outcomes, semantic refusal,
+exhausted call allowance and unresolved provider state; no broad/live claim follows.
+
+### ADR-278: Project completeness gaps and bounded post-paper plan recovery
+
+Absent an explicit --workflow-gaps argument, research planning reads the optional
+project docs/WORKFLOW_GAPS.json registry, hashes it as an input and activates
+completeness-first. Unsupported new gap hypotheses belong in unresolved_questions,
+not fabricated registry IDs. Abstained observations cannot be relabeled merely to
+force admission or policy updates. A rejected plan may receive one child retry with
+updated gap/priority/feedback only, fixed original idea/evidence/objective/options/
+provider, exclusive parent claim and inherited provider accounting under the same
+USD 3 ceiling. Coordinator retains original NEXT_PLAN/status artifacts and records
+separate recovery bindings. Actual allocation v2 reached accepted software work
+planning without authorizing another experiment. Acceptance is schema/contract
+admission, not proof that the plan is scientifically adequate or already executed.
+
+### ADR-277: A rejected paragraph target permits one ledger-bound revision retry
+
+Only the explicit duplicate/unknown paragraph-target rejection enables a child
+revision attempt. Paper bytes, evidence, review hashes, provider/model and original
+input are fixed; the child adds explicit format feedback and inherits provider
+accounting. An exclusive parent claim prevents multiple children. The original
+USD 3 limit is unchanged, total call allowance becomes two, and recursive retries
+are forbidden. Other rejection types remain terminal. Paper cycles resolve the
+child result while preserving the original cycle contract and failed artifacts.
+Actual allocation v2 produced a revised PDF through this path. Its later rejected
+next plan is reported separately in WORKFLOW_STATUS.json, not masked by paper
+delivery or treated as scientific approval/full project completeness.
+
+### ADR-276: Normalize bound workspace figures, not arbitrary external paths
+
+Native reports may reference sibling figures through ../figures. Import resolves
+each reference inside the owned workspace, validates a generated-artifact hash or
+the retained continuation snapshot plus original source copy, and normalizes paths
+in a derived staging bundle. Absolute references and workspace escape remain
+forbidden; basename collisions remain explicit errors. Original delivery receipts
+and files are immutable. New report receipts also inventory the figures directory.
+The actual allocation v2 import succeeded with two figures without model calls or
+re-execution; later revision rejection is retained as a separate unfinished stage.
+
+### ADR-275: Recover proposal syntax and schema within one shared retry
+
+The live unattended allocation attempt returned valid JSON missing a proposal
+rationale. Parsing alone is insufficient: action-instance schema validation now
+occurs inside the same one-retry formatting boundary. Both responses are retained,
+no executable argument text is patched locally, and no tool runs before validation.
+Exhausted retries raise NativeProposalFormatError, which the bounded coordinator
+can continue under inherited budgets. Arbitrary ValidationError remains ineligible.
+The first attempt's report/review/PDF disposition is evidence of downstream
+delivery only, not completion of its interrupted experiment.
+
+### ADR-274: Experience collection recovery is derived work, not research replay
+
+Native delivery and lineage disposition can reconstruct an absent terminal
+collection from the original prospective captures. Recovery has a per-run lock,
+hash-bound sampling plan/result, preserved attempt directories and a maximum of
+three interrupted attempts across invocations. Only a finished collection is
+published by an atomic no-overwrite link; candidate locators stay in its attempt
+directory. Original partial collections/captures are never moved or rewritten.
+Existing complete collections are reused, conflicting receipts rejected. Missing
+capture outcomes stay unresolved and candidates remain quarantined/unattributed.
+There are no model calls, experiment reruns or policy updates in this recovery.
+Changed source/idea constraints still fail under the existing collector rules.
+
+### ADR-273: Execution receipts survive subprocess postprocessing failures
+
+The Native coordinator separates subprocess exit from retained execution state.
+A nonzero exit can advance to existing recovery/delivery only with a known Native
+boundary, matching plan hash, controller ownership and Taste treatment. A separate
+receipt retains the exit code and input hashes; original logs and results remain
+unchanged. Missing, foreign or unknown boundaries cannot authorize continuation.
+Pending-job/accounting/trajectory/collection requirements still apply downstream.
+This path does not retry experiments, add budget or require positive scores. A
+no-call coordinator fixture reaches report entry through one bounded child after
+nonzero exits; real unattended full delivery remains unverified.
+
 ## Boundary
 
 ```text
@@ -10,6 +1176,25 @@ ResearchState → candidate ResearchAction set → TasteController
 
 SciTaste owns the state, action ranking, transition, and decision log. An executor
 returns observations and artifacts but cannot select the next global action.
+
+For the CVPR 2027 program, SciTasteBench is the decision-level measurement
+instrument: it owns outcome-hidden shared-prefix requests, executable action
+forks, scorer-private utilities, and chronological delayed-credit tests. It
+does not inherit complete-agent outcomes from external benchmarks. The
+engineering and scientific exit gates are independent and recorded in
+`docs/research/CVPR27_MAINLINE_EXIT_CRITERIA.md`. Resource routing likewise
+remains separate from decision/scoring authority: future GPU experiments
+default to the registered remote 8×RTX 3090 host, with an exact project
+binding at launch; the historical local 3090 baseline does not select that
+host or confer experiment authority.
+
+Development outcome receipts are scientific evidence, not controller-readiness
+certificates. In particular, a support-ready adaptive head may change an
+executed action and still reduce a task score. The self-development project's
+MLRC Perception ON/OFF pair demonstrates that distinction on one consumed task;
+its formal and transfer claims remain closed. The current evidence boundary and
+next independent vision task are recorded in
+`docs/research/MLRC_VISION_MAINLINE_STATUS_V1.md`.
 
 ## Phase 0-8 components
 
@@ -184,6 +1369,11 @@ returns observations and artifacts but cannot select the next global action.
     cannot cross evidence tiers/splits/roles, and self-development trajectories
     never establish external validity. Held-out target projections expose neither
     the selected action nor outcome/attribution labels.
+53. Independent SciTasteBench decision methods receive only an outcome-hidden
+    common request. Scorer-owned action utilities and task-cluster identities
+    remain in a separate private key; all methods must cover the same request
+    population under one execution/scorer contract. A fixed-menu adapter is a
+    decision policy, never proof that a complete Auto Research framework ran.
 
 ## Architecture decision records
 
@@ -4970,3 +6160,1725 @@ ScienceAgentBench is additionally required if the manuscript keeps an unqualifie
 autonomous-research title. Same-backbone Full versus Native Base isolates the Taste treatment;
 official benchmark agents establish competitiveness. Results from the local and external tracks
 must be reported separately and cannot substitute for each other.
+
+### ADR-154: official hidden-rubric scores are a first-class evidence endpoint
+
+Status: implemented in the evaluation contract; the first formal result is complete and null.
+
+An official autonomous-research benchmark can expose a hidden target and an
+official scoring implementation while still using a disclosed multimodal model
+as its rubric evaluator. Such evidence is not a deterministic task metric, but
+it is also not an independently recruited human package-preference panel.
+SciTaste therefore represents it as `official_benchmark_score` with
+`official_hidden_rubric` task signals and an
+`official_benchmark_primary` judge role. The exact task allocation and judge
+protocol remain content-bound, provider failures or unparsable rubric items are
+invalid rather than zero, and rescoring occurs outside immutable agent
+workspaces.
+
+The corresponding matched estimand is
+`complete_system_bundle_effect`: Full SciTaste versus Native Base under one
+model, harness, visible task, tool, and budget envelope. It may authorize a
+complete-system improvement statement when the preregistered effect and
+coverage gates pass. It does not by itself identify which Taste abstraction or
+transfer mechanism caused the effect; those claims remain owned by
+SciTasteBench mechanism contrasts.
+
+The first admitted use completed ten matched ResearchClawBench task pairs. Full
+SciTaste improved the mean by 0.667 official-score points and won six tasks, but
+its task-bootstrap interval crossed zero and the registered two-point effect
+threshold was not met. The lifecycle therefore records a complete formal null,
+not an infrastructure failure and not a positive title claim. This distinction
+is preserved in the selected project run and the manuscript.
+
+### ADR-155: preregistered external formal studies are first-class project evidence
+
+Status: implemented; the V7 protocol is registered and its result remains
+pending cohort completion.
+
+An external benchmark execution must not remain a detached folder merely
+because it did not originate in SciTaste's native cell runner. ProjectRuntime
+therefore admits an explicit `external-formal-study` evaluation origin. Its
+proposal binds the original frozen protocol bytes, paired population, agent and
+judge identities, runtime-source hashes, and prior owner authorization without
+launching new work. Its result path rehashes every project-owned arm receipt,
+official score, and conditional Taste overlay; replays the paired bootstrap and
+exact sign-flip analysis; checks the detailed integrity audit; and rejects any
+indication that the deferred `perceptual-visual-relexing` project ran or RRMOT
+was touched.
+
+Scientific completeness and a positive effect remain distinct. A complete null
+may satisfy the evidence gate and bind a paper, while
+`scientific_effectiveness_established` stays false. Selecting the protocol
+without a result produces the explicit lifecycle state
+`external-formal-result-unregistered`; it cannot be mistaken for completed
+evidence.
+
+### ADR-156: separate independent decision methods from SciTaste controls
+
+Status: accepted, 2026-09-24. SciTasteBench objective forks expose a common
+outcome-hidden `DecisionMethodRequest` to genuine decision policies and keep
+all action utilities in a distinct `DecisionScoringKey`. Competing policies
+must submit one action, abstention, or explicit failure for every request.
+Scoring rejects unknown actions, incomplete method coverage, duplicate cases,
+and mixed execution/scorer contracts; task clusters, not branch continuations,
+are the averaging units. The public request contains no task-cluster identity,
+replicate outcome, scorer transform, or utility estimate.
+
+This boundary corrects the previous experimental conflation: Native, Raw/RAG,
+generic memory, mismatched precedent, and gate removals are references or
+within-SciTaste controls. Direct, reflection, and planning/search become
+independent decision methods only through real implementations on the same
+request interface. Complete Auto Research systems must retain their research
+loops on task-level benchmarks; adapting one to a fixed menu does not evaluate
+its native system. The CLI prepares and scores data but makes no model calls,
+opens no formal split by default, and does not authorize a method-effect claim.
+Reported token/cost fields require provider or local-runtime receipts; the
+development runner now preserves per-case provider usage and its conservative
+pricing manifest, while formal cost admission remains separate. Direct and
+two-stage planning completed one 30-case development comparison, changing
+only one action between them. A separate source-task-disjoint retrospective
+development partition ran reflection on 15 targets; it changed no direct
+decision and cost substantially more. This does not establish prospective
+delayed-credit learning. Tool search remains unimplemented.
+
+The development policy runner is deliberately narrower than that formal gate:
+direct makes one model choice; reflection adds observed episodes only from
+source-task groups disjoint from the target; planning first estimates every
+available action, then makes a separate choice. Its per-case receipt binds
+provider model identity and usage, while unknown prices remain `null` in the
+submission and aggregate score. It refuses visual attachments rather than
+pretending the text API consumed them. The planning route is not a tool-using
+search agent, and its completed development score is not a formal method
+effect claim.
+
+For the first image-task qualification, the MLRC Meta-Learning adapter freezes
+two method trees from one verified upstream ProtoNet source: unchanged squared
+Euclidean prototype distance and L2-normalized query/prototype distance.
+The preparer verifies that only the helper implementing this geometry differs;
+it does not invent an action utility. Both branches still need identical
+remote execution and the unchanged official scorer before a visual fork can
+enter the private key vault. A local baseline score is not a matched remote
+branch result.
+The remote execution bundle copies the unchanged official ingestion/scorer
+and verifies its hashes alongside both branch trees. Each branch runs in an
+exclusive output directory with one explicit GPU and one wall ceiling; a busy
+device is rejected before launch. An official score is accepted only after
+the expected 1,000 predictions and score file exist. Failure preserves logs
+and a terminal receipt, never a partial utility. This execution boundary is
+prepared but has not run because the remote GPUs are occupied and its system
+Python lacks torch.
+Bundle v2 additionally binds every development image byte with a deterministic
+tree digest, so a changed or partial remote transfer cannot silently become a
+new experiment input. Bundle v1 is a superseded local predecessor.
+
+### ADR-157: venue retargeting is an explicit, historical project transition
+
+Status: accepted, 2026-09-24. A project may change target venue without
+rewriting old papers, reviews, runs, or deadline attestations. The new
+`retarget_project_venue` operation changes `target_venue` and the current
+schedule in one revision-guarded transaction and stores the prior schedule,
+completion records, timestamp, and reason in venue history. A CVPR 2027
+bundle uses hash-bound assets from the official CVPR 2026 author kit only as a
+provisional layout pending 2027-specific instructions. Venue configuration
+checks mechanics, not scientific fit: the CVPR research claim requires
+vision-task outcomes and visual evidence. Self-iteration does not acquire an
+RSI claim without repeated accepted agent revisions and held-out transfer.
+
+### ADR-158: Scientific Taste recursion is domain-neutral policy succession
+
+Status: implemented at the selection and transfer interface; no prospective
+RSI result has been established.
+
+CVPR vision research is an evaluation instantiation, not a specialization of
+SciTaste's controller. The existing `ResearchExecutor`, research workload,
+pre-decision Scientific Situation, and scorer-owned action-fork interfaces keep
+task data and executable metrics outside the Taste policy. The paper's general
+method statement therefore distinguishes architecture from the visual tasks
+used to test it.
+The common `DecisionMethodRequest` can optionally carry bounded,
+content-addressed pre-decision evidence artifacts (e.g., an image error slice
+or video clip) from the domain adapter. The artifact resolver verifies bytes
+and rejects symlink traversal before a policy opens them. Private action
+utilities and later outcomes remain in `DecisionScoringKey`, never in the
+visible artifact list. Existing text-only request hashes remain unchanged.
+
+A project Taste refresh may propose a new policy from reviewed development
+episodes. `TasteEvolutionPlan` freezes parent and candidate policy identities,
+training source groups, untouched selection groups, reserved transfer groups,
+and a task-mean regret threshold. `select_taste_evolution_round` scores both
+complete action submissions through the existing outcome-hidden request and
+private-key split. It accepts a candidate only when paired task-cluster regret
+beats the frozen threshold; otherwise the parent remains active. Rejections
+remain in the self-hashed generation lineage, prior selection groups cannot be
+reused, and an accepted development policy is not silently deployed.
+`evaluate_taste_evolution_transfer` reads only reserved task groups after
+selection and has no authority to revise it. This is a functioning policy-level
+self-improvement operator, not autonomous harness rewriting and not an RSI
+effectiveness claim without repeated accepted generations and held-out
+transfer. See `docs/RECURSIVE_TASTE_POLICY.md` for the executable path.
+
+### ADR-159: Image decision evidence reaches models before branch execution
+
+`ImageEvidenceDecisionBackend` extends the existing structured provider route
+for decision requests carrying exact image bindings. It verifies each local
+artifact, preserves the public text request, and sends the same PNG/JPEG/WebP
+bytes to every policy call. It accepts at most eight images and 16 MiB per
+request; unsupported media or changed bytes fail before transmission. Text-only
+requests retain their prior hashes and transport. The baseline CLI now keeps
+exact structured recordings, including intermediate planning estimates.
+
+`prepare_mlrc_meta_decision.py` materializes one development request with four
+deterministic input examples. These illustrate task domains; they do not claim
+measured feature-norm or error evidence. The independent direct/planning
+submissions are bound into the remote pair queue before execution. The queue
+waits for a GPU without an active compute process and runs the frozen actions
+once under explicit waiting and execution ceilings. Its state is observable
+by PID and an atomic status file. It does not preempt host workloads.
+
+`score_mlrc_meta_decision.py` joins the pre-execution decision commitments to
+both complete official branch receipts and score files. Raw chance-normalized
+accuracy remains visible; its utility mapping `(score + 1) / 2` accommodates
+valid negative scores. A launcher-only correction may preserve a decision
+commitment only when the method, scorer, data and environment bindings agree.
+This closes the image-decision transport and outcome-join implementation, while
+the first remote outcomes remain pending. It neither narrows the controller's
+domain nor makes the single task a whole-agent or formal benchmark result.
+
+### ADR-160: Collect remote outcomes into the project without relaunching work
+
+`collect_mlrc_meta_remote_pair.py` observes the exact remote queue PID and
+command line, copies its evidence, and updates the registered project run with
+optimistic revision control. A dead process with a nonterminal state is
+interrupted, not successfully completed; a matching cancellation receipt is
+retained as cancellation. Completed pairs pass through the frozen decision
+scorer before a result is published. Collection never starts or retries a job
+and never changes the project's current-run selection. Observation uses the
+host's basic Python; experiments still require the isolated Python 3.12 runtime.
+
+`decision_dataset.py` packages consumed development requests independently of
+private scorer keys, preserves exact source/license provenance and evidence
+bytes, and produces a coverage/limitations card. The evaluator checks dataset
+and key commitments before applying the same submission scorer. Packaging does
+not authorize public release or promote consumed data into a fresh test split.
+
+### ADR-161: Agent candidates share the official task scorer, not a fixed action menu
+
+The MLRC Meta-Learning runtime supports `package-candidate` independently of
+the two-action decision fork. A candidate provides its complete method tree
+and system/trajectory/budget provenance; the packager copies the unchanged
+official runtime, data bindings and dependency lock from a verified base
+bundle. Execution accepts only the action population of that bundle role.
+Original bundles remain immutable, including experiments already in progress.
+The interface marks agent identity unverified: a self-reported name and digest
+do not demonstrate execution of an external framework. It is a scorer bridge,
+not agent orchestration, an execution sandbox, or a completed system comparison.
+Untrusted candidate execution still needs a separately isolated/admitted
+workspace. No GPU or provider call occurs during packaging.
+
+### ADR-162: Reuse the research-patch node across task-specific method surfaces
+
+`prepare_mlrc_perception_research_arm.py --task meta-learning` reuses the
+existing proposal/admission path with explicit task identity, metric and
+method-only snapshot. Default Perception behavior is retained. The Meta-Learning
+request overrides historical task-description split/time examples with the
+actual development contract and cannot edit the external scorer or data.
+Structured requests/responses are recorded before proposal validation, retaining
+paid model output even when a proposal is rejected. A prepared patch is not a
+complete research-agent trajectory, an execution receipt, or an improvement.
+The first real proposal is registered independently and deferred as a nearby
+logit-scale variant of an already-running experiment; its score remains null.
+
+### ADR-163: Completed image forks use the same participant/scorer dataset API
+
+`export_mlrc_meta_development_dataset.py` first verifies the completed pair and
+pre-execution decision commitments through the existing outcome join, then
+checks the attributed upstream scorer and revision. It exports exact requests
+and images separately from private scoring keys, retains source/license limits,
+and reproduces both existing submission scores through `evaluate_dataset`.
+Partial jobs cannot supply outcome keys. The package remains internal consumed
+development data; code licensing does not grant image redistribution rights.
+One image research task is not expanded into 1,000 independent scientific cases.
+
+### ADR-164: Generated MLRC candidate execution requires an isolated process
+
+Candidate bundles execute ingestion under Bubblewrap with cleared environment,
+private network/PID namespaces, read-only interpreter/bundle/development-data
+mounts, one writable output directory, and only the selected NVIDIA device
+plus required control devices. GPU selection uses its UUID inside the sandbox.
+CPU affinity, CPU time, individual output-file size and wall timeout are bounded.
+No Bubblewrap means no candidate execution; there is no direct-host fallback.
+Output symlinks are rejected before trusted official scoring. The result receipt
+distinguishes this path from the historical trusted frozen-fork execution.
+
+The actual 4090 isolation probe executed one CUDA tensor operation and verified
+single-device visibility, read-only inputs, cleared sentinel environment,
+hidden host SSH/other-project paths and distinct network namespaces. It was
+not a training run or candidate quality result. This is development isolation,
+not a held-out label firewall or a complete resource-quota system: development
+labels remain visible, and aggregate RAM/total disk quotas are not implemented.
+The already-completed fork bundles and scores remain unchanged.
+
+### ADR-165: Native actions bind remote MLRC execution and feedback
+
+`RemoteMLRCActionHandler` plugs into the existing `SciTasteNativeExecutor`
+handler map rather than introducing another controller. A selected action can
+name only its preconfigured candidate; project, action type, paths, bundle
+identity and remaining experiment/GPU/wall budget are checked before launch.
+New execution accepts isolated candidate bundles only. Durable local launch
+claims and exclusive remote markers prevent automatic duplicate execution;
+after a disconnected call the same action observes rather than launches again.
+Missing receipts are unresolved, while a recorded PID that no longer owns the
+job is interrupted. Neither condition is silently promoted to success.
+
+Terminal outcomes retain the official score-file hash, bundle commitment,
+metrics and explicitly qualified resource accounting in `ExecutionResult`.
+The normal Native store publishes its content-bound execution record.
+`observation_only` requires ANALYZE, incurs no new experiment charge, and marks
+the result as a historical import rather than native experiment execution.
+An actual remote Euclidean outcome has passed this path and Native-store
+verification. New launch/reconnect behavior has focused simulated coverage;
+no complete native research trajectory or external-agent result is claimed.
+
+`scripts/run_mlrc_native_action.py` is the thin CLI for a serialized binding,
+ResearchState and already-selected ResearchAction. Launch requires the explicit
+`--allow-launch` switch. It does not select a method, generate a candidate,
+change canonical scientific evidence or automatically reopen a failed attempt.
+
+### ADR-166: Concretize API hypotheses before bounded Native execution
+
+The OpenAI-compatible backend now implements the existing candidate-generation
+protocol as well as ranking. Generated proposals are admitted by the existing
+controller boundary: action identities, executable parameters, action types
+and resource ceilings cannot be freely rewritten by model text. Candidate
+responses use a separate exact-request replay sidecar, preserving ranking log
+compatibility and avoiding repeated model calls during resume.
+
+`run_mlrc_native_development_loop.py` composes hypothesis generation, selection,
+code proposal, isolated remote execution, outcome recording and a subsequent
+controller decision. A STOP decision is terminal for that development run.
+The first real run stopped because its generic experiment option lacked a
+specific supported hypothesis. A separately identified successor enables the
+candidate-generation path; it must not replace or retrospectively improve the
+first result. Both consume previously observed development evidence. Neither
+is a formal comparison, Full Taste, or the complete idea-to-paper workflow.
+
+The successor has now completed a real isolated experiment and post-outcome
+selection: score 0.048716 versus prior baseline 0.184874, followed by STOP.
+One implementation correction required main-window review. The original
+receipt, predictions and score were collected and matched to Native hashes.
+The trusted scorer exposed host-wide CPU threading; future runner bundles
+limit affinity and numerical-library pools to four CPUs. The completed bundle
+is unchanged and is not pooled into a cross-runtime timing comparison.
+
+### ADR-167: Implementation alignment advice cannot redefine a hypothesis
+
+`PatchScopeReviewNode` sees the selected directive and exact original/candidate
+source, not experimental outcomes. Its structured advice must cover every edited
+file and ground every reported deviation in a literal candidate-code quote.
+Aligned advice does not grant execution permission or replace code isolation.
+The bounded Native driver optionally invokes it, retains a rejected proposal,
+allows one correction and re-reviews before launch; abstention or unresolved
+review prevents spending GPU budget. Review/correction cost stays in the run's
+API accounting, and old completed runs cannot acquire this flag retroactively.
+
+Real retrospective calls exposed both a true implementation deviation and an
+ambiguous directive. Prompt v2 explicitly routes ambiguity to abstention rather
+than permitting the reviewer to invent full-dataset statistics, interfaces or
+data passes. This semantic node is not a validated scientific-quality judge:
+it may be wrong, and exact quotation does not establish semantic correctness.
+The first complete GPU loop still includes main-window implementation review.
+
+The bounded driver also accepts an explicit `--prior-native-loop`. Terminal
+feedback is reconstructed only after matching `EXECUTION_RESULT.json` against
+the verified Native store, including its added sequence/record locator/hash.
+The predecessor hypothesis, score and disposition enter the next state and
+patch feedback, and their digest enters its immutable contract. This starts a
+new bounded development allocation; it does not reopen or rewrite a prior STOP,
+reset a formal assignment or establish a causal Taste improvement. Hypothesis
+templates for this path require operational definitions to reduce downstream
+reviewer ambiguity. A consumed-development successor is not a new held-out task.
+
+### ADR-168: Exact local edits preserve code outside the selected change
+
+Benchmark patch output schema 1.1 adds optional `find` to each edit. A present
+find must match exactly once in the supplied immutable predecessor; otherwise
+admission fails. The replacement is expanded into a complete file before the
+existing size/hash/syntax/execution boundaries. Schema 1.0 full-file outputs
+remain readable; snippets cannot silently masquerade as complete files. No
+fuzzy search, new path authority or larger execution budget is introduced.
+
+Review coverage must include all edited files but can also cite unchanged
+visible callers: a disabled new flag can be correct locally and never used.
+Candidate quotation checks resolve local edits before checking the full visible
+candidate tree. A rejected candidate is included in correction feedback so the
+repair node need not reconstruct it from review prose. Exact code grounding
+still does not prove a reviewer interpretation correct. The real successor
+failed on its only repair attempt; new interfaces do not rewrite that outcome.
+
+Schema 1.2 extends local patches to multiple disjoint spans per file. All locators
+match the same original source, not a progressively changed buffer, and edits
+apply from the final source offset backwards. The resolved file is shared by
+generation admission, scope-review citation checking and materialization. Whole
+file/local mixtures and overlapping spans fail closed. The next real preparation
+attempt motivated this extension but remains rejected under its original 1.1
+contract; it also exposed reviewer advice that changed an inference-only method
+at training time. Mechanical admission does not certify semantic fidelity.
+
+### ADR-169: Experimental edit boundaries are caller-owned, not reviewer-owned
+
+An optional `PythonEditBoundary` declares permitted qualified function/method
+symbols and files where new helper definitions may be added. Masking only these
+symbols must leave the original AST unchanged. New helpers cannot shadow
+original bindings or introduce decorators/evaluated defaults. Boundary paths
+must be in the original supplied source; normal isolation remains mandatory.
+
+For inference-only MLRC, only `MyLearner.fit`, `MyPredictor.__init__` and
+`MyPredictor.predict` may change; new helpers may be added separately. Existing
+training helpers, backbone, training/validation methods and module imports stay
+fixed. A model reviewer cannot widen this set. `--edit-boundary` enters the
+controller context, generation constraints, contract hash and preparation
+receipt; rejected candidates leave a specific admission record. This protects
+declared source structure, not arbitrary dynamic Python behavior or scientific
+merit. A bounded real-source check passed; no new live trajectory is claimed.
+
+The subsequent v5 preparation used this boundary live: first admission rejected
+a protected-helper change, then the single automatic correction produced an
+admitted inference-only candidate. Compiler/boundary failures now share the same
+correction marker and cost reserve with semantic review. Process stdout/stderr
+and deterministic admission records remain available; unknown transport failures
+without a recorded proposal do not authorize automatic repeat calls.
+
+The final semantic review disputed inference plumbing, so v5 did not execute.
+Exhausted correction and invalid/unresolved reviews now produce a terminal
+`RESULT.json` and ProjectRuntime status rather than an untracked exception.
+This demonstrates bounded automatic code recovery, not reliable semantic
+adjudication, GPU success or an end-to-end research claim.
+
+### ADR-170: Bounded adjudication of implementation-review disagreements
+
+Optional scope adjudication is frozen into a new Native run's contract via
+backend/profile hashes. It runs only for unresolved scope advice, after the
+caller-owned edit boundary has passed, using a different configured model
+identity. Every initial finding must receive exactly one grounded resolution;
+aligned requires all findings dismissed. Uncertainty, incomplete coverage,
+invented quotations, provider failure or inadequate budget cannot authorize
+execution. Adjudication creates no further code-correction allowance. Its cost
+and result hashes remain in the same trajectory.
+
+The separate read-only development run used Qwen3.7 after a recorded DeepSeek
+402 failure and dismissed v5's two disputed findings. V5 remains terminal with
+no GPU execution. This is cross-model, not cross-provider independent validation
+or a reviewer-accuracy study. Quote checks alone do not prove semantic validity;
+the optional new-contract adjudication-to-execution path is not yet exercised.
+
+### ADR-171: Explicit adoption without reopening stopped trajectories
+
+`run_mlrc_reviewed_candidate` creates a separate execution contract for an
+unexecuted terminal candidate with an admitted, aligned adjudication. Candidate
+projection, literal-code findings, caller-owned AST boundary and the complete
+materialized method tree must match the frozen baseline plus declared edits.
+The existing Native handler supplies remote isolation, one-attempt launch
+identity, result collection and post-experiment decisions. The adopted decision
+changes only its execution candidate identifier; the original decision hash and
+source run remain in the contract. Original generation and review costs remain
+upstream, while new API accounting covers post-experiment calls only.
+
+The current development invocation launches on 4090-2 GPU 3. It does not reopen
+v5, supply an independent scientific sample, or establish uninterrupted agent
+autonomy. Final results must be interpreted alongside this adoption contract.
+
+### ADR-172: Adapt the upstream agent's provider, not its research logic
+
+The MLAgentBench bridge replaces completion function references only after the
+actual upstream ResearchAgent has been imported. Planning, reflection, action
+parsing and history stay upstream. The bridge records request/response identity
+without Authorization, restricts log paths, and reserves a conservative liability
+before every transport request. Failure leaves the reservation consumed; there
+is no implicit transport retry. A separate completion record preserves usage.
+This is single-process infrastructure, not an agent result: isolated tools and
+the full matched-budget upstream trajectory are still required before comparison.
+
+### ADR-173: Real upstream loop, explicitly adapted tools
+
+The development launcher verifies the MLRC checkout pin and tracked source
+integrity, imports its real ResearchAgent, then installs the provider bridge.
+The environment exposes only known candidate paths, bounded Python replacements,
+one fixed remote experiment and a final-answer tool. It never executes generated
+code locally. Experiment execution uses the existing bundle freezer and Native
+remote handler with GPU occupancy checking and isolated ingestion. An exclusive
+tool reservation prevents a second experiment request from relaunching the job.
+Agent final claims are never accepted as official scores. API and execution
+authority are separate explicit launch flags; runs have independent directories.
+
+This is not the stock MLAgentBench environment: retrieval, arbitrary shell and
+model-assisted high-level tools are not exposed, and tool symmetry with Native
+is not established. The first live run is development only. Interrupted runs
+require observation of any recorded remote handle before resuming or replacing
+them; a terminal agent record alone does not imply a terminal remote experiment.
+
+Resolved provider calls release their unused reservation after validated usage
+is persisted; only unresolved calls retain the full reservation. A pre-experiment
+continuation creates a new run with an exact upstream checkpoint/trace binding
+and deducts prior observed usage and calls from the total budget. It refuses
+nested continuations, unfinished API requests or any prior experiment marker.
+The upstream restore method restores its own history; no model history is
+regenerated or manually rewritten to alter the research decision.
+
+The development summary reads the actual tool trace, terminal agent record,
+Native execution result and per-call provider receipts. An edit–experiment–feedback
+loop is reported complete only when a successful measured experiment and a final
+agent response follow an actual source edit and experiment tool action. Agent
+claimed scores are kept separate and never substituted for executor measurements.
+This narrow completion flag explicitly excludes full idea-to-paper completion,
+formal method comparison and benchmark generality.
+
+### ADR-174: Own the shared tool interface independently of external agents
+
+`executor.research_tools.ResearchToolEnvironment` owns candidate path access,
+write freezing, one-attempt experiment dispatch and measurement/claim separation.
+Its data classes have no MLAgentBench dependency. The upstream adapter uses this
+interface by structural compatibility; SciTaste can use its own ToolAction.
+An interface descriptor records tools, argument shapes, paths and fixed limits
+without executable callables or credentials. New launches save its fingerprint.
+Tool equality alone is insufficient for a matched comparison: initial information,
+model, action scope, total budgets and task population still need to match.
+
+`ResearchToolActionHandler` binds selected SciTaste ResearchActions to this
+environment through Native's existing handler/store boundary. Tool name, argument
+object and interface fingerprint are required. Dispatch checks project identity,
+meta-action mapping and remaining experiment allowance. Measured experiment
+receipts keep their status/cost/data and source action identity; unresolved tools
+remain PLANNED, while a submitted final answer is never promoted to a measurement.
+No controller logic or extra model call is hidden in this executor adapter.
+
+### ADR-175: Native tool proposals remain subordinate to the controller
+
+`research_tool_loop` admits a typed tool proposal with exact argument names,
+converts it to a candidate ResearchAction and offers STOP alongside it to the
+real TasteController. Only the selected action reaches Native's shared-tool
+handler. Every step records decision, execution receipt and research-state
+revision; an unresolved experiment exits without launching another attempt.
+
+The live development launcher uses a common provider reservation ledger for
+both proposal and ranking calls, with explicit JSON output formatting and the
+same initial task text as the external adapter. The extra selection call is
+charged, not treated as free infrastructure. Native Base disables augmentation
+and utility/critic weighting here; this does not validate the full Taste method.
+
+The shared-tool state reducer derives decision-context features only from prior
+execution receipts. It distinguishes execution failure from adverse scientific
+outcome and supports explicitly maximizing or minimizing objectives. Missing
+baseline, objective direction, confidence or expected information value cannot
+be replaced by optimistic defaults. This supplies the existing learned-policy
+interface without activating a policy or exposing future target outcomes.
+
+### ADR-176: Task identity is data, not a model.py convention
+
+ResearchToolTask declares the source task group, visible problem, objective
+direction, baseline, required and writable paths, development split, execution
+mode and one-attempt wall ceiling. The environment checks the visible prompt and
+workspace against it and exposes the same descriptor to both agent adapters.
+Existing callers retain the historical model.py default; explicitly bound tasks
+can use another Python entrypoint and preserve task-owned scoring files read-only.
+CPU/API/GPU labels do not implement a backend: the caller must still provide the
+appropriate isolated executor with the declared limit. The present live launchers
+remain MLRC Meta-Learning-specific; registering another task does not run it.
+
+### ADR-177: Separate local development scoring from external submission
+
+The MLRC unlearning adapter extracts only development functions from a fixed
+source digest. It preserves their AST and ten-model scoring protocol, excluding
+Kaggle import-time authentication and private-test submission functions. The
+offline evaluator loader retains data partitioning and transforms but disables
+network acquisition and unrestricted pickle loading. Neither source builder
+executes imported code. These builders are not a sandbox: agent-authored methods
+must execute separately without access to retrained reference weights or held-out
+scoring data before trusted scoring may consume their tensor outputs. Until that
+boundary is connected, the adapter cannot claim end-to-end execution or formal
+benchmark equivalence. The upstream Gaussian-reference score is a development
+proxy and cannot support a certified-unlearning claim.
+
+The unlearning exchange now implements that evaluator-side method interface:
+it exports the original state, invokes a caller-supplied isolated worker launcher,
+and loads only bounded, uncompressed numeric NPZ tensors with exact model metadata.
+It never imports agent methods. The candidate worker consumes separate normalized
+retain/forget/validation arrays; neither testing arrays nor reference checkpoints
+belong in its mounts. Staging indexes datasets without consuming scorer samplers.
+The launch callback remains responsible for sandbox enforcement and reaping workers
+before reading output; the exchange alone is not isolation. Candidate replicas use
+seed + replica and return models in eval mode, an explicit development adaptation
+because upstream executes candidates in the same process/RNG stream as scoring.
+Ten replicas remain fixed and failed attempts cannot silently reuse their slot.
+
+The remote unlearning CLI connects the exchange to the existing explicit-mount
+bubblewrap launcher. Workers see a read-only candidate/runtime bundle and allowed
+examples/original snapshots, plus their own writable output only. The scorer's
+reference model and full dataset are outside those mounts. A supervisor bounds
+the whole evaluation and writes PROCESS_RESULT independently of SCORE. Sandbox
+failure has no host fallback. Remote source deployment is not execution acceptance;
+the first real score and process-isolation behavior must still be observed.
+The supervisor records exact runtime and candidate-source digests before launch,
+checks selected GPU identity and occupancy, and holds a task-level advisory lock.
+This lock coordinates cooperating unlearning launchers, not other users' jobs;
+the occupancy observation is time-bound rather than an exclusive hardware lease.
+Collected results enter the controller through a contract-bound ExecutionResult
+adapter. It requires the fixed replica count, matching seed/hardware/protocol,
+finite component metrics and the original composite formula. Process failure is
+distinct from an adverse scientific score, and missing terminal state stays
+PLANNED. Historical observation can suppress new-run cost accounting explicitly;
+it must not be presented as new Native execution. This adapter does not launch jobs.
+
+RemoteUnlearningExperiment supplies the shared-tool launch callback and a separate
+observe method. Before launch it freezes candidate/runtime hashes; exclusive local
+and remote bindings prevent retries. SSH observation failures remain unresolved.
+Shared tools can append observation-only updates to a reserved experiment while
+retaining the initial result; terminal results are cached without relaunch. Native's
+task selector now connects this callback for unlearning, while preserving the
+meta-learning default. This integration still requires the first live-data run.
+The pinned external-agent entrypoint uses the same task selector and backend for
+unlearning, with identical candidate permissions and wall ceiling. Continuation
+checks task identity before importing earlier agent history. Controller/provider
+differences remain disclosed; a shared execution substrate alone is not evidence
+of a matched completed comparison or full autonomous research capability.
+
+### ADR-178: Shared-tool decisions must retain their observed outcomes
+
+The shared-tool loop now saves the exact state immediately before controller
+selection, after proposer and context changes. The decision snapshot identity must
+match that persisted input. Original per-turn decision files remain pre-execution;
+terminal executor results attach to ResearchDecision and append to decisions.jsonl,
+which the existing Taste trajectory reconstruction machinery can consume. Pending
+remote execution is not written as a completed outcome. This does not assign causal
+credit, authorize a lesson, activate a policy or convert historical runs into
+prospective supervision. Earlier unbound logs remain unchanged.
+
+### ADR-179: Iterative tools are explicit new contracts, not reopened runs
+
+IterativeResearchToolTask v1.1 adds bounded attempt count and cumulative execution
+seconds while the v1.0 contract remains single-attempt. Its environment reserves
+each attempt before copying a hashed candidate snapshot and calls a trusted backend
+factory with that attempt's remaining ceiling. Pending runs have observation-only
+recovery. Only terminal results with measured costs permit a new revision; unknown
+cost is not treated as zero. Cached results do not charge the same experiment twice.
+The factory must enforce the passed wall limit and must isolate source execution.
+API budgeting remains the provider ledger's responsibility. Creating a v1.1 task
+does not expand any earlier completed run or make development results formal.
+
+Native's iterative entrypoint now creates a fresh remote job per frozen attempt,
+passes remaining execution seconds to its supervisor, and summarizes all completed
+attempts against the declared baseline. The model receives the remaining experiment
+and execution budgets; provider limits independently cap API liability and calls.
+The recorded task history can include prior negative outcomes, but this is local
+feedback, not an admitted learned policy. Cached results carry no repeated cost and
+are excluded from score-trend reconstruction. No historical run is reopened.
+The pinned external-agent launcher also opts into the same v1.1 environment,
+factory, task description and ceilings. Legacy saved-state continuation cannot
+be combined with iterative mode, preventing implicit budget expansion. Both new
+entrypoints retain all attempt results and distinguish a retained original
+baseline from an improved generated candidate.
+
+### ADR-180: Source/intent review is advisory and opt-in
+
+ImplementationIntentReviewNode uses the existing ModelNode authority, model identity,
+telemetry and budget checks. Its source inputs are digest-bound, candidate-relative
+and size-bounded. Findings must cite declared evidence; implementation findings must
+cite supplied source bytes. It cannot return patches, execute source, authorize a
+run, or promote a paper claim. An empty threat list is not a correctness certificate.
+This node is distinct from mandatory isolation/credential checks and is not a new
+always-on preflight. Shared-tool routing and live review-quality evaluation remain
+separate integration work. Running trajectories are not modified by its addition.
+
+SharedLedgerStructuredBackend connects this protocol to the existing agent provider
+bridge without allocating another API budget. Both callers must remain serialized
+in one process. Immutable fingerprinted requests map to the provider's existing
+reservation/completion records; malformed output still consumes the provider call.
+Actual served identity and usage are preserved, never inferred from requested model
+names. Costs retain the bridge's conservative-liability meaning, not invoice rates.
+Profile-bearing requests are explicitly unsupported; provider tool calls are rejected.
+This adapter alone does not enable review in any running trajectory or establish
+that a model can detect the observed scientific implementation discrepancy.
+
+Native shared-tool runs can now explicitly install Review Implementation before
+freezing their interface fingerprint. This maps to REVIEW and follows the ordinary
+proposal/controller/selected-tool path. Disabled interfaces reject the proposal.
+The tool reads only existing bounded candidate source, records source-bound input,
+context and policy, and returns the node result to tool history. Subsequent writes
+remain governed by the existing experiment-budget/freeze rules; no repair or
+experiment occurs inside review. The opt-in flag is recorded in the run contract.
+No historical or currently running comparison is modified by this capability.
+
+Review observations expose accepted proposals, status, rejection reasons and the
+local record reference only. Full requests, source and raw provider responses stay
+in the audit record instead of being duplicated into every subsequent tool prompt.
+Rejected untrusted proposals are retained there, not served as accepted advice.
+An accepted proposal passes schema, provenance and authority checks only. Every
+review observation explicitly sets semantic_correctness_verified=false. Real
+post-hoc use demonstrated that even a compliant signed derivation can be followed
+by an incorrect scientific interpretation; acceptance is not a learning/admission
+signal or authorization for automatic repair.
+
+### ADR-181: Result delivery follows measured selection, not mutable workspace state
+
+Iterative delivery recomputes the best observed objective from terminal attempt
+receipts and the declared baseline, retaining incumbents on ties. It checks every
+frozen source hash, candidate identity and aggregate selection before writing to a
+new directory outside the source run. The selected code is copied from its frozen
+attempt, never from the last working directory. All outcomes remain in the delivery;
+agent final prose is explicitly unverified. Baseline winners require separate
+baseline-source resolution rather than exporting a worse generated candidate.
+Export conveys development evidence, not scientific validation or formal eligibility.
+For the registered unlearning adapter, optional baseline-run/source inputs resolve
+an original-baseline winner against validated scorer receipts and the task's baseline
+score/source identity. Every copied file must match the measured source digest.
+Unsupported task families cannot borrow this resolver by matching a numeric score.
+The multi-run development summary retains complete trajectories and source-file
+digests, reporting task/provider alignment separately from formal comparison
+eligibility. It does not turn scorer replicas into independent agent trials or
+equate a selected development proxy with a verified scientific mechanism.
+Completed review/delivery artifacts can be registered with ProjectRuntime using
+their real project-relative path and content hash. Registration is revision-guarded,
+idempotent only for identical metadata, and does not switch the current paper/run.
+Registration seed zero is labelled a bookkeeping placeholder, not a claim about
+the provider's sampling seed or the experimental seed.
+
+### ADR-182: Native prospective capture precedes execution
+
+The opt-in research-tool Taste capture prepares a development-only sampling plan
+before source-run registration. The normal controller still chooses the action.
+Before appending that decision to mutable state history or invoking the executor,
+the loop calls the existing prospective lock API with the exact controller input.
+After a terminal result it writes a separate result receipt and invokes the existing
+outcome attachment API. Pending executions keep only their predecision lock; no
+terminal scientific outcome is invented. A stale Idea or failed predecision lock
+stops execution rather than silently recording retrospective evidence as prospective.
+No learning/admission authority follows from this capture, and historical runs
+remain unchanged. Observation-only recovery of a pending capture remains explicit.
+
+### ADR-183: Learned allocation routes by decision scope, not tool availability
+
+An explicit development policy must bind the project's current Idea and expose an
+adaptive-allocation head. The research-tool controller router applies it only when
+the alternatives are EXPERIMENT/STOP with Run Experiment/Final Answer tools. The
+same base preference backend and provider ledger are shared; read/edit/review
+decisions do not inherit unsupported allocation judgments. The existing learned
+assessment retains its support/abstention behavior. Runs preserve the exact policy
+and distinguish learned allocation from precedent augmentation and Full SciTaste.
+This connection does not establish cross-task transfer or a scientific gain.
+Policy-use summaries read typed per-decision traces and check their family-policy
+identity against the run contract. They distinguish configuration, assessment,
+abstention, nonzero adjustment and selection agreement. Even agreement with a
+recommendation is not a no-policy counterfactual and cannot prove causal influence.
+
+### ADR-184: Multiple tool proposals are alternatives, not a workflow script
+
+The optional proposal batch contains two-to-four complete tool actions for the
+same current state. Duplicate tool/argument pairs are rejected even if rationales
+differ, and the combined payload remains bounded. Every proposal is converted to
+a distinct concrete action before selection; the implicit Stop remains available.
+Only the selected action executes and incurs execution cost. All alternatives are
+retained in the decision and trajectory; no candidate may assume a sibling proposal
+already executed. The default single-proposal path and IDs remain unchanged.
+Multi-proposal generation uses one existing-budget model call and does not raise
+execution limits. Allocation-only Taste does not route mixed-purpose sets.
+
+### ADR-185: Agent backend identity is a run-level choice
+
+Both development entrypoints accept an explicit backend config while preserving
+historical defaults. Requested provider/model and config hash enter the contract;
+the provider ledger retains actual served identity. Native project registration
+uses the selected identity and rejects a mid-run provider/model change. Existing
+upstream continuation still requires the original config digest. No fallback or
+new API budget is implied by selecting another backend; separate runs are required
+for model comparisons, whose compatibility/effectiveness must be observed rather
+than inferred from successful configuration loading.
+The separate post-hoc source-review entrypoint follows the same explicit backend
+binding. On provider exceptions it records only error type/status, never headers or
+exception text, and preserves unresolved reservations in its liability total. An
+HTTP failure is not a model-quality observation; no implicit retry/fallback occurs.
+Provider ledger accounting is shared by bridge admission and development reporting:
+a completed record replaces its reservation, an unresolved request retains it, and
+unknown/nonfinite liability fails rather than becoming zero. Runs with this ledger
+do not also count the duplicate provider wire log. Separate legacy node receipts
+remain separately accounted; this is not provider invoice reconciliation.
+
+### ADR-186: Preference schema repair is distinct from transport retry
+
+`max_format_retries` optionally overrides the legacy shared retry limit for ranking
+JSON schema failures. Native development permits one repair and zero transport
+retries; the run contract declares both. Each repair remains a normal logged call
+subject to the same provider ledger admission. No malformed decision is executed,
+no field-name guessing is performed, and old interrupted runs are not rewritten.
+
+### ADR-187: Explain policy inactivity from immutable predecision state
+
+The research-policy abstention explainer replays the frozen family head on captured
+states and candidate sets, requiring the resulting assessment digest to equal the
+recorded trace. Output includes matched features, effective support, uncertainty
+and application threshold. This is historical diagnosis, not fresh authorization,
+counterfactual outcome evidence or a policy update. Repeated coarse-feature fallback
+must not be mistaken for response to changing scientific evidence.
+
+### ADR-188: Experiment observation collection does not invent decision credit
+
+`collect_research_experience` bridges prospective tool captures to the existing
+v2 episode compiler. It preserves the frozen decision context and selected-action
+result, verifies the lock/outcome/projection chain, and emits quarantined candidates.
+Execution outcome polarity is unresolved and credit is not-attributable with zero
+confidence. Agent rationale is explicitly unendorsed. The collector neither infers
+unexecuted alternatives nor admits or trains a policy. Scientific interpretation
+and transfer scope remain a separate review stage.
+
+### ADR-189: Separate attribution hypothesis generation from review
+
+The experience attribution node receives hash-verified candidate evidence and may
+propose scoped credit assignments referring only to existing outcomes/confounders,
+or abstain. It does not rewrite outcomes, alternatives or decision context. The
+bounded runner records draft status separately from the existing AI credit-review
+node; neither a draft nor node-schema acceptance constitutes panel admission.
+Larger evidence packets may use an explicit bridge byte ceiling, without changing
+agent defaults or bypassing cost reservation and call-count limits.
+
+### ADR-190: Agent termination and experimental delivery are separate states
+
+Both iterative development runners call a common finalizer after terminal result
+and summary persistence. It reuses measured selection, exports outside the source
+run and registers the artifact. Pending experiments produce a deferred receipt,
+never a claimed complete delivery. A baseline winner without verified source stays
+explicitly unresolved. Completed measurements can be delivered after agent failure
+without relabeling that failure or treating agent prose as scientific evidence.
+
+### ADR-191: Development observations enter a writing buffer, not headline claims
+
+The delivery adapter consumes the measured-selection export and emits existing
+semantic writing evidence, narrowly supported observation claims and limitations.
+It includes every attempt, baseline, direction, cost and agent terminal status,
+bound to the source-selection digest. Claims are non-headline and the buffer
+explicitly withholds manuscript adoption and formal-evidence authority. The
+finalizer persists this alongside source delivery; it does not bypass the formal
+evidence or review-driven manuscript revision flows.
+
+### ADR-192: Multi-proposal history is projected, not repeated verbatim
+
+Native generation retains all action rationales and measured/review outcomes but
+replaces proposed and superseded source bodies with explicit hash/size references.
+The latest successful write for each file stays verbatim. Obsolete reads of those
+files reference the archived content rather than duplicate it. Only the generation
+prompt changes; immutable decisions, outcomes and trajectories remain complete.
+This reduces source duplication without silently truncating scientific feedback.
+
+### ADR-193: Continue interrupted Native runs without resetting research budgets
+
+Continuation is explicit and creates a separate run. It requires terminal Native
+interruption, matching task/provider/tool settings, complete post-action state,
+terminal known-cost experiments and no unresolved provider reservation. Historical
+candidate, experiment and API ledgers are copied as inherited evidence; history
+and resource counters start from the saved state. Turn indices continue rather
+than restart. A create-exclusive parent claim prevents independent children from
+spending the same remainder. Partial preparation does not automatically release
+that claim; recovery requires inspection. New prospective capture covers new
+decisions only, and lineage marks inherited history as non-new execution. Learned
+policy continuation is not enabled by this development implementation.
+
+### ADR-194: Profiled semantic nodes share the research provider ledger
+
+The shared structured adapter honors optional generation envelopes within the
+bridge ceiling, refuses unsupported seed promises, and records profile identity
+and effective output limits. Actual served model and usage remain provider-derived.
+Node runtime still owns profile admission and project-level constraints; bridge
+reservations enforce the common agent cost/call allowance. This support is not an
+independent authorization to activate a Taste corpus or execute a research action.
+
+### ADR-195: Grounded transfer reasoning precedes tool-action selection
+
+The optional research controller wrapper freezes grounded candidates through the
+existing TasteController projection, invokes the existing deliberation node under
+project-runtime and shared-provider limits, and loads its verified ledger entry.
+Only an accepted closed-set proposal reaches augmented action selection. Missing
+grounded candidates or a nonaccepted result uses intrinsic selection with an
+explicit trace; there is no hidden raw-retrieval substitution. Pure inspection
+turns skip the extra inference. Corpus quality and scientific effectiveness remain
+distinct from schema/ledger validity. The initial development route excludes
+learned-allocation-policy mixing and continuation; no formal claim is enabled.
+
+### ADR-196: Paper passage preparation is distinct from Taste admission
+
+The paper preparation command consumes operator-reviewed line selections from
+saved text and emits the existing ReferenceQualityInput schema. PDF/text hashes,
+official source URLs and selection locations remain in separate provenance files.
+Content identity and task-leakage review is explicitly an operator assertion, not
+something inferred from role tags or hashes. Preparation is development-only,
+never a quality verdict, abstraction, formal split assignment, or library admission.
+Exact text is preserved; tables/equations with damaged text extraction must not be
+silently reconstructed into purported source evidence. Retrieval comparison arms
+must receive the same qualified source material when evaluating abstraction gains.
+
+### ADR-197: Screening can draft an abstraction but cannot admit its own memory
+
+The development paper-screening command optionally chains the existing grounded
+abstraction node after a ledger-accepted qualify proposal. Both calls share one
+bounded provider ledger and the same frozen source projection. The result is an
+untrusted TasteAbstractionCandidate with a verifiable model trace, not a corpus
+admission or authorization to execute. Negative quality verdicts skip abstraction;
+rejected abstraction outputs remain recorded. Explicit whitespace-only projection
+normalization stores both raw and projected passage hashes, preserving original
+PDF/text and selection locations. Scientific content is not repaired or paraphrased
+by that transformation. Do not use role-label coverage as a scientific quality
+verdict, and do not rewrite historical ledger outputs after improving the prompt.
+
+The optional review protocol materializes independent, identity-blinded review
+requests for accepted candidates after generation; it does not execute reviewers
+or infer admission. Reusing screening requires the original accepted ledger and
+an equal full source input, not just matching a source name. Source screening
+judges whether evidence supports a bounded abstraction, rather than requiring the
+source paper to contain a finished cross-domain rule. Generated hypotheses and
+inferred scope conditions must not be promoted to measured scientific findings.
+
+### ADR-198: Review-bound revision retains a separate source-evidence boundary
+
+GroundedTasteRevisionInput extends the abstraction contract additively, preserving
+historical abstraction inputs. It binds the prior abstraction, exact final-review
+hash and primary findings, while explicitly denying that review text is scientific
+evidence. The preparation route verifies the locked source/proposal pair, original
+review responses and execution receipts, and the unchanged screened projection.
+The initial route handles primary-agreement rejections; adjudicated/disputed input
+is not silently downgraded into this simpler path.
+
+The new grounded-taste-revision node retains original source-only grounding checks.
+Its accepted output is a new untrusted candidate and is compatible with the same
+independent review-pack preparation as initial abstractions. Neither a previous
+quality result nor a successful revision grants memory admission. Earlier model
+outputs and rejection records remain immutable; the revision uses a new run and
+candidate identity derived from its review binding.
+
+### ADR-199: Reviewed development experience has an explicit library bridge
+
+`reviewed_development_cases` verifies accepted review decisions against actual
+locked responses and execution receipts, candidate runtime/source bindings, and
+a qualified source-quality ledger. It accepts original or revised candidates
+without rewriting scientific stage, applicability or failure conditions.
+The compiler emits TasteCase records for the existing Native retriever with an
+AI-only label, human_verified=false and development-only provenance. Compilation
+does not establish formal validity, provider diversity or scientific effectiveness.
+The command writes a fresh output directory and hashes the library and inputs;
+existing libraries and rejected candidates remain untouched.
+
+### ADR-200: Local driver interruption does not terminate remote research
+
+The observe-only unlearning command reads a project-owned attempt binding and
+calls the existing remote observation/collection path. It never invokes launch.
+Collection exposes observed remote liveness and replica count so interrupted local
+orchestration cannot be mistaken for experiment termination. Terminal results
+retain original source/runtime/budget checks and immutable writes. Recovered
+results do not retroactively turn a skipped Taste intervention into treatment.
+
+### ADR-201: Online Taste participation is measured from decision records
+
+Native research reporting separates configured enablement, actual invocation
+outcomes and controller decisions carrying non-abstaining selected precedents.
+Only the latter sets the diagnostic taste_augmented flag. That flag does not imply
+a causal action change, scientific gain or formal validity; these require separate
+experimental evidence. Post-hoc validation never replaces rejected online receipts.
+Singleton precedent support covers input, proposal and persisted decision trace,
+while at least two alternative current actions remain required.
+
+### ADR-202: Experiment delivery produces learning inputs, not automatic lessons
+
+If the run has a prospective sampling plan, terminal delivery invokes the existing
+verified experience compiler. Completed experiments become quarantined candidates
+with unassigned credit; absent completion projections are listed as unresolved.
+The compiler preserves predecision state and actual outcomes, including negatives.
+EXPERIENCE_STATUS.json distinguishes collection success from collection failure;
+neither authorizes policy updates. A failed collector does not erase or invalidate
+otherwise measured experiment delivery. Semantic attribution, review and admission
+remain separate from deterministic observation collection.
+
+### ADR-203: Scientific task semantics are shared, source-bound inputs
+
+Both Native and upstream MLAgentBench development runners accept an optional
+ScientificTaskContext. Each bounded fact carries a candidate-visible-data or
+public-protocol declaration, source locator/hash and exact excerpt. Paths must
+remain inside the evidence root; source bytes and excerpt presence are checked.
+Only selected facts/excerpts reach the shared research problem, not entire source
+files. Source integrity does not prove semantic truth or verify declared visibility;
+the preparing operator remains responsible for excluding held-out information.
+
+Binding happens before continuation checks and model execution, so changed context
+is a changed task, not an invisible mid-run prompt edit. Legacy tasks are unchanged
+without the explicit option. The same context must be supplied to comparison arms;
+no formal fairness claim follows merely from implementing this shared interface.
+
+### ADR-204: Proposed causal credit has its own candidate identity
+
+Attribution materialization verifies the saved node request against the original
+observation candidate, rehashes source evidence and compares proposed credit with
+both structured and raw response content. It derives a new identity from the raw
+response digest while preserving the factual observation fields. Only draft credit,
+applicability/failure boundaries and attribution producer metadata change.
+
+The binding records original candidate, request, raw response and resulting candidate
+hashes. Abstention emits no credited candidate. Scientific review remains necessary;
+the bridge checks internal provenance consistency, not independent provider identity
+or causal truth. New candidates stay quarantined and cannot update policy.
+
+### ADR-205: Recommendation adoption is separate from participation
+
+Development delivery compares each non-abstaining, precedent-bearing Taste
+recommendation with the recorded final selected action. Missing action bindings
+are unresolved, not agreement. Counts are descriptive: agreement neither proves
+that Taste changed a decision nor that the decision improved research quality.
+This reporting layer does not override controller decisions or alter live tasks.
+
+### ADR-206: Critique is revision input, not experimental evidence
+
+An attribution draft may carry feedback from a retained AI review of its exact
+candidate. The loader validates request/response binding, review packet identity,
+candidate credit and agreement with raw response content. The new request records
+the source review digest. These checks establish internal consistency, not
+independent provider verification or correctness of the critique.
+
+The revision node keeps experimental observations unchanged and may narrow credit
+or abstain. Materialization still creates a separately quarantined candidate;
+neither acceptance of an earlier candidate nor partial support for a credit item
+is transferred to the revision. Feedback is fallible criticism, not new data.
+
+### ADR-207: Provider admission exhaustion is a distinct terminal reason
+
+The shared provider bridge raises a typed budget exception before sending a
+request that exceeds call or liability limits. It carries only numeric accounting
+and a request-not-sent flag. Both development entrypoints preserve this reason
+while continuing result delivery. Budget stopping is not scientific completion;
+historical generic RuntimeErrors cannot be retroactively assigned this cause.
+
+### ADR-208: Finite campaign delivery need not consume another model call
+
+An explicit Native contract flag permits deterministic termination when the
+experiment allocation is consumed. The loop checks before proposing or ranking,
+writes a resource-stop receipt, and returns separately from controller completion.
+Pending historical execution remains unresolved. The finalizer remains responsible
+for baseline-inclusive measured delivery, not agent-generated success claims.
+Interactive post-experiment analysis remains available with the default policy;
+continuation rejects policy changes instead of silently changing the treatment.
+
+### ADR-209: Optional implementation advice is a shared tool
+
+The real upstream ResearchAgent adapter can install the same implementation-review
+tool as Native before freezing the visible interface. Calls consume the existing
+shared provider budget and do not approve or block experiments. The contract
+records availability and continuation rejects changes. This closes interface
+availability only; it does not prove full-system equivalence or a fair formal study.
+
+### ADR-210: Measured delivery feeds the existing evidence-paper contract
+
+Paper preparation recompiles its writing buffer from the selected experiment
+delivery and combines it with an editorial brief. The brief cannot replace claims,
+evidence or limitations. Its headline is descriptive, not a forced improvement
+claim; all measured attempts remain visible. Bindings preserve selection, brief
+and input digests. Numeric allowances exclude identifiers and source hashes.
+Preparation neither publishes a paper nor promotes development evidence to formal
+results, and it never changes the project's current manuscript alias.
+
+### ADR-211: Paper generation uses a project-registered live invocation
+
+The delivery drafting launcher registers its run and invokes the existing paper
+node through ModelNodeRuntime. Prepared input and measured selection are rehashed
+before use. A failed node is not a successful process or a paper, and provider
+accounting is retained separately because response parsing can fail after billing.
+No paper aliases change at this boundary. The observed long-JSON failure requires
+transport or drafting decomposition work, not relaxed scientific claims.
+
+### ADR-212: Reviewable candidates are not admitted submissions
+
+Recovery may delete only a bounded number of unquoted closing braces when a
+unique valid JSON text results; scalar prose and numeric values are unchanged.
+The saved provider request must match the prepared input. An incorrect model
+fingerprint and schema failures remain recorded, never rewritten as acceptance.
+Such prose can be rendered as an unreviewed independent candidate for subsequent
+critique. The normal venue submission gate remains separate and unchanged.
+The paper node now explicitly transmits its expected input fingerprint rather
+than asking a model to calculate an unprovided cryptographic digest.
+
+### ADR-213: Negative paper review is a lifecycle result
+
+The candidate-review launcher uses exact registered paper bytes, the existing
+review packet and durable runtime. An accepted model response can recommend
+rejection; importing it opens revision obligations rather than failing the
+workflow. Neither the model recommendation nor an experiment-requiring concern
+authorizes new resource use. Independent expert review and publication readiness
+remain false. Unreviewed candidates need a revision handoff without fabricated
+argument-adoption authority.
+
+### ADR-214: Unapproved papers can receive evidence-bound candidate edits
+
+Candidate revision is a separate path from admission of a formally structured
+paper argument. It reads the exact registered review paper and reports, hashes
+supplied evidence, and proposes paragraph replacements with concern links.
+Unknown or repeated targets and incomplete concern responses are rejected.
+Applying a proposal builds a separately registered candidate; it cannot close
+review, update current-paper aliases, launch experiments or establish accuracy.
+Existing scientific revision/adoption gates remain unchanged. This allows negative
+reviews and imperfect drafts to progress while preserving unresolved obligations.
+
+### ADR-215: Segment recovery must not duplicate irreversible calls
+
+The candidate-paper coordinator binds source, evidence and stage identities in
+an immutable contract, holds an exclusive cycle lock, and records stage start
+before invoking subprocesses. Resume reuses verified reports/artifacts; a started
+or existing incomplete stage is not implicitly retried. Completion binds revised
+text and PDF while preserving open review and false whole-lifecycle completion.
+The first exercised path adopts existing real artifacts with zero new calls;
+fresh automatic invocation is a separate verification claim.
+
+### ADR-216: Initial candidate build is a recoverable artifact operation
+
+The initial paper builder binds prepared input, retained request/response and
+registered source-run identity. It performs bounded recovery, ordinary rendering
+and unapproved paper registration under one lock. Complete matching artifacts are
+reused; incomplete or changed builds are preserved for reconciliation rather than
+overwritten. Its provenance record binds recovered text and compiled PDF, without
+reclassifying the source model invocation or selecting a current manuscript.
+
+### ADR-217: Candidate prose transport is separate from scientific admission
+
+Long-form candidate generation may use one plain-prose response per required
+section instead of embedding the entire manuscript in a nested JSON proposal.
+The orchestrator supplies headings, freezes evidence input and provider identity,
+and retains each prompt/response with exclusive start markers. A completed saved
+response can be materialized on resume; an absent response after a start is not
+silently retried. One shared ledger bounds the section campaign to USD 3 liability.
+The assembled Markdown/TeX/PDF is registered as an unreviewed candidate, not an
+accepted EvidencePaperDraftNode proposal. This route intentionally does not grant
+scientific approval, establish factual accuracy or close subsequent review.
+
+### ADR-218: Experience disposition is distinct from successful policy learning
+
+A measured-cycle receipt binds source contract, result selection, completed
+paper-flow summary, revised Markdown/PDF and candidate collection. Candidates
+must belong to that source run; optional retained AI reviews are verified against
+their exact candidate. Explicitly unattributable observation-only credit may be
+routed to abstention without fabricating scientific review. Directional credit
+without review remains pending; a positive review remains pending admission.
+Neither case silently changes the retrieval library or operational policy.
+Completing the negative/abstaining disposition path proves neither positive
+admission nor learned benefit. Missing collections are not silently synthesized.
+
+### ADR-219: Project purpose does not replace executor constraints
+
+A prepared project task binds the verified current idea, explicit scientific
+subquestion, task template, adapter identity and required candidate-file hashes.
+The Native launcher loads this plan and adds its identity to the execution
+contract; changed idea/source or continuation plan is rejected. Project goals
+are exposed as hypotheses, not measured evidence. They do not authorize edits to
+the scorer, hidden data, resource ceilings or unsupported claims of generality.
+The initial adapters remain meta and unlearning, with iterative execution only
+for unlearning. Resource preparation remains adapter-specific. This interface
+does not itself perform autonomous study selection or validate study adequacy.
+
+### ADR-220: Compose execution without converting observation failure to relaunch
+
+The prepared-study coordinator freezes idea-plan, editorial brief, baseline and
+optional Taste inputs. It records execution start before invoking Native and
+never launches again merely because a terminal receipt is absent. Pending or
+failed delivery prevents paper generation from nonexistent measurements; actual
+terminal measurements may proceed independently of negative controller outcomes.
+Paper/revision/disposition reuse their existing stage checkpoints. Completion is
+scoped to a prepared study; scientific adequacy and autonomous study design are
+separate capabilities. Initial support is the iterative unlearning executor.
+
+### ADR-221: Recover advisory flag contradictions without laundering acceptance
+
+A retained, complete paper review rejected solely for experiment-action evidence
+flags can be imported as separately recovered internal advice. Recovery verifies
+the provider/request/runtime binding and original packet, only raises missing
+evidence/experiment requirements to true, and reapplies all original content
+checks. A sidecar records original rejection, exact edits and imported report hash.
+No prose/verdict is changed; no accepted invocation provenance is fabricated.
+The flags are obligations, not execution authorization. Other errors stay blocked.
+
+### ADR-222: Study design is not executor selection or scientific certification
+
+The research-design node binds the project idea and available evidence, proposing
+falsifiable hypotheses, comparison roles, split/sampling units, measurements,
+resource needs and explicit executor gaps. Required comparison-role coverage can
+be specified by the caller; mechanism ablations cannot satisfy an external-method
+requirement. No model plan grants execution authority. Limited capability inputs
+must not be mistaken for a complete repository inventory. A schema-valid plan may
+still be scientifically poor or violate priorities; such outputs stay proposals,
+not committed experiment assignments or evidence that autonomy is complete.
+
+### ADR-223: Planning capability inventory must expose its evidence and limits
+
+Planning receives a maintained seven-entry inventory whose descriptions are bound
+to actual source files/hashes. It distinguishes task execution, benchmark arms,
+mechanism studies, decision scoring, evidence import and prepared lifecycle
+composition. Presence is not runtime readiness; this is not an exhaustive runtime
+discovery mechanism. Design handoffs preserve missing adapters versus missing
+execution binding, resource needs and unverified scientific adequacy. No shell
+commands or formal assignments are synthesized from arbitrary model text.
+
+### ADR-224: Preserve study semantics when binding an execution component
+
+Project task preparation optionally requires all four design selectors: design
+file, study ID, comparison ID and treatment/comparator arm. The design must bind
+the current idea and nominate the chosen adapter; a null or different executor
+cannot be silently substituted. The plan freezes source bytes and the full study,
+comparison and relevant hypotheses. Resume verifies those design bytes. This
+passes scientific intent to one component; it does not implement prose-defined
+sampling/scoring, assign all campaign arms, or establish study adequacy. Those
+remaining execution bindings must not be inferred from prompt inclusion alone.
+
+### ADR-225: Design-bound multi-arm execution reuses the campaign scheduler
+
+Launch-config v1.2 adds a project-relative, hash-bound study design and explicit
+comparison/system mapping. Before dispatch the existing runner verifies current
+idea, exact plan, complete comparison coverage, distinct system IDs and matched
+task/seed/repetition/lane assignments. Existing resource/endpoint/scorer checks
+and activation rules still apply; this binding grants no new authority. Distinct
+IDs alone do not establish an independent external framework. v1.0/v1.1 omit the
+new field from canonical identity to preserve old checkpoint compatibility.
+
+### ADR-226: Task compilation selects registered resources without inventing scorers
+
+The development compiler accepts a pilot template, explicit task/lane selection,
+study design and comparison mapping. It emits ordinary prelaunch/cell-plan objects
+and their design binding, preserving source resource identities and resetting
+approval. Formal protocols and held-out tasks require their existing dedicated
+assignment path, not this compiler. Requested primary outcome and configured
+endpoint remain separately visible; task expansion is not proof of sampling or
+metric equivalence. Compilation does not authorize resource use or certify a study.
+
+### ADR-227: Planning selections use closed protocol options
+
+Model design proposals may include a typed execution selection: template, lane,
+task IDs, study and comparison-to-system mapping. These references must resolve
+against supplied pilot protocol options; optional automatic compilation invokes
+the existing no-run matrix compiler. Task eligibility and executor IDs are
+explicitly separate from protocol IDs. If a protocol supplies no eligible tasks,
+the planner must leave the selection absent, not reinterpret task isolation.
+The first live exercise rejected its selection and launched nothing; positive
+model-selection-to-compilation evidence is still outstanding.
+
+### ADR-228: Development split use and learning-source isolation are separate
+
+The prelaunch schema uses held_out/source_group_disjoint for learning-source
+isolation, including its explicitly development-scoped protocols. The development
+compiler therefore shares an exact split-label allowlist with the planner and
+still requires pilot scope. It preserves held_out rather than flipping it to
+obtain an executable matrix. Unknown split labels and formal/robustness scopes
+remain on their dedicated assignment path. Matrix compilation does not establish
+that a proposed contrast matches the implemented treatment or scoring endpoint.
+
+### ADR-229: Compiled studies own write targets and expose actual implementations
+
+The compiler derives new manifest/protocol identities from its design, selection
+and output location. Output/archive directories are beneath that compilation;
+an echoed template ID cannot route a new study into old evidence. It also freezes
+an implementation contract containing real system refs and the registered
+endpoint/analysis alongside proposed model comparisons. These are deliberately
+not declared semantically equivalent without supporting implementation evidence.
+
+### ADR-230: Cycle observations inform planning without implicit Taste admission
+
+`project.cycle_feedback` loads a project-local receipt chain linking the supplied
+plan, terminal execution, complete measured selection, paper summary and experience
+dispositions. It retains failures as well as successes and labels changed-idea
+history explicitly. Feedback does not confer retrieval admission, causal credit,
+review closure or execution authority. `plan_project_research --previous-cycle`
+archives the resulting packet with its source hashes before the model call.
+
+The existing cycle coordinator can optionally generate the next proposal after
+delivery. Planning has a separate bounded allowance and start/exit/result receipts;
+an interrupted planning attempt does not rerun completed experiments or writing.
+No autonomous campaign loop or implicit adoption follows structural acceptance.
+The direct planner path is exercised; the new composed branch is not yet proven.
+
+### ADR-231: Generated studies reuse the registered evaluation campaign runner
+
+`scripts.run_generated_study_campaign` joins compilation artifacts, project
+evaluation publication and `ProjectEvaluationCampaignRunner`. It checks the exact
+plan/design/proposal identities, binds a separately supplied implementation launcher
+and retains any formal-preparation binding. Model prose supplies no command or
+authorization. Existing evaluations must match both plan and resource corpus.
+Publication is project-owned and does not change the selected evaluation alias.
+
+The same runner owns execution, activation, resume and explicit failed-assignment
+retry. The wrapper retains its input contract and append-only observation receipts;
+it adds no scheduler or second assignment ledger. Without `--allow-execution` it
+only registers and reports readiness. Source/resource/authorization requirements
+are not bypassed. CLI/import/style checks passed; no live generated campaign has
+yet exercised this integration. In particular the retained perception selection
+still has old resource bindings and mismatched proposed method semantics.
+
+### ADR-232: Prepared remote tasks carry their execution resource envelope
+
+Prepared unlearning plans may embed a validated non-secret resource envelope,
+including the existing catalog host definition, source manifest hash, bundle/code/
+Python paths and device index. The Native runner passes that exact envelope into
+each iterative experiment. SSH and rsync use its explicit user/host/port rather
+than an independently mutable alias. Credentials remain names in the contract and
+values in the ignored access store. Runtime source hashes and candidate hashes
+remain checked by the remote launcher; resource metadata is not an idle reservation.
+
+Legacy plans and archived bindings retain the old route. Observe reads the saved
+binding, not the newly configured destination. The current task still fixes seeds
+42–51. Changing task/scorer/model/data semantics is not authorized by a resource
+profile. A no-network mocked route/observe check passed and a real project plan
+was prepared; a new live remote run has not exercised this resource envelope.
+
+### ADR-233: Model task selection compiles trusted envelopes, not executable prose
+
+Research design has a separate optional single-component task selection, mutually
+exclusive with campaign-matrix selection. Available options come from verified
+prepared plans and expose the actual task, executor limits and frozen resource.
+The compiler rechecks source and template identity, binds the selected study and
+comparison arm, and invokes existing task preparation. It neither invents shell
+commands nor treats a one-arm component as a complete comparative study.
+
+New prepared plans retain the original template locator and hash to avoid copying
+previous scientific context into a newly selected study. Legacy plans remain
+loadable but cannot be used as selectable templates without that provenance.
+The actual planner-to-compiled-task path completed; the resulting live lifecycle
+is in progress and does not yet establish unattended end-to-end completion.
+
+### ADR-234: A cycle and its continuation have distinct registered identities
+
+The generic development-artifact registrar accepts an optional explicit run ID;
+existing callers retain directory-derived identities. The cycle coordinator uses
+a dedicated `-continuation` ID for NEXT_PLAN.json, preventing collision with its
+already registered RESULT.json. Artifact hashes and conflicting-entry rejection
+remain unchanged. The real collision was recovered with API/execution disabled;
+experiments, drafting, review, revision and next planning were all reused.
+
+### ADR-235: Package the coordinator and expose an explicit workspace-backed CLI
+
+The live coordinator and artifact registrar are package modules, with thin script
+compatibility shims. `scitaste project research-cycle` shares the coordinator's
+argument definitions and uses an explicit trusted workspace for repository-backed
+executor, writing and planning modules. Caller paths are resolved before the
+child changes directory; the CLI does not change its own working directory or
+interpret model-provided shell commands. Existing frozen cycle identities survive
+the migration. A completed real cycle resumed from `/tmp` with API/execution
+disabled and exited successfully. Independent distribution of remaining backend
+scripts/configs is not yet solved and is not claimed by this entrypoint.
+
+### ADR-236: Model-drafted attribution requires explicit producer identity
+
+Candidate provenance is resolved against the exact bound draft-result bytes,
+request fingerprint and raw-response hash. The registered review launcher rejects
+the producer model before an API call and uses run-specific invocation IDs.
+Materialization and admission require producer identities for candidates marked
+`model-attribution-draft`; previously imported records without them remain retained
+but ineligible. This makes the existing producer/reviewer exclusion effective in
+the live path rather than relying on optional operator parameters. The admitted
+negative episode is training-eligible only, with no automatic policy mutation.
+
+### ADR-237: Family assignment and policy refresh consume durable review evidence
+
+The registered reviewer supports an outcome-blind family projection in addition
+to attribution. `refresh_reviewed_experience_policy` imports the exact durable
+review invocations and delegates assignment, corpus sealing and fitting to the
+existing package interfaces. An optional previous corpus contributes immutable
+admission/assignment pairs; duplicate admissions and changed source bytes fail.
+The new snapshot is project-registered, not made current or activated. Existing
+support/uncertainty defaults remain intact. The real single-episode path and
+no-call resume completed; multi-episode accumulation and downstream live use are
+not yet demonstrated. Fitting successfully does not imply sufficient support.
+
+### ADR-238: Explicit development consultation preserves snapshot provenance and abstention
+
+Project policy refresh loading verifies the closed receipt, all four artifact
+hashes, semantic cross-bindings and current project Idea. Product cycle inputs
+freeze the selected receipt hash; Native records the refresh, readiness and policy
+identity and snapshots the consulted model. This is explicit development use of
+the existing allocation router, not project-default deployment or formal authority.
+Weak support does not block reading/assessment but continues to forbid a supported
+preference through existing head-level abstention. Library deliberation and learned
+allocation remain separate modes. An actual retained decision was consumed offline;
+fresh live integration has not been exercised and no effect improvement is claimed.
+
+### ADR-239: Benchmark delivery is distinct from execution and scientific validity
+
+ResearchClawBench terminal receipts enter the shared measured-paper interface via
+a source-typed selection. Import revalidates receipt hashes and project-local report
+and score bindings; compile rechecks all original bytes. Legacy unbound scoring
+stays unknown. Report content is not promoted into measured claims, and internal
+arms are not presented as external framework comparators. The execution launcher
+can register delivery and continue into existing paper orchestration, preserving
+the terminal receipt if writing interrupts. Real historical import/input preparation
+is demonstrated; fresh integrated execution and downstream revision are not.
+
+### ADR-240: Explicit revision recovery preserves failure and evidence history
+
+Revision prompts expose headings as protected context, not candidate edit targets.
+Application verifies the union against the original paper and preserves original
+block ordering; legacy packets remain compatible. Measured-paper orchestration
+allows one explicitly named recovery lineage only after a terminal rejected
+revision, with a frozen original-result hash, new output and additional budget.
+Draft and review are reused, the original rejection remains, and total accounting
+includes both revision calls. This closed the real historical benchmark paper
+segment; it grants neither review closure nor new-experiment evidence.
+
+### ADR-241: Next implementation action is distinct from the scientific study agenda
+
+Verified paper feedback supplies actual concerns and revision responses to planning
+without converting reviewer requests into execution authority. An observed planning
+failure exposed a structural bias: always requiring a next study encouraged efficacy
+experiments to masquerade as completeness work. Optional completeness-first input
+therefore includes frozen project workflow gaps and requires an explicit known-gap
+implementation action. Scientific studies remain available but deferred; campaign
+and task selections cannot override that immediate work item. Historical designs
+retain defaults. Real v2 planning selected task provisioning, not an efficacy gate;
+semantic adequacy still requires judgment and cannot be established by schema alone.
+
+### ADR-242: Provision existing benchmark tasks without inventing execution support
+
+A separate project-owned envelope binds existing CPU/API benchmark tasks to the
+current Idea, visible data, runtime source and API settings. The coordinator invokes
+the existing ResearchClawBench native-base adapter, disables GPU visibility, and
+records launch/exit state separately from result import and writing. A missing
+receipt never authorizes automatic relaunch. This broadens task orchestration,
+not arbitrary task synthesis, sandbox isolation, full Taste control or online
+decision attribution. Optional dependencies remain outside the minimal core install.
+
+### ADR-243: Reuse scientific report content and keep figures through revision
+
+The prepared task continuation can import the actual generated report rather than
+redraft from terminal metadata. It verifies the execution result, receipt, report
+and generated asset hashes; only relative image paths are normalized. Paper import
+registers an unapproved candidate and does not replace the current project manuscript.
+Revision resolves images from the registered source bundle and preserves nested
+artifact paths. Real review/revision plus a no-call task-coordinator resume completed;
+this establishes the delivery path, not metric validity or review closure.
+
+### ADR-244: Upstream tool observations do not impersonate scientific Taste decisions
+
+The inspected upstream event writer synchronously emits assistant tool choices
+before execution and tool feedback afterward. Optional capture writes durable
+selection records before returning from the callback, binds runtime source hashes,
+and pairs outcomes by exact call identity/tool/arguments. Source order errors fail;
+unmatched selections remain explicit. The terminal receipt binds the disposition.
+Historical replay is a distinct non-prospective mode. Neither mode invents candidate
+alternatives, scientific decision classes or causal reward from success. These
+observations remain outside Taste admission pending actual controller/state and
+attribution integration. Replay paired 38 real calls; prospective live use is open.
+
+### ADR-245: Tool reuse must not delegate SciTaste's research controller
+
+A separate workspace environment wraps upstream tool objects, never their autonomous
+agent loop. Existing Native proposal generation, TasteController selection, durable
+decision/state storage and Native dispatch remain the control path. Concrete tool
+names map to explicit meta-actions; shell calls are probes, not automatically measured
+experiments. Schema validation binds optional/required arguments, error observations
+remain errors, and elapsed tool wall time is recorded. One fixture proves alternative
+selection dispatches only the chosen tool and stores feedback. It does not establish
+the yet-unimplemented full live Native CPU/API task launcher or scientific attribution.
+
+### ADR-246: Native-owned task execution and prospective capture share the existing controller
+
+Task preparation explicitly selects an upstream-agent or SciTaste Native owner.
+The Native launcher reuses visible benchmark assets and tool objects, but generates
+alternatives through the durable provider bridge and ranks them through TasteController.
+State snapshots, decisions, Native execution receipts and prospective Taste locks
+remain the existing control path. Shell tool calls do not fabricate scientific
+experiment counts or objective measurements. Terminal all-action collection creates
+quarantined candidates with unassigned causal credit, not automatic lessons. Live
+execution has begun; startup or partial tool completion is not whole-flow acceptance.
+
+### ADR-247: Recover Native workspace progress without resetting cost or fabricating context
+
+Explicit terminal-interruption continuation copies completed workspace evidence,
+validates decision/result checkpoints and inherits the complete API ledger and
+elapsed task duration. A single child claims the remaining budget; unresolved
+requests/background jobs do not authorize reruns. Open-tool episodes may have no
+structured allocation context, while decision locks and feedback stay source-bound.
+Proposal recovery removes only echoed schema metadata from otherwise valid action
+instances; absent actions are not invented. Historical error/status mistakes are
+retained, with fixes applying prospectively. The live path reached 11 actions and
+quarantined candidates but stopped on budget admission before producing a report.
+
+### ADR-248: Recover proposal formatting before dispatch within the existing budget
+
+Native proposal JSON decoding permits one model formatting retry through the same
+durable provider ledger and original budget. The invalid response remains retained
+and unexecuted; error metadata binds its hash. A second failure remains a terminal
+interruption. No local heuristic rewrites executable arguments. Completion is not
+conditional on improved metrics, and format recovery must not restart experiments.
+
+### ADR-249: Terminal report delivery is a lifecycle stage, not another research action
+
+An explicit report-only handoff consumes retained Native code/observations and the
+same provider ledger/ceiling. It can read terminal completed or interrupted states
+but cannot execute experiments, bypass unknown outcomes, or create a new research
+budget. Retained reports are reused. New report artifacts are hash-bound separately
+from execution results, then imported into the shared paper review/revision pipeline.
+The launcher can select this terminal policy; recovery targets delivery alone.
+Direct paper cycles now supply the same review-feedback planning interface as
+measured-draft wrappers, without pretending they ran those wrappers. Scientific
+approval and experience admission remain distinct from lifecycle delivery.
+
+### ADR-250: Project research cycles dispatch by execution capability
+
+The installed research-cycle command now selects unlearning or Native workspace
+orchestration. Shared project/plan/output arguments remain common; baseline and
+unlearning-specific Taste options are required/accepted only by their adapter.
+Native orchestration binds an execution/report/paper identity, avoids relaunching
+started execution, and validates terminal paper and quarantined experience links.
+Historical delivery does not demand that today's idea/provider configuration match
+the old task; new execution still validates the prepared task's current bindings.
+Next planning receives actual paper feedback and cycle evidence, but cannot launch
+experiments implicitly. This project-owned coordinator still uses explicitly trusted
+checkout scripts as execution backends, rather than claiming a standalone wheel.
+
+### ADR-251: Experience disposition follows the complete Native continuation lineage
+
+Native cycle experience routing binds the actual paper cycle to the terminal run,
+then follows parent-result hashes and a shared task identity. Candidate semantic
+hashes and evidence bytes are verified at their original run roots. Each source
+has one unambiguous collection; recovered collections retain their own identity.
+Candidates are counted once, including prior continuations rather than only the
+final run. Shared disposition rules preserve observation-only abstention, bound
+review rejection, or pending attribution/admission. Neither positive results nor
+positive credit are required for completion; no policy admission is implicit.
+A separate source-bound receipt preserves existing cycle summaries and is included
+in optional next-planning evidence. Conservative abstention is not an AI review.
+
+### ADR-252: Compile Native study components without changing prepared task authority
+
+The existing task-selection compiler accepts Native workspace task options, exposing
+visible task descriptions and frozen resource envelopes to planning. A selected
+component binds design bytes, study/hypothesis/comparison identity and one arm;
+the loader reconstructs instructions from that design and rejects changed source
+plans, resources or execution settings. Execution and reporting receive the same
+study context. The upstream task remains an existing asset, not an invented task,
+and selecting an arm does not activate a different framework or Full Taste.
+Broader studies with no executor must remain distinct from executable components.
+Accepted compilation provides no execution authority or scientific-quality approval.
+
+### ADR-253: Project-study workspaces are independent of benchmark task bootstrapping
+
+A separate explicit plan kind binds a current-Idea study, one comparison arm and
+project-local asset manifest to the same Native controller. Assets declare individual
+data/reference/starter-code targets and use constraints; no directory-wide copy or
+resource permission is inferred from model prose. Initialization copies declared
+files and renders instructions, with no model or experiment execution. The Native
+runner conditionally uses project initialization instead of importing TaskRunner.
+Reporting, continuation, paper feedback and experience remain shared infrastructure.
+The current generic path is CPU/API only and still uses an explicit external tool
+provider; it neither invents benchmark validity nor claims generic GPU support.
+
+### ADR-254: Native execution services belong to the package, scripts are compatibility entries
+
+`scitaste.executor.native_workspace` owns Native task execution and imports
+`native_support` plus the package experience collector, not unrelated experiment
+scripts. Transport and ranking preserve one durable provider ledger and never log
+authorization headers. Runtime source bindings use installed package locations;
+credential files retain restrictive permissions and an explicit/project-root path.
+Legacy script module names forward to package implementations. Project orchestration
+dispatches directly to the package runtime. The optional report lifecycle still uses
+checkout scripts, so package-owned execution is not full standalone lifecycle delivery.
+
+### ADR-255: Native report lifecycle and external-directory recovery are package routes
+
+Native terminal reporting, import, paper review/revision and review recovery now invoke
+package modules. Model backend, review profile, venue profile and credential locations
+can be explicit inputs; old relative defaults remain compatibility behavior. Native
+cycles without next-planning can omit a checkout workspace. Unlearning and next-plan
+generation still require one, as does the optional legacy measured-draft builder.
+Historical candidate paths with the known outputs/projects/project prefix are resolved
+against that project, not the caller cwd, preserving original receipts. New collector
+paths are absolute. A real external-directory no-call recovery proves this recovery
+route, not fresh API execution or independently installed wheel compatibility.
+
+### ADR-256: Planning inventories installed capabilities separately from legacy checkouts
+
+The package planner loads package-owned capability sources from its installed module
+tree. Legacy script adapters appear only when an explicit code root is supplied;
+absence of a checkout is not silently presented as availability of those adapters.
+Native cycles pass the bound task provider configuration to next planning and include
+actual paper feedback plus experience disposition. The compatibility script retains
+its previous cwd-based legacy inventory explicitly. A selected next work item is
+advisory and carries no experiment execution authority. Optional legacy campaign
+compilation and unlearning routes still require their declared checkout dependencies.
+
+### ADR-257: Reserve reporting capacity inside the existing task API ceiling
+
+New project workspace plans declare a report reserve inside their total API liability
+ceiling. Native execution uses the total minus reserve for request admission; the
+terminal report inherits the full existing ledger and total ceiling, not a fresh
+budget. Legacy plans default to zero reserve to preserve their declared behavior.
+This reduces budget-driven reporting failures without requiring favorable results
+or extending execution. Separate review/revision stage budgets remain explicit.
+
+### ADR-258: Explicit recovery retains failed tools, resource usage and session resolution
+
+The live project study exposed a Path/string mismatch in Bash's default cwd;
+the bridge now passes a Path. Unusable start/read-only background terminal tools
+are no longer offered by this foreground workspace runtime. Recovery may explicitly
+add bounded turns without changing the original plan, API ceiling or cumulative
+execution time; the child contract records the amendment. Recorded local background
+session PIDs must be observed absent before an explicit recovery can proceed;
+subsequent delivery inherits the observation binding and rechecks absence. Unknown
+or live sessions still fail closed. Root-level generated Python sources and results/
+artifacts are included in reporting rather than discarded for folder differences.
+
+### ADR-272: Unattended recovery is an explicit bounded continuation policy
+
+Native project orchestration may preauthorize up to three child continuations for
+known JSON interruptions or remote pending boundaries. It does not extend turns,
+API/time limits or remote job slots. Existing ownership/started markers and terminal
+hashes bind the chain and prevent duplicate launch. Provider uncertainty or another
+child's budget claim blocks further automatic work; unresolved remote execution does
+not proceed to paper writing. Quality scores and unknown errors never trigger this
+policy. Default zero preserves existing invocation contracts. Live unattended recovery
+is not yet established by the focused no-call policy check.
+
+### ADR-271: Provider response syntax is an explicit action-generation contract
+
+The shared provider bridge supports opt-in JSON-object response mode. Native proposal
+calls enable it and record that choice, instead of relying only on prompt wording.
+Other callers keep their existing format behavior. Provider rejection is not silently
+converted into another model/mode; the existing format-retry and accounting limits
+remain unchanged. Structural and tool-argument validation are still necessary, and
+no local repair modifies generated executable text. A retained real failing prompt
+parsed successfully in one replay; this is case evidence, not a reliability guarantee.
+
+### ADR-270: Complete assets and resolve bookkeeping without inventing evidence
+
+Long-form result figures group only hash-bound observed replicates, require matched
+seed identities and expose individual values plus means. A new derived paper preserves
+original review evidence rather than inheriting new approval. Separately, an interrupted
+prospective capture may be closed without admission when its original decision/state
+lock and later terminal result are verified through continuation lineage. This explicit
+exclusion does not fabricate the missing outcome attachment or grant scientific credit.
+Old pending receipts remain immutable; closure receives a new project artifact.
+
+### ADR-269: Artifact retrieval and report-source selection are separate from training
+
+Fetch Remote exposes bounded inventory and explicit artifact collection for an existing
+terminal job; it never submits code or increments experiment usage. File-level errors
+remain visible to the model independently of process exit. Terminal report recovery
+may bind separately collected artifacts to the original job in the execution lineage,
+copy them into a new report version, and select those measurements/source instead of
+a local repair. Full source data stays hash-bound, while bulky learning histories can
+be omitted from the writing prompt. The live capacity case completed report/review/
+revision/PDF through this explicit recovery, not an uninterrupted autonomous run.
+
+### ADR-268: Recover remote completion before Native result publication
+
+A remote process may finish while its Native publication fails. Recovery can bind
+the next persisted decision to the exact retained pre-action snapshot and hashed
+remote request. It creates an explicitly labeled recovery projection, observes/reuses
+the original job, and commits the outcome/cost only in the child. Original records
+are not rewritten and the projection is not presented as original execution output.
+Native artifact paths must be project-relative. The live capacity study exercised
+this path after absolute artifact locators caused publication failure; subsequent
+history projection now tolerates recovery metadata. Artifact collection failure must
+not imply experiment failure; a dedicated retrieval interface remains next work.
+
+### ADR-267: Recover a recorded pending remote boundary without a new action
+
+Native continuation can reconcile its final pending Run Remote action using copied
+workspace/job ledgers. Observation-only tool mode rejects new request identities.
+Matching terminal remote identity and complete finite costs are required; their
+delta updates the child state and original decision while the parent's pending record
+is preserved. Observation duration counts against remaining task time. The same
+exclusive continuation-budget claim applies. This does not repair arbitrary missing
+checkpoints or retroactively complete prospective Taste capture, and live interrupted
+recovery has not yet been demonstrated.
+
+### ADR-266: Completed remote jobs remain the same jobs across continuation
+
+Workspace continuation inherits remote request, staging, binding and result ledgers.
+Each retained terminal result must have a matching committed controller outcome/cost;
+missing or pending jobs cannot silently disappear. Child tools keep the original
+remote root for inherited requests and reuse terminal results at zero incremental
+cost. Fresh child requests remain subject to the inherited slot count. This enables
+completed-job continuation only, not observation reconciliation for pending jobs or
+arbitrary partially committed checkpoints.
+
+### ADR-265: Native remote actions consume plan-bound resources
+
+Real assistant-selected CPU analysis on 4090-2 exercised tool dispatch, detached SSH
+execution and artifact return. It did not exercise online model ranking or GPU use.
+`experiments` in generic executor cost measures execution reservations; it is not a
+scientific trial count and must not inflate benchmark sample sizes. The proposer now
+conditions remote permission on tool availability rather than asserting CPU-only
+execution for every plan.
+
+Project task plans optionally hash-bind a remote resource manifest. The Native tool
+surface exposes files/argv/artifact requests but not host/device/budget mutation.
+Job count and per-job time reserve a finite study envelope; a pending job blocks
+new attempts. Successful tool transport is not scientific success. Terminal costs
+return through the selected-action handler and repeated requests have zero additional
+cost. Artifacts are retained locally for subsequent read/analysis/report tools.
+Generic remote continuation remains disabled until copied job ledgers and remaining
+budgets can be reconciled; no silent budget reset is allowed.
+
+### ADR-264: Generic remote job substrate separates submission from observation
+
+The package submits explicit project files/argv to a fresh task-specific remote
+directory and runs a stdlib worker detached from SSH. Immutable local binding and
+remote launch marker prevent duplicate launch; missing observation remains unresolved.
+Terminal receipts bind the job manifest; explicit artifact retrieval verifies hashes
+and does not overwrite changed evidence. Device visibility and process-group timeout
+are execution controls, not a security sandbox or GPU reservation. Controller tool
+integration, broader accounting and live remote validation remain separate open work.
+
+### ADR-263: Reconcile a pending terminal boundary into an immutable child run
+
+Iterative Native continuation may accept a final pending experiment only through a
+trusted observation-only callback. The remote binding must match the reservation;
+terminal action identity and complete nonnegative costs must match before checkpoint
+reconciliation. Parent state/history stay unchanged. The child records original and
+terminal observations, copies the attempt ledger and adds its missing receipt, while
+the exclusive continuation claim prevents duplicate remaining-budget consumption.
+No launch entry or model action is called during reconciliation. This covers recorded
+unresolved boundaries, not arbitrary incomplete checkpoints or retroactive Taste
+capture attribution.
+
+### ADR-262: Pending experiment observation is not a new research action
+
+Selected experiment execution may encounter a transient remote observation gap.
+An explicitly bounded wait invokes only the trusted backend's observation method,
+never its launch entry. The original reservation/action identity remains bound;
+terminal cost and capture attach once through the existing handler. Each observation
+is recorded, transient errors retain pending state, and timeout alone is not failure.
+The Native unlearning runner enables this path by default; adapters without a trusted
+observer do not gain invented recovery. Whole-process crash recovery remains separate.
+
+### ADR-261: Separate resource availability from prepared research tasks
+
+Live resource-selected planning compiled and loaded successfully without execution.
+Compiler task identities now include their planning-run identity because project
+artifact registration is keyed by run ID, not full path. Historical generic-task
+outputs remain immutable; future preparations must not collide across planning runs.
+
+Design inputs may expose project-local workspace resource bundles rather than
+pre-existing tasks. A mutually exclusive workspace selection binds study, comparison
+arm and declared asset subset. Compilation freezes the selected manifest and delegates
+to the existing Native workspace provisioner. Model selection cannot add assets or
+expand CPU/API budgets; drift in sources/config/assets rejects compilation. Native
+post-paper planning can use the same interface but never silently launches another
+experiment. Optional schema fields preserve old designs. Resource acquisition remains
+separate; a compiled plan is not evidence that a study ran or is scientifically strong.
+
+### ADR-260: Optional Taste deliberation in generic Native workspace execution
+
+The project coordinator forwards paired development library/profile inputs. The
+executor freezes library bytes and records profile identity; continuation cannot
+silently switch treatment. Deliberation uses the same provider ledger, call cap,
+execution ceiling and report reserve as proposal/ranking. Qualified-grounding
+requirements remain unchanged; absent grounding retains intrinsic selection, and
+read-only inspection skips deliberation. Per-decision receipts distinguish actual
+use/fallback from configured availability. This is integration, not full-policy
+learning or evidence of scientific gains; no new online validation is claimed.
+
+### ADR-259: Complete missing figures from retained evidence without rerunning research
+
+The figure-supplement service accepts a registered delivery, hash-bound numeric
+data and an explicit rendering specification. It renders empirical distributions
+without resampling, changing observations or executing experiments. A new paper
+version and derivation receipt preserve source/data/spec/figure/PDF hashes, while
+original review and paper artifacts remain unchanged. The supplement does not inherit
+scientific approval or claim a new review. This is artifact completion, not an
+additional experimental trial or evidence of a method improvement.

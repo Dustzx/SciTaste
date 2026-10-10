@@ -171,9 +171,7 @@ class CounterfactualDeliberationConfirmationProtocol(BaseModel):
             raise ValueError("confirmation task count differs from the frozen success rule")
         if len(self.studies) != self.success.expected_state_count:
             raise ValueError("confirmation state count differs from the frozen success rule")
-        expected_turns = set(
-            range(1, self.success.expected_state_count // len(task_turns) + 1)
-        )
+        expected_turns = set(range(1, self.success.expected_state_count // len(task_turns) + 1))
         if any(turns != expected_turns for turns in task_turns.values()):
             raise ValueError("confirmation tasks must share the same consecutive prefix phases")
         if set(self.forced_actions) != set(CounterfactualResearchAction):
@@ -215,9 +213,7 @@ class CounterfactualDeliberationPopulationLock(BaseModel):
     source_manifest_sha256: str = Field(pattern=_SHA256)
     source_library_sha256: str = Field(pattern=_SHA256)
     development_report_sha256: str = Field(pattern=_SHA256)
-    bindings: tuple[CounterfactualDeliberationConfirmationBinding, ...] = Field(
-        min_length=4
-    )
+    bindings: tuple[CounterfactualDeliberationConfirmationBinding, ...] = Field(min_length=4)
     target_outcomes_absent_from_selector_inputs: Literal[True] = True
     source_outcomes_absent_from_selector_inputs: Literal[True] = True
     policy_update_from_confirmation_forbidden: Literal[True] = True
@@ -465,8 +461,7 @@ def prepare_counterfactual_deliberation_confirmation(
             or result.metric_transform != endpoint.metric_transform
             or result.metric_direction != endpoint.direction
             or result.failure_value != endpoint.failure_value
-            or result.practical_equivalence_tolerance
-            != endpoint.practical_equivalence_tolerance
+            or result.practical_equivalence_tolerance != endpoint.practical_equivalence_tolerance
         ):
             raise ValueError("confirmation outcome contract differs from the protocol")
 
@@ -701,8 +696,7 @@ def analyze_counterfactual_deliberation_confirmation(
     )
     failure_gate = (
         not protocol.success.require_failure_noninferiority
-        or strongest_contrast.selector_failure_rate
-        <= strongest_contrast.baseline_failure_rate
+        or strongest_contrast.selector_failure_rate <= strongest_contrast.baseline_failure_rate
     )
     supported = all(
         (
@@ -812,9 +806,7 @@ def _confirmation_contrast(
         exact_two_sided_sign_p_value=_exact_two_sided_sign_test(wins, losses),
         selector_failure_rate=sum(not item.selected_objective_observed for item in states)
         / len(states),
-        baseline_failure_rate=sum(
-            not item.static_objective_observed[baseline] for item in states
-        )
+        baseline_failure_rate=sum(not item.static_objective_observed[baseline] for item in states)
         / len(states),
     )
 

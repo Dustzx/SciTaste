@@ -78,9 +78,10 @@ class CounterfactualPreDecisionState(BaseModel):
 
     @model_validator(mode="after")
     def state_is_closed(self) -> CounterfactualPreDecisionState:
-        if self.diagnostic_rationale_sha256 != hashlib.sha256(
-            self.diagnostic_rationale.encode()
-        ).hexdigest():
+        if (
+            self.diagnostic_rationale_sha256
+            != hashlib.sha256(self.diagnostic_rationale.encode()).hexdigest()
+        ):
             raise ValueError("pre-decision diagnostic-rationale hash mismatch")
         expected_hard = (
             f"stage={self.stage}",
@@ -105,9 +106,7 @@ class CounterfactualPreDecisionState(BaseModel):
         unsigned = cls.model_construct(state_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            state_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"state_sha256"})
-            ),
+            state_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"state_sha256"})),
         )
 
 
@@ -179,9 +178,7 @@ class CounterfactualTemporalSafePrecedentAudit(BaseModel):
         unsigned = cls.model_construct(audit_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            audit_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"audit_sha256"})
-            ),
+            audit_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"audit_sha256"})),
         )
 
 
@@ -311,9 +308,7 @@ def derive_temporal_safe_counterfactual_precedents(
             source_case_sha256 = content_sha256(source_case.model_dump(mode="json"))
             if source_case_sha256 != binding.taste_case_sha256:
                 raise ValueError("source counterfactual precedent case hash mismatch")
-            prefix = load_interactive_research_prefix(
-                state_base / binding.study_id / "PREFIX.json"
-            )
+            prefix = load_interactive_research_prefix(state_base / binding.study_id / "PREFIX.json")
             if prefix.prefix_sha256 != binding.prefix_sha256:
                 raise ValueError("temporal-safe source prefix hash mismatch")
             observable = counterfactual_predecision_state(prefix)
@@ -327,9 +322,7 @@ def derive_temporal_safe_counterfactual_precedents(
             selector_visible = _selector_visible_projection(safe_case)
             _reject_terminal_markers(selector_visible)
             safe_cases.append(safe_case)
-            safe_bindings.append(
-                binding.model_copy(update={"taste_case_sha256": safe_case_sha256})
-            )
+            safe_bindings.append(binding.model_copy(update={"taste_case_sha256": safe_case_sha256}))
             case_audits.append(
                 CounterfactualTemporalSafeCaseAudit(
                     case_id=binding.case_id,
@@ -429,10 +422,7 @@ def merge_temporal_safe_counterfactual_precedents(
         if project_id is None:
             project_id = manifest.project_id
             action_vocabulary = manifest.action_vocabulary
-        elif (
-            manifest.project_id != project_id
-            or manifest.action_vocabulary != action_vocabulary
-        ):
+        elif manifest.project_id != project_id or manifest.action_vocabulary != action_vocabulary:
             raise ValueError("temporal-safe sources differ in project or action vocabulary")
         cases = {item.case_id: item for item in TasteLibrary(root / "TASTE_LIBRARY.jsonl").all()}
         binding_ids = {item.case_id for item in manifest.bindings}
@@ -550,9 +540,7 @@ def temporal_applicability_mismatches(
     if source.stage != target.stage:
         mismatches.append(f"stage:{source.stage}!={target.stage}")
     if source.evidence_status != target.evidence_status:
-        mismatches.append(
-            f"evidence_status:{source.evidence_status}!={target.evidence_status}"
-        )
+        mismatches.append(f"evidence_status:{source.evidence_status}!={target.evidence_status}")
     if preferred_action not in available_actions:
         mismatches.append(f"preferred_action_unavailable:{preferred_action}")
     return tuple(mismatches)

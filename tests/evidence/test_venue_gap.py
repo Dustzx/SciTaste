@@ -323,9 +323,7 @@ def test_single_development_result_cannot_mark_top_venue_program_ready() -> None
     )
 
     assert contradicted.submission_position is SubmissionEvidencePosition.CONTRADICTED
-    assert contradicted.evidence_program_decision.mode.value == (
-        "repair-contradicted-core-claim"
-    )
+    assert contradicted.evidence_program_decision.mode.value == ("repair-contradicted-core-claim")
     assert contradicted.top_venue_comparison.band is (
         VenueCompetitivenessBand.CENTRAL_CLAIM_CONTRADICTED
     )

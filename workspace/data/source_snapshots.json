@@ -1,0 +1,42 @@
+{
+  "screenspot_pro": {
+    "url": "https://gui-agent.github.io/grounding-leaderboard/results/screenspot_pro.json",
+    "checked_on": "2026-10-09",
+    "sha256": "78bdb52432e27d4814ad944e5c11d7322b06b0d26729c446ef7c841460cf2788",
+    "changed": false,
+    "bytes": 449206,
+    "needs_review": false
+  },
+  "mathvision_board": {
+    "url": "https://mathllm.github.io/mathvision/",
+    "checked_on": "2026-10-09",
+    "sha256": "4f50613509b976da1a6197298a180f02064fd5d2d842b757c1277c8064e95467",
+    "changed": false,
+    "bytes": 247343,
+    "needs_review": false
+  },
+  "omnidocbench_readme": {
+    "url": "https://raw.githubusercontent.com/opendatalab/OmniDocBench/main/README.md",
+    "checked_on": "2026-10-09",
+    "sha256": "a799f3dabee0d8e2be9f990fc325c3fefadb8d7f8d0cf56148406547d495a3ad",
+    "changed": false,
+    "bytes": 96525,
+    "needs_review": false
+  },
+  "qwen38_card": {
+    "url": "https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/README.md",
+    "checked_on": "2026-10-09",
+    "sha256": "57e4bdb258ee1a7d2635c5174ebd4e56abe392505cdb5f8bbb356b0dc4293641",
+    "changed": false,
+    "bytes": 65012,
+    "needs_review": false
+  },
+  "bfcl_board": {
+    "url": "https://gorilla.cs.berkeley.edu/leaderboard.html",
+    "checked_on": "2026-10-09",
+    "sha256": "ef72a8621b6ea1b8aa1d1b7691f73cc3079fd38e86f599c9a38cb626c911fc29",
+    "changed": false,
+    "bytes": 16207,
+    "needs_review": false
+  }
+}

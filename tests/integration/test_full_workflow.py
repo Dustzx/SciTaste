@@ -16,7 +16,127 @@ from scitaste.project import ProjectRuntime
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.persistence import StateStore
 from scitaste.state.research_state import ResearchState
+from scitaste.writing.argument import PaperArgumentContract, write_paper_argument_contract
 from scitaste.writing.evidence_projection import WritingEvidenceProjection
+
+
+def test_full_workflow_materializes_revision_ready_paper_contract(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    run_root = tmp_path / "outputs/projects/revision-ready/runs/run-001"
+    communication = run_root / "stages/communication"
+    figure = run_root / "stages/figure"
+    communication.mkdir(parents=True)
+    figure.mkdir(parents=True)
+    body = """# Abstract
+A bounded abstract.
+
+# Introduction
+The problem and scope.
+
+# Method
+The bounded method.
+
+# Evaluation
+The evaluation protocol.
+
+# Results
+The bounded result.
+
+# Limitations
+The result does not establish general effectiveness.
+
+# Conclusion
+The bounded conclusion.
+"""
+    (communication / "paper.publication.md").write_text(body, encoding="utf-8")
+    (figure / "figure.svg").write_text(
+        "<svg xmlns='http://www.w3.org/2000/svg'/>", encoding="utf-8"
+    )
+    (figure / "figure.drawio").write_text("<mxfile/>", encoding="utf-8")
+    source_text = "## Title\nRevision-ready paper\n\n" + body
+    contract = PaperArgumentContract.create(
+        project_id="revision-ready",
+        paper_id="revision-ready-paper",
+        archetype="empirical-system",
+        central_question="Can a project-owned lifecycle preserve revision lineage?",
+        central_answer="The bounded workflow preserves a typed revision handoff.",
+        manuscript_sha256=hashlib.sha256(source_text.encode()).hexdigest(),
+        claims=(
+            {
+                "claim_id": "claim-lineage",
+                "role": "headline",
+                "primary_carrier_ids": ("carrier-audit",),
+            },
+        ),
+        carriers=(
+            {
+                "carrier_id": "carrier-audit",
+                "kind": "evidence-audit",
+                "evidentiary_role": "audit",
+                "status": "planned",
+                "title": "Lifecycle lineage audit",
+                "intended_takeaway": "The revision handoff preserves exact lineage.",
+                "target_claim_ids": ("claim-lineage",),
+            },
+        ),
+        entry_points=tuple(
+            {
+                "location": location,
+                "claim_ids": ("claim-lineage",),
+                "central_question_visible": True,
+                "central_answer_visible": True,
+                "scope_matches_contract": True,
+            }
+            for location in (
+                "title",
+                "abstract",
+                "introduction",
+                "headline-results",
+                "conclusion",
+            )
+        ),
+        sections=tuple(
+            {
+                "section_id": f"section-{heading.casefold().replace(' ', '-')}",
+                "heading": heading,
+                "question_answered": f"What does {heading} establish?",
+                "claim_ids": ("claim-lineage",),
+                "primary_carrier_ids": ("carrier-audit",),
+            }
+            for heading in (
+                "Introduction",
+                "Method",
+                "Evaluation",
+                "Results",
+                "Limitations",
+                "Conclusion",
+            )
+        ),
+    )
+    contract_path = write_paper_argument_contract(contract, tmp_path / "argument.yaml")
+    bibliography = tmp_path / "references.bib"
+    bibliography.write_text("% no citations in fixture\n", encoding="utf-8")
+    base = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(base).model_validate(
+        {
+            **base.model_dump(mode="python"),
+            "project_id": "revision-ready",
+            "paper_id": "revision-ready-paper",
+            "paper_directory": "revision-ready-paper",
+            "paper_title": "Revision-ready paper",
+            "paper_bibliography": bibliography,
+            "paper_argument_contract": contract_path,
+        }
+    )
+
+    files, _ = FullWorkflow._materialize_paper(config, runtime, run_root)
+
+    assert files["source-markdown"] == "main.md"
+    assert files["bibliography"] == "references.bib"
+    assert files["paper-argument-contract"] == "PAPER_ARGUMENT_CONTRACT.yaml"
 
 
 def test_full_cli_preserves_one_state_and_registers_a_project_paper(
@@ -160,6 +280,9 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assessment = json.loads((paper / "ASSESSMENT.json").read_text(encoding="utf-8"))
     assert paper_manifest["status"] == "integration-fixture"
     assert paper_manifest["manuscript_role"] == "integration-fixture"
+    assert paper_manifest["files"]["source-markdown"] == "main.md"
+    assert paper_manifest["files"]["submission-tex"] == "main.tex"
+    assert paper_manifest["files"]["manuscript-assessment"] == "ASSESSMENT.json"
     assert set(paper_manifest["artifact_sha256"]) == set(paper_manifest["files"].values())
     assert len(paper_manifest["finalization_plan_sha256"]) == 64
     assert (run / "finalization/PLAN.json").is_file()

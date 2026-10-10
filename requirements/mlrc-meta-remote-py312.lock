@@ -1,0 +1,15 @@
+# Development-only MLRC Meta-Learning runtime, matching the local successful
+# Python 3.12 baseline environment. Install into a dedicated remote venv.
+--extra-index-url https://download.pytorch.org/whl/cu124
+absl-py==2.1.0
+Jinja2==3.1.6
+matplotlib==3.11.2
+numpy==2.5.3
+pandas==2.3.3
+Pillow==12.3.0
+PyYAML==6.0.3
+scikit-learn==1.9.1
+scipy==1.18.1
+seaborn==0.13.2
+torch==2.5.1+cu124
+torchvision==0.20.1+cu124

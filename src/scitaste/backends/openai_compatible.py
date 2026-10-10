@@ -16,7 +16,14 @@ import httpx
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from scitaste.backends.base import PreferenceRequest, PreferenceResponse, Usage
+from scitaste.backends.base import (
+    CandidateGenerationRequest,
+    CandidateGenerationResponse,
+    GeneratedCandidateProposal,
+    PreferenceRequest,
+    PreferenceResponse,
+    Usage,
+)
 
 
 class APIStyle(StrEnum):
@@ -34,6 +41,8 @@ class OpenAICompatibleConfig(BaseModel):
     api_style: APIStyle = APIStyle.CHAT_COMPLETIONS
     timeout_seconds: float = Field(default=120.0, gt=0)
     max_retries: int = Field(default=2, ge=0, le=5)
+    # None preserves legacy behavior; schema repair need not retry transport failures.
+    max_format_retries: int | None = Field(default=None, ge=0, le=5)
     reasoning_effort: str | None = None
     json_mode: bool = False
     extra_headers: dict[str, str] = Field(default_factory=dict)
@@ -71,6 +80,7 @@ class HttpxTransport:
     ) -> dict[str, Any]:
         with httpx.Client(timeout=timeout) as client:
             response = client.post(url, headers=headers, json=payload)
+            self.last_status_code = response.status_code
             response.raise_for_status()
             data = response.json()
         if not isinstance(data, dict):
@@ -107,6 +117,11 @@ class OpenAICompatibleBackend:
             headers["Authorization"] = f"Bearer {api_key}"
         started = time.perf_counter()
         semantic_attempts = 0
+        format_retries = (
+            self.config.max_retries
+            if self.config.max_format_retries is None
+            else self.config.max_format_retries
+        )
         while True:
             semantic_attempts += 1
             data = self._post_with_retry(endpoint, headers, payload)
@@ -115,7 +130,7 @@ class OpenAICompatibleBackend:
                 parsed = _parse_json_object(raw_text)
                 break
             except ValueError:
-                if semantic_attempts > self.config.max_retries:
+                if semantic_attempts > format_retries:
                     raise
                 payload = _add_format_repair(payload, self.config.api_style)
         latency_ms = (time.perf_counter() - started) * 1000
@@ -139,6 +154,62 @@ class OpenAICompatibleBackend:
             latency_ms=latency_ms,
             semantic_attempts=semantic_attempts,
             usage=Usage(input_tokens=int(input_tokens), output_tokens=int(output_tokens)),
+        )
+
+    def generate_candidates(
+        self, request: CandidateGenerationRequest
+    ) -> CandidateGenerationResponse:
+        """Concretize hypotheses before ranking, using the same live API model.
+
+        The controller's existing admission retains action identity, executable
+        parameters and resource ceilings; this response is still only a proposal.
+        """
+        api_key = os.getenv(self.config.api_key_env) if self.config.api_key_env else None
+        if self.config.api_key_env and not api_key:
+            raise RuntimeError(f"missing API key environment variable {self.config.api_key_env}")
+        system = (
+            "Concretize each supplied research action template exactly once. For an experiment, "
+            "state a specific falsifiable mechanism, evidence-based motivation, what changes, "
+            "what stays fixed and what outcome would count against it. Do not claim unobserved "
+            "results. Preserve STOP/control meanings and all declared constraints. Do not add "
+            "tools, paths, budget or actions. Return only a JSON object with a candidates list; "
+            "each item has template_action_id, description (at most 1000 characters), rationale "
+            "(at most 2000 characters) and parameter_overrides (use {} unless an existing "
+            "SEARCH template explicitly allows a refined query)."
+        )
+        payload = self._payload(request.model_dump_json())
+        if self.config.api_style == APIStyle.CHAT_COMPLETIONS:
+            payload["messages"][0]["content"] = system
+            endpoint = f"{self.config.base_url}/chat/completions"
+        else:
+            payload["instructions"] = system
+            endpoint = f"{self.config.base_url}/responses"
+        headers = {"Content-Type": "application/json", **self.config.extra_headers}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        started = time.perf_counter()
+        data = self._post_with_retry(endpoint, headers, payload)
+        raw = _response_text(data, self.config.api_style)
+        parsed = _parse_json_object(raw, required={"candidates"})
+        if set(parsed) != {"candidates"} or not isinstance(parsed["candidates"], list):
+            raise ValueError("candidate response must contain only a candidates list")
+        candidates = [
+            GeneratedCandidateProposal.model_validate(row) for row in parsed["candidates"]
+        ]
+        usage = data.get("usage", {})
+        return CandidateGenerationResponse(
+            request_id=request.request_id,
+            request_fingerprint=request.fingerprint,
+            candidates=candidates,
+            backend=self.name,
+            model=self.config.model,
+            raw_response=raw,
+            raw_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
+            latency_ms=(time.perf_counter() - started) * 1000,
+            usage=Usage(
+                input_tokens=int(usage.get("input_tokens", usage.get("prompt_tokens", 0))),
+                output_tokens=int(usage.get("output_tokens", usage.get("completion_tokens", 0))),
+            ),
         )
 
     def _post_with_retry(
@@ -240,7 +311,7 @@ def _response_text(data: dict[str, Any], style: APIStyle) -> str:
     raise ValueError("Responses API response has no text output")
 
 
-def _parse_json_object(text: str) -> dict[str, Any]:
+def _parse_json_object(text: str, *, required: set[str] | None = None) -> dict[str, Any]:
     cleaned = text.strip()
     if cleaned.startswith("```"):
         cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE)
@@ -250,7 +321,13 @@ def _parse_json_object(text: str) -> dict[str, Any]:
         raise ValueError("model did not return valid JSON") from exc
     if not isinstance(value, dict):
         raise ValueError("model response JSON must be an object")
-    required = {"selected_action_id", "rationale", "confidence"}
+    if required is None:
+        required = {"selected_action_id", "rationale", "confidence"}
+        # Observed provider spelling error. Preserve raw response bytes in the
+        # receipt; this alias supplies no missing reasoning or decision content.
+        if "rationale" not in value and isinstance(value.get("rationate"), str):
+            if value["rationate"].strip():
+                value["rationale"] = value.pop("rationate")
     missing = required - value.keys()
     if missing:
         raise ValueError(f"model response is missing: {', '.join(sorted(missing))}")

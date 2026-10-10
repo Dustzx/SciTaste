@@ -1,0 +1,10 @@
+# Isolated native AutoResearchClaw literature dependency overlay, not a replacement
+# for the main Python 3.12 environment or local-GPU lock. Install with pip --target.
+arxiv==2.4.1
+feedparser==6.0.14
+feedparser-sgmllib==2.1.0
+requests==2.32.5
+charset-normalizer==3.5.1
+idna==3.20
+urllib3==2.8.0
+certifi==2026.7.22

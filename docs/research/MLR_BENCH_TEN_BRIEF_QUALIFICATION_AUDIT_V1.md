@@ -1,5 +1,14 @@
 # MLR-Bench ten-brief qualification audit v1
 
+Supersession note, 2026-09-30: the historical causal-ablation-first ordering below
+is no longer the main-paper plan. The primary comparison is real research frameworks
+on SciTasteBench, with external MLR-Bench transfer. Broad workshop briefs are valid
+open-research inputs; absence of a fixed prediction endpoint does not prohibit actual
+agent-selected empirical research. The original MLR paper rubric has now been acquired
+and the SCSL two-system assignment is running under a disclosed resource-limited
+configuration. Neither supplies an objective shared predictive score or a held-out
+population by itself. See `OPEN_RESEARCH_BENCHMARK_COMPARISON.md` for current scope.
+
 Date: 2026-09-12
 
 Status: exact local bytes acquired and inspected; eligible for bounded

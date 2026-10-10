@@ -11,6 +11,7 @@ from scitaste.evaluation import (
     prepare_project_evaluation_result,
     publish_project_evaluation_result,
 )
+from scitaste.lifecycle_workflow import LifecycleWorkflow
 from scitaste.model_nodes import (
     ImmutableStateProjection,
     ModelNodeFacade,
@@ -45,10 +46,12 @@ from scitaste.writing import (
     PaperArgumentContract,
     build_project_paper_revision_runtime_config,
     inspect_project_paper_adoption,
+    inspect_project_paper_revision_context,
     load_project_paper_adoption_source,
     prepare_project_paper_adoption,
     prepare_project_paper_revision_context,
     publish_project_paper_adoption,
+    publish_project_paper_revision_context,
     writing_node_types,
 )
 from scitaste.writing.argument import (
@@ -475,6 +478,62 @@ def test_revision_context_binds_adopted_prose_and_keeps_unproved_work_blocked(
         "clarify-scope": "Introduction",
         "missing-baseline": "Evaluation Protocol",
     }
+
+
+def test_revision_context_publishes_recoverable_project_handoff(tmp_path: Path) -> None:
+    runtime, revision = _reviewed_adoption(tmp_path)
+    prepared = prepare_project_paper_revision_context(
+        runtime,
+        project_id="adoption-project",
+        review_id="development-review",
+        source_adoption_run_id="adopt-paper-v1",
+        target_manuscript_id="paper-v2",
+        expected_revision=revision,
+    )
+
+    snapshot, publication = publish_project_paper_revision_context(
+        runtime,
+        prepared=prepared,
+        run_id="paper-v2-revision-context",
+        source_commit=_COMMIT,
+        expected_revision=revision,
+    )
+
+    assert snapshot.revision == revision + 2
+    assert publication.blocked_concern_ids == ("missing-baseline",)
+    assert publication.input_fingerprint == prepared.input_data.fingerprint
+    assert (
+        inspect_project_paper_revision_context(
+            runtime, "adoption-project", "paper-v2-revision-context"
+        )
+        == publication
+    )
+
+
+def test_lifecycle_revision_handoff_routes_blocked_and_text_only_concerns(
+    tmp_path: Path,
+) -> None:
+    runtime, revision = _reviewed_adoption(tmp_path)
+
+    actions, handoff, blocker = LifecycleWorkflow(runtime.outputs_root).prepare_revision_handoff(
+        project_id="adoption-project",
+        paper_directory="paper-v1",
+        review_id="development-review",
+        source_commit=_COMMIT,
+        adoption_run_id="adopt-paper-v1",
+        revision_context_run_id="paper-v2-lifecycle-context",
+        target_manuscript_id="paper-v2",
+    )
+
+    assert runtime.open("adoption-project").revision == revision + 2
+    assert [item.action for item in actions] == [
+        "adopt-paper",
+        "publish-revision-context",
+    ]
+    assert handoff is not None
+    assert handoff.text_only_concern_ids == ("clarify-scope",)
+    assert handoff.blocked_concern_ids == ("missing-baseline",)
+    assert blocker.code == "review-evidence-required"
 
 
 def test_revision_context_rejects_nonexistent_review_section(tmp_path: Path) -> None:

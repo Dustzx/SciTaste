@@ -107,8 +107,7 @@ def _formal_case(study_id: str, task_cluster_id: str, suffix: str):
         execution_contract=ObjectiveForkExecutionContract.create(
             contract_id="paired-budget-v1",
             allowed_tools=("fixture-tool",),
-            budget_limit=100.0,
-            budget_unit="tokens",
+            resource_limits={"api_cost_usd": 1.0, "tokens": 100.0},
             maximum_steps=10,
             timeout_seconds=60,
             network_access=False,
@@ -160,9 +159,7 @@ def _action_map(source: FormalObjectiveForkSituationCase) -> ScientificSituation
             ),
             ScientificActionSemanticBinding(
                 source_action_id="diagnostic",
-                source_action_definition_sha256=source_definitions[
-                    "diagnostic"
-                ].definition_sha256,
+                source_action_definition_sha256=source_definitions["diagnostic"].definition_sha256,
                 target_action=target_definitions["probe"],
                 mapping_rationale="Both actions run a bounded uncertainty-resolving probe.",
                 boundary_conditions=("Competing explanations remain live.",),

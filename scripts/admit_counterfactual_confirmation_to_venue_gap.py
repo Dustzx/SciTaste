@@ -69,9 +69,7 @@ def run(args: argparse.Namespace) -> tuple[VenueGapManifest, VenueComparisonProf
     research_model = protocol["models"]["research_agent"]["requested_model"]
     judge_model = protocol["models"]["terminal_judge"]["model"]
     domains = sorted({item.task_cluster_id for item in report.states})
-    primary = next(
-        item for item in report.contrasts if item.baseline_action.value == "PROBE"
-    )
+    primary = next(item for item in report.contrasts if item.baseline_action.value == "PROBE")
     experiment = next(
         item for item in report.contrasts if item.baseline_action.value == "EXPERIMENT"
     )
@@ -153,9 +151,7 @@ def run(args: argparse.Namespace) -> tuple[VenueGapManifest, VenueComparisonProf
     for claim in profile_payload["innovation_claims"]:
         evidence_id = claim_bindings.get(claim["claim_id"])
         if evidence_id is not None:
-            claim["effect_evidence_ids"] = _append_unique(
-                claim["effect_evidence_ids"], evidence_id
-            )
+            claim["effect_evidence_ids"] = _append_unique(claim["effect_evidence_ids"], evidence_id)
 
     component_bindings = {
         "failure-boundary-analysis": "newtonbench-formal-v4-failure-boundary",

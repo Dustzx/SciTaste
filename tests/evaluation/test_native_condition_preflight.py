@@ -177,7 +177,7 @@ def test_v4_behavioral_attestation_fails_closed_after_implementation_drift(
     assert list(tmp_path.iterdir()) == []
 
 
-def test_v6_behaviorally_attests_current_clean_native_implementation(
+def test_v6_historical_attestation_fails_closed_when_current_source_has_drifted(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -193,18 +193,38 @@ def test_v6_behaviorally_attests_current_clean_native_implementation(
         allow_local_fixture_execution=True,
     )
 
-    assert report.implementation_qualified is True
-    assert report.findings == ()
-    assert report.exact_condition_population_verified is True
-    assert report.workflow_component_routes_verified is True
-    assert report.full_placebo_single_factor_verified is True
-    assert len(report.condition_probes) == 6
-    assert all(item.condition_contract_verified for item in report.condition_probes)
-    assert report.taste_routing_probe is not None
-    assert report.taste_routing_probe.verified is True
-    assert report.critic_routing_probe is not None
-    assert report.critic_routing_probe.verified is True
-    assert report.local_fixture_execution_performed is True
+    # The frozen v6 manifest is evidence for its pinned source, not newer code.
+    # Independently reconcile each reported drift against the actual Git bytes.
+    import hashlib
+    import subprocess
+
+    expected_head_drift = set()
+    expected_worktree_drift = set()
+    for item in report.implementation_evidence:
+        source = subprocess.check_output(
+            ["git", "show", f"{inspection.manifest.source_commit}:{item.path}"]
+        )
+        head = subprocess.check_output(["git", "show", f"HEAD:{item.path}"])
+        worktree = Path(item.path).read_bytes()
+        assert item.source_sha256 == hashlib.sha256(source).hexdigest()
+        assert item.head_sha256 == hashlib.sha256(head).hexdigest()
+        assert item.worktree_sha256 == hashlib.sha256(worktree).hexdigest()
+        if source != head:
+            expected_head_drift.add(item.path)
+        if worktree != head:
+            expected_worktree_drift.add(item.path)
+    assert expected_head_drift  # Current implementation has evolved since v6.
+    for code, expected in (
+        ("implementation_evidence_drift", expected_head_drift),
+        ("implementation_worktree_drift", expected_worktree_drift),
+    ):
+        assert {
+            item.message.rsplit(": ", 1)[-1] for item in report.findings if item.code == code
+        } == expected
+    assert report.implementation_qualified is False
+    assert report.condition_probes == ()
+    assert report.taste_routing_probe is None
+    assert report.critic_routing_probe is None
     assert report.real_task_or_experiment_execution_performed is False
     assert report.model_calls == report.api_calls == report.gpu_jobs == 0
     assert list(tmp_path.iterdir()) == []

@@ -51,9 +51,7 @@ def run(args: argparse.Namespace):
         population=tuple(population),
         expected_state_count=int(analysis["state_count"]),
         expected_task_cluster_count=len(protocol["tasks"]),
-        minimum_objective_observation_rate=float(
-            admission["minimum_objective_observation_rate"]
-        ),
+        minimum_objective_observation_rate=float(admission["minimum_objective_observation_rate"]),
     )
     save_counterfactual_confirmation_report(report, args.output)
     return report

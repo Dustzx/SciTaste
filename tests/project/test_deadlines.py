@@ -17,6 +17,7 @@ from scitaste.project import (
     complete_project_venue_milestone,
     inspect_project_deadline,
     materialize_deadline_work_plan,
+    retarget_project_venue,
 )
 
 
@@ -146,6 +147,64 @@ def test_assignment_rejects_a_different_target_venue(tmp_path: Path) -> None:
         )
 
     assert runtime.open("deadline-project").revision == 0
+
+
+def test_explicit_venue_retarget_preserves_old_schedule(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    first = assign_project_venue_schedule(
+        runtime,
+        project_id="deadline-project",
+        schedule=_schedule(),
+        expected_revision=0,
+    )
+    cvpr = ProjectVenueSchedule.create(
+        schedule_id="cvpr-2027-test-v1",
+        venue_id="cvpr-2027",
+        venue_name="CVPR 2027",
+        deadline_timezone="Anywhere on Earth (UTC-12)",
+        sources=(
+            {
+                "source_id": "cvpr-dates",
+                "role": "authoritative",
+                "url": "https://cvpr.thecvf.com/Conferences/2027/Dates",
+                "checked_at": "2026-09-24T00:00:00+08:00",
+            },
+        ),
+        milestones=(
+            {
+                "milestone_id": "cvpr-paper",
+                "kind": "paper-submission",
+                "deadline_at": "2026-11-16T23:59:00-12:00",
+                "hard_deadline": True,
+                "source_id": "cvpr-dates",
+                "required_outcomes": ("Submit an anonymous paper.",),
+            },
+        ),
+    )
+    with pytest.raises(ValueError, match="requires a reason"):
+        retarget_project_venue(
+            runtime,
+            project_id="deadline-project",
+            schedule=cvpr,
+            expected_revision=first.revision,
+            reason=" ",
+            changed_at=datetime.fromisoformat("2026-09-24T00:00:00+08:00"),
+        )
+    updated = retarget_project_venue(
+        runtime,
+        project_id="deadline-project",
+        schedule=cvpr,
+        expected_revision=first.revision,
+        reason="Submission target changed to vision research.",
+        changed_at=datetime.fromisoformat("2026-09-24T00:00:00+08:00"),
+    )
+    assert updated.revision == first.revision + 1
+    assert updated.manifest.target_venue == "CVPR 2027"
+    assert updated.manifest.model_extra["venue_schedule"]["venue_id"] == "cvpr-2027"
+    history = updated.manifest.model_extra["venue_schedule_history"]
+    assert history[-1]["prior_schedule"]["venue_id"] == "iclr-2027"
+    assert history[-1]["prior_completions"] == []
+    assert inspect_project_deadline(updated).next_milestone_id == "cvpr-paper"
 
 
 def test_critical_deadline_routes_claim_work_and_defers_repeated_checks(

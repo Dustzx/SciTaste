@@ -345,9 +345,7 @@ class TasteControllerInteractiveGuidanceProvider:
             # NewtonBench exposes experiments (not an executable code budget), so
             # every evidence-development action concretises to an experiment call.
             allowed_agent_actions=(
-                ("submit_hypothesis",)
-                if selected.type.value == "STOP"
-                else ("run_experiments",)
+                ("submit_hypothesis",) if selected.type.value == "STOP" else ("run_experiments",)
             ),
         )
         return InteractiveGuidanceEnvelope.create(
@@ -358,9 +356,7 @@ class TasteControllerInteractiveGuidanceProvider:
                 "intervention_contract": contract.model_dump(mode="json"),
                 "controller_decision": decision.model_dump(mode="json"),
                 "action_semantics_profile": semantics_profile.value,
-                "action_semantics_sha256": research_action_semantics_sha256(
-                    semantics_profile
-                ),
+                "action_semantics_sha256": research_action_semantics_sha256(semantics_profile),
             },
         )
 
@@ -419,11 +415,7 @@ def _remaining_experiment_bucket(value: int) -> str:
 def _interactive_evidence_context(
     context: InteractiveResearchContext,
 ) -> dict[str, str]:
-    phase = (
-        "early"
-        if context.turn <= 2
-        else ("late" if context.remaining_turns <= 2 else "middle")
-    )
+    phase = "early" if context.turn <= 2 else ("late" if context.remaining_turns <= 2 else "middle")
     if not context.history:
         return {
             "evidence_status": "unassessed",

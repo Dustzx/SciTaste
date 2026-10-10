@@ -473,10 +473,7 @@ def refresh_project_taste_policy(
             if item.feature_kind == "stage-action"
             and item.support >= head.config.minimum_feature_support
         }
-        support_sufficient = (
-            head is not None
-            and len(supported_stage_actions) >= 2
-        )
+        support_sufficient = head is not None and len(supported_stage_actions) >= 2
         families.append(
             ProjectTastePolicyFamilyReadiness(
                 decision_family=family,
@@ -566,6 +563,54 @@ def materialize_project_taste_policy_refresh(
     except BaseException:
         shutil.rmtree(temporary, ignore_errors=True)
         raise
+
+
+def load_project_taste_policy_refresh(
+    runtime: ProjectRuntime,
+    *,
+    project_id: str,
+    directory: str | Path,
+) -> tuple[
+    FamilyConditionedLifecycleTastePolicy,
+    ProjectTastePolicyReadiness,
+    ProjectTastePolicyRefreshReceipt,
+]:
+    """Load an intact current-idea snapshot; loading never grants activation authority."""
+    root = (runtime.projects_root / project_id).resolve(strict=True)
+    target = Path(directory).resolve(strict=True)
+    target.relative_to(root)
+    receipt = ProjectTastePolicyRefreshReceipt.model_validate_json(
+        _bounded_regular_file(target / "REFRESH.json", label="policy refresh receipt")
+    )
+    if receipt.project_id != project_id:
+        raise ValueError("Policy refresh belongs to another project")
+    payloads = {}
+    for name, expected in receipt.artifacts.items():
+        raw = _bounded_regular_file(target / name, label="policy refresh artifact")
+        if _sha256(raw) != expected:
+            raise ValueError(f"Policy refresh artifact changed: {name}")
+        payloads[name] = raw
+    policy = FamilyConditionedLifecycleTastePolicy.model_validate_json(payloads["POLICY.json"])
+    readiness = ProjectTastePolicyReadiness.model_validate_json(payloads["READINESS.json"])
+    corpus = ProjectTastePolicyCorpusManifest.model_validate_json(payloads["CORPUS_MANIFEST.json"])
+    config = LifecycleTastePolicyConfig.model_validate_json(payloads["POLICY_CONFIG.json"])
+    idea = inspect_current_idea_revision(runtime, project_id)
+    if (
+        not idea.artifact_verified
+        or idea.current_binding is None
+        or not idea_binding_matches_current(receipt.idea_revision, idea.current_binding)
+        or not idea_binding_matches_current(policy.idea_revision, idea.current_binding)
+        or not idea_binding_matches_current(config.idea_revision, idea.current_binding)
+        or not idea_binding_matches_current(corpus.idea_revision, idea.current_binding)
+        or policy.policy_sha256 != receipt.policy_sha256
+        or readiness.policy_sha256 != policy.policy_sha256
+        or readiness.readiness_sha256 != receipt.readiness_sha256
+        or corpus.corpus_manifest_sha256 != receipt.corpus_manifest_sha256
+        or config.config_sha256 != receipt.config_sha256
+        or readiness.policy_application_ready != receipt.policy_application_ready
+    ):
+        raise ValueError("Policy refresh semantic or current-Idea binding differs")
+    return policy, readiness, receipt
 
 
 def load_project_taste_policy_corpus(

@@ -26,9 +26,7 @@ def run(args: argparse.Namespace) -> tuple[Path, ...]:
     backend = load_structured_openai_compatible_config(args.backend_config)
     if (backend.provider, backend.model) != (profile.provider, profile.model):
         raise ValueError("backend and deliberation profile model identities differ")
-    backend = backend.model_copy(
-        update={"max_output_tokens": profile.generation.max_output_tokens}
-    )
+    backend = backend.model_copy(update={"max_output_tokens": profile.generation.max_output_tokens})
     policy = NodePolicy(
         policy_id="counterfactual-content-taste-deliberation-v1",
         enabled=True,

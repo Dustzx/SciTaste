@@ -1,5 +1,115 @@
 # Tool Intelligence
 
+## Adaptive operational programs — 2026-10-08
+
+Tool Intelligence is not synonymous with LLM-generated code or optional checks.
+The opt-in Native v2 harness lets the existing proposal model choose an execution
+procedure: compose operational dependencies, or observe and return to scientific
+planning. Two typed judgments (composition route and need for intervening scientific
+interpretation) are supplied together, without a separate screening call. This
+uses the interface pattern in [Jev's official primitives](https://docs.typesafe.ai/primitives),
+not Jev's model, calibration, latency, or prices. Session judgments are uncalibrated.
+
+`executor.adaptive_tool_program` realizes **one selected scientific action** as
+2–6 registered tools, with at most one code action. Each step retains mandatory
+project, path, protected-input, schema, deadline and isolation guards. A failed
+step or missing promised artifact stops its dependent steps and returns the actual
+observations to the controller; it cannot manufacture completion, retry itself,
+start remote work, change permissions or interpret new evidence autonomously.
+Read/prepare/run/collect may be composed; choosing another experiment after seeing
+results requires a new scientific decision. Skill procedures and Taste remain
+distinct from execution authority. This is bounded dynamic procedure construction,
+not arbitrary agent-authored branches or a demonstrated globally optimal strategy.
+
+The separate `AdaptiveHarnessProfile` and explicit `research_harness_binding`
+preparation argument preserve the serialized v1 profile and frozen assignments.
+`prepare_tool_program_study.py` prepares matched actual Native research assignments,
+with the same public data, scientific question, Taste, tool implementations and
+resource ceilings, before either outcome is observed. Measurements retain complete
+held-out task outcomes, papers, failures, all model replies, atomic tool invocations
+and elapsed time. Counting a program as one tool would be an invalid efficiency
+claim. This previously exposed assay is development evidence; it is not a new
+independent task, an external-framework comparison, a Jev evaluation, or a causal
+Taste-benefit result. Scope and limits must accompany any eventual experimental row.
+
+### Source-bound delivery and measured whole-task execution
+
+The actual paired research exposed the same costly handoff error in both conditions:
+the selected predictor existed outside the declared submission directory. Original
+failures remain immutable. The explicit v3 `SourceBoundHarnessProfile` adds a typed
+`Freeze Submission` tool: the model selects an exact manifest/source mapping;
+trusted code verifies every digest and confines paths, stages all dependencies, then
+publishes a complete directory atomically. It neither rewrites the scientist's code
+nor chooses a better procedure after seeing private outcomes. A launcher-owned
+confirmation observer, when explicitly declared, requires isolated execution and
+charges an experiment; a model cannot grant or reset a private query.
+
+The final paired development result retains both failed original confirmations and
+two separately charged, unchanged-source delivery continuations. Each continuation
+uses six responses from its original allocation. Both selected primaries complete
+all 28 held-out conditions at mean-condition RMSE 0.0685244. Total model replies are
+40 (atomic) versus 30 (adaptive), a descriptive 25% reduction; original atomic tool
+dispatches are **12 versus 22**, so this is not fewer tools, measured token/dollar
+savings, calibrated latency or improved scientific quality. Whole-lifecycle times,
+including the repair gap, are 46.86 and 46.10 minutes. Neither source continuity nor
+an equal predictive score certifies manuscript quality or independent reproduction.
+
+Canonical project record: `docs/records/TOOL_INTELLIGENCE_ADAPTIVE_EXECUTION_20261008.md`;
+actual results: `evaluations/native-adaptive-tools-20261008-v2/DELIVERY_RESULTS.json`.
+The normal preparation script exposes `--native-tool-policy atomic|adaptive|source-bound`
+for **new** assignments. Old plans remain exact; matched Taste comparisons must
+use the same selected harness in every arm. These capabilities address execution
+procedure choice, not unrestricted workflow rewriting or a new scientific baseline.
+
+Composed results can exceed the old experience-summary cap. The collector now
+references the exact original outcome attachment and digest instead of truncating
+its nested evidence into an apparent lesson. The original post-result collection
+failure stays recorded; a separate no-inference collection recovers nine quarantined
+candidates without a policy update or scientific execution replay.
+
+## Experience maintenance from research decisions — 2026-10-07
+
+The opt-in `reviewed-inquiry-v1` Native path feeds verified Taste judgments into
+`taste.maintenance`, not an extra inference before every tool. One bounded current
+queue distinguishes no qualified retrieval pool, inapplicable experience and
+unresolved transfer premises; transport/schema failures do not imply bad experience.
+Question/library/gap identities deduplicate repeats, with at most eight active gaps
+and eight recent evidence bindings each. Full immutable deliberations retain history.
+The next existing proposal sees the current gap and weighs source acquisition or
+re-abstraction against the active experiment and remaining budget. A pending handoff
+is neither a running search nor an admitted library update. The suggested two-source
+search ceiling is advisory, not a permission or downloader resource guarantee.
+
+`project.source_maintenance` now supervises a previously prepared source through
+actual reference quality, grounded abstraction and independent review into a
+separately frozen successor. Suppliers answer emitted requests; the supervisor
+does not simulate model decisions or approve its own abstractions. Retained receipts
+are reused with their source/review chains verified. Ambiguous unfinished model
+phases stop rather than being silently replayed; the original deadline is not reset.
+Terminal successors retain exact library and manifest bindings.
+
+Never overwrite a
+live comparison library or weaken applicability merely to increase adoption. This
+path reuses the actual qualified leakage/reproducibility source to produce the exact
+four-case successor without new model calls. It is orchestration validation, not
+new scientific evidence. The repository worker requires an explicit code root;
+fully unattended search-to-reviewed-library activation and project-global queue
+scheduling remain unimplemented. No scientific effectiveness is inferred from queue
+creation or source qualification alone.
+
+## Scientific feedback is work, not only text
+
+`project.paper_feedback.review_work_items` separates a new experiment, computation
+on retained evidence, evidence acquisition and claim/text revision. In particular,
+`ADD_ANALYSIS` can require execution even if the reviewer marks both new-evidence
+and new-experiment flags false. Reviewer suggestions remain fallible planning input;
+the router grants no permission and cannot mark a concern resolved.
+`project.review_research` binds an actual completed paper flow to its own execution,
+then prepares a distinct CPU-only retained-data Native task. Explicit public inputs,
+read-only staging, original-assignment preservation and separate lifecycle accounting
+prevent retroactive replacement of a framework comparison. This entry does not
+authorize arbitrary new training, data acquisition or API/GPU use.
+
 Tool Intelligence is SciTaste's bounded execution-intelligence layer. It makes
 semantic judgment available at selected rigid-tool boundaries without making a
 model the controller or executor. The v1 vertical slice added typed tool-plan
@@ -14,6 +124,79 @@ improve scientific outcomes. ADR-022 remains proposed until its registered
 effectiveness and safety gates are independently satisfied.
 
 ## Authority flow
+
+### Native integration: skills, Taste and the execution harness
+
+New Native assignments include a content-bound `NativeHarnessProfile` in their
+execution plan. This is part of the research executor, not a UI-only adviser.
+The old three-tool read-only catalog below remains a separate restricted service;
+it is not the permission model for Native's research tools.
+
+`executor/research_harness.py` provides six first-party procedural skills:
+question/hypothesis formation, controlled experiments, independent confirmation,
+evidence/claims, paper/revision, and tool recovery. Each proposal sees the compact
+catalog and at most two procedures selected from the stage, retained reasoning and
+observed tool outcome. A Native task can begin in the Evidence stage without a
+formed question; in that case the question/hypothesis guide loads first. Skills explain **how** to perform
+work; Scientific Taste evaluates **which work and why now** using current evidence
+and applicable reviewed precedents. A skill identifier is not an applicability
+judgment, scientific outcome, or permission. External skill folders and scripts
+are not automatically trusted or executed.
+
+The same proposal may include verification advice. The harness derives action
+effects from its registered tool, binds advice to the exact arguments and policy,
+and rejects attempts to weaken mandatory boundaries. The optional router uses
+disclosed, uncalibrated engineering priors. Routine reads take the direct path;
+generated code retains isolation and authorization checks. Direct file writes
+retain path/protected-input checks; a selected targeted Python syntax check is
+inline rather than another model invocation or repository-wide test run.
+
+The launcher, not model metadata, supplies execution permission and isolation.
+The workspace sandbox mounts declared protected inputs read-only. Receipts bind
+selected actions, profile/input hashes, requested skills, routes and guard time;
+these are execution observations, not scientific labels. No additional routing
+model call or standalone preflight is introduced. Admitted-action counts do not
+measure tool success, scientific progress or avoided total inference cost.
+
+`workspace_task` and `benchmark.open_research` bind the profile for future plans;
+`native_workspace`, `research_tool_loop`, `research_tool_handler` and `harness_tools`
+carry it through actual execution. Plans without this field remain legacy plans:
+an old frozen experiment is not silently upgraded. Source snapshots retain the
+consumed harness, sandbox and verification policy before the first action.
+
+Matched Taste experiments must share the same model service, procedural skills,
+harness, router, task and total budget. Improvements caused by changed execution
+infrastructure are separate system-version effects. Policy-level RSI likewise
+holds those components fixed and requires independently reserved evaluation;
+engineering self-iteration is not empirical RSI. Generation as Content displays
+and edits typed project decisions in a parallel interaction plane; it neither
+replaces this execution chain nor acquires authority through generated text.
+
+The October 3 CPU research-to-paper assignment exercises this path as development
+evidence on an already exposed MLR-Bench topic. Its project-owned receipts, not
+this description, determine the observed outcome. It is not a formal baseline
+comparison or a demonstrated benefit of Taste or verification routing.
+
+Known pre-tool waits now retain exact proposal and selection inputs under
+`loop/prepared_turns/`. Recovery verifies state, committed history and tool-interface
+bindings rather than constructing a new input with changed wall annotations or
+asking the proposer again. The executor still checks the actual deadline; a frozen
+model input cannot grant extra execution time. Old waits without these records are
+not retroactively repaired, and arbitrary mid-tool interruption remains ineligible.
+For a terminal interrupted session with a retained report, an explicit observer
+disposition can admit report-only delivery after process absence and artifact/hash
+checks. Unanswered requests stay charged and unconsumed; no reply, successful Native
+close, research continuation or scientific confirmation is invented. This separate
+recovery boundary does not establish an uninterrupted research lifecycle.
+
+Post-paper planning can structurally project an oversized canonical research state
+with the full active reasoning frame, typed hypotheses/claims/concerns and a source
+hash; omitted raw observations remain explicitly unavailable in that projection.
+An output-size-only session design failure can receive one explicitly source-bound
+prose compression, with unchanged 32 KB admission and original lifecycle deadline.
+The original response/rejection remain; identifier, evidence-anchor, selection and
+numeric/enum bindings are checked. Prose equivalence is not mechanically proved,
+and scientific rejection cannot use this path. No experiment or API is authorized.
 
 ```text
 immutable project/state projection
@@ -662,11 +845,23 @@ status by name similarity.
 
 ## Current limitations
 
+- Actual tool arguments are checked before execution. A schema failure can use
+  the existing single budgeted model formatting repair, not a silent argument
+  alias. Original failed runs and mandatory guards remain; this operational
+  bound is not measured repair efficacy or scientific Taste improvement.
+- Actual ACS Native execution exposed a model-invented optional skill identifier.
+  The research harness now retains the requested identifier/rejection reason but
+  binds no skill, preserving the otherwise admissible tool action. Registered
+  tool effects, execution authority, sandboxing and protected-data guards remain
+  mandatory. This is a zero-extra-call operational recovery, not evidence of
+  improved scientific decisions or an automatic skill-installation mechanism.
+  Original failed assignments and separately continued scientific state remain
+  distinct in project evidence.
 - Full Workflow now owns an explicit deterministic post-evidence hotspot policy
   and call site. It can trigger one bounded Tool Intelligence request from
   actual project state and evidence, but it does not let a model invent the
   trigger, tool catalog, permissions, or canonical evidence.
-- One attempt executes at most one dependency-free read-only action. A
+- One restricted-catalog attempt executes at most one dependency-free read-only action. A
   `replan-required` result requires a new typed state projection and a new
   bounded model invocation; the model never executes its proposed DAG.
 - A custom handler interrupted after its start marker requires human
@@ -677,8 +872,12 @@ status by name similarity.
   ignored output and is not part of the source tree.
 - Repair supports four pinned output schemas and performs structural validation;
   target-specific semantic gates require a new target invocation.
-- The catalog cannot write files, run experiments, launch code, access the open
-  web, or mutate ResearchState.
+- The restricted catalog cannot write files, run experiments, launch code, access
+  the open web, or mutate ResearchState. Native's separately authorized research
+  harness can execute registered research tools; it does not inherit catalog leases.
+- Native routing priors are not calibrated, and loaded procedural skills have not
+  established improved scientific outcomes. The six built-in guides are not a
+  general external skill installation mechanism.
 - The paired engineering benchmark establishes deterministic safety/recovery
   behavior and controller-step proxies only. The preregistered study adds a
   narrow grounded evidence-acquisition endpoint, but independent domain review,

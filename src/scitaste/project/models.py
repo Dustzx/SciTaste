@@ -135,7 +135,8 @@ class ProjectEvaluationBundle(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
+    origin: Literal["external-formal-study"] | None = None
     project_id: str
     evaluation_id: str
     manifest_id: str
@@ -157,7 +158,7 @@ class ProjectEvaluationBundle(BaseModel):
     authorization_blocker_codes: tuple[str, ...] = Field(default=(), max_length=100)
     critic_blocking_codes: tuple[str, ...] = Field(default=(), max_length=100)
     cell_plan_blockers: tuple[str, ...] = Field(default=(), max_length=2_000)
-    files: dict[str, ProjectEvaluationArtifact] = Field(min_length=5, max_length=20)
+    files: dict[str, ProjectEvaluationArtifact] = Field(min_length=2, max_length=20)
     no_execution_performed: Literal[True] = True
     bundle_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
@@ -194,15 +195,22 @@ class ProjectEvaluationBundle(BaseModel):
 
     @model_validator(mode="after")
     def bundle_is_closed_and_self_hashed(self) -> ProjectEvaluationBundle:
-        required_files = {
-            "prelaunch_manifest",
-            "resource_corpus",
-            "gate_report",
-            "critic_report",
-            "cell_plan",
-        }
+        if self.schema_version == "1.0":
+            if self.origin is not None:
+                raise ValueError("evaluation bundle v1.0 cannot declare an external origin")
+            required_files = {
+                "prelaunch_manifest",
+                "resource_corpus",
+                "gate_report",
+                "critic_report",
+                "cell_plan",
+            }
+        else:
+            if self.origin != "external-formal-study":
+                raise ValueError("evaluation bundle v1.1 requires an external formal origin")
+            required_files = {"formal_protocol", "admission"}
         if set(self.files) != required_files:
-            raise ValueError("evaluation bundle must bind the five canonical artifacts")
+            raise ValueError("evaluation bundle files differ from its declared origin")
         locators = [item.locator for item in self.files.values()]
         if len(locators) != len(set(locators)) or "EVALUATION.json" in locators:
             raise ValueError("evaluation artifact locators must be unique and non-recursive")
@@ -219,7 +227,10 @@ class ProjectEvaluationBundle(BaseModel):
         )
         if self.status != expected_status:
             raise ValueError("evaluation status does not match its readiness and authority")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"bundle_sha256"}))
+        hash_payload = self.model_dump(mode="json", exclude={"bundle_sha256"})
+        if self.schema_version == "1.0":
+            hash_payload.pop("origin", None)
+        expected = content_sha256(hash_payload)
         if self.bundle_sha256 != expected:
             raise ValueError("evaluation bundle hash mismatch")
         return self
@@ -301,7 +312,8 @@ class ProjectEvaluationResultBundle(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
+    origin: Literal["external-formal-study"] | None = None
     project_id: str
     result_id: str
     evaluation_id: str
@@ -321,7 +333,7 @@ class ProjectEvaluationResultBundle(BaseModel):
     headline_eligible: bool
     scientific_effectiveness_established: bool
     blocker_codes: tuple[str, ...] = Field(max_length=20_000)
-    files: dict[str, ProjectEvaluationArtifact] = Field(min_length=2, max_length=2)
+    files: dict[str, ProjectEvaluationArtifact] = Field(min_length=2, max_length=4)
     evidence: tuple[ProjectEvaluationResultEvidence, ...] = Field(max_length=20_000)
     bundle_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
@@ -337,8 +349,16 @@ class ProjectEvaluationResultBundle(BaseModel):
 
     @model_validator(mode="after")
     def result_bundle_is_closed_and_self_hashed(self) -> ProjectEvaluationResultBundle:
-        if set(self.files) != {"result_set", "assessment"}:
-            raise ValueError("evaluation result bundle must bind result_set and assessment")
+        if self.schema_version == "1.0":
+            if self.origin is not None:
+                raise ValueError("evaluation result v1.0 cannot declare an external origin")
+            required_files = {"result_set", "assessment"}
+        else:
+            if self.origin != "external-formal-study":
+                raise ValueError("evaluation result v1.1 requires an external formal origin")
+            required_files = {"formal_result", "integrity_audit"}
+        if set(self.files) != required_files:
+            raise ValueError("evaluation result files differ from its declared origin")
         locators = [item.locator for item in self.files.values()]
         if len(locators) != len(set(locators)) or "RESULT.json" in locators:
             raise ValueError("evaluation result bundle file locators must be unique")
@@ -353,7 +373,10 @@ class ProjectEvaluationResultBundle(BaseModel):
             raise ValueError("result headline eligibility must match scientific completeness")
         if self.scientific_effectiveness_established and not self.headline_eligible:
             raise ValueError("scientific effectiveness requires headline-eligible evidence")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"bundle_sha256"}))
+        hash_payload = self.model_dump(mode="json", exclude={"bundle_sha256"})
+        if self.schema_version == "1.0":
+            hash_payload.pop("origin", None)
+        expected = content_sha256(hash_payload)
         if self.bundle_sha256 != expected:
             raise ValueError("evaluation result bundle hash mismatch")
         return self

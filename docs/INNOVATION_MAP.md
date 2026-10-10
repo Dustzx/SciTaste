@@ -17,6 +17,16 @@ budget. The selected action, rejected alternatives, rationale, expected value,
 cost, and observed outcome become an auditable decision record and can later form
 a verified Taste Case.
 
+The September 30 refinement makes this object generative as well as selective:
+Taste should influence which explanatory gaps are noticed, which competing
+mechanisms are proposed, and which observations would change the research direction.
+The implemented evidence-guided reasoning frame now joins scientific planning,
+Native tool proposals and controller context. It retains conditional diagnostic
+probes and source-bound question/hypothesis updates; it does not claim a known
+shortest discovery path, calibrated posterior or measured Taste gain. Routine tools
+reuse the current frame without an extra model call. See
+[runtime integration and limits](research/EVIDENCE_GUIDED_RESEARCH_REASONING.md).
+
 This turns taste from an implicit model style into an inspectable research-control
 policy. Current implementation covers deterministic ranking, opt-in model-backed
 fixed-candidate selection, stage-aware Taste retrieval, intrinsic/augmented modes,
@@ -150,7 +160,16 @@ focus to cited candidate evidence; it does not relax claim citations or accept
 unknown fields. Fixed labels are therefore acceleration infrastructure rather
 than the product's semantic ceiling.
 
-### 3. Tool Intelligence — bounded semantic-agency plane
+### 3. Tool Intelligence — core execution intelligence
+
+Tool Intelligence is now integrated into new Native research assignments. Typed
+procedural skills supply scoped instructions; Scientific Taste chooses evidence-
+appropriate research actions; the content-bound harness supplies tools, isolation
+and permissions. The same proposal may advise the verification route without a
+second routing model call. The executor derives effects independently and cannot
+accept model-created authority. The parallel Generation as Content plane observes
+this state and submits typed interventions rather than becoming a second controller.
+See `TOOL_INTELLIGENCE.md` for the six built-in skills and legacy-plan boundary.
 
 Every effective next experiment gate now receives a shared, project-bound
 cost-sensitive verification route without changing its published priority.
@@ -182,8 +201,10 @@ an undeclared system. Deterministic validation and the Taste controller retain
 those responsibilities. Current implementation supports typed advisory nodes,
 record/replay, project-owned receipts, opt-in live providers, content-addressed
 first-party bindings, and a durable single-step read-only execution chain across
-restarts; observations remain non-authoritative. Broader native code, analysis,
-and writing tools are still being implemented.
+restarts; observations remain non-authoritative. The Native harness additionally
+binds actual code and analysis tools to authorized research actions. Its existing
+paper/review/revision lifecycle remains the delivery path; neither tool admission
+nor successful manuscript rendering establishes scientific quality.
 
 Tool Intelligence also includes a cost-sensitive verification router. It compares
 the expected avoidable loss of a failure with the detection value and cost of a

@@ -232,11 +232,7 @@ def _codescientist_items(
     audit: list[dict[str, Any]] = []
     for position, item in enumerate(selected):
         state = item["decision_state"]
-        context = (
-            "problem-and-idea-value"
-            if position < 5
-            else "hypothesis-and-falsifiability"
-        )
+        context = "problem-and-idea-value" if position < 5 else "hypothesis-and-falsifiability"
         family = "scientific-value" if position < 5 else "epistemic-discrimination"
         candidate_id = f"feasibility-cs-{context.split('-')[0]}-{position + 1:02d}"
         abstract = (
@@ -307,8 +303,7 @@ def _earliest_revision(record: dict[str, Any]) -> int | None:
         error = previous.get("error") or {}
         observation = str(previous.get("observation", "")).lower()
         if error.get("occurred") is True or any(
-            cue in observation
-            for cue in ("error", "failed", "traceback", "not found", "no such")
+            cue in observation for cue in ("error", "failed", "traceback", "not found", "no such")
         ):
             return index
     return None
@@ -558,9 +553,7 @@ def main() -> int:
         raise ValueError("OpenDiscoveryTrace dataset commit differs from frozen config")
     used = _used_review_ids(root, config.prior_pair_configs)
 
-    cs_projection, cs_decisions, cs_audit = _codescientist_items(
-        _jsonl(codescientist_path)
-    )
+    cs_projection, cs_decisions, cs_audit = _codescientist_items(_jsonl(codescientist_path))
     odt_projection, odt_decisions, odt_audit = _opendiscovery_items(dataset)
     review_projection, review_decisions, review_audit = _review_items(
         intake=_jsonl(intake_path),
@@ -570,9 +563,7 @@ def main() -> int:
     )
     projections = cs_projection + odt_projection + review_projection
     decisions = cs_decisions + odt_decisions + review_decisions
-    contexts = Counter(
-        str(record["decision"]["decision_context_family"]) for record in decisions
-    )
+    contexts = Counter(str(record["decision"]["decision_context_family"]) for record in decisions)
     if contexts != Counter(config.target_counts):
         raise ValueError(f"materialized context counts differ: {dict(contexts)}")
     candidate_ids = [str(record["intake_candidate_id"]) for record in projections]
@@ -599,9 +590,7 @@ def main() -> int:
         "candidate_count": len(projections),
         "source_group_count": len(set(source_groups)),
         "context_counts": dict(sorted(contexts.items())),
-        "domain_counts": dict(
-            sorted(Counter(str(item["domain"]) for item in projections).items())
-        ),
+        "domain_counts": dict(sorted(Counter(str(item["domain"]) for item in projections).items())),
         "source_stratum_counts": {
             "codescientist_model_ideas": len(cs_projection),
             "opendiscoverytrace_agent_prefixes": len(odt_projection),

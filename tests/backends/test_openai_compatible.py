@@ -16,6 +16,20 @@ from scitaste.backends.openai_compatible import (
 from scitaste.schema.actions import MetaAction, ResearchAction
 
 
+def test_observed_rationale_typo_does_not_invent_missing_reasoning():
+    from scitaste.backends.openai_compatible import _parse_json_object
+
+    payload = '{"selected_action_id":"probe","rationate":"Compare evidence","confidence":0.8}'
+    parsed = _parse_json_object(payload)
+    assert parsed["rationale"] == "Compare evidence"
+    assert parsed["selected_action_id"] == "probe"
+    assert parsed["confidence"] == 0.8
+    with pytest.raises(ValueError, match="rationale"):
+        _parse_json_object('{"selected_action_id":"probe","rationate":"","confidence":0.8}')
+    with pytest.raises(ValueError, match="rationale"):
+        _parse_json_object(payload, required={"rationale"})
+
+
 class StubTransport:
     def __init__(self, response: dict[str, Any]) -> None:
         self.response = response
@@ -253,7 +267,8 @@ def test_schema_violation_gets_one_bounded_repair_attempt(monkeypatch) -> None:
         ]
     )
 
-    response = OpenAICompatibleBackend(config(), transport=transport).rank(request())
+    backend_config = config().model_copy(update={"max_retries": 0, "max_format_retries": 1})
+    response = OpenAICompatibleBackend(backend_config, transport=transport).rank(request())
 
     assert response.semantic_attempts == 2
     assert len(transport.calls) == 2

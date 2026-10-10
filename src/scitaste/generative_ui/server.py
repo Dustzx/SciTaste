@@ -613,8 +613,17 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         parts = path.strip("/").split("/")
         prefix = ["api", "v2", "workspace", "projects"]
         if parts == prefix:
+            if method == "POST":
+                try:
+                    document = self.server.application.create_project(self._read_json_object())
+                except FileExistsError as exc:
+                    raise _HTTPProblem(
+                        HTTPStatus.CONFLICT, "project_already_exists", "project already exists"
+                    ) from exc
+                self._send_model(HTTPStatus.CREATED, document)
+                return
             if method != "GET":
-                raise _method_not_allowed("GET")
+                raise _method_not_allowed("GET, POST")
             document = self.server.application.project_list_workspace()
             self._send_model(HTTPStatus.OK, document, etag=document.fingerprint)
             return

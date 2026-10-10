@@ -1,8 +1,67 @@
 # Decision-grounded Scientific Taste selection
 
-Status: implemented at the proposal, deterministic-admission, and controller
-boundary. No real provider call, source-content read, human judgment, or effect
-measurement is reported here.
+## Exact source boundaries in future requests — 2026-10-09
+
+Applicability and deliberation output schemas now enumerate each candidate case's
+exact source applicability/failure conditions and the actual current fact IDs.
+The model still judges transfer, uncertainty and feasible actions; it cannot put
+an invented current-task premise into the source-condition field. Existing source
+grounding, blocker, applicability and action-mapping checks remain unchanged.
+Historical malformed replies and abstentions are retained, not retroactively
+admitted. This repair follows a real source-aligned cohort with no accepted
+selective recommendation; fewer future interface rejections or a scientific
+Taste gain are not yet established by the schema change.
+
+Status: implemented at proposal, deterministic-admission and controller boundaries.
+Real source-qualified, independently session-reviewed development cases and genuine
+whole-task framework runs now exist; current numerical evidence is owned by the
+self-development project's submission plan and evidence ledger. None establishes
+human validity, verified supplier-model parity or a positive Taste effect.
+
+## Separate formation from selection
+
+Native now binds experience at two distinct intervention positions. This avoids
+attributing a proposal-generation effect to the downstream applicability selector.
+The following are mechanism conditions, not additional external frameworks:
+
+| Condition | Candidate/question formation | Executable action choice |
+|---|---|---|
+| No external experience | No source context | Intrinsic controller |
+| Raw-source control | Bound verbatim passages | Intrinsic controller |
+| Generative Taste only | Reviewed conditional lessons | Intrinsic controller |
+| Selective Taste only | No proposal precedent context | Admitted deliberation or intrinsic fallback |
+| Full Taste | Reviewed conditional lessons | Admitted deliberation or intrinsic fallback |
+
+For generative-only operation, pass a reviewed library/profile and
+`--taste-proposal-context reviewed-conditional-v1 --taste-action-selection disabled`
+to the prospectively prepared Native campaign and project research cycle. The
+library remains available to the proposer, but no Taste deliberation is requested
+and no Taste action adjustment is applied. This intentionally disabled position
+is recorded separately from abstention, transfer failure and runtime rejection.
+The ordinary intrinsic controller still runs: disabling Taste does not disable
+action selection or execution safeguards. `reviewed-inquiry-v1` may instead bind
+the explicit question/hypothesis/probe transfer interface.
+
+New proposal-prompt receipts also retain a bounded offered-experience projection:
+the actual context hash/byte size and offered case/source identities. Offering is
+not model consumption, adoption or scientific benefit. Historical receipts without
+this observation remain unmeasured; downstream abstention must not be interpreted
+as absence of earlier source exposure. No extra model call is needed to record it.
+
+Selection stays enabled by default, preserving older assignment behavior and
+serialized defaults. Campaign, runtime, cycle and continuation bind the switch;
+resuming cannot silently change an assigned mechanism. Existing experiments and
+source libraries are never rewritten to fit a new condition.
+
+The table describes available interventions, **not completed five-arm evidence**.
+A new prospective study must freeze shared task/source pools, unchanged data and
+confirmation boundaries, task-specific scientific endpoints and every condition
+before any new outcome. Equal byte ceilings are not equal information or verified
+model parity. Old exposed tasks can support an explicitly disclosed diagnostic,
+not a newly unseen benchmark result. Do not run multiple identical seeds merely
+to seek a favorable result; use different conditions only where their contrast
+answers a declared scientific question. External Native/ARC/MLR comparisons remain
+the system main experiment, separate from these internal ablations.
 
 ## Scientific gap
 
@@ -69,7 +128,7 @@ This boundary does not claim that a model's semantic assessment is correct. It
 makes the assessment falsifiable and prevents it from silently broadening the
 evidence or execution boundary.
 
-## ICLR evidence obligation
+## Original ICLR mechanism-design obligation
 
 The original H2 matched-versus-mismatched contrast establishes whether relevant
 Taste can causally help when relevance is controlled. It does not establish
@@ -91,11 +150,17 @@ rendering and token ceilings. Pool labels remain hidden until selection and
 downstream outputs are locked. Pilot data determine burden and variance but
 cannot enter the formal confirmatory estimate.
 
-## Remaining evidence
+## Remaining scientific evidence
 
-The software boundary is complete, but the scientific claim is open. It still
-requires admitted real source cases, independently labeled applicability on
-held-out decisions, a task-excluded provider conformance pilot, frozen
-hard-negative pools, blinded downstream decisions, expert outcomes, and powered
-source-group analysis. Until those exist, SciTaste has a testable method rather
-than evidence that the method improves research.
+The boundary is implemented, but the scientific claim remains open. In the six
+new task cohorts, 61 of 79 recorded post-proposal deliberations were admitted;
+59 abstained and two selected same-source physical-evaluation experience. These
+counts exclude pre-proposal exposure, recommendation adoption and causal effects.
+Several ON/OFF primary observations are null or adverse. Broader source coverage
+must remain conditional, rather than lowering the admission gate to force usage.
+The next evidence obligation is a source-bound prospective formation/selection
+contrast with scientifically meaningful tasks, independent applicability judgments
+and failure-inclusive outcomes. Independent session review is operational evidence,
+not human gold, powered population inference or top-venue certification. The earlier
+H2b design above remains an unexecuted obligation, not a retrospective description
+of the current framework cohort or its common manuscript assessments.

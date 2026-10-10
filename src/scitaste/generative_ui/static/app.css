@@ -1304,6 +1304,63 @@ fieldset {
   gap: 1.2rem;
 }
 
+.desktop-workspace > .workspace-title,
+.desktop-workspace > .component-card > h2 { display: none; }
+.desktop-workspace > .component-card { padding: 1.15rem; }
+.desktop-workspace { padding-top: .15rem; }
+.desktop-workspace .desktop-home { gap: .65rem; }
+.desktop-workspace .desktop-phase { min-height: 95px; padding-top: .45rem; padding-bottom: .45rem; }
+.desktop-workspace .desktop-phase::before { top: 25px; }
+.desktop-workspace .desktop-node-detail { padding: .75rem 1rem; }
+.workspace-column:has(.desktop-workspace) .conversation-composer { gap: .25rem; }
+body:has(.desktop-workspace) .conversation-composer .quick-intents { display: none; }
+body:has(.desktop-workspace) .conversation-composer #intent-result > .generation-empty { display: none; }
+body:has(.desktop-workspace) .conversation-composer #intent-result:has(> .generation-empty:only-child) { display: none; }
+.research-desktop { display: grid; gap: 1rem; }
+.research-desktop [hidden] { display: none !important; }
+.desktop-home { display: grid; gap: 1rem; }
+.desktop-intro { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.desktop-intro h3 { font-size: 1.25rem; margin: 0; color: var(--forest-dark); }
+.desktop-intro p { font-size: .82rem; color: #5d6d65; margin: 0; }
+.desktop-timeline { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap: .35rem; overflow-x: auto; padding: .6rem .1rem; }
+.desktop-phase { position: relative; display: grid; justify-items: center; gap: .45rem; padding: .7rem .25rem; border: 1px solid transparent; background: transparent; color: #61716a; border-radius: .7rem; min-height: 113px; }
+.desktop-phase::before { content: ""; position: absolute; height: 2px; background: #d9e2db; top: 29px; left: -4px; right: -4px; z-index: 0; }
+.desktop-phase:first-child::before { left: 50%; }
+.desktop-phase:last-child::before { right: 50%; }
+.desktop-phase-marker { z-index: 1; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #f3f5f1; border: 2px solid #c6d1c8; font-size: .85rem; }
+.desktop-phase strong { font-size: .85rem; }
+.desktop-phase small { font-size: .73rem; font-weight: 400; }
+.desktop-phase.state-complete .desktop-phase-marker { background: #1d6750; border-color: #1d6750; color: white; }
+.desktop-phase.state-current .desktop-phase-marker { border-color: #a57c2e; color: #815d18; background: #fff7e5; }
+.desktop-phase[aria-pressed="true"] { background: #eef5ef; border-color: #a8bfae; color: #173f30; }
+.desktop-phase:hover { background: #f2f6f0; color: #173f30; }
+.desktop-node-detail { display: grid; grid-template-columns: 1fr minmax(170px, .4fr); gap: 1.5rem; background: #f6f8f3; border: 1px solid #d8e3d7; border-radius: .75rem; padding: 1rem 1.2rem; }
+.desktop-node-label { font-size: .72rem; color: #61766a; }
+.desktop-node-detail h4 { margin: .3rem 0; font-size: 1rem; }
+.desktop-node-detail p { margin: .25rem 0; color: #5d6d65; font-size: .8rem; }
+.desktop-task-list { margin: .65rem 0 0; padding-left: 1.2rem; font-size: .85rem; line-height: 1.65; }
+.desktop-node-actions { display: grid; align-content: center; gap: .5rem; }
+.desktop-node-actions button { padding: .55rem .8rem; }
+.desktop-node-actions small { font-size: .71rem; color: #68796e; line-height: 1.4; }
+.desktop-dock { display: grid; grid-template-columns: repeat(6, 1fr); gap: .75rem; padding: .3rem .2rem; }
+.desktop-app { display: grid; justify-items: center; gap: .5rem; border: 1px solid #e1e7dd; border-radius: .8rem; padding: .75rem .35rem; background: #fff; color: #294c3d; }
+.desktop-app:hover, .desktop-app[aria-pressed="true"] { border-color: #8dac99; background: #edf4ee; color: #173d2d; }
+.desktop-app-icon { display: grid; place-items: center; border-radius: .6rem; background: #eef2e7; width: 37px; height: 37px; font-size: 1.35rem; }
+.desktop-app:nth-child(2n) .desktop-app-icon { background: #f5eddb; }
+.desktop-app strong { font-size: .8rem; }
+.desktop-panel-toolbar { display: flex; align-items: center; gap: 1rem; margin: .3rem 0 1rem; }
+.desktop-panel-toolbar h3 { margin: 0; font-size: 1.05rem; }
+.desktop-panel-toolbar button { font-size: .8rem; padding: .5rem .75rem; }
+.desktop-panel-content { display: grid; gap: 1rem; }
+@media(max-width: 700px) {
+  .desktop-intro { display: block; }
+  .desktop-intro p { margin-top: .4rem; }
+  .desktop-node-detail { grid-template-columns: 1fr; gap: .75rem; }
+  .desktop-node-actions { grid-template-columns: 1fr 1fr; }
+  .desktop-node-actions small { grid-column: 1 / -1; }
+  .desktop-dock { grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+}
+
 .project-operating-loop {
   background:
     radial-gradient(circle at 15% 12%, rgba(220, 235, 225, 0.9), transparent 34%),
@@ -4848,4 +4905,61 @@ code {
   #generate-workspace {
     max-width: 6.2rem;
   }
+}
+
+/* Navigation lives in the drawer; the research canvas owns the viewport. */
+.workspace[aria-busy="true"]::before { content: attr(data-loading-label); display: block; padding: 1rem; border-radius: .7rem; background: #edf4ed; color: #416650; font-size: .9rem; }
+.desktop-project-label { display: block; margin-bottom: .35rem; color: #687b6d; font-size: .75rem; }
+body.drawer-shell .application-grid { height: 100dvh; padding-top: 1.1rem; }
+body.drawer-shell .content-column { grid-template-rows: minmax(0, 1fr) auto; }
+body:has(.project-index-workspace) .conversation-composer { display: none; }
+body:has(.project-index-workspace) .content-column { grid-template-rows: minmax(0, 1fr); }
+.project-nav .app-header { display: block; border-radius: .65rem; padding: .9rem; flex-shrink: 0; }
+.project-nav .app-header h1 { font-size: 1.05rem; }
+.project-nav .header-summary { line-height: 1.5; margin-top: .4rem; }
+.project-nav .header-controls { display: flex; justify-content: space-between; margin-top: .65rem; }
+.project-nav .locale-panel { display: flex; gap: .5rem; align-items: center; }
+.project-nav .locale-panel select { width: auto; padding: .3rem; }
+.project-nav .drawer-close { color: white; }
+.project-nav .project-toolbar { grid-template-columns: minmax(0, 1fr) auto; flex-shrink: 0; padding: .55rem; }
+.project-nav .toolbar-home, .project-nav .evidence-tools, .project-nav #connection-status { grid-column: 1 / -1; }
+.project-nav .toolbar-home { text-align: left; }
+.project-nav #connection-status { text-align: left; white-space: normal; }
+.project-nav .evidence-tools-panel { position: static; width: auto; max-height: 45vh; grid-template-columns: minmax(0, 1fr); box-shadow: none; padding: .6rem; margin-top: .5rem; }
+.project-nav { overflow-y: auto; }
+.project-nav .workspace-history { flex: 1 0 180px; }
+.project-nav .freshness-bar { flex-shrink: 0; border-radius: .4rem; font-size: .65rem; padding: .5rem; }
+.project-index-workspace { max-width: 1400px; width: 100%; margin: 0 auto; }
+.project-index-header { background: none; border: 0; padding: 1.3rem .3rem; margin-bottom: 1rem; }
+.project-index-header h2 { font-size: 1.8rem; margin-top: .4rem; }
+.project-index-header p { color: var(--muted); }
+.project-index-grid { grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 1.1rem; align-items: stretch; padding: .15rem .3rem 1.5rem; }
+.project-index-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .65rem; align-content: start; padding: 1.2rem; border-radius: 1rem; box-shadow: 0 3px 12px rgb(20 40 27 / 4%); transition: border-color 150ms, transform 150ms; }
+.project-index-card:hover { border-color: #8dac99; transform: translateY(-2px); }
+.project-index-card h3, .project-card-description, .project-card-identity, .project-card-facts, .project-index-card > button { grid-column: 1 / -1; margin: 0; }
+.project-index-card h3 { font-size: 1.02rem; line-height: 1.45; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-height: 2.9em; }
+.project-card-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #eaf2e9; color: #255342; font-size: 1.8rem; }
+.project-card-venue { align-self: center; font-size: .72rem; color: #62766a; max-width: 145px; overflow-wrap: anywhere; text-align: right; }
+.project-card-identity { font-size: .67rem; color: #87958d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-card-description { font-size: .8rem; color: #66776d; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 3.2em; }
+.project-card-facts { font-size: .74rem; color: #62766a; padding-top: .2rem; }
+.project-index-card > button { background: #eff4ee; color: #204c38; margin-top: .2rem; }
+.new-project-card { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 1.5px dashed #a9bfae; background: #f4f8f1; color: #315b44; min-height: 310px; }
+.new-project-card > strong { font-size: 1.05rem; }
+.new-project-card > span:last-child { color: #6c7e70; font-size: .8rem; line-height: 1.6; max-width: 210px; }
+.create-project-dialog { width: min(520px, calc(100vw - 2rem)); max-height: 90dvh; border: 1px solid #cbd8ce; border-radius: 1rem; padding: 1.5rem; color: var(--forest-dark); }
+.create-project-dialog::backdrop { background: rgb(15 35 25 / 35%); backdrop-filter: blur(3px); }
+.create-project-dialog form { display: grid; gap: .65rem; }
+.create-project-dialog h2, .create-project-dialog p { margin: 0 0 .45rem; }
+.create-project-dialog p { color: #657569; font-size: .85rem; line-height: 1.6; }
+.create-project-dialog label { font-size: .85rem; }
+.create-project-dialog textarea { min-height: 90px; padding: .6rem; border: 1px solid #91a097; border-radius: .4rem; }
+.create-project-actions { display: flex; justify-content: flex-end; gap: .7rem; margin-top: .5rem; }
+.desktop-latest-progress { display: grid; gap: .35rem; text-align: left; background: #edf4ed; border: 1px solid #d8e3d7; color: #244735; padding: .7rem .9rem; }
+.desktop-latest-progress strong { font-size: .78rem; }
+.desktop-latest-progress span { font-size: .82rem; line-height: 1.5; font-weight: 400; }
+.desktop-latest-progress small { color: #687b6d; font-size: .7rem; font-weight: 400; }
+@media(max-width: 600px) {
+  .project-index-grid { grid-template-columns: minmax(0, 1fr); }
+  .new-project-card { min-height: 180px; }
 }

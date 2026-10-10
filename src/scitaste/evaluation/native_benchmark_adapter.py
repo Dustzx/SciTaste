@@ -1075,8 +1075,7 @@ class NativeBenchmarkCellRunner:
         if isinstance(self.config.backend, LiveRuntimeBackend):
             backend_config = self.config.backend.config
             if (
-                resource.kind
-                not in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+                resource.kind not in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
                 or resource.provider_id != backend_config.provider
                 or resource.model_id != backend_config.model
                 or resource.api_key_env != backend_config.api_key_env
@@ -1696,8 +1695,7 @@ def _h4_resource_budget(
         max_experiments=config.maximum_patch_iterations + 1,
         max_api_cost_usd=(
             float(cell.resource.max_cost or 0)
-            if cell.resource.kind
-            in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+            if cell.resource.kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             else None
         ),
         compute_constraints=[
@@ -1966,8 +1964,7 @@ def _verify_h4_static_model_resources(
         valid = (
             model_profile.live_execution_permitted
             and all(
-                cell.resource.kind
-                in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
+                cell.resource.kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
                 and cell.resource.provider_id == backend.provider
                 and cell.resource.model_id == backend.model
                 and cell.resource.api_key_env == backend.api_key_env

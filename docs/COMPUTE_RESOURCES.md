@@ -4,9 +4,76 @@ SciTaste maintains compute resources above individual research projects. A GPU
 host or API model can serve several projects, while each project keeps its own
 experiment proposal, approval, result, and paper evidence.
 
+**Current scheduling amendment (2026-09-25):** the user supplied `4090-2`
+(`user@10.7.61.103:22`) as the preferred replacement GPU host, with project
+files under `/data/zfx`. Read-only access confirmed eight RTX 4090 devices
+(24 GB each), idle devices 3–7 and approximately 3.8 TiB free storage at the
+observation time. Devices 0–2 have existing compute processes: do not interrupt
+them. Availability is not a reservation. The default Python is 3.10.4; a
+dedicated Python 3.12.12 environment and the frozen data/bundle have now been
+installed under `/data/zfx/scitaste/mlrc-meta-dev-20260925`. The two-arm queue
+`pair-v1`, PID 641918, selected GPU 3 and completed both arms; the process has
+exited. Official scores are 0.184874 and 0.106298, with 512.08 and 510.99
+seconds ingestion/scoring respectively. Those are the two completed frozen-fork jobs;
+the separately identified Native candidate run below was launched afterwards.
+The ignored observation is `outputs/resources/GPU_4090_2_OBSERVATION_20260925.json`;
+the password is bound only in the ignored mode-0600 credential file as
+`SCITASTE_GPU_4090_2_SSH_PASSWORD`. Changing hosts does not change scientific
+tasks, data, or models; both matched arms must use the same new device and
+record the hardware amendment. Do not pool old/new hardware timing results.
+
+The formal resource index is now `configs/resources/compute_catalog_v15.yaml`,
+with project binding `configs/resources/projects/scitaste_self_development_v15.yaml`.
+Both have been applied through `ComputeResourceRuntime`, retaining predecessor
+catalog/binding history. A fresh read-only snapshot at 13:28:57 UTC confirms
+eight 24,564-MiB RTX 4090 devices and 4,138,244,005,888 storage bytes available.
+The separate Native candidate-centering development run completed on GPU 3
+with score 0.048716 and a controller STOP; it is not a repeat of either
+completed frozen-fork arm. Local GPU and
+3090-2 bindings are inventory-only in this project amendment.
+
+**Previous scheduling decision (2026-09-24):** future GPU experiments for the
+SciTaste self-development project default to the registered remote 8×RTX 3090
+host `gpu-host-3090-2`. The local 3090 is historical development provenance and
+available inventory, not the default experiment route. Existing v14 bindings
+describe availability and prior roles; a new exact project binding/launch plan
+must encode the remote selection before the next GPU job. Do not infer that all
+eight cards should be occupied or that a prior local proposal authorizes a
+remote run. See `docs/research/CVPR27_MAINLINE_EXIT_CRITERIA.md`.
+
+**2026-09-25 live observation:** all eight remote devices were already busy
+(six at 100% utilization, the others at 81% and 75%; 10–18 GiB free memory
+per device). The read-only snapshot is retained locally at
+`outputs/resources/GPU_3090_2_OBSERVATION_20260925.json`. The September 12
+idle report below is historical, not current scheduling authority. Do not
+preempt those workloads or silently move the visual-fork job to the local GPU.
+A later same-day observation found **all eight devices at 100% utilization**,
+36.4 GB free under `/media/sdb`, and no PyTorch in the system Python 3.12.
+It is retained as `outputs/resources/GPU_3090_2_OBSERVATION_20260925T113222Z.json`.
+The isolated remote environment is pinned in
+`requirements/mlrc-meta-remote-py312.lock`. It has since been installed in
+`/home/ubuntu/scitaste-runs/mlrc-meta-dev-20260925/venv`, with the exact
+development data and bundle staged alongside it. The dedicated environment
+imports successfully without GPU allocation; all transferred data bytes match
+the local digest. See `outputs/resources/REMOTE_MLRC_META_ENVIRONMENT_20260925.json`.
+The former `pair-v2` queue (PID 3509686) waited up to one hour for an unused
+card, then runs each of two development arms once, sequentially, with a
+20-minute ceiling each. It was cancelled at 2026-09-25 12:32:12 UTC with zero
+executed arms to migrate to `4090-2`; its `CANCELLED.json` and the cancelled
+project-run status are preserved. It is no longer an active waiting job.
+The earlier `pair-v1` waiting process was cancelled with zero executed arms;
+its cancellation record is retained. Home-volume free space after staging was
+23.7 GB. The local GPU remains unused.
+The latest read-only process check found eight `ubuntu` Python workers under a
+`pt_elastic` parent, all in the shared host's
+`MinCUv2_SFT_PAPV_GRPO_2epoch_20260923` working directory. This appears to
+be a separate distributed GRPO job, **not a SciTaste launch**. At that instant,
+seven GPUs read 100% utilization and one 33%; all eight still had active
+workers. Do not infer an idle card from free VRAM alone.
+
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v13.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v15.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
   `configs/resources/gpu/`; v1 through v4 remain immutable, readable history.
@@ -37,10 +104,11 @@ turning a weak password hash or bearer key into a tracked artifact.
 | Class | Resource | Current role/state |
 |---|---|---|
 | API | `deepseek-v41-flash` | current canonical route `deepseek-flash` / `DeepSeek-V4.1-Flash`; official identity and peak price ceiling verified, current authenticated sentinel window absent |
-| API | `zhipu-glm53-flash` | authenticated Generation as Content generation/edit availability verified; formal experiment selection remains separate |
-| API | `bailian-qwen38-max` | historical provenance only; blocked by the latest recorded arrearage response |
+| API | `zhipu-glm53-flash` | historical interactive availability exists, but the latest formal scorer calls returned provider code 1113 for insufficient balance |
+| API | `bailian-qwen38-max` | verified formal ResearchClawBench research agent; the exact served revision is bound by both the v2 trajectory protocol and the v7 conditional-policy confirmation |
+| API | `bailian-qwen37-max-vision` | verified multimodal official judge for the formal-v3 scoring amendment and v7 confirmation; one bounded image-plus-JSON identity call succeeded before formal use |
 | GPU | `gpu-host-local-3090` | verified local 1×RTX 3090 development/preflight host |
-| GPU | `gpu-host-3090-2` | verified remote 8×RTX 3090 host; all devices idle and 311,710,777,344 storage bytes free at the read-only observation |
+| GPU | `gpu-host-3090-2` | verified remote 8×RTX 3090 host; latest read-only check shows a separate distributed job on all eight devices; the old idle observation is historical |
 | checkpoint | `qwen3-vl-2b-local-47f9c0e0` | verified current local Qwen3-VL-2B-Instruct tree |
 | checkpoint | `qwen3-5-4b-local-b4e05070` | content-verified local Qwen3.5-4B asset; not selected for an experiment |
 | checkpoint | `qwen3-5-4b-remote-b4e05070` | host-scoped replica of the same Qwen3.5-4B bytes; not selected for an experiment |
@@ -56,8 +124,8 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development_v13.yaml` explicitly binds
-all thirteen current project resources. The
+`configs/resources/projects/scitaste_self_development_v14.yaml` explicitly binds
+all fifteen current project resources. The
 two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
 select the paper backbone. Qwen3.5-9B is only a cross-model robustness
 candidate, while Scientific Judge and Thinker retain their narrow external
@@ -154,7 +222,7 @@ Validate the shared catalog and its local evidence without contacting anything:
 
 ```bash
 scitaste resource inspect \
-  --catalog configs/resources/compute_catalog_v13.yaml \
+  --catalog configs/resources/compute_catalog_v14.yaml \
   --evidence-root .
 ```
 
@@ -163,26 +231,26 @@ observations:
 
 ```bash
 scitaste resource update-catalog \
-  --catalog configs/resources/compute_catalog_v13.yaml \
+  --catalog configs/resources/compute_catalog_v14.yaml \
   --evidence-root . --outputs-root outputs
 
 scitaste resource bind-project \
-  --catalog configs/resources/compute_catalog_v13.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v13.yaml \
+  --catalog configs/resources/compute_catalog_v14.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v14.yaml \
   --outputs-root outputs
 
 # After a content-bound catalog change, archive and replace an existing binding:
 scitaste resource update-project-binding \
-  --catalog configs/resources/compute_catalog_v13.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v13.yaml \
+  --catalog configs/resources/compute_catalog_v14.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v14.yaml \
   --outputs-root outputs
 
 scitaste resource status \
-  --catalog configs/resources/compute_catalog_v13.yaml \
+  --catalog configs/resources/compute_catalog_v14.yaml \
   --outputs-root outputs
 
 scitaste resource access-status \
-  --catalog configs/resources/compute_catalog_v13.yaml \
+  --catalog configs/resources/compute_catalog_v14.yaml \
   --credential-file outputs/resources/access/credentials.env \
   --output outputs/resources/access/STATUS.json
 ```

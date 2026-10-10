@@ -24,7 +24,9 @@ The fixture completed.
 """
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCITASTE_PAPER_TITLE = "SciTaste: Grounded Scientific Taste for Autonomous Research"
+SCITASTE_PAPER_TITLE = (
+    "SciTaste: Selective Transfer of Scientific Experience in Autonomous Research"
+)
 
 
 def test_short_contract_output_is_explicitly_an_integration_fixture() -> None:

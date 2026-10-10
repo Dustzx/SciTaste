@@ -460,9 +460,7 @@ def _parse_json_object_with_redundant_closer(
     """Accept only a complete JSON object followed by at most two stray closers."""
 
     try:
-        value, end = json.JSONDecoder(
-            parse_constant=_reject_non_finite_json
-        ).raw_decode(cleaned)
+        value, end = json.JSONDecoder(parse_constant=_reject_non_finite_json).raw_decode(cleaned)
     except (json.JSONDecodeError, ValueError):
         value = None
         end = 0

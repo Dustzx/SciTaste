@@ -202,9 +202,7 @@ class EvaluationCriticSuite:
                     problems.append(f"{lane.lane_id}:missing_scitaste")
                 lane_claim = claim if claim is not None and claim.lane_id == lane.lane_id else None
                 if lane_claim is None:
-                    canonical_internal_pair = {
-                        item.system_id for item in selected
-                    } == {
+                    canonical_internal_pair = {item.system_id for item in selected} == {
                         "full-scitaste-learned-policy",
                         "native-base-without-learned-taste",
                     } and any(item.role is SystemRole.ABLATION for item in selected)
@@ -212,9 +210,7 @@ class EvaluationCriticSuite:
                         if counts[SystemRole.CONTROL] < 1:
                             problems.append(f"{lane.lane_id}:missing_direct_control")
                         if counts[SystemRole.METHOD_COMPARATOR] < 2:
-                            problems.append(
-                                f"{lane.lane_id}:fewer_than_two_method_comparators"
-                            )
+                            problems.append(f"{lane.lane_id}:fewer_than_two_method_comparators")
                 elif lane_claim.estimand_kind in {
                     ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
                     ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
@@ -457,9 +453,7 @@ class EvaluationCriticSuite:
         if any(
             lane.kind in {ExecutionLaneKind.API_ONLY, ExecutionLaneKind.HYBRID}
             for lane in manifest.lanes
-        ) and (
-            not manifest.retention.retain_raw_provider_responses
-        ):
+        ) and (not manifest.retention.retain_raw_provider_responses):
             problems.append("raw_provider_responses_not_retained")
         if problems:
             return (

@@ -285,28 +285,20 @@ def analyze_counterfactual_deliberations(
             8,
         ),
         precedent_population_preferred_action_coverage=round(
-            _mean(
-                item.precedent_population_contains_preferred_action for item in states
-            ),
+            _mean(item.precedent_population_contains_preferred_action for item in states),
             8,
         ),
         retrieval_preferred_action_coverage=round(
             _mean(item.retrieval_contains_preferred_action for item in states), 8
         ),
-        preferred_action_hit_rate=round(
-            _mean(item.preferred_action_hit for item in states), 8
-        ),
+        preferred_action_hit_rate=round(_mean(item.preferred_action_hit for item in states), 8),
         diagnostic_action_contrast_count=diagnostic_count,
         diagnostic_action_contrast_rate=round(diagnostic_rate, 8),
         mean_objective_value=round(mean_objective, 8),
         objective_failure_rate=round(failure_rate, 8),
         mean_regret=round(_mean(item.regret for item in states), 8),
-        static_mean_objective_values={
-            key: round(value, 8) for key, value in static_means.items()
-        },
-        static_failure_rates={
-            key: round(value, 8) for key, value in static_failures.items()
-        },
+        static_mean_objective_values={key: round(value, 8) for key, value in static_means.items()},
+        static_failure_rates={key: round(value, 8) for key, value in static_failures.items()},
         status_policy_mean_objective_value=round(
             _mean(item.status_policy_objective_value for item in states), 8
         ),
@@ -385,9 +377,7 @@ def _analyze_state(
         if candidate.preferred_action not in assessment.aligned_current_action_ids:
             continue
         weight = (
-            candidate.confidence
-            * assessment.relevance_confidence
-            * candidate.broad_retrieval_score
+            candidate.confidence * assessment.relevance_confidence * candidate.broad_retrieval_score
         )
         votes[candidate.preferred_action] = votes.get(candidate.preferred_action, 0.0) + weight
     ranked_votes = sorted(votes.items(), key=lambda item: (-item[1], item[0]))
@@ -397,10 +387,7 @@ def _analyze_state(
         selected_action = "PROBE" if abstained else proposal.recommended_action_id
     else:
         selection_rule = "legacy-weighted-precedent-vote-v1"
-        tied = (
-            len(ranked_votes) >= 2
-            and abs(ranked_votes[0][1] - ranked_votes[1][1]) <= 1e-12
-        )
+        tied = len(ranked_votes) >= 2 and abs(ranked_votes[0][1] - ranked_votes[1][1]) <= 1e-12
         abstained = not ranked_votes or tied
         selected_action = "PROBE" if abstained else ranked_votes[0][0]
     utilities = _bounded_utility_values(target, result)
@@ -417,9 +404,7 @@ def _analyze_state(
         accepted_invocation_id=verified.invocation_id,
         ledger_sha256=verified.ledger_sha256,
         candidate_case_ids=tuple(item.case_id for item in input_data.candidates),
-        candidate_preferred_actions=tuple(
-            item.preferred_action for item in input_data.candidates
-        ),
+        candidate_preferred_actions=tuple(item.preferred_action for item in input_data.candidates),
         selected_case_ids=proposal.selected_case_ids,
         action_vote_weights={key: round(value, 12) for key, value in sorted(votes.items())},
         selection_rule=selection_rule,
@@ -442,9 +427,7 @@ def _analyze_state(
         objective_failure=not target.objective_observed[selected_action],
         oracle_value=oracle_value,
         regret=max(0.0, oracle_value - objective_value),
-        static_objective_values={
-            action: utilities[action] for action in _STATIC_ACTIONS
-        },
+        static_objective_values={action: utilities[action] for action in _STATIC_ACTIONS},
         static_objective_observed={
             action: target.objective_observed[action] for action in _STATIC_ACTIONS
         },
@@ -483,8 +466,7 @@ def _bounded_utility_values(
             utility = value
         else:
             raise ValueError(
-                "heterogeneous deliberation analysis requires an explicit bounded utility "
-                "transform"
+                "heterogeneous deliberation analysis requires an explicit bounded utility transform"
             )
         if not 0.0 <= utility <= 1.0:
             raise ValueError("counterfactual bounded utility is outside [0, 1]")

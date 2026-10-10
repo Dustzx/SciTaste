@@ -1,6 +1,1392 @@
 # Roadmap
 
+2026-10-10 priority: SciTaste remains the unified full-workflow project; current
+implementation focuses on Idea Research & Discovery. Integrate rapid retrieval,
+evidence synthesis, idea construction and Taste-guided refinement through the
+new `workspace/` entry. CCF A/B submission planning replaces the CVPR-only product
+section. Experiment, Writing, Figure and Review retain their existing plans and
+acceptance gates. This source/UI integration does not complete `taste-freeze`,
+independent confirmation, or matched Taste-effect experiments. See
+`workspace/docs/SCITASTE_POSITIONING.md` and `workspace/docs/SUBMISSION_VENUES.md`.
+
+2026-10-09 capability search follows the canonical plan's `taste-freeze` and
+`primary-experiments` gaps rather than treating first-panel execution as research
+completion. Opt-in Native v4 exposes bounded, model-guided strong-control search,
+exact-identity cache reuse and one evidence-led public refinement panel. Two real
+Native task-exposed iterations were assigned before their new outcomes; existing
+system comparisons and failures remain unchanged. The implementation owns tools,
+experiments, source freeze and writing; fresh session agents only supply requested
+model responses. C51 in the project ledger owns results and the scientific
+acceptance gap. Both actual controllers terminate with first papers: selected
+perturbation RMSE .067890→.062072 (8.6% reduction, 20/28 improve), forecast
+MASE 1.128919→.991609 (12.2%, 663/1000 improve). Exact-array scoring recovery
+retains the original forecasting collection failures. The two unchanged sources
+also execute on 1,000 pre-reserved history groups: MASE 1.055611→.919021
+(12.9%, 632/1000 improve), preserving pre-inference export failure separately.
+These measured combined-configuration gains are not matched-backbone superiority,
+causal Taste benefit or a substitute for the original framework comparisons.
+
+2026-10-09 source-aligned mainline: the canonical plan advances
+`primary-experiments` and `mechanism-and-transfer` with a new temporal
+probability research task under one Native harness and genuine pinned external
+frameworks. Original no-experience failure and separately charged paper recovery
+remain distinct. Raw/Taste selected-primary predictions are identical; a
+pre-freeze matched numerical-input control identifies an explanatory confound,
+not a predictive Taste gain. Actual source-condition copying failures prevent
+selective intervention; future schemas enumerate source-specific boundaries
+without changing prior assignments. Native first-paper scientific claims receive
+separate fresh inventory and evidence-assessment roles. MLR's actual coding
+thread and unchanged writer close delivery after a retained envelope failure;
+no completed experiment is repeated. Project C48 and the canonical project plan
+own detailed evidence and remaining scientific gates. Jev is not a prerequisite,
+and engineering delivery or AI-only support does not certify publishability.
+
+2026-10-08 Tool Intelligence execution: implement bounded dynamic operational
+composition and exact-source atomic handoff in explicit new Native harnesses.
+The actual paired scientific task completes 28 confirmation conditions only after
+separately retained unchanged-source delivery recovery. Selected-primary RMSE is
+identical; total model replies are 40 versus 30, not a Taste effect or token/cost
+measurement. Original failure, all atomic tools and repair gaps remain charged.
+Project ledger C47 and DELIVERY_RESULTS own evidence. This closes an execution
+dependency within `mechanism-and-transfer`, not task validity, scientific-quality
+judging or matched independent-task Taste improvement. Next use one common new
+harness in source-appropriate Taste attribution; do not repeat this task for gains.
+
+2026-10-08 measurement-first amendment (canonical plan revision 28): advance `task-freeze`,
+`paper-structure` and `mechanism-and-transfer` against the current submission
+plan. Six-family scientific contracts name rival predictions, discriminating
+controls, counterexamples and strong domain references; schema coverage does not
+certify task quality. Table 2 now distinguishes fixed scientific conclusions,
+atomic assertions and independent reproduction; old requirement-category and
+ordinal ratings remain supplementary. Three original perturbation manuscripts
+complete a separately bound post-outcome assessment, with limited error/style/omission
+diagnostics. Real MLR-Bench source evaluator functions execute through a session
+transport on retained first papers rather than repeating whole research. A new
+public geometry ranking/permutation contrast executes actual subject estimation,
+not a new system run or hidden confirmation. Project evidence owns numerical
+outcomes; all seven new model-role requests are consumed. Main content remains
+eight pages; supplementary material has fourteen. Independent reproduction,
+other-domain controls and calibrated cross-domain evaluation remain missing.
+Neither this design nor new development
+judgments establish formal admission, Taste benefit or publication readiness.
+
+2026-10-08 earlier mainline snapshot: submission-plan revision 27 owned the then-current
+acceptance gates. The six bounded prospective cohorts are terminal: eighteen
+original assignments, twelve complete original primary confirmations, fifteen
+common first-paper ratings and three missing manuscripts. This is not a certified
+formal benchmark or established Taste benefit. Norman ON/OFF and ACS OFF finish
+actual paper/review/revision/PDF with scientific concerns open. ARC's last native
+export rejection/alterations/compilation-validation failure and MLR supplier's
+extra retrieval deviation remain disclosed. Six-task science/system tables and
+full rubric are compiled into eight content pages and thirteen supplementary
+pages. The 79 retained original Native decisions contain 61 admitted deliberations,
+59 abstentions and only two same-source PDE recommendations. Pre-proposal exposure
+remains; neither advice adoption nor causal model weakness follows. Next priority
+is source-appropriate conditional experience and generation/selection attribution,
+not more closed-cohort repetitions. Fresh source qualification, grounded abstraction
+and two independent session reviews now produce a separate eight-case successor;
+the prior seven-case library is unchanged and the successor is not automatically
+activated. Native can bind proposal formation separately from Taste action selection,
+with offered-context receipts distinct from consumption/adoption/effect. These close
+source-maintenance and routing dependencies, not task applicability or scientific
+efficacy. C42–C43 own the evidence and conformance limits. Engineering
+continuations retain their original failures and old lifecycle allocation;
+unknown optional skill hints no longer discard otherwise admissible actions.
+Historical Taste-request resume now revalidates computed receipt fingerprints
+without weakening permissions or rewriting requests. Outcome collection and
+first-paper assessment preserve failed originals and separate recoveries.
+Report-only Native descendants verify confirmed source and inherited ancestry
+without executing confirmation twice. Oversized population evidence reaches
+review with every group value retained, not a text-only success summary.
+Scientific effectiveness, judge calibration and publication-quality gates remain
+open. Project documents/plan, not this historical roadmap, own live run status.
+
+2026-10-07 capability iteration: actual scientific review now routes retained-data
+analysis into a separately allocated Native research continuation. The first live
+inquiry-policy assignment completed paired/tie-rule computation, report, independent
+review, revision and PDF in 1643.23 seconds/26 retained responses. Its numerical
+concern is substantially addressed; contribution/significance remain rejected.
+Prepared-source maintenance has a
+source-bound quality/abstraction/review/successor supervisor, validated by reuse of
+already completed source receipts without new model calls or active-library changes.
+Project ledger C35–C36 owns detailed outcomes. Formal SciTasteBench admission,
+matched scientific effectiveness and unattended discovery/activation remain open.
+
+2026-10-07 execution: a prospectively frozen, previously unrun official MLR-Bench
+data-practice topic has completed through actual Native, AutoResearchClaw and
+MLR-Agent controllers. Fresh session roles supply only their emitted model replies;
+Native paper continuation and independent text assessment are terminal. Project
+ledger C33 owns current evidence; this CPU-adapted external transfer does not fill
+the formal SciTasteBench carrier or establish Taste gains. The new inquiry-transfer
+protocol separates questions prompted by unknown source assumptions from permission
+to apply a recipe, with closed premise/source/probe bindings. It is implemented
+and wired into opt-in Native runtime admission and question-aware retrieval,
+but not yet exercised by a new frozen live assignment; the current policy is unchanged.
+October 6/effectiveness gates remain active, not marked complete by another launch.
+All three exploratory overall grades are 5/10; eleven accepted Native Taste
+consultations select no existing precedent. The opt-in maintenance handoff detects
+source/premise gaps without another model call; actual source qualification,
+abstraction and two independent AI reviews produce a separate four-case successor.
+Unattended source-search-to-activation and scientific successor efficacy remain open.
+ARC's failed compilation and destructive native metric sanitization are retained,
+not repaired into a different assessed endpoint. C33–C34 own detailed evidence.
+
+2026-10-05 substantive mechanism execution: the same actual Native harness now
+supports a campaign-bound verbatim-source control alongside no-preloaded-experience
+and conditional Taste. One existing real FMD family has three prospectively frozen
+development assignments; it is not three independent tasks or a formal test set.
+All actual research/confirmation/paper/review/revision flows are terminal, with
+original startup failure and paper-only recoveries retained. Primary quality is
+nearly identical; explanatory controls reveal unresolved confounds, not Taste gain.
+Large evidence now survives both review and revision through source-hashed partial
+scientific views; omitted fields cannot support inference. All native independent
+scientific reviews reject and missing mechanisms/breadth remain pending.
+Project ledger C30–C32 owns results and next decisions. Independent task/system
+evidence and applicable experience remain active priorities; no supplier API,
+local GPU, positive-seeking replay or all-suite loop was introduced.
+
+2026-10-04 accelerated evidence assembly: the two authored three-system tasks and
+one distinct official MLR-Bench VerifAI topic are now terminal and source-bound
+as nine original assignments. The new topic has actual Native, ARC and recovered
+MLR-Agent papers; first-paper assessment is distinct from later revision, original
+failures and recovery. Native review/revision is closed within inherited budget;
+ARC's native TeX export failure remains. Actual claim-consistency diagnostics
+cover twelve statements/two tasks: 48 matching ratings, no flips across 24 wording
+pairs, not writing-quality or novelty calibration. The manuscript includes the
+scientific findings, scoped diagnostic, concrete retrieval/task specifications
+and prior Scientific Taste positioning; body is eight pages, references one,
+supplement five. The fresh independent scientific review still leaves empirical
+benefit unestablished. Project ledger C28/C29 owns detailed results.
+October 6 evidence assembly is active, not complete: formal task admission and
+applicable matched Taste attribution remain open. No new UI, GPU/API calls or
+full-suite loop. Normal model handoffs resume within the original ceiling.
+
+2026-10-04 natural-shift cohort closure: Native + Taste and prospective Native OFF
+have delivered frozen confirmation, paper, review and revised PDF. Real pinned ARC
+and MLR-Agent also delivered native manuscripts; both original frozen confirmations
+failed before scoring on the same missing public-protocol mount. All three terminal
+papers are independently assessed, with original failures retained; no causal Taste
+effect or formal ranking is established. The two external confirmations now have
+separate bounded input-only recovery, never scientific source repair or original
+score replacement. Future campaigns declare public metadata explicitly; new Native
+paper cycles consume verified own-arm execution receipts without upgrading formal
+admission. Existing review inputs stay immutable. Detailed findings live in project
+ledger C26, not duplicated progress snapshots. Internal delivery remains October 9.
+
+2026-10-03 accelerated scientific batch: the canonical internal delivery target
+is now October 9 (submission-plan revision 7), two days earlier; every date remains
+a latest completion bound. A seventh candidate family uses the official WILDS
+Amazon reviewer-shift source with deterministic outcome-independent user selection,
+disjoint discovery/confirmation and separate average/tenth-percentile-user accuracy.
+Its source-qualified JTT/D3M precedents have passed conditional abstraction and two
+independent AI-only reviews, forming a separately frozen two-case development library.
+Genuine Native + Taste, pinned AutoResearchClaw and pinned MLR-Agent executions were
+started on the same prospective CPU task and lifecycle ceilings and are now terminal. A no-experience
+Native assignment was frozen before all outcomes as an internal ablation, not an
+external competitor. Scientific effects, formal admission and manuscript readiness
+are not established by these freezes. The lifecycle coordinator now explicitly
+forwards opt-in pre-proposal and bounded decision-context policies; old defaults
+and consumed cohorts remain unchanged. See `MAINLINE_DELIVERY_PLAN.md` for the
+active plan; October 11 references below are historical.
+
+2026-10-03 core integration: future Native plans now bind procedural skills and
+execution intelligence into the actual research loop, not just the display layer.
+The same proposal carries optional verification advice; hard permissions and
+scientific-integrity guards remain outside model authority. A CPU-only Native
+research-to-paper assignment on an existing MLR-Bench topic executed a real study,
+then separately recovered paper/review/revision/PDF within the original shared
+ceiling. Its Native interruption, pending request and delivery failures are retained;
+this is not uninterrupted completion. Session model roles made no supplier API/GPU
+calls. Six observation-only experiences abstained. Next planning consumed actual
+review/experience feedback; one explicit output-format compression preserved its
+initial rejection and was accepted within the original budget. The segment is
+delivered with a nonexecuting next design. This supports integration, not a new untouched benchmark
+task or Taste advantage; independent review still finds weak scientific contribution.
+The paper now separates skills, harness, Scientific Taste, typed generative
+interaction and conditional policy-level RSI. Formal task/library freezes and
+prospective external-framework outcomes remain the scientific priority.
+Known pre-tool waits now freeze exact model inputs; terminal report-only disposition
+never reopens research. Planning projects large canonical state structurally with
+original-source hashes and explicit omitted-observation limits, not a bigger prompt.
+
+2026-10-02 latest independent research batch is closed:
+official CIFAR-10 small CNN checkpoints support an authored weight-space research
+question. The prospective fixed selection is two development and two confirmation
+training blocks, six subject checkpoints per block; these are one candidate family,
+not 24 research tasks or a formal released benchmark. CUDA/SGD failures are retained;
+a uniform AdamW repair applies to the full predetermined pool, not selected winners.
+The fixed pool, staged task and reviewed three-case library were frozen before the
+genuine Native/ARC/MLR-Agent comparison. MLR-Agent completed frozen confirmation and
+its native manuscript. Native completed development and a recovered paper/review/
+revision/PDF cycle but missed frozen confirmation; ARC's separately budget-inheriting
+recovery stopped at its no-metrics writer guard. Original failures remain. Independent
+paper assessments find weak contribution, not system superiority or useful Taste.
+Future-runtime repairs reduce exact repeated context, retain pending request identity,
+charge offline resume gaps and safely recover unchanged read-only review advice after
+unrelated project updates. Consumed controller bytes are not changed. Detailed outcomes
+live in project ledger C24. Next priority is scientific task quality, applicable
+experience and a fresh prospective comparison; no repeat full-test or grading loop.
+
+2026-10-01 submission delivery: generic project-owned internal deadlines and
+evidence-bound deliverable plans are implemented, without changing official venue
+calendars or authorizing execution. Self-development now targets a ten-day internal
+package (October 11), with independent task freeze, genuine framework comparisons,
+Taste ablations, external transfer, scientific synthesis, review and final delivery.
+Current priority is scientific data and complete-task results, not UI polish or
+repeated checks. See `MAINLINE_DELIVERY_PLAN.md`; earlier package notes below are
+historical and cannot override that active plan. No formal superiority is claimed.
+
+2026-10-02 ready work has advanced before the latest milestone dates: genuine ARC
+and Native no-Taste microscopy research have executed, with frozen confirmation
+and Native paper continuation. A source-only qualified noisy-target precedent has
+passed two independent fresh-context AI reviews; a separate Native Taste assignment
+executed with identical discovery hashes/instructions/total ceilings.
+The new campaign binds library/profile and forbids late OFF/ON switches. Taste
+nodes consume the same response budget. Original OFF/ARC confirmations failed
+before joint scoring (extra top-level fit NPZ and missing frozen helper module).
+Their scores remain absent regardless of later interpretation/writing;
+future task generation clarifies these exact interfaces without changing old
+freezes. Taste has now completed all five-budget confirmation and full report analysis.
+Both Native report-only recoveries completed paper/review/revision/PDF within the
+original ceiling; scientific concerns remain open and beneficial transfer is not
+established. ARC retains its original envelope failure; its separate remaining-budget
+native-stage recovery ended at stage-17 drafting when the inherited ceiling expired.
+Its late unconsumed model output is not a framework paper; scores remain absent.
+These are not formal main results or benchmark-wide claims.
+Next-version Native integrates pre-proposal reviewed conditional lessons and bounded
+post-proposal decision views, preserving executable actions and legacy defaults.
+Current source/library freezes stay unchanged; matched scientific attribution remains
+necessary. Exact sealed paper grades stay separate from later progress and revisions.
+The official single-observation denoising paper and supplement have also been fully
+extracted, source-qualified, abstracted and accepted by two fresh-context AI reviews.
+A separate v2 library holds two related denoising precedents for new assignments;
+it does not establish cross-domain coverage, applicability or scientific efficacy.
+Neither source prestige nor this intake changes the closed experiment's frozen library.
+Method text now states the implemented inspectable recommendation and abstention
+rule rather than an unimplemented statistical confidence-bound selector; complete
+research is the primary benchmark figure and fork diagnostics remain secondary.
+
+Second published-system integration has completed pinned MLR-Agent with its
+original stages and real Codex CLI. Session children supply only requested model
+outputs; they do not replace the framework or execute its scientific tools.
+The first missing-dependency startup failure is retained; a separate recovery uses
+the isolated dependency overlay and inherits that cost. Idea, literature, proposal,
+real experiments, internal pre-freeze critique, frozen confirmation and native paper
+delivery are complete (22 requested model responses). The actual coding CLI created
+the manuscript; upstream writing reused that existing file, rather than making a
+separate writer-model pass. Fresh-context paper assessment is retained separately
+under the campaign's `assessment-flow/RESULTS.json`; novelty and contribution remain
+limited rather than being certified by successful pipeline completion.
+This reuses the graph development family and has no native review/revision, so it
+does not expand independent task coverage or constitute formal main results.
+
+The fourth candidate family is now materialized from the actually acquired rMD17
+source, with two molecular development contexts and procedure-frozen aspirin
+confirmation. Strict 800 fitting + 200 calibration label budgets, source-index
+windows, redacted query exports, force/risk endpoints and joint-control scoring
+are executable. Eight development and four target fixed controls completed offline
+on CPU; no controller training, GPU experiment or autonomous framework assignment
+is claimed. Weak reference accuracy is retained rather than optimized away. Next:
+real system research on this family and independent imaging-source construction,
+not another reference/testing loop.
+
+The fifth candidate family now materializes real FMD microscopy observations with
+input/reference frame separation, whole-FOV partitions and source-frozen procedural
+transfer. Target inference sees only one query capture budget in each offline process;
+other budgets, full source, averages and private references are absent. PSNR/SSIM,
+reference disagreement and unvalidated frequency diagnostics remain separate. Actual
+fixed controls completed development and all five target budgets; these are not framework outcomes, biological-fidelity
+proof or formal benchmark admission. Current population is five candidate families.
+Initial relative-output transport failure and its complete predictions remain;
+recovery reused those bytes and did not rerun the initial control. Next molecular
+Native/AutoResearchClaw comparison is now executing the actual two frameworks;
+confirmation service and Native paper-cycle continuation are active. No outcome
+is claimed before their retained terminal receipts.
+The common staged confirmation/collection route supports graph and molecular
+identity/force endpoints without replacing either framework's scientific decisions.
+
+Current real graph-task comparison has reached both execution endpoints: Native
+completed confirmation plus paper/review/revision; a separate budget-inheriting ARC
+mapping recovery completed all native stages and delivered a paper, but never made
+the required frozen target submission. Original failures remain visible. ARC's
+LaTeX export also failed because our adapter selected an unsupported template;
+future launches are corrected, with no scientific rerun. Both systems own their
+actual research/tools; subagents only answer model nodes. Independent paper/claim
+assessment stays separate from objective confirmation and pipeline completion.
+This is one development family, not formal evidence or a demonstrated Taste benefit.
+
+2026-10-01 graph-task delivery: one real-data research family now has two development
+graphs and a staged confirmation graph, frozen-program transfer and joint primary/
+control scoring interfaces. Twelve fixed reference executions and a fresh-context
+numeric/scope anchor check are complete; convergence warnings are retained. There
+were then three candidate task families, not five tasks or a formal main experiment;
+the later molecular delivery above brings the current total to four.
+Next is genuine framework comparison and full scientific delivery; no further
+reference/anchor campaign is a prerequisite. See the current task-data document.
+
+2026-10-01 authored task-data delivery: two new source families are materialized as
+complete research-task packages, with real UCI data, group/time partitions, fixed
+objective endpoints, public claim/review contracts and successful reference CLI runs.
+Separate public-only exports and validation-only review evidence exist. They remain
+candidate-unassigned, not formal benchmark results; reference models are not external
+research frameworks. Next is evaluator isolation and real-framework binding plus
+claim/review calibration and further task families. See
+`docs/research/SCITASTEBENCH_TASK_DATA_V1.md`.
+
+2026-10-01: original MLR-Bench SCSL receipts and independent assessment are collected.
+Native's hypothesis-identity rejection prevented report delivery after real experiments;
+ARC reached a revised manuscript but failed its native quality gate (not wall timeout).
+Session checkpoint continuation now inherits consumed requests and experiment files,
+and scientific-update rejection permits one model correction without relaxing evidence
+integrity. A separate recovery run is completing delivery; original failures remain.
+See `docs/research/OPEN_RESEARCH_BENCHMARK_COMPARISON.md`.
+
+2026-10-01 recovery closure: the Native benchmark task now has an actual imported
+manuscript, retained experimental figure, internal review, revision, TeX and PDF.
+Inherited experiment files are unchanged; 19 research/delivery session responses
+include the original 13. A separate independent assessment gives overall 5/10 and
+novelty 3/10. This establishes repaired delivery, not formal superiority or scientific
+acceptance; contribution quality and SciTasteBench full-task data remain mainline work.
+
+2026-09-30 benchmark-first execution: an unchanged MLR-Bench SCSL brief and source
+paper rubric now bind an actual Native/AutoResearchClaw comparison. New open-brief
+Native entry avoids preauthoring agents' hypotheses. Both assignments remain visible
+when incomplete; the collector separates native completion from paper scores.
+Wine continuation is not a gate. See `docs/research/OPEN_RESEARCH_BENCHMARK_COMPARISON.md`.
+The CPU/session development slice is not a released SciTasteBench or formal result.
+
+2026-09-30 evidence-guided reasoning: scientific planning and Native tool proposals
+now carry competing mechanisms, discriminating probes, conditional outcome branches
+and source-bound hypothesis updates. Controller/Taste context consumes the current
+frame; decisions and canonical-state handoff retain it. Routine tools add no model
+call, and provisional reasoning grants neither scientific support nor execution
+authority. See `docs/research/EVIDENCE_GUIDED_RESEARCH_REASONING.md`. Next: exercise
+the mechanism in complete research tasks, not isolated positive-result chasing.
+
+2026-09-30 native-framework terminal update (supersedes launch note below): actual
+AutoResearchClaw completed three experiment subprocesses (~9.75 s total), reached
+analysis/decision and twice rolled back to refinement. The 5400 s total development
+wall cap ended v4 with exit -15; 31 session responses were consumed across v3/v4.
+Current completed prefix is 12, with no completed paper/review chain. Most time was
+session response turnaround and literature network work. A fresh development budget
+and rollback-aware continuation are needed; no scientific improvement is established.
+
+2026-09-30 actual-framework execution: a clean pinned AutoResearchClaw runs its own
+stage sequence and tools from stage 1, with session children answering only its
+original chat requests. Native stages 1–3 completed (four replies); stage 4 revealed
+missing declared arXiv dependencies under public-source rate limits. An isolated
+dependency overlay and hash-bound native stage-4 continuation retain the original
+remaining budget. No scientific outcome or full completion is claimed without the
+terminal native receipt. MLR-Agent actual pinned code is now acquired; its coding
+CLI and model/literature routes still require real integration, never impersonation.
+
+2026-09-30 scientific priority update: complete-task SciTasteBench becomes the
+primary comparison between SciTaste and actual external research frameworks.
+Versioned protocol separates objective results, reproducibility, claim support,
+and review response; decision forks and internal memory variants remain secondary.
+Fresh source families and qualified native external adapters are still required;
+old development tasks are not promoted to formal data. See
+`docs/research/SCITASTEBENCH_FULL_TASK_PROTOCOL_V2.md`. Session subagents are preferred
+over newly authorized GLM/DeepSeek calls; no Qwen APIs or local GPU work.
+
+2026-09-30 next-task outcome: cross-domain few-shot comparison remains incomplete.
+ResearchAgent's original convolution crash and unchanged-candidate exit-137 recovery
+are retained; the latter produced 170/1000 predictions and no official score. Native
+prepared its candidate but was operator-deferred under severe shared-host CPU load.
+Fixed single-proposal schema, GPU forwarding and aggregate CPU/wall budget mismatch;
+new executions retain CPU usage attribution. No GPU validation of the final repair,
+no method ranking, and no new paper PDF. Project progress exposes the actual blocker.
+Re-admit the full task only with usable CPU/GPU resources and an explicit budget.
+
+2026-09-30 delivery integration: completed ML research packages can now publish
+source-verified outcomes, report links and recorded next steps to the common project
+document interface. Existing Idea notes survive; stale concurrent writes and evidence
+drift are rejected. Re-publication is idempotent. The interrupted v2 handoff has been
+synchronized without another experiment or PDF build; scientific scope is unchanged.
+
+2026-09-29 scientific follow-up: Native completed the new matched 120-step retain-only
+control with ten model receipts and score 0.07265888. Actual execution took 1188.76
+seconds against a 1200-second cap; measured feedback motivated a justified stop,
+not an implemented scientific revision. No second evaluation was launched. Fresh
+review and revised Markdown/TeX/PDF retain the development proxy's candidate-dependent
+reference-noise caveat. This single informed control is not a new framework ranking
+or Taste benefit. Ten repetitions belong to this estimator, not an agent-run default.
+
+2026-09-29 substantive ML research comparison: the actual pinned external
+MLAgentBench ResearchAgent and Native with grounded Taste deliberation ran the same
+CIFAR-10/ResNet-18 unlearning task on remote 4090-2 GPU 6. Both controllers finished.
+External completed ten replicas with total_score 0.00536134; Native's final attempt
+timed out with seven receipts and no complete score. Both first backward failures
+and the symmetric operator-supplied CuDNN compatibility amendment remain visible.
+Four accepted Taste consultations all abstained; no applied Taste effect is claimed.
+Source/receipt-bound same-task report, independent review, revision and registered
+Markdown/TeX/PDF delivery are complete; project living summaries are updated.
+Review prioritizes a newly registered matched-backend control and affordable
+measured-feedback iteration. Compatibility repair is not scientific revision.
+This is a real external development comparison, not formal superiority or complete
+open-ended idea-to-paper validation. Provider APIs and local GPUs were not used.
+
+Session full-chain delivery completion: the report/review/revision chain produced
+and registered a six-page Markdown/TeX/PDF bundle without replacing the main paper.
+The separate Taste format continuation also submitted a correct law (18 queries,
+3 code calls, numerical RMSLE 0); its six accepted consultations selected precedents
+twice. The primary failed Taste row remains unchanged. These development outcomes
+do not establish Taste benefit or formal benchmark readiness.
+
+2026-09-29 session full-chain package: Native has completed a hard polarization
+instance with 18 actual measurements, two isolated numerical analyses and an original
+submission accepted by the independent session symbolic judge (accuracy 1.0,
+RMSLE 1.0407016601237141e-15). The primary Taste arm failed before experiments and
+remains failed in the paired record. A single unqueried format continuation is
+separately registered with inherited budget. Session-backed report/review/revision
+and hash-bound TeX/PDF delivery are implemented; formal efficacy is still open.
+New provider API calls are paused per the user's latest direction.
+
+2026-09-29 numerical/source package: shared isolated Python/NumPy/SciPy analysis
+is implemented and used by all three refraction arms. NIST-grounded experience
+passed real source qualification, abstraction and independent DeepSeek/GLM review;
+the frozen library has two cases. Six new development arms finished, with zero
+original submissions and two incorrect common-terminal submissions. Six accepted
+Taste deliberations selected experience twice; efficacy remains unestablished.
+Added immutable evidence-report/review/revision synthesis and bounded proposal
+delimiter recovery for future runs; no retroactive score replacement.
+
+2026-09-29 stateless-provider package: six harder-task arms executed with retained
+failures; five eligible measured histories received terminal-only recovery and real
+GLM scoring, all incorrect. Original valid submissions remain 0/6. API transport,
+run-scoped freshness, inherited-budget empty recovery, deterministic library compilation
+and terminal-format handling are implemented. Seven Taste consultations had six accepted
+inapplicable judgments and one invalid-boundary rejection; zero revision conflicts.
+Scientific efficacy remains an outcome to measure, not a prerequisite. Next: shared
+analysis tools, source/task coverage and a frozen complete scientific campaign; no
+repetition of these tasks for favorable scores. Detailed evidence stays in the project.
+
+2026-09-29 complete development package: one grounded experience passed independent
+AI review and library admission; six actual two-task/three-system runs are scored.
+All recover the law, with no established Taste benefit. Four accepted consultations
+abstained and three encountered shared-project revision conflicts. See
+`MAINLINE_DELIVERY_PLAN.md` and the package ANALYSIS.md. Next delivery combines
+run-local/role isolation, independent coverage and substantive scientific comparison;
+no repetition of these solved development tasks or promotion to formal paper evidence.
+
+2026-09-29 source-to-Taste mainline: the design-method source now has a frozen
+original/projection, an accepted session-authored reference-quality invocation and
+an accepted grounded-abstraction invocation. This replaces hand-authored candidates
+as runtime inputs, not independent review or library admission. Development library
+compilation can explicitly consume ledger-verified session quality; default formal
+verification still rejects session-only generation. Next: independent abstraction
+review and frozen library compilation, then new matched research trajectories.
+Qwen API calls are prohibited; session preferred, GLM/DeepSeek remain permitted.
+
+2026-09-28 reviewed-Taste execution: the shared Newton Native runner now accepts a
+verified accepted set, source-quality result and session deliberation profile. It
+recompiles the source/review chain before reserving a run, freezes the derived library
+and profile, and uses the existing grounded deliberation controller with intrinsic
+fallback. This is a development treatment, not Full SciTaste or demonstrated benefit.
+The new source candidate requires the independent review's revisions; no new Newton
+experiment was launched with an unqualified library. Future runs expose a 32-session
+request ceiling (previous runs had 20); token-matched comparison remains unsupported.
+
+2026-09-27 scientific system-comparison lane: pinned upstream MLAgentBench
+ResearchAgent now executes shared Newton research tools through an isolated session
+transport. Native supports the same batched queries with actual-query accounting.
+Both development arms completed isolated scoring under the same query/turn limits:
+each recovered the law (symbolic accuracy 1.0, RMSLE 0.0); external used 18 queries
+and Native without Taste used 12. This single-instance difference is not a
+demonstrated efficiency advantage.
+These are consumed development tasks, not formal held-out results or whole-pipeline
+comparisons. No task-applicable reviewed Taste library was exportable from the
+audited sources; do not relabel Native without Taste as Full SciTaste.
+
+2026-09-27 mainline operational state: Native cycles now publish source-bound progress
+and freeze it into fresh next-planning evidence. `project progress` reads current
+observations independently of old scientific dossiers; retained V4 delivery is
+reconciled without replay. Known waits are distinguished from process liveness and
+scientific completion. New end-to-end hook execution and a UI projection remain open;
+do not count this as refreshed scientific experiments or a new autonomous result.
+
+2026-09-27 project navigation: drawer-owned global controls, descriptive gallery and
+metadata-only project creation are implemented. Self-development revision 1341 adds
+the actual September 27 bounded core milestone independently of the historical
+scientific dossier. Scientific-plan refresh and generic automatic Native progress
+projection remain separate from this explicit reconciliation.
+
+2026-09-27 project desktop: timeline-first orientation and six on-demand workspaces
+replace the long default dashboard. Actual browser navigation and phase-prefill work;
+large-project intent overflow is repaired. Plan editing is explicit and cancellable.
+The real model revision attempt returned a provider HTTP error without changing the
+plan. Remaining: model-route availability, initial large-project load time and generic
+Native progress projection; the historical dossier is not overall code completeness.
+
+2026-09-27 interface-to-Native integration: published user program revisions now enter
+research planning with mandatory bound responses. Fresh execution rejects stale or
+unacknowledged intent; the existing program UI shows actual planning disposition and
+explanation separately from execution. Five focused tests passed, zero API/GPU work.
+Next: generic Native plan/progress projection and real project interaction acceptance;
+do not count this dossier-based bridge as complete live execution control.
+
+2026-09-27 05:45 +08: frozen core sprint delivered within its eight-hour deadline.
+V4 unified objective/selection/Native execution inherited canonical state and produced
+uncertain interpretation, report, editable figure and revised PDF; downstream delivery
+used explicit repair, not repeated execution. Experience disposition and next planning
+completed. This is bounded session-assisted functionality, not scientific superiority,
+conference readiness, all-path autonomy or a full-suite pass. See
+`research/CORE_CAPABILITY_STATUS.md`; move next to separately scoped scientific quality
+and benchmark work rather than repeating the core integration loop.
+
+2026-09-27 optional explanatory figure handoff is implemented from Native contract to
+source-bound editable exports/critic receipts/PDF and new paper import. One focused
+export/reuse/drift fixture passed. Core integration joins now await final defect audit;
+session-generated figure-to-paper and fresh unified positive objective remain
+verification limits, not claimed scientific completion.
+
+2026-09-27 inherited-state execution and a real session interpretation are now
+connected with retained recovery evidence. One read, zero experiments/API/GPU work;
+source-quote escaping failure preserved and fixed, derived graph remains uncertain.
+Original failed run was not rewritten. Remaining core handoff: optional explanatory
+figure contracts/critic artifacts in the Native delivery route.
+
+2026-09-27 Native optional model interpretation now updates canonical evidence via
+existing critic/graph logic and forwards source-bound state to next planning. No extra
+API call or experiment. Next integrated boundary: actual inherited-state run with
+an uncertainty-preserving interpretation; optional explanatory-figure handoff remains.
+
+2026-09-27 predecessor-state intake implemented for Native objective/prepared-plan
+routes, with cumulative budgets and retained scientific history. Targeted construction
+checks pass; actual inherited-state execution and explicit result-to-evidence
+interpretation remain open, rather than counting tool success as claim support.
+
+2026-09-27 initial objective acquisition join implemented: declared options enter
+planning; explicit resource enablement reuses retained receipts or bounded downloads;
+prepared resources feed a fresh planning decision rather than auto-starting a study.
+Existing retained acquisition verified both enablement branches without external work.
+Remaining primary join: canonical predecessor/evidence state in the free-code path.
+
+2026-09-27 actual paper wait/resume now delivered (`session-paper-resume-v1`);
+fixed nested computed-fingerprint deserialization discovered by the real resume.
+Original-spec audit distinguishes implemented older Discovery/Evidence/Figure
+workflows from remaining joins to the new objective/session entry: initial resource
+acquisition, predecessor/evidence-state continuity, optional explanatory-figure
+contracts. Core completeness is not narrowed to the delivered assisted case.
+
+2026-09-27 follow-up: paper review/revision model waits now propagate through the
+Native report wrapper to project-level pending status without pretending the
+completed experiment failed. Same-command resume retains source bindings. This is
+a functional status fix, not a new experiment or a claim of arbitrary crash recovery.
+
+2026-09-27 latest: the Taste-informed compiled plan completed an actual Native
+analysis→paper→review/revision→experience disposition→Taste-informed next-plan
+cycle (`session-functional-cycle-v2`). Scientific rejection and experience
+abstention are preserved. The single broad integration attempt was interrupted at
+expensive checkpoint hashing (533 passed, 12 failed); one shared state-sealing bug
+is repaired with 15 focused tests passing. Final exit audit and remaining failure
+classification are open; no full-suite pass or scientific completion is claimed.
+Current inventory: [core capability status](research/CORE_CAPABILITY_STATUS.md).
+
+2026-09-27 architectural session review identified two actual core blockers, now
+implemented: completeness-first may select a gap-bound Native functional validation,
+and both initial/next planning consult the configured Taste library. Actual planning
+accepted an abstaining consultation and compiled the selected validation task after
+recovering a task-registration identity collision. No training or new efficacy result.
+Next: execute/deliver this bound plan and perform the one final integration gate.
+
+2026-09-27 the existing Native research-cycle entry now accepts objectives and
+declared resource/task options, invokes planning/provisioning, and forwards the exact
+compiled selection. Actual session intake resumed and retained accepted workflow-only
+work without starting a study. Positive forwarding and cross-stage integration still
+need the final gate; no fresh autonomous research claim follows from this case.
+
+2026-09-27 Native known-session-wait recovery implemented with immutable checkpoints,
+source/workspace binding, process lock and retained Taste requests/receipts. A real
+four-wait drill completed one file read and one stop without action replay. Project
+entry supports distinct per-request continuation attempts. Next: final core inventory
+and integrated stage recovery; arbitrary in-flight tool crashes remain fail-closed.
+
+2026-09-27 review/revision session-wait recovery is connected to the paper coordinator.
+Review keeps its exact pending runtime intent; revision preserves paragraph/evidence
+inputs; bounded process continuations retain prior receipts. One focused runtime
+interruption/resume fixture passed. Native checkpoint recovery remains the main gap;
+paper subprocess recovery is implemented but not yet covered by a live interruption.
+
+2026-09-27 project-entry session planning wait recovery implemented: exact original
+command/input binding, mutual exclusion, at most three retained process continuations,
+and explicit pending status. One focused no-call test passed. Native and paper-node
+interruption recovery remain open; the prior complete assisted case is not re-executed.
+
+2026-09-27 session-integrated-cycle-v1 delivered a real assisted retained-data
+analysis→figures/report→internal review→revision/PDF→experience disposition→accepted
+next-plan sequence through Native and the project coordinator. Taste was configured
+and correctly abstained from unsupported transfer. Four experiences remain uncredited;
+zero API calls/new training. Next: source-bound interruption recovery and final
+integration, not new efficacy demos. Whole-project and scientific completion remain open.
+
+2026-09-27 session-authored planning now exports input-bound requests, accepts
+validated replies and resumes without API credentials. The actual project planning
+result session-core-planning-v1 was accepted using prior paper feedback, with no
+API calls. Execution/writing/review session integration remains the next core work.
+
+2026-09-27 priority reset: [eight-hour core completion sprint](research/CORE_COMPLETION_SPRINT.md)
+targets 11:15 +08:00. Freeze peripheral expansion; unify the entry, enable honestly
+recorded session responses, integrate Taste and deliver one full functional case.
+Existing repaired runs do not establish whole-project or unattended completeness.
+
+2026-09-27 accepted-plan resource materialization can now resume without repeating
+planning. Actual previous model-selected handoff was reused successfully. Distinct
+resource outcomes prevent accepted planning from hiding pending preparation; status
+history can represent multiple recovery transitions. Network interruption and novel
+source discovery still need their own implementation/evidence rather than new demos.
+
+2026-09-27 real model selection→receipt reuse→resource bundle completed for a declared
+public metadata option (one API call, USD 0.174564). Native post-paper planning now
+has the same acquisition-option interface. New-source discovery, network fetching
+and acquisition-to-executed-study generality remain unproven; no new experiment ran.
+
+2026-09-27 resource scheduling now composes existing bounded download transactions
+with asset preparation; retained receipts bypass downloads. Actual reuse-to-bundle
+path registered successfully. Explicit network path, model-driven source selection
+and interrupted acquisition recovery still need scoped end-to-end evidence.
+
+2026-09-27 acquired-resource handoff implemented: existing acquisition receipts can
+produce Native asset manifests/resource options without bespoke path mapping. A real
+retained public configuration was bound and registered; no benchmark execution or
+ingestion claim. General model-driven source discovery/acquisition scheduling and
+resumable package acquisition remain distinct unfinished integration work.
+
+2026-09-27 review recovery now uses distinct ordinary runtime invocations under one
+provider budget, retaining both costs and selecting only the accepted invocation
+for review import. A focused scripted-runtime fixture confirms both ledger entries
+and accumulated charges. Fresh live multi-stage unattended behavior remains unproven;
+the API-free fixture is not evidence of scientific quality or broad completeness.
+
+2026-09-27 accepted structured-stage-recovery work item partially implemented:
+planning and revision share bounded format correction with retained attempts and
+unchanged financial ceilings; one no-call fixture passed. Review's runtime-facade
+ledger path remains a separate integration requirement. No repeated study/API call.
+
+2026-09-27 allocation v2 repaired lifecycle now reaches an accepted post-review
+work plan with no new experiments: structured-stage recovery. Project workflow-gap
+registry and inherited-budget planning retry remove the missing-ID handoff issue;
+prompt explicitly treats abstention as valid and forbids forced attribution.
+This is a repaired complete stage sequence, not proof of unattended general-purpose
+research or scientific effectiveness. Follow the accepted software work item next.
+
+2026-09-27 allocation v2 now has revised PDF and complete ten-observation disposition.
+One bounded revision-format retry succeeded with inherited accounting; experiments
+and review were reused. Post-review planning actually ran but rejected an unknown
+workflow-gap ID. Next mainline: connect observed workflow gaps to model planning and
+recover that planning boundary, not rerun allocation or optimize its score.
+
+2026-09-27 unattended allocation v2 completed actual simulation, two figures and
+report, then review. Model autonomously repaired a plotting API error. Mainline
+fixed a retained sibling-figure import boundary and resumed without re-execution.
+Revision is now terminal-rejected on paragraph-target validation; next priority is
+bounded revision recovery followed by experience disposition and next planning.
+This is not yet an uninterrupted or fully closed autonomous workflow.
+
+2026-09-27 first live unattended allocation attempt delivered the writing/review/
+experience stages but NOT the experiment: a missing action rationale interrupted
+execution after four actions. Format recovery now covers schema validation as well
+as JSON parsing with the same single retry. A second bounded live attempt has been
+launched with post-review planning; its outcome must be read from run receipts.
+
+2026-09-27 Native postprocessing now recovers missing experience collections for
+the delivered run and its continuation ancestors. Retained attempts, no-overwrite
+publication and a bounded retry count avoid experiment reruns or fabricated credit.
+Focused interrupted/recovered/reused collection fixture passed; unattended live
+delivery and broader workflow completeness remain open.
+
+2026-09-27 Native stage handoff now preserves execution receipts even when later
+postprocessing exits nonzero. One no-call coordinator fixture exercises initial
+interruption → bounded child → report entry, without duplicate execution. This is
+orchestration coverage, not live unattended lifecycle completion.
+
+2026-09-27 bounded unattended continuation integrated into Native project cycles:
+explicit 0–3 child limit, inherited resource/treatment identity, no budget reset,
+no retry on low scores/unknown errors, no paper handoff while remote remains pending.
+One no-call policy fixture passed; live unattended recovery remains unverified.
+
+2026-09-27 Native proposal-format recovery: explicit provider JSON-object mode
+replayed the retained failing prompt successfully (one call, USD 0.266124, no tools
+executed). No retry-cap increase, no local executable-text repair. General model-action
+reliability remains unproven; proceed with bounded unattended stage orchestration.
+
+2026-09-27 remote-capacity case bookkeeping/assets complete: second figure and derived
+PDF generated from original results; 18 abstentions and one recovered capture excluded
+without admission. No new API/GPU work. Autonomous success/scientific quality remain
+unproven; next mainline is reliable model actions and unattended stage orchestration.
+
+2026-09-27 remote-capacity paper delivered: original remote results now pass through
+report, actual review, revision and PDF. Combined recorded liability USD 6.302184;
+no new training this increment. Added artifact-only Fetch Remote and report recovery
+bindings. Remaining case completion: second figure and one orphaned Taste capture.
+Model JSON failures/operator recovery/local CPU deviation remain explicit.
+
+2026-09-27 model-driven remote capacity case: design compiled, Native chose a real
+GPU training job (9.333 seconds), but artifact-path/publication/recovery errors broke
+the paper handoff. Fixed relative artifact publication and precommit recovery; original
+remote outputs recovered separately. Local CPU repair deviation retained. v3 stopped
+on JSON parsing before report, no active job. Next: artifact-only retrieval and paper
+delivery from original remote evidence; no experiment rerun or score optimization.
+
+2026-09-27 generic pending-boundary recovery implemented for a recorded final
+Run Remote action, with observation-only lookup, child checkpoint/cost reconciliation
+and preserved parent evidence. One fixture passed; live interrupted recovery unverified.
+
+2026-09-27 generic completed-job continuation: inherited remote ledgers preserve
+job identity, slots and checkpoint costs; cached requests do not relaunch. One focused
+fixture passed. Pending jobs and uncommitted outcomes remain explicit recovery gaps.
+
+2026-09-27 real remote Native tool execution succeeded on 4090-2: retained-data CPU
+summary, four artifacts returned, no errors, no API/GPU or experiment repetition.
+Online model ranking/full remote study and generic continuation remain open. Updated
+the proposer to respect remote-bound resources rather than its stale CPU-only text.
+
+2026-09-27 Native remote integration: remote-bound project tasks expose `Run Remote`
+with fixed resource limits and standard experiment/wall/GPU accounting. Resource
+selection and task compilation retain the binding. One mocked transport check passed;
+live SSH and generic continuation are still open.
+
+2026-09-27 generic remote substrate: package SSH submit/observe/collect and detached
+bounded worker implemented. Explicit input/manifest hashes, GPU selection and no
+automatic relaunch. Local worker check passed; real SSH, model-tool integration and
+resource accounting remain open. No remote GPU experiment was launched.
+
+2026-09-27 unresolved-run continuation: iterative unlearning can reconcile its final
+pending remote outcome into a new checkpoint and continue without relaunch. Parent
+evidence and cumulative budgets preserved. One fixture passed; live reconnection,
+hard-crash recovery and pending Taste-capture reconciliation remain open.
+
+2026-09-27 remote pending continuation: selected unlearning experiments may wait
+and re-observe their original reservation instead of immediately terminating the
+controller loop. Bounded wait, no re-launch, no pending-to-failure inference. One
+focused fixture passed; whole-process restart recovery remains open.
+
+2026-09-27 live resource-selected design completed and compiled a loadable Native
+plan: one model call, USD 0.121164 liability, no experiment rerun. Fixed future task
+identity collisions across planner runs and refreshed the planner capability inventory.
+
+2026-09-27 fresh-study provisioning: design v4 accepts workspace resource options
+and selects declared assets without a prepared task. Package planning compiles the
+selection; Native post-paper planning forwards registered resources. One focused
+fixture passed, no repeated experiment. Autonomous acquisition/remote execution
+remain open; positive metrics are not prerequisites.
+
+2026-09-27 completeness-first Native Taste integration: project cycles now forward
+optional paired library/profile inputs to package-owned execution. Shared accounting,
+frozen library and continuation treatment identity are retained. No new online run
+or effectiveness claim; remaining priority is provisioning and recovery completeness.
+
+2026-09-27 allocation artifact requirement completed: added the second requested
+figure from retained replicate results, without experiments/API. The package's
+evidence-bound figure-supplement entry created a separate registered paper version
+`allocation-project-paper-v2-complete-assets`, retaining old figure/data/paper hashes.
+The new version is not newly reviewed or scientifically approved; the original
+operator-repaired lifecycle status is unchanged.
+
+2026-09-27 fresh recovered project cycle delivered: `allocation-project-cycle-v2`
+completed actual synthetic experiments, report import, review/revision/PDF, feedback
+and 24 abstained experience dispositions from `/tmp` through package services.
+Both subject policies tied. First-run Bash interface failure and explicit recovery
+are retained; this is not uninterrupted autonomy or formal SciTaste efficacy.
+The task requested two figures but produced one, an explicit remaining deliverable.
+Revised paper: `papers/allocation-project-paper-v1-revised/main.pdf` under the project.
+No new experiment was performed to chase gains; no process remains live.
+
+2026-09-27 fresh project-owned cycle launched: `allocation-project-cycle-v1` runs
+the new CPU budget-allocation simulation from `/tmp` through package execution and
+writing services. It uses an accepted model design and declared synthetic specification,
+not a benchmark TaskRunner or copied prior outputs. Outcome pending. Execution now
+honors a report reserve (USD 6.5 execution + USD 1.5 report, shared USD 8 ceiling);
+old plans with no reserve retain their prior limit. No local/remote GPU or downloads.
+
+2026-09-27 package-owned feedback planning: Native cycles can now continue into
+`scitaste.project.research_planning` without a checkout. Installed-package adapters
+are inventoried directly; legacy script capabilities require an explicit code root.
+Real `native-project-feedback-cycle-v2` resumed existing artifacts from `/tmp` and
+made one accepted planning call (USD 0.274908 liability). The chosen completeness
+work is a fresh, bounded non-Math_000 project-owned full cycle, accepting null results
+and unfavorable review. No new experiment was launched and no scientific-quality
+claim follows from accepted planning. Unlearning and optional legacy campaign/draft
+compilation remain checkout-dependent.
+
+2026-09-27 Native paper lifecycle is now package-owned: terminal report, actual-report
+import, candidate cycle, review/revision and conservative review recovery have package
+entries with compatibility wrappers. Native project cycles may omit `--workspace`;
+explicit paper backend/review/venue profiles and credential paths support external
+invocation. Actual `native-project-cycle-v1` resumed successfully from `/tmp` with no
+workspace/API/execution flags and no regenerated stages. Historical relative candidate
+locators are anchored to the project without rewriting evidence. This is not a new
+fresh model run or a wheel-install acceptance; next planning, unlearning and optional
+legacy measured-draft building still require checkout support.
+
+2026-09-27 package-owned Native runtime: the execution loop, provider transport/
+ledger support and prospective experience collector now live under `scitaste`.
+Legacy scripts remain compatibility entries; project orchestration invokes the
+package module. From `/tmp`, a no-call import/ledger/help check explicitly blocked
+all `scripts` imports and succeeded. Source bindings resolve installed module paths,
+and credentials may be explicitly supplied or located under the project outputs
+root (environment fallback only when no file exists). No new execution occurred.
+Report/review/revision subprocesses and the tool-provider acquisition remain external
+dependencies; a fully standalone end-to-end package is not yet claimed.
+
+2026-09-27 project-owned workspace provisioning: an installed
+`project prepare-workspace-task` command now binds a selected model study to explicit
+project asset files and CPU/API limits, without a benchmark task directory/schema.
+Native execution and project-cycle routing accept this plan kind; the planner can
+reuse it as a resource option. Real `project-owned-workspace-task-v1` preparation,
+loading and file/instruction initialization completed with no API or experiments.
+It reuses existing development data and is not a new benchmark or independent
+experiment. Fresh full execution of this plan kind is still unproven; external
+tool-provider code and checkout scripts remain dependencies. Autonomous asset
+discovery/selection and generic remote-GPU provisioning remain open.
+
+2026-09-27 design-to-task binding: planner task options and compilation now support
+Native CPU/API prepared tasks as well as unlearning. Accepted real model proposal
+`native-design-task-binding-v3` produced a source-bound `prepared-task/PLAN.json`;
+loader validated it without execution. The selected study/arm enters both executor
+and report context, while assets, resource limits and executor identity remain
+frozen. Two earlier proposals with invalid references remain rejected. Three calls
+cost USD 0.418308 conservative liability; no experiments. This is binding a model
+design to existing task resources, not generic task invention or scientific adequacy.
+
+2026-09-27 Native experience routing: the unified cycle now traverses its verified
+continuation lineage and binds candidate evidence to the delivered paper cycle.
+`native-project-cycle-v1-experience-disposition/RESULT.json` records 12 explicit
+abstentions across six source runs, no unresolved captures, no new API/experiments
+and no policy update. The same conservative routing function serves measured and
+Native paths. Bound reviews can yield rejected/pending-admission states; none is
+invented here. This completes this path's conservative disposition stage, not
+positive Taste learning or causal attribution quality.
+
+2026-09-27 unified entry: `scitaste project research-cycle --executor native-workspace`
+now routes prepared Native tasks through execution, actual report/review/revision,
+planning feedback and quarantine disposition without requiring unlearning baselines.
+Real completed artifacts were resumed with API/execution disabled and registered as
+`native-project-cycle-v1`; no stage was regenerated. Fresh execution dispatch and
+optional next planning are implemented, not separately live exercised through this
+new coordinator. An explicit trusted executor checkout is still required; this is
+not a claim of standalone packaging or autonomous study provisioning.
+
+2026-09-27 current: Native prepared CPU/API research now reached an actual report,
+five-figure revised PDF and open review, not just tool execution. Terminal reporting
+reuses measured outputs even after budget/interruption stops; no metric gain is a
+delivery prerequisite. Execution + report: 28 calls / USD 7.544496 liability under
+the original USD 8 ceiling. Review/revision are separately accounted writing stages.
+`scripts.run_native_report_lifecycle` connects resumable report import, review,
+revision and planning feedback; it never relaunches experiments. The main runner
+exposes `--report-paper-prefix` for terminal handoff. Twelve Native action experiences
+remain quarantined, not admitted Taste. Broader autonomous task provisioning,
+attribution integration and whole-project completeness remain open.
+
+The following dated snapshots are historical; the paragraph above is authoritative.
+
+Current update: v4 stopped on invalid proposal JSON (25 cumulative calls,
+USD 7.069824 liability); v5 stopped before sending a request because its reservation
+would exceed the same USD 8 ceiling. No additional calls or experiments occurred.
+One budget-accounted format retry is implemented but not live exercised.
+Actual experiments and five figures already
+exist; equal results are valid input to reporting, not a reason to rerun them.
+Native report delivery remains open. The older snapshots below are historical.
+
+Native live execution reached 11 recorded actions and 11 quarantined experience
+candidates across preserved continuations, then stopped at the original USD 8
+request-admission ceiling (24 calls, USD 6.765108 liability). Code/results exist;
+report is absent. Fixes address schema echo, missing allocation context, history
+duplication and write-refusal status. Completion remains open; no process is live.
+
+Live Native CPU/API launcher implemented and started (`native-cpu-api-controller-v1`),
+separate from upstream-agent execution. SciTaste proposes/selects and records state;
+prospective decision/outcome capture uses the existing Taste pipeline. Terminal
+completion and collection remain pending. No metric gain is a prerequisite.
+
+Native control foundation added for upstream workspace tools: schema-bound tool
+arguments, Native-owned alternative selection, persistent decisions/state and raw
+feedback. A deterministic selected-action-only fixture passed; actual model-backed
+Native CPU/API task launching and experience integration remain to implement.
+
+Benchmark execution now has optional pre-tool durable selection/post-tool outcome
+capture and explicit observation-only dispositions. Historical real-event replay
+paired 38 calls without new API/GPU work; prospective live use is not yet proven.
+Next integration must connect actual SciTaste scientific decisions, not relabel
+upstream tool events as reviewed/admitted Taste or rerun tasks only for bookkeeping.
+
+Fresh CPU/API task now reached reviewed/revised PDF with all six real report figures.
+The task runner can import the original report and continue review/revision directly;
+completed-path no-call resume succeeded. Next: prospective decision/outcome capture
+and experience disposition, not quality-driven repetition of this experiment.
+
+The real prepared CPU/API task now completed in 675.084 seconds with 39 recorded
+model-call events, actual code/experiment outputs, parameter sweep, figures and
+report. Terminal delivery registered automatically. Fresh paper continuation and
+decision-level experience capture remain incomplete; metric correctness is not
+independently verified and official scoring was not requested.
+
+Broader task provisioning now has a registered real CPU/API task envelope and a
+live ResearchClawBench execution (`prepared-cpu-api-run-v2`). It reuses upstream
+task data/runtime, binds the current Idea and disables GPU visibility. Completion
+is pending; native-base execution does not establish full Taste control or learning.
+
+Review-to-planning connection implemented and exercised. The design model now has
+a distinct project-gap-bound completion action rather than always selecting an
+immediate scientific study. Actual v2 planning selects general task provisioning;
+implement and run a real CPU/API task next. A dry-run alone does not close that gap.
+
+Historical ResearchClawBench results now actually reached reviewed/revised PDF
+delivery (`researchclawbench-paper-flow-v1`). A heading-targeting revision failure
+was retained and recovered with one separate call; total 10 calls / USD 0.600804
+conservative liability, no GPU work. Review remains open and this does not establish
+fresh execution, task provisioning or experience learning for that adapter.
+
+ResearchClawBench gained terminal-result delivery into the existing paper lifecycle.
+Two real historical runs were registered and compiled to a paper-node input with
+no API/GPU calls. The execution runner can now continue into writing/review/revision;
+fresh integrated execution is not yet demonstrated. Missing bound scores stay
+unknown; report existence and internal arm labels confer no scientific authority.
+
+Policy snapshots can now be explicitly consumed by the product/Native development
+entrypoints with exact bundle/current-Idea checks and preserved abstention. One
+retained real decision was assessed offline and correctly abstained; no new live
+choice, deployment, effectiveness or broad task coverage is established.
+
+Reviewed experience now reached a real fitted, project-registered policy snapshot
+after outcome-blind cross-model family assignment. Default support remains 3;
+observed support is 0.6 from one episode, so the snapshot is not activated.
+Next learning integration: accumulate independent eligible experiences and connect
+explicit policy consumption without bypassing abstention or requiring positive effects.
+
+Experience admission now has a real completed example: revised negative experience
+was admitted after two producer-independent model reviews. No policy was updated.
+Next learning integration is decision-family assignment, policy refresh and actual
+consumption; do not equate accepted attribution with a learned operational policy.
+
+Product entrypoint added: `scitaste project research-cycle --workspace CHECKOUT`
+uses the packaged coordinator. A no-call resume of the completed cycle from `/tmp`
+succeeded. Workspace-backed executor/writing/planning dependencies remain; broader
+adapters and operational experience learning are still completeness work.
+
+Latest verified completion: model-selected task → remote experiments → revised
+PDF → abstaining experience dispositions → next-plan proposal all completed.
+The final registration collision was repaired and resumed without new API/GPU
+work. This closes a supported task path, not generic autonomous research.
+Next: product-entrypoint integration, broader adapters and eligible operational
+experience learning. Do not rerun the completed unlearning study for efficacy.
+
+Model-selected task execution has now completed three remote attempts / 30 replicas
+and stopped normally at the experiment limit. The same coordinator advanced into
+paper drafting without manual experiment restart. Paper/review/revision/experience
+and subsequent planning are still in progress; whole-project completion is unproven.
+
+Real model task selection now produced a design-bound, resource-bound executable
+plan. The resulting `model-selected-research-cycle-v1` is running on remote GPU 3;
+completion and subsequent paper/experience/next-plan delivery are pending.
+The broad program remains incomplete; this is a supported development component.
+
+Native unlearning now consumes an explicit project-plan remote resource envelope,
+including the existing 4090 host definition and task runtime paths. A real plan
+was prepared and one no-network routing/observation check passed. Live use of the
+new envelope and generated-design-to-task selection are still outstanding.
+
+Generated study registration/launch/resume now has an entrypoint using the existing
+evaluation runner (`run_generated_study_campaign`). It is implemented but not
+live-exercised; matching a generated study to current resources and implemented
+methods remains next. No additional API/GPU work was launched for this increment.
+
+Cycle feedback now reaches real model planning through `--previous-cycle` while
+preserving failed attempts and non-admission. The first call completed, but its
+design was not adopted due to factual/comparison errors. The coordinator's new
+optional next-plan stage is implemented, not yet exercised as a composed run.
+Generated-plan execution remains the primary missing integration; do not confuse
+feedback ingestion with learned-policy update or adequate scientific planning.
+
+Current ordering reaffirmed: whole-workflow completeness → stage quality →
+effectiveness. The next integration target is generated-plan execution with
+accurate treatment/resource binding, followed by experience-to-next-plan flow.
+The prepared-study paper/review/revision segment is already exercised. Do not
+repeat it, demand above-baseline scores or block project delivery on favorable
+experience reviews. The current boundary table in the completeness-first plan
+supersedes historical “next” statements below.
+
+Latest completion update: the prepared idea-bound study now completed through
+revised PDF and explicit experience abstention after a retained-review interface
+recovery, without repeating experiments/drafting. Remaining completeness gaps
+include autonomous study design, broader task adapters and actual reviewed policy
+admission/update; do not equate this prepared-study flow with all-project completion.
+
+Latest integrated exercise (2026-09-26): idea-bound Native/Taste execution now
+reaches normal experiment-budget termination, automatic measured delivery and
+generated draft through a single coordinator. Three attempts yielded one failure
+and two measured successes. The live review response failed action/evidence-flag
+validation, so revised-paper and final experience handoff remain pending for this
+run. Continue from retained review evidence, not by repeating GPU work or drafting.
+
 Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
+
+**Priority override — 2026-09-26:** complete the integrated lifecycle before
+optimizing scores, individual-stage quality or formal external comparisons.
+Negative experiments are valid inputs to interpretation and writing; favorable
+results are not a development exit gate. The operative sequence and outstanding
+handoffs are in [the completeness-first plan](research/COMPLETENESS_FIRST_EXECUTION_PLAN.md).
+Next: bridge measured delivery into paper drafting, review and revision, then
+exercise one project-scoped resumable lifecycle. Older effect-first next steps
+below are deferred, not prerequisites for this integration sprint.
+
+Measured-paper integration update: the fresh v2 entrypoint completed sectioned
+drafting, candidate build, live review, live revision and revised PDF registration
+without new experiments (9 calls; USD 0.828780 conservative liability). Next:
+connect project idea/task execution and experience disposition to the same run.
+Paper quality and baseline superiority are not prerequisites for that integration.
+
+Current execution (2026-09-26): contextual unlearning attempts 001 and 002
+completed ten replicas each, scoring 0.034132 and 0.037417 versus baseline
+0.053929. Attempt 003 completed at 0.027856. All thirty replica receipts are
+collected; total measured execution was 1497.28 seconds and API liability
+USD 3.450852. The agent subsequently interrupted with RuntimeError; exact cause
+was not retained, so this is not a clean controller completion. Automatic
+baseline-inclusive delivery, writing buffer and three quarantined experience
+candidates succeeded. Six recorded Taste-participating decisions include five
+recommendation agreements and one disagreement; none establishes scientific
+benefit. Do not rerun completed GPU work. Next runs distinguish provider-budget
+admission stops from other errors and retain numeric diagnostics; this does not
+retroactively relabel the interruption or establish a scientific improvement.
+Finite future Native campaigns can opt into a contract-bound no-call stop at the
+experiment limit, followed by the existing measured delivery. Two focused cases
+cover completed and pending execution; the prior live run is not relabeled as a
+successful exercise of this newly added policy.
+
+The attribution loop now accepts candidate-bound AI feedback for a new draft;
+one bounded revision of the rejected v4 attribution completed (one API call,
+USD 0.241824 liability ceiling). It removed the unsupported beneficial sequencing
+claim and retained only a narrowly scoped negative implementation observation.
+The new candidate is quarantined pending fresh review. This closes
+the revision-input gap, not the independent review/admission or policy-learning
+requirements. Original observations and prior rejection remain unchanged.
+
+Reference development update (2026-09-26): official SSD, SalUn and SCRUB PDFs
+and extracted text are acquired under the self-development project's acquisitions.
+Three exact-passage ReferenceQualityInput packets now exist, with source hashes
+and bibliographic provenance separated from screening inputs. The reusable paper
+preparation command does not qualify sources or admit Taste. Next: content-based
+quality judgments and grounded abstractions; this post-hoc development corpus is
+not a sealed evaluation resource or evidence of an experimental gain.
+The first real screening batch made three calls (conservative liability USD
+0.214296): two proposals failed exact-excerpt validation; one passed the ledger
+and returned qualify. Its rationale largely counted role labels rather than
+assessing scientific content, so it is not admitted as a quality-validated source.
+The quality prompt now makes role coverage necessary but insufficient and requires
+substantive comparison/setup/boundary reasoning. Next: richer empirical source
+passages and substantive quality/abstraction, not another GPU replication.
+The empirical v3 source packet now completed both live quality screening and
+grounded abstraction, producing one ledger-bound candidate. Two preceding
+abstraction attempts exposed action-length and interleaved-PDF-quote problems;
+both remain recorded. This turn used five calls, USD 0.598104 conservative
+liability. Next: independent AI content review and a second distinct precedent,
+then activate the bounded deliberation treatment; no memory admission or GPU gain
+is established by candidate generation. See the project source record and v3
+OPERATOR_REVIEW.md for privacy, inference and transfer limits.
+Both source-derived candidates now completed independent-context dual-agent content
+review, and both were rejected; no operational library is admitted. SCRUB added an
+unsupported resource-cost boundary; SalUn overgeneralized aggregate advantage and
+blurred same-level alternatives/objective trade-offs. The pipeline automatically
+prepares blind review requests after an accepted abstraction. Locked-review revision
+is now implemented: the revision input verifies the original source, candidate,
+both actual review responses and final decision before reusing the qualified source.
+SCRUB and SalUn each completed one real revision invocation and generated fresh
+blind review requests. SCRUB revision v1 was again rejected by both reviewers:
+unevaluated scale was incorrectly described as demonstrated failure. SalUn revision
+v1 subsequently received two independent-context accept decisions, now locked and
+finalized. This is AI-only content acceptance, not operational library admission.
+SCRUB revision v2 failed exact source-quotation validation and was retained without
+another retry (one call, USD 0.177612 conservative liability).
+A forced two-condition minimum was removed; one
+supported boundary is preferable to an invented second one. Next: re-review the
+remaining revisions and admit only supported experience, then run the existing live Taste
+deliberation integration. SalUn has now been compiled into a one-case development
+library through verified quality and review-chain bindings, without manual schema
+translation. The existing Native `--development-taste-library` path can consume
+`evaluations/unlearning-reviewed-development-library-v1/TASTE_LIBRARY.jsonl`.
+Actual applicability and experiment benefit remain unestablished; do not treat
+this development admission as a formal corpus or a positive treatment result.
+The first live integration exposed an arbitrary two-precedent input minimum;
+the controller silently fell back with the one-case library. Single-precedent
+assessment is now supported without relaxing applicability judgments. The original
+driver is interrupted; its already-launched remote attempt-001 has now been
+recovered without relaunch (10 replicas, score 0.039852 versus baseline 0.053929).
+Remote process termination and complete execution cost are recorded. It cannot
+establish Taste effectiveness or retroactively complete the interrupted loop.
+The corrected v2 run reached real deliberation but exposed a remaining two-item
+output-schema constraint. Both output schemas now support singleton assessments;
+the representative regression covers input, output and semantic validation. Two
+already-rejected responses pass the corrected validator post hoc and selected the
+SalUn precedent, but v2's imported code continues with recorded intrinsic fallback.
+Its remote experiment is allowed to complete; do not relabel this as online Taste
+selection or launch repeated replacement runs while it is active.
+V2 has now finished normally after nine decisions and three completed experiments:
+0.037492, 0.004127 and 0.052121 versus baseline 0.053929. All ten-replica outcomes
+are retained. Total execution time was 1019.43 seconds; API liability USD 1.958292.
+Six deliberation outputs were rejected and zero controller decisions used Taste.
+Automatic result selection retained the baseline; a separate resolved delivery
+binds the baseline's original measured source, leaving initial artifacts intact.
+Next: exercise the fully corrected singleton path, not rerun this consumed result
+as a formal comparison. General Taste effectiveness remains unestablished.
+V3 reached an accepted live deliberation with the corrected singleton schemas,
+then preference selection failed twice on the exact `rationate` spelling. No GPU
+experiment was launched; API liability was USD 0.566808. A bounded parser alias
+now retains the provided reason without changing raw evidence; a no-experiment
+delivery record preserves the interruption. Accepted reasoning has not yet reached
+an executed controller decision, so online Taste participation is still unproven.
+V4 now records accepted Taste deliberation in two actual controller decisions:
+Write File completed successfully and Run Experiment launched attempt-001 on
+remote GPU 3. Both selected the reviewed SalUn precedent and were non-abstaining.
+This establishes live source-to-review-to-library-to-decision integration, not a
+counterfactual action change or scientific improvement. The experiment is pending;
+the proposal's mechanism explanation remains an unverified hypothesis.
+V4 attempt-001 completed at 0.036504 (baseline 0.053929), and its negative outcome
+led to a different, final-layer-reset candidate with Taste again in the decisions.
+Attempt-002 is running. Terminal delivery now automatically collects completed
+prospective observations as quarantined experience candidates; v2's three actual
+outcomes were successfully compiled without any invented attribution or admission.
+The v4 third proposal exposed missing task semantics: it treats sample forgetting
+as class deletion and invents an accuracy-ratio FQ equation. Read-only allowed-label
+inspection showed all ten classes in both subsets (500 versus 4500 per class).
+Both development runners now accept the same optional, source-bound task-context
+package; public metric excerpts and candidate-visible dataset facts are prepared
+under `evaluations/unlearning-task-context-v1/`. Do not inject this into the active
+v4 trajectory or claim that it already corrected scientific reasoning.
+V4 has now finished normally: six accepted deliberations participated in six
+controller decisions, three experiments scored 0.036504, 0.027874 and 0.028357,
+all below baseline 0.053929. Execution consumed 1164.84 seconds; API liability
+USD 2.492544. Automatic delivery exported the measured baseline source and writing
+buffer, and compiled three quarantined experience candidates without manual repair.
+This closes this development execution/delivery/capture path, not scientific
+effectiveness, a learned policy update or the full idea-to-publication objective.
+One v4 prospective candidate now has an actual model-generated attribution draft
+(one call, USD 0.233976). It separates information gain from a lower-scoring design,
+but overstates an unexecuted alternative comparison. It remains unadmitted. Next
+learning integration gap: bind draft credit to a new reviewable candidate while
+preserving original observations, then review rather than automatically learning
+from a schema-accepted beneficial/harmful label.
+The draft-to-candidate bridge is now implemented and used on the real v4 record.
+A separate AI attribution-review call returned reject: decision/outcome traces are
+supported, but beneficial credit over an unexecuted read alternative is not. The
+review cost USD 0.221736; this is one review, not a completed panel. No candidate
+was admitted and no policy changed. Observation-to-draft-to-review is now runnable;
+review-driven credit revision and eventual justified admission remain separate work.
+
+Allocation development update (2026-09-26): all three remote experiments finished;
+scores 0.037830, 0.038584 and 0.033572 did not beat baseline 0.053929.
+The baseline delivery is exported and registered. Final preference response lacked
+`rationale`, so the run remains interrupted, not an end-to-end success. Future
+Native runs allow one separately bounded format repair under the existing ledger.
+All three allocation assessments abstained; Taste benefit remains unestablished.
+Historical assessment reproduction now identifies the gap: all three assessments
+matched only zero-failure action features despite changing experiment outcomes and
+budgets. Prioritize admitted experience coverage of rich decision contexts and
+prospective held-out evaluation; do not lower confidence thresholds post hoc.
+Three prospective experiment observations are now compiled into existing Taste
+candidate schemas with their rich predecision context and original result bindings.
+Next: review transferable attribution and applicability, then admit justified
+experience separately; collection alone is not policy learning or effectiveness.
+The attribution drafting node now fills the gap between uncredited observations
+and the existing credit-review interface, which correctly rejects unassigned credit.
+Drafting may abstain; it does not itself create policy-training authority.
+Iterative Native and upstream runners now share automatic measured-result delivery:
+frozen best source, all-attempt report, project registration, and explicit unresolved
+baseline/pending-execution states. This removes manual export from the normal
+terminal path; semantic attribution and paper readiness remain separate.
+Delivery now also emits WRITING_BUFFER.json using the writing subsystem's evidence,
+claim and limitation models. This provides machine-readable result context while
+keeping development notes outside the current manuscript and formal claim ledger.
+Integrated multi-proposal/optional-review run completed two real experiments
+(0.082406, 0.050760; baseline 0.053929), then exceeded proposal request size.
+Automatic best-source delivery succeeded despite interruption. A source-deduplicated
+prompt projection reduces its history from 98,492 to 44,301 bytes while preserving
+measurements and current source. Full uninterrupted integration remains unproven.
+Native continuation now restores terminal post-action state and uses the remaining
+original budget in a separate lineage-bound run. Live continuation inherited eight
+turns, two experiments, 715.33 execution seconds and 1.936572 USD API liability;
+neither earlier experiment was relaunched. It is not a new independent trial.
+Continuation has now finished normally: three measured outcomes 0.082406,
+0.050760 and 0.128003 versus baseline 0.053929, 1144.99 execution seconds and
+2.526264 USD cumulative API liability. Best source, all outcomes, unverified agent
+prose and writing buffer were automatically delivered. This establishes a recovered
+development research loop, not uninterrupted execution, learned Taste improvement,
+or a complete idea-to-publication evaluation.
+Next integration gap: grounded precedent deliberation already exists in the Taste
+controller but is not yet connected to the live shared-tool run. The shared ledger
+now supports its profiled model-node requests without introducing a second API
+budget. Grounded source selection, live runtime wiring and transfer validation
+remain before claiming this path works end to end.
+The live Native entrypoint now accepts an explicit development Taste library and
+matching deliberation profile, verifies accepted runtime-ledger proposals and feeds
+them into the existing action controller. Invalid/no-grounded-pool paths explicitly
+use intrinsic selection. The live treatment still needs qualified source selection
+and a bounded execution; this integration does not establish a Full SciTaste result.
+Source selection now identifies a scope mismatch: executable hidden-law libraries
+require interactive-experiment conditions, not the Native EVIDENCE state. Relevant
+unlearning primary-source candidates (SSD, SalUn, SCRUB) are documented in the
+project's UNLEARNING_REFERENCE_CANDIDATES_20260926.md, explicitly post-hoc development
+discovery, not admitted experience. Full-text qualification precedes activation.
+
+Latest live update (2026-09-26): unlearning baseline v2 completed all ten isolated
+candidate/scorer iterations on remote 4090 GPU 3: composite 0.05392880487,
+test accuracy 0.88274, whole-run reservation 240.893 seconds. Native completed its
+independent edit/experiment/feedback loop: score 0.03237085896, worse than baseline,
+470.560 seconds, 0.401688 USD recorded API liability. The external agent also
+completed: score 0.04139810110, 478.048 seconds, 0.438732 USD API liability. Both
+candidates underperformed baseline; no method gain is claimed. V1 failed before remote
+launch on an rsync option compatibility issue and is retained, not retried.
+
+Independent machine-unlearning task: digest-bound offline development scorer
+extraction implemented, without Kaggle login or submissions. Scoring functions
+are unchanged. Candidate worker, allowed-data staging and tensor-only scorer
+handoff are implemented and connected to a remote CLI using bubblewrap and a
+whole-evaluation timeout. Runtime and verified assets are deployed, and the first
+complete baseline is measured. Independent per-replica seeds are a disclosed
+adaptation, not upstream bitwise equivalence.
+Official source, weights and forget indices are staged remotely. The shared-tool
+task now includes the measured baseline, identically for both agents. Launch receipts bind
+candidate/runtime digests and require the selected GPU to be currently idle.
+The receipt-to-ExecutionResult adapter now returns task scores, component metrics
+and measured wall-time cost to the shared controller schema; missing terminal
+receipts stay unresolved. The shared-tool launch callback is connected to Native
+`--task unlearning`, with observe-only recovery and preserved receipt history.
+The backend, Native and external model-directed edit/experiment/feedback loops
+have completed. Next is bounded multi-experiment revision through the shared-tool
+interface, whose current one-attempt contract prevents iterative recovery.
+An opt-in v1.1 iterative task/environment is now implemented with per-attempt
+snapshots and cumulative runtime accounting. The three-attempt unlearning contract
+is connected to Native `--iterative`; its first live run completed with the
+two negative candidate outcomes as explicit task history. API liability ceiling
+is 4 USD; no enhanced Taste is active. External iterative integration is also
+implemented with the identical task/budget. The independent upstream run
+`mlagentbench-unlearning-iterative-development-v1` completed without access to
+Native's iterative outcomes. Its three scores were 0.03931130, 0.02902920 and
+0.04008115, all below baseline. The verified baseline is exported in
+`mlagentbench-unlearning-selected-delivery-v1`; execution used 1,674.612 seconds
+and API liability 1.165032 USD. Both complete trajectories are indexed in
+`unlearning-shared-iterations-development-v1/REPORT.json`, development-only. Native's
+first frozen random-label candidate completed at 0.04740872958 and triggered a
+model-generated revision plus a second real experiment. All three attempts completed;
+source-level implementation discrepancies are preserved.
+Attempt 002 scored 0.14658621050 on the development proxy but retained nearly-perfect
+forget-set accuracy and the sign discrepancy. Attempt 003 scored 0.04562328824;
+retain/test accuracy fell to 0.81377/0.78474. Total execution was 1,540.693 seconds,
+with 1.397604 USD conservative API liability. The final agent selected attempt 002,
+but repeated the unsupported ascent interpretation. Objective fidelity, semantic review integration and
+held-out effectiveness are unresolved; do not promote this gain to a method claim.
+The measured best source is now exported separately as
+`native-unlearning-selected-delivery-v1`, with all attempts, frozen-source checks
+and explicit semantic limitations. It contains attempt 002, not the mutable final
+attempt-003 workspace. Baseline-winning deliveries require baseline source
+resolution instead of silently selecting a worse generated candidate.
+The exporter now accepts an explicit measured unlearning baseline run and source
+root, verifies receipts and source digests, and can deliver that baseline when it
+remains best. The real three-file baseline was resolved without another experiment.
+Both post-hoc reviews and the delivery are now registered as project-owned,
+content-hashed development records. The evidence ledger separates iterative
+execution capability (C9) from unestablished semantic-review reliability (C10),
+without promoting either to a formal paper result or switching current aliases.
+Optional source/intent review now has a bounded advisory node using existing model
+policy and evidence contracts. A structured backend now shares the existing agent
+provider ledger, including call limits and conservative liability accounting.
+Native now exposes opt-in `--enable-implementation-review`, returning source-bound
+advice through ordinary tool history after controller selection. A first real
+post-hoc Qwen3.8 review missed the sign error and returned a disallowed action;
+the node rejected it. Prompt v2 was then called once: its response passed schema
+and policy checks, yet again mislabelled a negative-gradient update as ascent.
+Acceptance now explicitly excludes verified semantic correctness. Reliable model review
+quality and external-agent opt-in parity remain pending; completed attempts
+remain unchanged. The adapter supports serialized calls and rejects unsupported
+generation profiles rather than silently ignoring their constraints.
+Next Native runs now save exact decision-input snapshots and outcome-bound decision
+logs for the existing Taste reconstruction path. Earlier runs are not relabelled
+as prospectively captured episodes; lesson attribution/admission remains separate.
+The completed iterative Native run has now been reconstructed with the existing
+Taste trajectory pipeline: 9/9 states verified, 9/9 outcomes bound and 9/9 decisions
+with alternatives. Its after-the-fact assignment correctly yields zero prospective
+foundations. Native now exposes `--capture-taste-trajectory`, connecting existing
+pre-execution locks and post-execution attachments under a plan frozen before run
+registration. One targeted no-API loop passed; a new real prospectively captured
+trajectory remains pending. Do not relabel old records or treat tool success as
+delayed scientific utility. Delayed attribution and learning admission remain separate.
+Native also accepts an explicit development allocation policy. The v19 adaptive
+head is current-Idea-bound and routes only experiment-versus-stop decisions, not
+source design/review. `native-unlearning-allocation-prospective-development-v1`
+starts a new captured development trajectory with that head and unchanged bounded
+budgets. This is a live integration exercise, not a formal transfer/effectiveness
+comparison or Full SciTaste. Unreliable optional semantic review remains disabled.
+The first live experiment-versus-stop decision reached the v19 head but abstained
+on uncertain pairwise probability, with zero adjustments. Base control launched
+the first experiment. Policy-use reporting now distinguishes enablement, assessment,
+abstention and recommendation; no changed-decision or gain claim is established.
+New Native runs may request two-to-four distinct concrete proposals per turn via
+`--proposal-count`; the controller compares all plus Stop and executes only one.
+Single-proposal defaults and active trajectories are unchanged. A focused offline
+selection check passed; live candidate quality and broader scientific decision
+families remain open. Allocation Taste still abstains from routing mixed-purpose
+candidate sets rather than pretending to judge method design.
+The prospective run's first experiment completed at 0.03783013 versus baseline
+0.05392880 in 325.395 seconds. Its real result was automatically attached to the
+pre-execution decision lock. Source analysis found an identity reset operation;
+that operator finding stays separate from live agent input. Subsequent agent
+revision/selection remains pending, as does scientific episode admission.
+Native and upstream-agent launchers now accept explicit `--backend` configuration
+for future trajectories. Provider/model/configuration identity is recorded and
+Native registration cannot silently relabel or switch an existing run. The current
+Qwen trajectory stays frozen; alternate-provider runtime quality remains untested.
+One post-hoc DeepSeek review request subsequently returned HTTP 402 Payment Required,
+without model output. The failure and unresolved reservation are registered; no
+retry was made. Cross-provider reasoning quality remains unknown until billing is
+resolved or another explicitly selected available provider is used.
+Provider request admission and final/progress reporting now share the reservation
+ledger, so missing usage after a failed request cannot be reported as zero. Existing
+wire-only legacy runs retain their original accounting path; values remain budget
+liability conventions, not invoices.
+The captured trajectory's second experiment scored 0.03858354, still below baseline,
+and its outcome attached successfully. A third candidate is running. All three
+allocation assessments abstained with zero adjustments: operational integration is
+observed, useful task-transfer guidance is not. Preserve this limitation rather
+than counting configured policy use as effectiveness.
+The pinned upstream MLAgentBench launcher now supports the same `--task unlearning`
+descriptor and backend. Previous meta-learning histories cannot be transferred
+into this independent task.
+
+Current real-execution update (2026-09-25): the adjudicated v5 candidate completed
+under `mlrc-native-reviewed-candidate-execution-v1` on remote 4090 GPU 3. Its
+official score was 0.129494 versus the previous Euclidean baseline 0.184874;
+the controller retained the baseline and stopped. This explicit adoption preserves
+the stopped source run and is not an uninterrupted autonomous trajectory or a
+Taste comparison. The upstream MLAgentBench provider bridge is implemented;
+isolated tool/environment integration is now connected to the actual pinned
+upstream ResearchAgent. `mlagentbench-restricted-tools-development-v1` is the
+first live, restricted-tools development run; it stopped before GPU execution
+because resolved API reservations were not released. V2 continues its saved
+upstream state with that accounting corrected and the same total budget;
+it independently edited source, executed the remote experiment and acknowledged
+the negative score (0.098715 versus historical baseline 0.184874). It submitted
+the real candidate score after a post-budget rewrite was rejected. This adapted
+upstream development loop is complete; matched agent execution remains a separate
+exit gate.
+The candidate tool layer is now SciTaste-owned and independent of upstream
+MLAgentBench, enabling both controllers to use the same operational interface.
+Native dispatch and execution-store integration now consume that shared interface;
+the first live SciTaste-owned proposal/selection/tool loop completed as
+`native-shared-tools-development-v1`, with the same initial task prompt and candidate.
+It remains a consumed-task development run; the formal matched study is not launched.
+The Native controller completed its model-generated edit, remote experiment and
+honest final response in seven tool turns. Its 0.098715 score equals the external
+candidate's and remains below baseline; the two development workflows are now
+executable, not evidence of Taste superiority. The project evidence ledger C8
+records their common limits and the separate cost/continuation histories.
+The shared loop now derives observed decision context for future policy routing.
+Current policy v19 supports bounded adaptive-allocation use only; connecting it
+must not be labelled complete multi-dimensional Taste or same-task generalization.
+Whole-agent comparison and the complete idea-to-paper exit remain open.
+Independent-task expansion now has an explicit shared task contract. MLRC
+machine-unlearning development assets are being acquired (two checkpoints and
+forget indices complete; CIFAR download pending). Its development-only isolated
+executor and unchanged scorer integration are not yet implemented; no new task
+score or formal comparison exists.
 
 | Milestone | Status | Exit gate |
 |---|---|---|
@@ -67,16 +1453,110 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.28 — atomic scientific-decision reconstruction | done | two blind agents proposed 50 and 46 atomic spans from the fixed retrospective 12-source pilot; exact-span F1 is 0.396 while 0.5-IoU overlap F1 is 0.833 and matched-family agreement is 0.850; 10/12 items were explicitly routed to a third AI adjudicator, producing 53 source-bound decisions, but unbound model/runtime and network isolation keep scale and formal use blocked |
 | Phase 9.29 — prospective atomic-calibration planning | in progress | v2 made two real GLM-5.3-Flash calls and failed on 2/33 quote-normalized spans; frozen v3 then used a disjoint 24-item sample and made five real calls, but failed when B2 removed source tokenization spaces and Markdown emphasis in 3/31 locators. Both runs stopped without retry and both samples are immutably consumed. A two-agent AI audit additionally disclosed that v3's embedded YAML times postdate provider contact; immutable Git history proves the actual pre-contact byte order, but those timestamps cannot support a preregistration claim. The repeated locator failure rejects the premise that a generative model should reproduce source bytes: next freeze a deterministic high-resolution evidence-unit contract and run offline adversarial tests before selecting another sample. |
 | Phase 9.30 — native lifecycle-policy H4 execution | in progress | the native runner now consumes a protocol profile plus a replayed five-state manipulation report, creates campaign-bound arm requests before baseline/model/mutation, selects one high-level action through deterministic Taste on every round, retains typed terminal evidence and persistent task-seed-repetition pairs, closes public-analysis legacy/pair/evidence-chain bypasses and selective primary reruns, hides operational IDs from the model, reserves full-campaign budget, and supports task-specific guidance. E2 schema 1.1 now refuses execution unless the exact adaptive-allocation head is support-ready, source-disjoint, and proven active plus feedback-sensitive by an outcome-blind target-domain state probe. Formal launch still requires the real policy, accepted Idea, frozen artifacts, disclosed resources, and owner-authorized cells. |
-| Phase 9.31 — family-conditioned Scientific Taste | in progress; activation-v2 full run next | a seven-family scientific-judgment ontology, independently fitted uncertainty-aware heads, controller routing/trace, and project-level refresh/readiness bundles are implemented. Policy v6 retains three scientific-value episodes but its adaptive-allocation head still has zero support. Activation v1 and its small-model mono-selection review are retained as superseded development evidence. Activation v2 freezes nine fresh NewtonBench task identities plus three preassigned EXPERIMENT, three REFINE, and three first-approved-STOP strata before execution; it emits allocation-local candidates, retains every failure or missing stratum, and reviews only after all trajectories terminate. DeepSeek-V4.1-Flash and Qwen3.8-Max replace generic 4B/8B models as the independent live panel, with separate call/token/cost accounting and zero retries. One append-only campaign then fits policy v7 at the unchanged threshold, runs the five-state MLRC probe, and materializes an acyclic E2 successor only if the treatment is active. This is policy-development evidence, not an effectiveness result. |
+| Phase 9.31 — family-conditioned Scientific Taste | in progress; state-diverse cohort next | a seven-family scientific-judgment ontology, independently fitted uncertainty-aware heads, controller routing/trace, and project-level refresh/readiness bundles are implemented. Current policy v13 has sufficient adaptive-allocation support but fails the stricter identifiable-adaptation rule: archived admissions mostly share the same coarse early-trajectory state and learn a global `REFINE` prior. The runtime now records evidence status, confidence, next-experiment value, and trajectory phase, but existing admitted episodes predate that projection. The next cohort must prospectively vary observable state and action on source-disjoint NewtonBench development tasks, retain every failure, use the independent DeepSeek-V4.1-Flash/Qwen3.8-Max review panel, and fit one successor without lowering support. Only a passing outcome-blind MLRC state probe may open E2. This is policy-development evidence, not an effectiveness result. |
 | Phase 9.32 — deadline-critical work routing | done | the venue countdown now compiles a snapshot-bound work order: claim/submission/release tasks survive critical pressure, prerequisites remain explicit, and noncritical polish or non-release verification is deferred without granting execution authority |
 | Phase 9.33 — independent SciTasteBench validation reserve | paused after consumed v7 diagnostic | two exact official-source acquisitions provide 40 F1000 and 20 ARIES dev source groups disjoint from earlier calibration sources; v6 and v7 each exposed a runner-contract strictness issue rather than model or Taste quality, and both samples are permanently consumed; retain the remaining 10 ARIES plus 30 F1000 groups, stop calibration churn, and prioritize the deadline-critical Track-A H1/H2 pilot |
 | Phase 9.34 — bounded Track-A decision execution | implementation complete; real execution not started | a strict no-call compiler turns the coverage-aware three-arm suite into exact condition-hidden model requests only after all eligible inputs have tokenizer traces and hard call/token/cost/byte/latency budgets; live execution is double-opt-in, zero-retry, terminal on any failure, and never replaces missing cases. A complete eligible-subset run can feed the existing two-primary plus disputed-only-adjudicator AI panel, with planned 24/72, eligible, and executed counts kept distinct and no human-validity claim. |
 | Phase 9.35 — prospective decision-episode cohort ingress | in progress | a fail-closed cohort layer requires an outcome-free immutable predecision lock followed by a strictly later outcome attachment and completed projection. NewtonBench Gravity v7 and source-disjoint Fourier v8 now supply one beneficial and one harmful external-task STOP episode, each admitted by an identical-packet cross-model panel and outcome-blind family assignment. Long trajectories use a compact, hash-bound outcome projection while retaining the full immutable receipt as source authority. The two earlier self-development captures remain historical dogfood; formal precedent/held-out populations and broader decision-family coverage remain open. |
 | Phase 9.36 — complete AutoResearch program and resource binding | implementation and one-shot B0 complete | one project-owned 17-state controller now covers acquisition, task admission, role-scoped model/system freeze, idea selection, experiment execution, hidden scoring, evidence admission, paper assembly, dual-AI review, adjudication, review-driven revision, and immutable package closure. The independent-judge successor B0 completed all 14 fixed task-excluded requests without selective reruns: Qwen3.8-Max is frozen for research/code, GLM-5.3-Flash for judge, MiniLM for retrieval, and Qwen3-VL-8B for the scoped local task role. The exact selection is retained in E2 v5; the incomplete predecessor campaign remains explicitly superseded. Qwen3-VL-2B is still a lower bound, inventory presence never selects a model, and B0 remains engineering-only rather than paper effectiveness evidence. |
-| Phase 9.37 — capability-driven complete AutoResearch execution | in progress; v9 controller at development execution | v7 is retained as a zero-execution failed plan because its campaign and result-admission commands named different E2 identities; v8 is retained as a zero-execution failed plan because it did not prove a behaviorally active Taste treatment. V9/E2-v5 is the current self-project authority: execution/admission identity and Qwen3.8-Max budgets remain closed, but an ON arm cannot launch until learned Taste is support-ready, state-sensitive, and measurably behavior-changing. SciTaste is one system; T0 training-free and T1 training-based name its workloads, while A0/A1 name adaptation. Formal results remain zero. The next external action is the separately disclosed adaptive-allocation activation cohort; after its target-domain state probe passes, run one two-arm MLRC development pair and then the formal pair. No further model-role B0 campaign or repeated smoke layer is planned. |
+| Phase 9.37 — capability-driven complete AutoResearch execution | in progress; v10 controller registered | v7 is retained as a zero-execution failed plan because its campaign and result-admission commands named different E2 identities; v8 is retained as a zero-execution failed plan because it did not prove a behaviorally active Taste treatment. Program v10 is now registered as the durable self-project controller. E2-v6 binds the current model inventory, repaired MLRC runtime v3, isolated hidden-label projection, and current policy v13; every static system/runtime/model/firewall gate passes. The remaining scientific blocker is real rather than bookkeeping: policy v13 has sufficient adaptive-allocation support but no eligible adaptive head or target-domain state probe, so the paired development run remains closed. SciTaste is one system; T0 training-free and T1 training-based name its workloads, while A0/A1 name adaptation. No further model-role B0 campaign or repeated smoke layer is planned. |
 | Phase 9.38 — resumable Track-A abstraction campaign | implementation complete; next source-disjoint batch unapproved | one batch-level command now discovers immutable model-node ledger entries, executes only missing frozen abstractions behind explicit live authority, resumes interrupted evidence without retrying any terminal invocation, retains accepted/rejected/failed/not-applicable/planned outcomes, and automatically compiles the independent AI-review pack once at least one result is admissible. Read-only inspection of the prior quality-qualified batch reports 3/3 consumed, 2 runtime-accepted, 1 rejected, 13,622 tokens, USD 0.001538, and zero new calls; its later AI review accepted 0/2, so no H1/H2 effect follows and a new preregistered source-disjoint batch is still required. |
 | Phase 9.39 — four-layer SciTasteBench evidence contract | design frozen; natural intake materialized | the ICLR evaluation now separates source/abstraction (SA), held-out decisions (D), delayed-credit learning (L), and externally scored complete projects (P); replaces a flat accuracy headline with five causal endpoints, requires behavior-changing mediation for Taste attribution, distinguishes six lifecycle-context families from the existing seven-family Taste judgment ontology, moves Visual to product evidence, and freezes a 36-case natural development release before the 120-case formal floor. A no-call intake verified 370 natural candidates, projected one outcome-hidden representative from each of 141 source groups, retained later outcomes in a scoring-only vault, and found 101 groups with no exact prior Track-A role across three domain strata. The historical 24-target pilot remains consumed development evidence and no case has yet been promoted. |
 | Phase 9.40 — budgeted decision-regret execution | implementation complete; dual screening complete; third-panel plan frozen | SciTasteBench schema 4.0 can bind context and judgment as separate axes, record AI-panel rather than expert authority, bind hidden per-action utilities and abstentions, and report paired regret reduction. Two independent, outcome-blind, zero-retry screens covered all 101 unused source groups: Qwen3.8-Max proposed 84 eligible cases for 132,812 tokens and USD 2.096904, while GLM-5.3-Flash proposed 77 for 135,621 tokens and a conservative USD 1.648568 ceiling. Deterministic all-batch normalization fixed only model-copied envelope identities and retained original rejected receipts. Of 71 jointly eligible cases, context labels agree on 40; resource-allocation has zero agreement and only a five-case union, so no quota has been fabricated. The third-model operator now bypasses 21 exact agreements and 11 joint exclusions and freezes 69 disputes as nine ordinal-position DeepSeek-V4.1-Flash batches. Its first local launch stopped before transport at zero tokens/cost because no `DEEPSEEK_API_KEY` is stored; retain that receipt and create a new version after credential binding rather than retrying it. Then allocate and construct exactly 36 cases. |
+| Phase 9.41 — matched complete-system external evidence | done; formal null | Every official ResearchClawBench `_001` task completed under matched Qwen3.8-Max Native Base and Full SciTaste arms. A fail-closed scoring amendment reused the immutable trajectories after the original judge provider failed, and all 20 arms received source-bound official scores from one fixed multimodal judge. Full SciTaste averaged 21.532 versus 20.865, won 6/10 tasks, and produced a paired gain of +0.667 with 95% task-bootstrap interval [-1.933, 2.947]; the frozen positive claim rule was not met. Preserve the null result, improve cross-domain intervention reliability on development evidence, then open a new sealed population. `perceptual-visual-relexing` remains the preferred separate post-closure idea-to-paper validation and RRMOT remains isolated. |
+| Phase 9.42 — conditional Taste confirmation | treatment frozen; superseded operationally by V5 | Replace the unconditional long-form overlay exposed by Phase 9.41 with a source-grounded conditional policy capped at 7,000 bytes, three actions, explicit triggers/blockers, support/failure branches, and native-plan abstention. A saved Qwen3.8-Max development response on consumed `Math_001` materialized a 6,468-byte policy after one bounded key-only provider repair with no semantic-value change. The confirmation population is all untouched `_002` tasks, hash-frozen and screened away from the reserved perceptual/RRMOT direction. V4 opened no research arm. |
+| Phase 9.43 — evidence-safe V5 confirmation | treatment responses complete; superseded operationally by V6 | V4 ended before any research arm: one packet passed and nine responses hit field-length limits, while a fail-before-write bug lost the rejected payloads. V5 persisted all ten accepted structured responses before admission and opened no research arm; five packets then exceeded 7 KB only because of repeated rendering syntax. Its semantic outputs are immutable inputs to V6. |
+| Phase 9.44 — lossless V6 complete-system confirmation | superseded after infrastructure failure | V6 replayed all ten immutable V5 node results with no provider recall or semantic edit and materialized 5,440–6,903-byte packets. It completed eight valid arm receipts before ENOSPC invalidated one in-flight arm and prevented cohort completion. The eight valid receipts remain admissible only through V7's exact-hash resume manifest; partial workspaces and V6 itself carry no aggregate claim. |
+| Phase 9.45 — ENOSPC-safe V7 formal resume | done; formal null | V7 verified and reused the eight valid V6 arm receipts, executed exactly the twelve missing arms, and completed all 20 registered cells. ResearchHarness plus the conditional SciTaste packet scored 18.135 versus 17.290 for unmodified ResearchHarness: paired `+0.845`, 95% task-bootstrap interval `[-2.225, 4.765]`, and 3/10 wins. The frozen positive claim rule failed. This is matched augmentation evidence, not an independent SciTaste Native system result. |
+| Phase 9.46 — external formal evidence admission | done | `external-formal-study` is a first-class ProjectRuntime origin. The complete V7 cohort, integrity audit, and all 20 verified records are project-owned and selected as `researchclawbench-formal-v7-result`; scientific evidence is complete while scientific effectiveness remains unestablished. The paper-facing public-agent snapshot is separately registered as ecological method context and is never pooled with V7. |
+| Phase 9.47 — independent SciTaste Native objective execution | one-task development executed; formal effect open | E2-v6 and policy v13 describe a historical static handoff, not the current run state. Real MLRC Perception development arms later scored upstream 0.233919, Native Base 0.241669, Raw 0.235708, and an earlier taste-guided abstraction 0.243956 (not Full SciTaste). A separate Native policy ON/OFF development pair changed actions and scored 0.249452 versus 0.260075, adverse ON minus OFF -0.010622. Both are consumed one-task development, with no formal held-out opening or named external-agent comparison. Policy v19 is application-ready but not effect-proven; do not relabel these runs as current Full or formal evidence. |
+| Phase 9.48 — SciTasteBench independent decision-method comparison | interface done; development execution continued in Phase 9.52 | Objective forks export an outcome-hidden common request separately from scorer-owned utility keys, and complete submissions receive task-cluster regret, tie-aware accuracy, failure/abstention, and cost accounting. The 30-case development population was compiled with zero calls; Phase 9.52 later ran direct, planning, and retrospective source-disjoint reflection. Prospective learning, genuine search, same-contract representative/challenge populations, and formal method-effect evidence remain open. |
+| Phase 9.49 — CVPR 2027 venue pivot and vision evidence | venue metadata/layout done; vision study pending | Self-development revision 1000 retargeted the project and preserved the old ICLR schedule. The manuscript uses a provisional exact-hash official CVPR 2026 kit, anonymous double-column main text and separate supplement; the 2027-specific guide remains to be checked. Priority is real vision research task qualification, matched Native/real-agent outcomes, vision action forks, and visual error analysis. RSI remains related work until repeated accepted self-revisions transfer to held-out vision tasks. |
+| Phase 9.50 — general research architecture and Taste policy succession | selection/transfer implementation done; prospective generations pending | The method and original title are domain general; CVPR visual tasks are a concrete evaluation. Reviewed outcomes can propose candidate Taste policies through the existing refresh path. A frozen, outcome-hidden selector now retains or rejects successors by task-cluster regret and tracks a non-reusable generation lineage; reserved transfer is evaluated separately. No policy was deployed, no fresh succession cohort was run, and RSI effectiveness is not claimed. Next priority remains independently scored vision-system evidence, followed by prospective policy generations if task breadth supports them. |
+| Phase 9.51 — second visual-task development and adverse-result integration | development baseline done; native/agent arms next | Reconciled the real Perception development receipts into the project claim ledger. The official MLRC Meta-Learning development split uses 20 already acquired image datasets and excludes AWA; the local extraction has an exact archive-hash manifest, 1.824 GB expanded data, and no set-2 files. Unchanged official `my_method` completed 1,000 development tasks under Python 3.12 on one RTX 3090 with normalized balanced accuracy 0.207025, recorded as a same-environment anchor rather than historical-score parity. Next: connect SciTaste Native and a real agent on this task. Do not alter the official test split, bypass the AWA gate, or treat one new development task as a formal multi-task effect. See `docs/research/MLRC_VISION_MAINLINE_STATUS_V1.md`. |
+| Phase 9.52 — SciTasteBench v1 engineering closure before further formal runs | in progress; first real image fork completed and exported | Text decision policies ran on consumed NewtonBench development data; direct/planning differ in only one action, and retrospective reflection changed none. The real MLRC image fork now completed on remote 4090: Euclidean 0.184874 versus normalized 0.106298, favoring direct choice; planning regret 0.039288. Separate text/image participant-scorer packages reproduce their existing results. The queue exited, no local GPU was used, and a nearby model-generated cosine proposal remains unexecuted rather than inheriting a score. No Taste arm or full agent comparison is present in this fork. Formal rights/splits/release qualification, matched budgets, representative/challenge populations, named whole-agent comparisons and prospective system evidence remain; see `docs/research/CVPR27_MAINLINE_EXIT_CRITERIA.md`. |
+
+Phase 9.52 integration note (2026-09-25): the MLRC development runtime now
+accepts complete agent candidate method trees through `package-candidate`,
+preserving the verified official scorer/data contract. This removes the fixed
+two-action submission restriction; it does not claim an external agent has run
+or itself provide a sandbox. Candidate ingestion now separately enforces
+Bubblewrap isolation, verified with one actual CUDA tensor on the remote 4090.
+Native/named-agent orchestration remains open; completed fork results are unchanged.
+
+The existing Native executor now accepts a bound remote MLRC action handler
+with durable launch/observation semantics and explicit historical ANALYZE mode.
+The latter consumed the real Euclidean result and published a verified Native
+record with no new GPU charge. New isolated launches and reconnect/no-relaunch
+logic are implemented, but the full selected-action/generation/execution/
+subsequent-selection trajectory and named-agent comparison have not yet run.
+
+Latest execution update: both 4090 branches completed official scoring:
+Euclidean 0.184874 (512.08 seconds), normalized 0.106298 (510.99 seconds),
+1,000 predictions each. The image-bearing dataset export reproduces direct
+regret 0 and planning regret 0.039288. A real Qwen3.8-Max proposal for nearby
+cosine logits was not selected for this campaign after the adverse related
+outcome; it remains unexecuted and has no imputed score. The queue has exited.
+Full agent orchestration and formal method-effect evidence remain open.
+
+Native loop integration now includes API-backed hypothesis concretization and
+exact replay before selection. The first live bounded controller run selected
+STOP and launched no GPU job; retain that result. A separate successor is
+exercising the new path on consumed development data. Do not promote interface
+implementation, focused tests, or a proposal into a completed research loop:
+new execution and post-outcome decisions still need their own terminal records.
+
+The concretizing successor has now selected support-prototype centering and
+launched its isolated candidate on 4090-2 GPU 3 (observed runner PID 695128).
+One main-window implementation review required a bounded API correction before
+execution; do not describe that correction as autonomous review. Official score
+is 0.048716 versus the prior 0.184874 baseline; the post-outcome controller
+selected retain-best-and-stop. The project registers both this run
+and the earlier STOP instead of discarding unsuccessful development trajectories.
+
+This completes one real bounded Native Base selection/code/execution/feedback
+iteration, including 1,000 collected predictions and a verified Native record.
+It does not complete autonomous implementation review, iterative Taste
+improvement, named-system comparison or idea-to-paper execution. Future runtime
+bundles now bound official scoring to four CPUs after observing excessive
+threading; the executed bundle and negative result remain unchanged.
+
+Implementation alignment now has an opt-in model-node gate and one bounded
+correction/re-review path. Two real retrospective reviews caught the extra query
+intervention but also exposed ambiguity in 'source-task mean'; neither is a
+reviewer-reliability result. Future ambiguity must abstain rather than silently
+change the experiment. Autonomous correction-to-execution remains to be exercised
+on a new, operationally explicit hypothesis; do not repeat the completed negative
+GPU experiment merely to label the manual review step automatic.
+
+The successor has now consumed verified prior feedback and performed autonomous
+review plus one correction attempt. The correction supplied a snippet as a full
+file and was rejected before GPU; there is no new score. This motivated exact
+local-patch schema 1.1 and unchanged-caller-aware review. The bounded failure is
+registered and retained; successful autonomous repair/execution remains open.
+
+A further preparation-only attempt stopped on same-file multi-edit schema
+rejection, with no GPU use. Schema 1.2 now supports disjoint original-source
+local edits. Reviewer scope expansion remains a separate semantic weakness;
+do not keep spending GPU on these preparation failures or call them experiments.
+
+Inference-only successors can now bind a caller-owned Python edit boundary,
+independent of reviewer suggestions. Training/reference helpers and backbone
+AST structure stay frozen while declared inference methods and added helpers
+are editable. The current source passes a bounded boundary check; a successful
+live trajectory under this contract remains outstanding.
+
+V5 now demonstrates automatic recovery from a deterministic boundary rejection:
+the corrected candidate passed syntax and the inference-only code boundary.
+Semantic review then disputed the inference plumbing and the run ended with
+`scope-review-unresolved-no-gpu`. Terminal records are automatic. Successful
+repair-to-execution and robust semantic adjudication remain separate open items.
+
+A bounded distinct-model adjudication path is now available for new contracts.
+Its read-only development call dismissed the two v5 findings without altering
+v5 or launching GPU. DeepSeek account balance is currently unavailable (402),
+registered separately; the successful fallback used Qwen3.7 and is not a
+cross-provider validation. Complete new-contract execution remains outstanding.
 
 The first real NewtonBench T0 development trajectory completes experiment
 selection, six environment observations, evidence-sensitive stopping, hidden
@@ -449,8 +1929,10 @@ The independent product path now also has a project-owned paper-review registry
 and an eight-gate lifecycle projection from native idea through independent
 pre-submission review. This closes the software control path, but the
 `scitaste-self-development` project remains scientifically incomplete until one
-paper source run binds verified native evidence and independent review artifacts
-are collected.
+paper source run binds verified native evidence, the concern-response cycle is
+verified, and independent review artifacts are collected. The separate
+`perceptual-visual-relexing` validation project cannot activate until the
+resulting lifecycle projection reports `top_venue_evidence_loop_complete=true`.
 
 The review path now includes a project-owned report-to-state transition rather
 than leaving `route_venue_review_to_state` as a test-only pure function. One

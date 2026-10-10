@@ -150,6 +150,54 @@ def _report(
     )
 
 
+def test_accepted_report_without_concerns_closes_internal_round(tmp_path: Path) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = _paper(runtime, _project(runtime), "paper-v1", text="# Paper v1\n")
+    snapshot, packet, _ = prepare_venue_review(
+        runtime,
+        project_id="review-project",
+        paper_directory="paper-v1",
+        review_id="development-round-1",
+        round_number=1,
+        review_scope="development",
+        venue_taste_profile=_PROFILE,
+        expected_revision=snapshot.revision,
+        select=True,
+    )
+    report = VenueReviewReport.create(
+        report_id="report-a",
+        packet_sha256=packet.packet_sha256,
+        review_scope="development",
+        reviewer=ReviewerIdentity(
+            reviewer_id="internal-a",
+            reviewer_kind="internal_model",
+            independent=False,
+            conflict_status="unverified",
+            provider="interactive-session",
+            model_name="runtime-identity-unavailable",
+        ),
+        summary="No decision-relevant concern remains for this development round.",
+        strengths=("The registered claims are internally coherent.",),
+        criteria=_criteria(),
+        initial_recommendation="accept",
+        decision_reasons=("No revision-triggering concern was identified.",),
+        concerns=(),
+        confidence="high",
+    )
+
+    _, round_record = import_venue_review_report(
+        runtime,
+        project_id="review-project",
+        review_id="development-round-1",
+        report=report,
+        expected_revision=snapshot.revision,
+    )
+
+    assert round_record.status == "closed_internal"
+    assert round_record.internal_review_complete is True
+    assert round_record.unresolved_concern_ids == ()
+
+
 def test_review_round_rejects_manuscript_bytes_as_new_evidence(
     tmp_path: Path,
 ) -> None:

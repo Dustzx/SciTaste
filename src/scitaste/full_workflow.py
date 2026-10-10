@@ -113,6 +113,10 @@ from scitaste.workflow_intake import (
     materialize_workflow_intake,
     verify_workflow_intake,
 )
+from scitaste.writing.argument import (
+    load_paper_argument_contract,
+    write_paper_argument_contract,
+)
 from scitaste.writing.evidence_projection import build_writing_evidence_projection
 from scitaste.writing.manuscript_quality import (
     ManuscriptAssessment,
@@ -165,6 +169,8 @@ class FullWorkflowConfig(BaseModel):
     paper_title: str = Field(min_length=1)
     paper_date: date
     paper_role: ManuscriptRole = "integration-fixture"
+    paper_bibliography: Path | None = None
+    paper_argument_contract: Path | None = None
 
     @field_validator("project_id")
     @classmethod
@@ -1667,7 +1673,27 @@ class FullWorkflow:
         assessment = assess_manuscript(source_text, requested_role=config.paper_role)
         require_requested_manuscript_role(assessment)
         source.write_text(source_text, encoding="utf-8")
-        paths = materialize_manuscript(markdown_path=source, target_dir=paper_root)
+        materialize_arguments = {"markdown_path": source, "target_dir": paper_root}
+        if config.paper_bibliography is not None:
+            materialize_arguments["bibliography_path"] = config.paper_bibliography
+        paths = materialize_manuscript(**materialize_arguments)
+        if config.paper_argument_contract is not None:
+            contract = load_paper_argument_contract(config.paper_argument_contract)
+            manuscript_sha256 = hashlib.sha256(source_text.encode("utf-8")).hexdigest()
+            if (
+                contract.project_id != config.project_id
+                or contract.paper_id != config.paper_directory
+                or contract.manuscript_sha256 != manuscript_sha256
+            ):
+                raise ValueError(
+                    "paper argument contract differs from the full-workflow manuscript"
+                )
+            paths.append(
+                write_paper_argument_contract(
+                    contract,
+                    paper_root / "PAPER_ARGUMENT_CONTRACT.yaml",
+                )
+            )
         assessment_path = paper_root / "ASSESSMENT.json"
         _write_json(assessment_path, assessment.model_dump(mode="json"))
         paths.append(assessment_path)
@@ -2255,6 +2281,8 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "native_code_repair_config",
         "model_node_advisory",
         "tool_intelligence_advisory",
+        "paper_bibliography",
+        "paper_argument_contract",
     ):
         if payload.get(field) is None:
             continue
@@ -2387,6 +2415,10 @@ def _publish_or_verify_finalization_plan(
         )
         if config.scenario_catalog is not None:
             input_paths.append(run_root / "intake" / "SCENARIO_CATALOG.yaml")
+    if config.paper_bibliography is not None:
+        input_paths.append(config.paper_bibliography)
+    if config.paper_argument_contract is not None:
+        input_paths.append(config.paper_argument_contract)
     input_sha256 = {_owned_locator(run_root, path): _file_sha256(path) for path in input_paths}
     expected = FullFinalizationPlan.create(
         project_id=config.project_id,
@@ -2772,15 +2804,18 @@ def _publish_snapshot_binding(
 def _paper_file_label(path: Path, root: Path) -> str:
     relative = path.relative_to(root).as_posix()
     return {
-        "main.md": "Markdown manuscript",
-        "main.tex": "LaTeX manuscript",
-        "main.pdf": "PDF manuscript",
-        "ASSESSMENT.json": "Manuscript assessment",
-        "build.json": "Build record",
-        "README.md": "Bundle README",
-        "figures/figure.svg": "Editable SVG figure",
-        "figures/figure.drawio": "Draw.io figure source",
-    }.get(relative, f"Artifact {relative}")
+        "main.md": "source-markdown",
+        "main.tex": "submission-tex",
+        "main.pdf": "submission-pdf",
+        "references.bib": "bibliography",
+        "PAPER_ARGUMENT_CONTRACT.yaml": "paper-argument-contract",
+        "ASSESSMENT.json": "manuscript-assessment",
+        "WRITING_TASTE_ASSESSMENT.json": "writing-taste-assessment",
+        "build.json": "build-record",
+        "README.md": "bundle-readme",
+        "figures/figure.svg": "editable-svg-figure",
+        "figures/figure.drawio": "drawio-figure-source",
+    }.get(relative, f"artifact-{hashlib.sha256(relative.encode()).hexdigest()[:12]}")
 
 
 def _owned_locator(run_root: Path, path: Path) -> str:
@@ -2895,6 +2930,8 @@ def _workflow_config_sha256(
         "evidence_scenario",
         "communication_scenario",
         "figure_scenario",
+        "paper_bibliography",
+        "paper_argument_contract",
     ):
         configured_path = getattr(config, field)
         if configured_path is None:

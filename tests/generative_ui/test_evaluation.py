@@ -80,7 +80,7 @@ def test_structural_proxy_is_deterministic_grounded_and_explicitly_non_human(
 
     assert first == second == round_trip
     assert first.fingerprint == second.fingerprint
-    assert first.task_count == 4
+    assert first.task_count == 5
     assert first.interpretation_boundary == "not-human-usability-or-scientific-effectiveness"
     assert first.focus_first_rate == 1.0
     assert first.mean_fixed_views_avoided > 0
@@ -90,6 +90,7 @@ def test_structural_proxy_is_deterministic_grounded_and_explicitly_non_human(
         IntentGoal.BLOCKER_DIAGNOSIS,
         IntentGoal.RUN_COMPARISON,
         IntentGoal.PAPER_EVIDENCE_REVIEW,
+        IntentGoal.NEXT_STEP_REVIEW,
     }
     for measurement in first.measurements:
         assert measurement.grounded_component_count == measurement.component_count
@@ -190,7 +191,7 @@ def test_module_command_emits_fingerprinted_reports(
 
     assert evaluation_module._main() == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["structural"]["task_count"] == 4
+    assert payload["structural"]["task_count"] == 5
     assert len(payload["structural"]["fingerprint"]) == 64
     assert payload["latency"]["benchmark_quick_intent_id"] == "review-project-progress"
     assert len(payload["latency"]["fingerprint"]) == 64

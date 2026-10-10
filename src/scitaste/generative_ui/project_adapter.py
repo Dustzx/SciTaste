@@ -61,6 +61,17 @@ class ProjectSnapshotAdapter:
             raise ValueError("project manifest changed while its snapshot was being bound")
         refs.append(manifest_ref)
 
+        if (project_root / "docs/project/INDEX.json").is_file():
+            refs.append(
+                self._ref(
+                    snapshot=snapshot,
+                    project_root=project_root,
+                    evidence_id=_evidence_id("artifact", "docs/project/INDEX.json"),
+                    kind=EvidenceKind.ARTIFACT,
+                    locator="docs/project/INDEX.json",
+                    label="Living project documents",
+                )
+            )
         for index, run in enumerate(snapshot.manifest.runs, start=1):
             locator = _project_relative(snapshot, snapshot.run_locators[run.run_id])
             refs.append(

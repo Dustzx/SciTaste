@@ -348,6 +348,62 @@ def assign_project_venue_schedule(
     )
 
 
+def retarget_project_venue(
+    runtime: ProjectRuntime,
+    *,
+    project_id: str,
+    schedule: ProjectVenueSchedule,
+    expected_revision: int,
+    reason: str,
+    changed_at: datetime,
+) -> ProjectSnapshot:
+    """Atomically change venue and retain the prior deadline contract."""
+
+    if not reason.strip():
+        raise ValueError("venue retargeting requires a reason")
+    if changed_at.utcoffset() is None:
+        raise ValueError("venue retargeting time must include a timezone")
+    snapshot = runtime.open(project_id)
+    if snapshot.revision != expected_revision:
+        raise ValueError(
+            f"stale project revision {expected_revision}; current is {snapshot.revision}"
+        )
+    previous_venue = snapshot.manifest.target_venue
+    if previous_venue and _normalized_venue(previous_venue) == _normalized_venue(
+        schedule.venue_name
+    ):
+        raise ValueError("venue is unchanged; use schedule assignment for the same venue")
+    extra = snapshot.manifest.model_extra or {}
+    history = extra.get("venue_schedule_history", [])
+    if not isinstance(history, list):
+        raise ValueError("project venue history is invalid")
+    previous_schedule = extra.get("venue_schedule")
+    if previous_schedule is not None:
+        ProjectVenueSchedule.model_validate(previous_schedule)
+    previous_completions = extra.get("venue_milestone_completions", [])
+    if not isinstance(previous_completions, list):
+        raise ValueError("project venue completions are invalid")
+    return runtime.update(
+        project_id,
+        expected_revision=expected_revision,
+        target_venue=schedule.venue_name,
+        venue_schedule=schedule.model_dump(mode="json"),
+        venue_milestone_completions=[],
+        venue_schedule_history=[
+            *history,
+            {
+                "prior_venue": previous_venue,
+                "prior_schedule": previous_schedule,
+                "prior_completions": previous_completions,
+                "new_venue": schedule.venue_name,
+                "new_schedule_sha256": schedule.schedule_sha256,
+                "reason": reason.strip(),
+                "changed_at": changed_at.isoformat(),
+            },
+        ],
+    )
+
+
 def project_venue_schedule_assignment_required(
     snapshot: ProjectSnapshot,
     schedule: ProjectVenueSchedule,
@@ -586,4 +642,5 @@ __all__ = [
     "load_project_venue_schedule",
     "project_venue_schedule_assignment_required",
     "read_project_venue_schedule",
+    "retarget_project_venue",
 ]

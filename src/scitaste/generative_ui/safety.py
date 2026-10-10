@@ -125,6 +125,15 @@ def validate_declarative_value(value: JsonValue, *, location: str = "data") -> J
     """Recursively enforce the data-only component boundary."""
 
     if isinstance(value, dict):
+        # Project documents use normalized relative locators as digest-map keys.
+        # Preserve the closed component boundary everywhere else; this mapping
+        # can carry only a safe locator and a SHA-256, never active UI content.
+        if location == "data.project_documents.reference_sha256":
+            for locator, digest in value.items():
+                ensure_safe_locator(locator)
+                if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                    raise ValueError("project document reference must contain a SHA-256")
+            return value
         for key, child in value.items():
             normalized = key.lower()
             if not _DATA_KEY.fullmatch(key):

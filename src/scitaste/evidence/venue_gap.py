@@ -308,9 +308,7 @@ class VenueClaimEvidenceContract(BaseModel):
 
     claim_id: str
     centrality: VenueClaimCentrality
-    required_components: tuple[VenueEvidenceComponent, ...] = Field(
-        min_length=1, max_length=20
-    )
+    required_components: tuple[VenueEvidenceComponent, ...] = Field(min_length=1, max_length=20)
     minimum_independent_families: int = Field(default=1, ge=1, le=20)
 
     @model_validator(mode="after")
@@ -372,9 +370,7 @@ class VenueComparisonProfile(BaseModel):
         if len(contract_claim_ids) != len(set(contract_claim_ids)):
             raise ValueError("venue comparison claim-evidence contracts must be unique")
         if self.claim_evidence_contracts and set(contract_claim_ids) != set(claim_ids):
-            raise ValueError(
-                "claim-evidence contracts must cover every and only innovation claim"
-            )
+            raise ValueError("claim-evidence contracts must cover every and only innovation claim")
         return self
 
 
@@ -952,9 +948,7 @@ def _assess_venue_comparison(
             matrix_by_component=matrix_by_component,
             current_by_component=current_by_component,
             evidence_by_id=evidence_by_id,
-            current_scale_by_metric={
-                item.metric: item for item in profile.current_scale_facts
-            },
+            current_scale_by_metric={item.metric: item for item in profile.current_scale_facts},
         )
         for neighbour in sorted(
             profile.accepted_evidence_profiles,
@@ -973,9 +967,7 @@ def _assess_venue_comparison(
     neighbour_kind_by_id = {item.paper_id: item.paper_kind for item in manifest.nearest_neighbours}
     target_series = _venue_series(manifest.target_venue)
     same_venue_neighbours = tuple(
-        item
-        for item in manifest.nearest_neighbours
-        if _venue_series(item.venue) == target_series
+        item for item in manifest.nearest_neighbours if _venue_series(item.venue) == target_series
     )
     latest_same_venue_year = (
         None if not same_venue_neighbours else max(item.year for item in same_venue_neighbours)
@@ -986,9 +978,8 @@ def _assess_venue_comparison(
         if target_year is None or latest_same_venue_year is None
         else max(0, target_year - latest_same_venue_year)
     )
-    same_venue_lineage_present = (
-        len(same_venue_neighbours) >= 2
-        and (same_venue_recency_gap is None or same_venue_recency_gap <= 2)
+    same_venue_lineage_present = len(same_venue_neighbours) >= 2 and (
+        same_venue_recency_gap is None or same_venue_recency_gap <= 2
     )
     method_neighbour_ids = {
         paper_id
@@ -1093,11 +1084,7 @@ def _assess_venue_comparison(
             "counts and result tables cannot establish which central claim each study closes."
         )
     elif not central_claim_arguments_complete:
-        incomplete = [
-            item.claim_id
-            for item in central_claims
-            if not item.complete_for_review
-        ]
+        incomplete = [item.claim_id for item in central_claims if not item.complete_for_review]
         diagnosis = (
             "Central claim arguments remain incomplete: " + ", ".join(incomplete) + ". "
             "A favorable local table cannot substitute for every evidence obligation of the "
@@ -1195,16 +1182,13 @@ def _assess_accepted_neighbour_gap(
                 and evidence_by_id[evidence_id].headline_eligible
                 and evidence_by_id[evidence_id].direction is EvidenceDirection.SUPPORTING
             )
-    component_shape_matched = (
-        not missing and not contradicting and len(supporting_families) >= 2
-    )
+    component_shape_matched = not missing and not contradicting and len(supporting_families) >= 2
     scale_gaps = tuple(
         _assess_evidence_scale_gap(item, current_scale_by_metric.get(item.metric))
         for item in profile.scale_facts
     )
     scale_reference_matched = bool(scale_gaps) and all(
-        item.status is VenueEvidenceScaleStatus.MEETS_OR_EXCEEDS_REFERENCE
-        for item in scale_gaps
+        item.status is VenueEvidenceScaleStatus.MEETS_OR_EXCEEDS_REFERENCE for item in scale_gaps
     )
     if missing:
         diagnosis = (
@@ -1214,9 +1198,7 @@ def _assess_accepted_neighbour_gap(
     elif contradicting:
         diagnosis = (
             "The current evidence includes an admitted contradiction in components also used "
-            "by this accepted paper: "
-            + ", ".join(item.value for item in contradicting)
-            + "."
+            "by this accepted paper: " + ", ".join(item.value for item in contradicting) + "."
         )
     elif len(supporting_families) < 2:
         diagnosis = (
@@ -1307,8 +1289,7 @@ def _majority_components(
     return tuple(
         component
         for component in sorted(VenueEvidenceComponent, key=lambda item: item.value)
-        if len(accepted_by_component.get(component, set()) & neighbour_ids) * 2
-        > len(neighbour_ids)
+        if len(accepted_by_component.get(component, set()) & neighbour_ids) * 2 > len(neighbour_ids)
     )
 
 
@@ -1450,11 +1431,7 @@ def _assess_evidence_component(
     evidence_by_id: dict[str, VenueEvidenceSignal],
 ) -> VenueEvidenceComponentAssessment:
     evidence = tuple(evidence_by_id[item] for item in current_evidence_ids)
-    admitted = tuple(
-        item
-        for item in evidence
-        if item.maturity is EvidenceMaturity.ADMITTED
-    )
+    admitted = tuple(item for item in evidence if item.maturity is EvidenceMaturity.ADMITTED)
     if admitted:
         maturity = VenueComponentMaturity.ADMITTED
     elif evidence:
@@ -1515,11 +1492,7 @@ def _assess_evidence_portfolio(
         for item in manifest.evidence
         if item.dimension in empirical_dimensions and (item.objective_measurement or item.held_out)
     )
-    admitted = tuple(
-        item
-        for item in empirical
-        if item.maturity is EvidenceMaturity.ADMITTED
-    )
+    admitted = tuple(item for item in empirical if item.maturity is EvidenceMaturity.ADMITTED)
     supporting_families = {
         item.family_id
         for item in admitted
@@ -1756,9 +1729,7 @@ def _rank_actions(
         fits = paper_deadline_hours is None or action.estimated_hours <= paper_deadline_hours
         if not fits:
             utility *= 0.05
-        candidates.append(
-            (action, closes, closes_components, comparable_papers, utility, fits)
-        )
+        candidates.append((action, closes, closes_components, comparable_papers, utility, fits))
     candidates.sort(key=lambda item: (-item[4], item[0].action_id))
     return tuple(
         RankedVenueGapAction(
@@ -1837,9 +1808,7 @@ def _assess_top_venue_competitiveness(
     )
     central_claim_ids = tuple(item.claim_id for item in central_arguments)
     central_innovations = tuple(
-        innovation_by_id[item]
-        for item in central_claim_ids
-        if item in innovation_by_id
+        innovation_by_id[item] for item in central_claim_ids if item in innovation_by_id
     )
     admitted_central = sum(
         item.evidence_status is VenueInnovationEvidenceStatus.ADMITTED_SUPPORT
@@ -1889,9 +1858,8 @@ def _assess_top_venue_competitiveness(
             "their claim-linked evidence contracts. A controlled result is a mechanism signal, "
             "not a complete paper argument."
         )
-    elif (
-        component_matches < comparison.accepted_neighbour_count
-        or scale_matches < len(neighbours_with_scale)
+    elif component_matches < comparison.accepted_neighbour_count or scale_matches < len(
+        neighbours_with_scale
     ):
         band = VenueCompetitivenessBand.BELOW_ACCEPTED_PORTFOLIO
         diagnosis = (

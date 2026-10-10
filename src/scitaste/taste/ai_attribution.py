@@ -662,6 +662,10 @@ def materialize_ai_taste_attribution_review(
 
     if project_id != candidate.project_id:
         raise ValueError("AI Taste review project differs from the candidate")
+    if candidate.attribution_producer_id == "model-attribution-draft" and (
+        not producer_model_id or not producer_run_id
+    ):
+        raise ValueError("Model-drafted attribution requires explicit producer identity")
     root = Path(evidence_root).resolve(strict=True)
     validate_relative_locator(output_directory, field_name="AI Taste review output directory")
     target = root / PurePosixPath(output_directory)

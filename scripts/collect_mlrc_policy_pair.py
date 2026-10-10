@@ -109,9 +109,7 @@ def main() -> int:
         "task_action_mapping_sha256"
     ):
         raise ValueError("MLRC pair used different task-action maps")
-    if on_directive.get("selected_action_type") == off_directive.get(
-        "selected_action_type"
-    ):
+    if on_directive.get("selected_action_type") == off_directive.get("selected_action_type"):
         raise ValueError("MLRC development pair collapsed to the same lifecycle action")
     if on_preparation.get("research_action_directive_sha256") != on_directive.get(
         "directive_sha256"
@@ -178,11 +176,7 @@ def main() -> int:
         },
         "paired_development_effect": delta,
         "development_preference": (
-            "learned-policy-on"
-            if delta > 0
-            else "learned-policy-off"
-            if delta < 0
-            else "tie"
+            "learned-policy-on" if delta > 0 else "learned-policy-off" if delta < 0 else "tie"
         ),
         "interpretation_boundary": (
             "This adaptive one-task development pair compares the executed consequences "

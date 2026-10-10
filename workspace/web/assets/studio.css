@@ -1,0 +1,36 @@
+/* Product palette and typography; the native research components keep their contracts. */
+:root {
+  --forest: #13866d;
+  --forest-dark: #142d36;
+  --paper: #f6f8fa;
+  --ink: #213743;
+  --line: #dce5e9;
+  --muted: #687d88;
+  font-family: Inter, "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+body { background: #f6f8fa; font-family: inherit; padding-top: 52px; }
+body.drawer-shell .application-grid { height: calc(100dvh - 52px); }
+.fast-studio-bar { position: fixed; inset: 0 0 auto 0; height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; z-index: 30; background: #142d36; color: #ecf6f4; border-bottom: 1px solid #2d4952; }
+.fast-studio-bar a { color: inherit; text-decoration: none; font-size: 13px; }
+.fast-studio-brand { display: flex; align-items: center; gap: 10px; }
+.fast-studio-brand strong { font-size: 16px; }
+.fast-studio-brand span { color: #a7c0c9; }
+.fast-studio-bar > div { display: flex; gap: 22px; }
+.app-header { background: #142d36; color: #f7fbfa; border-bottom: 1px solid #24434d; }
+.brand-block .eyebrow { color: #83dfc5; }
+.brand-block h1 { color: #fff; font-size: 23px; letter-spacing: -.5px; }
+.brand-block .header-summary { color: #b6cbd2; }
+.locale-panel label { color: #b6cbd2; }
+.header-controls { align-items: center; gap: 20px; }
+.fastresearch-home { color: #dcf5ee; text-decoration: none; font-size: 13px; white-space: nowrap; }
+.fastresearch-home:hover { color: white; }
+.project-nav { background: #142d36; color: #f1f7f8; }
+.project-nav .eyebrow, .project-nav .muted, .drawer-project-context { color: #abc6cd; }
+.project-nav h2, .project-nav label { color: #f1f7f8; }
+.project-toolbar, .conversation-composer { background: #fff; border-color: #dce5e9; }
+.workspace { background: #f6f8fa; }
+.workspace > section, .workspace .project-card, .component, .desktop-panel { border-radius: 14px; }
+button, select, input, textarea { font-family: inherit; border-radius: 8px; }
+button:focus-visible, a:focus-visible { outline: 3px solid #80d7c1; outline-offset: 3px; }
+.new-topic-button { background: #13866d; color: white; border-color: #13866d; }
+@media (max-width: 600px) { .header-controls { gap: 10px; } .fastresearch-home { font-size: 12px; } .fast-studio-bar { padding: 0 12px; } .fast-studio-brand span, .fast-studio-bar > div > a:first-child { display: none; } .fast-studio-bar > div { gap: 12px; } .fast-studio-brand { gap: 6px; } }

@@ -82,6 +82,9 @@ class ProjectRuntime:
                     if stages_document is not None
                     else _default_stages_document(manifest),
                 )
+                from scitaste.project.documents import scaffold_documents
+
+                scaffold_documents(temporary, manifest)
                 os.replace(temporary, target)
             except BaseException:
                 shutil.rmtree(temporary, ignore_errors=True)
@@ -107,6 +110,7 @@ class ProjectRuntime:
         if {
             "project_id",
             "revision",
+            "model_node_revision_scope",
             "runs",
             "reviews",
             "evaluations",
@@ -768,9 +772,47 @@ class ProjectRuntime:
         payload = current.model_dump(mode="json")
         payload.update(changes)
         payload["revision"] = current.revision + 1
+        # Separate unrelated run bookkeeping from project-wide intent changes.
+        # Stamps retain intervening changes, even when a value is later restored.
+        previous = payload.get("model_node_revision_scope", {})
+        old_runs = {run.run_id: run.model_dump(mode="json") for run in current.runs}
+        new_runs = {
+            run.run_id: run.model_dump(mode="json")
+            for run in ProjectManifest.model_validate(payload).runs
+        }
+        run_stamps = dict(previous.get("runs", {}))
+        for run_id in old_runs.keys() | new_runs.keys():
+            run_stamps.setdefault(run_id, current.revision)
+            if old_runs.get(run_id) != new_runs.get(run_id):
+                run_stamps[run_id] = current.revision + 1
+        payload["model_node_revision_scope"] = {
+            "project": (
+                previous.get("project", current.revision)
+                if set(changes) == {"runs"}
+                else current.revision + 1
+            ),
+            "runs": run_stamps,
+        }
         updated = ProjectManifest.model_validate(payload)
         _atomic_json(project / "PROJECT.json", updated.model_dump(mode="json"))
         return updated
+
+    def model_node_scope(self, project_id: str, run_id: str) -> tuple[int, str]:
+        """Bind all project authority and this run, excluding other runs only.
+
+        Scientific inputs still belong to the immutable model-node request. This
+        does not authorize watching mutable files outside that frozen input.
+        """
+        manifest = self.open(project_id).manifest
+        payload = manifest.model_dump(mode="json")
+        stamps = payload.pop("model_node_revision_scope", {})
+        payload.pop("revision")
+        payload["runs"] = [r for r in payload["runs"] if r["run_id"] == run_id]
+        if len(payload["runs"]) != 1:
+            raise ValueError("Model node must bind one registered run")
+        payload["authority_stamp"] = stamps.get("project", manifest.revision)
+        payload["run_stamp"] = stamps.get("runs", {}).get(run_id, manifest.revision)
+        return manifest.revision, content_sha256(payload)
 
     def _snapshot(self, project: Path, manifest: ProjectManifest) -> ProjectSnapshot:
         warnings: list[str] = []
@@ -1087,6 +1129,12 @@ def _verify_evaluation_bundle(
             raise ValueError(f"evaluation artifact {label!r} size mismatch")
         if hashlib.sha256(raw).hexdigest() != binding.sha256:
             raise ValueError(f"evaluation artifact {label!r} hash mismatch")
+    if bundle.origin == "external-formal-study":
+        from scitaste.evaluation.external_formal_study import (
+            verify_external_formal_evaluation,
+        )
+
+        verify_external_formal_evaluation(directory, bundle)
 
 
 def _require_evaluation_entry_matches_bundle(
@@ -1206,6 +1254,64 @@ def _verify_evaluation_result_bundle(
             raise ValueError(f"evaluation-result file {label!r} hash mismatch")
     _verify_evaluation_result_evidence(project, bundle)
 
+    if evaluation.origin == "external-formal-study":
+        if bundle.origin != "external-formal-study" or bundle.schema_version != "1.1":
+            raise ValueError("external formal evaluation requires an external formal result")
+        from scitaste.evaluation.external_formal_study import verify_external_formal_study
+
+        evidence_root = _external_formal_evidence_root(project, bundle)
+        formal_result_path = directory / bundle.files["formal_result"].locator
+        integrity_audit_path = directory / bundle.files["integrity_audit"].locator
+        verification = verify_external_formal_study(
+            project_root=project,
+            evaluation=evaluation,
+            result_raw=formal_result_path.read_bytes(),
+            audit_raw=integrity_audit_path.read_bytes(),
+            evidence_root=evidence_root,
+        )
+        complete = verification.scientific_evidence_complete
+        expected = (
+            evaluation.proposal_sha256,
+            evaluation.proposal_sha256,
+            verification.result_sha256,
+            verification.audit_sha256,
+            "complete" if complete else "incomplete",
+            verification.planned_cells,
+            verification.verified_records,
+            verification.succeeded_cells,
+            0,
+            verification.missing_cells,
+            verification.invalid_cells,
+            0,
+            complete,
+            complete,
+            complete and verification.claim_authorized,
+            verification.blocker_codes,
+        )
+        actual = (
+            bundle.proposal_sha256,
+            bundle.plan_sha256,
+            bundle.result_set_sha256,
+            bundle.assessment_sha256,
+            bundle.status,
+            bundle.planned_cells,
+            bundle.verified_records,
+            bundle.succeeded_cells,
+            bundle.failed_cells,
+            bundle.missing_cells,
+            bundle.invalid_cells,
+            bundle.valid_external_reviews,
+            bundle.scientific_evidence_complete,
+            bundle.headline_eligible,
+            bundle.scientific_effectiveness_established,
+            bundle.blocker_codes,
+        )
+        if actual != expected:
+            raise ValueError("external formal result summary differs from replayed evidence")
+        return
+    if bundle.origin is not None:
+        raise ValueError("native evaluation cannot admit an external-origin result")
+
     evaluation_dir = project / "evaluations" / evaluation.evaluation_id
     manifest_path = evaluation_dir / evaluation.files["prelaunch_manifest"].locator
     cell_plan_path = evaluation_dir / evaluation.files["cell_plan"].locator
@@ -1264,6 +1370,29 @@ def _verify_evaluation_result_bundle(
     )
     if actual != expected:
         raise ValueError("evaluation-result bundle summary differs from verified evidence")
+
+
+def _external_formal_evidence_root(
+    project: Path,
+    bundle: ProjectEvaluationResultBundle,
+) -> Path:
+    """Recover the single project-owned root shared by imported arm artifacts."""
+
+    if len(bundle.evidence) < 2:
+        raise ValueError("external formal result requires multiple evidence artifacts")
+    paths = [PurePosixPath(item.locator) for item in bundle.evidence]
+    common_parts: list[str] = []
+    for values in zip(*(path.parts for path in paths), strict=False):
+        if len(set(values)) != 1:
+            break
+        common_parts.append(values[0])
+    if not common_parts:
+        raise ValueError("external formal evidence does not share a project-owned root")
+    root = project.joinpath(*common_parts)
+    resolved = root.resolve(strict=True)
+    if not resolved.is_dir() or not resolved.is_relative_to(project.resolve(strict=True)):
+        raise ValueError("external formal evidence root is invalid")
+    return resolved
 
 
 def _verify_evaluation_result_evidence(

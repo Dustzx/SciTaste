@@ -88,9 +88,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
 
     candidate_binding = receipt.candidates[args.ordinal - 1]
     candidate_path = _bound(workspace, candidate_binding.candidate.model_dump(mode="json"))
-    candidate = TasteEpisodeCandidate.model_validate_json(
-        candidate_path.read_bytes(), strict=True
-    )
+    candidate = TasteEpisodeCandidate.model_validate_json(candidate_path.read_bytes(), strict=True)
     if candidate.candidate_sha256 != candidate_binding.candidate_sha256:
         raise ValueError("strong-review candidate semantic hash differs")
 
@@ -114,9 +112,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
     reviewers: list[tuple[dict[str, object], object, object]] = []
     for reviewer in manifest["reviewers"]:
         profile = profile_set.profiles[str(reviewer["profile_id"])]
-        backend = load_structured_openai_compatible_config(
-            _bound(workspace, reviewer["backend"])
-        )
+        backend = load_structured_openai_compatible_config(_bound(workspace, reviewer["backend"]))
         if (profile.provider, profile.model) != (
             str(reviewer["provider"]),
             str(reviewer["model"]),
@@ -128,9 +124,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
     if len(reviewers) != 2 or len({item[1].model for item in reviewers}) != 2:
         raise ValueError("strong-review panel requires two distinct models")
 
-    contract = load_ai_taste_review_panel_contract(
-        _bound(workspace, manifest["review_contract"])
-    )
+    contract = load_ai_taste_review_panel_contract(_bound(workspace, manifest["review_contract"]))
     authority = load_evidence_review_package(
         _bound(workspace, manifest["review_authority_package"])
     )
@@ -167,9 +161,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
         attribution_reviews = []
         for reviewer, profile, backend in reviewers:
             reviewer_id = str(reviewer["reviewer_id"])
-            invocation_id = (
-                f"{campaign_code}-{args.ordinal:02d}-attribution-{_slug(reviewer_id)}"
-            )
+            invocation_id = f"{campaign_code}-{args.ordinal:02d}-attribution-{_slug(reviewer_id)}"
             material = build_ai_taste_attribution_review_material(
                 runtime,
                 candidate,
@@ -205,9 +197,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
                 project_id=project_id,
                 run_id=candidate_binding.run_id,
                 invocation_id=invocation_id,
-                review_id=(
-                    f"{campaign_code}-{args.ordinal:02d}-attribution-{reviewer_id}"
-                ),
+                review_id=(f"{campaign_code}-{args.ordinal:02d}-attribution-{reviewer_id}"),
                 reviewer_id=f"{campaign_code}-{reviewer_id}-attribution",
                 role=TasteAttributionReviewRole.PRIMARY,
                 panel_contract=contract,
@@ -231,9 +221,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
             admission = admit_taste_episode(
                 candidate,
                 tuple(attribution_reviews),
-                admission_id=(
-                    f"{campaign_code}-{args.ordinal:02d}-{candidate.candidate_id}"
-                ),
+                admission_id=(f"{campaign_code}-{args.ordinal:02d}-{candidate.candidate_id}"),
                 evidence_root=run_root,
                 current_idea_revision=idea,
                 ai_review_contract=contract,
@@ -246,9 +234,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
             family_reviews = []
             for reviewer, profile, backend in reviewers:
                 reviewer_id = str(reviewer["reviewer_id"])
-                invocation_id = (
-                    f"{campaign_code}-{args.ordinal:02d}-family-{_slug(reviewer_id)}"
-                )
+                invocation_id = f"{campaign_code}-{args.ordinal:02d}-family-{_slug(reviewer_id)}"
                 material = build_scientific_decision_family_review_material(
                     runtime,
                     admission,
@@ -339,9 +325,7 @@ def _accumulate(result: dict[str, object], receipt) -> None:
     result["attempted_generations"] = int(result["attempted_generations"]) + 1
     result["input_tokens"] = int(result["input_tokens"]) + receipt.telemetry.input_tokens
     result["output_tokens"] = int(result["output_tokens"]) + receipt.telemetry.output_tokens
-    result["cost_usd"] = float(result["cost_usd"]) + float(
-        receipt.telemetry.cost_usd or 0.0
-    )
+    result["cost_usd"] = float(result["cost_usd"]) + float(receipt.telemetry.cost_usd or 0.0)
 
 
 def _file_binding(workspace: Path, path: Path) -> dict[str, str]:

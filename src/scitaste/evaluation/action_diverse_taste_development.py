@@ -51,9 +51,7 @@ ActionType = Literal[
     "PIVOT",
     "STOP",
 ]
-_ACTION_TYPES = frozenset(
-    {"PROBE", "PILOT", "EXPERIMENT", "ANALYZE", "REFINE", "PIVOT", "STOP"}
-)
+_ACTION_TYPES = frozenset({"PROBE", "PILOT", "EXPERIMENT", "ANALYZE", "REFINE", "PIVOT", "STOP"})
 
 
 class CurationSourceSpec(BaseModel):
@@ -229,9 +227,7 @@ class ActionDiverseCurationPlan(BaseModel):
         unsigned = cls.model_construct(plan_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            plan_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"plan_sha256"})
-            ),
+            plan_sha256=content_sha256(unsigned.model_dump(mode="json", exclude={"plan_sha256"})),
         )
 
 
@@ -393,20 +389,13 @@ def compile_action_diverse_curation_plan(
         eligible: list[EligibleActionTurn] = []
         for index, record in enumerate(receipt.turns):
             action_type = record.guidance.guidance.action_type
-            if (
-                action_type not in requested_actions
-                or not guidance_action_complied(
-                    action_type, record.decision.proposal.action
-                )
+            if action_type not in requested_actions or not guidance_action_complied(
+                action_type, record.decision.proposal.action
             ):
                 continue
             action_local_evidence_available = (
-                (
-                    record.observation is not None
-                    and index + 1 < len(receipt.turns)
-                )
-                or record.decision.proposal.action == "submit_hypothesis"
-            )
+                record.observation is not None and index + 1 < len(receipt.turns)
+            ) or record.decision.proposal.action == "submit_hypothesis"
             if not action_local_evidence_available:
                 continue
             turn = index + 1
@@ -664,8 +653,10 @@ def _effective_lock_sha256(record: InteractiveTurnRecord) -> str:
     value = audit.get("effective_prospective_lock_sha256")
     if value is None:
         value = audit.get("prospective_lock_sha256")
-    if not isinstance(value, str) or len(value) != 64 or any(
-        character not in "0123456789abcdef" for character in value
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
     ):
         raise ValueError(
             f"action-diverse receipt has no valid effective lock at turn {record.turn}"

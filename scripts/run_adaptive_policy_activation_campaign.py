@@ -232,8 +232,7 @@ def execute(args: argparse.Namespace) -> dict[str, object]:
         "consumed_local_review_gpu_hours": state.consumed_local_review_gpu_hours,
         "consumed_live_review_generations": state.consumed_live_review_generations,
         "consumed_live_review_tokens": (
-            state.consumed_live_review_input_tokens
-            + state.consumed_live_review_output_tokens
+            state.consumed_live_review_input_tokens + state.consumed_live_review_output_tokens
         ),
         "consumed_live_review_cost_usd": state.consumed_live_review_cost_usd,
         "journal_root": journal_root.relative_to(workspace).as_posix(),

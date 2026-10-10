@@ -99,10 +99,8 @@ class VenueTemplateConfig(BaseModel):
         if not required_outputs.issubset(outputs):
             raise ValueError("venue template must bind its style and bibliography files")
         statements = (*self.required_statements, *self.recommended_statements)
-        if (
-            not self.required_statements
-            or any(not item.strip() for item in statements)
-            or len(statements) != len({item.casefold() for item in statements})
+        if any(not item.strip() for item in statements) or len(statements) != len(
+            {item.casefold() for item in statements}
         ):
             raise ValueError("venue statements must be non-empty and unique")
         if not set(self.statement_page_limits).issubset(self.required_statements):
@@ -503,6 +501,8 @@ def _statement_order_is_valid(
     recommended: tuple[str, ...],
 ) -> bool:
     expected = tuple(item.casefold() for item in (*required, *recommended))
+    if not expected:
+        return True
     headings = [
         (_plain_heading(match.group(1)).casefold(), match.start())
         for match in _HEADING.finditer(markdown)

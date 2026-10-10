@@ -202,16 +202,13 @@ def _request(
             precedents.append(
                 {
                     "precedent_id": source.study_id,
-                    "source_task_id": "source-task-"
-                    + content_sha256(source.task_cluster_id)[:10],
+                    "source_task_id": "source-task-" + content_sha256(source.task_cluster_id)[:10],
                     "situation_similarity": scientific_situation_similarity(
                         source.situation,
                         target.situation,
                     ),
                     "situation": _situation_view(source.situation),
-                    "objective_fork_normalized_utilities": (
-                        source.normalized_action_utilities
-                    ),
+                    "objective_fork_normalized_utilities": (source.normalized_action_utilities),
                 }
             )
         items.append(
@@ -256,10 +253,7 @@ def _load_population(
 ]:
     situations = {
         item.study_id: item
-        for item in (
-            ScientificSituation.model_validate(row)
-            for row in _jsonl(situations_path)
-        )
+        for item in (ScientificSituation.model_validate(row) for row in _jsonl(situations_path))
     }
     if set(situations) != {item.study_id for item in lock.bindings}:
         raise ValueError("scientific situations and population lock differ")
@@ -305,9 +299,7 @@ def _static_action(
         for action, value in source.normalized_action_utilities.items():
             values[action].append(value)
     means = {
-        action: sum(observed) / len(observed)
-        for action, observed in values.items()
-        if observed
+        action: sum(observed) / len(observed) for action, observed in values.items() if observed
     }
     return min(means, key=lambda action: (-means[action], action))
 
@@ -394,9 +386,7 @@ def main() -> int:
                     minimum_confidence=config.minimum_confidence,
                     minimum_action_margin=config.minimum_action_margin,
                     minimum_used_task_clusters=config.minimum_used_task_clusters,
-                    minimum_used_precedent_similarity=(
-                        config.minimum_used_precedent_similarity
-                    ),
+                    minimum_used_precedent_similarity=(config.minimum_used_precedent_similarity),
                 )
             )
 

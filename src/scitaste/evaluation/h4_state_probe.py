@@ -337,8 +337,7 @@ def reduce_h4_feedback_context(
         # another edit lower value without relabelling them as positive support.
         evidence_status = "candidate-conflicted"
         repeated_null = len(history) >= 2 and all(
-            item.directed_improvement is not None
-            and abs(item.directed_improvement) <= 1e-12
+            item.directed_improvement is not None and abs(item.directed_improvement) <= 1e-12
             for item in history
         )
         evidence_confidence = "high" if repeated_null else "medium"

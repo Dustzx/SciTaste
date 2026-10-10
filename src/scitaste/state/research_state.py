@@ -312,7 +312,10 @@ class FigureContract(SciTasteModel):
     required_entities: list[FigureEntity] = Field(min_length=1)
     required_relations: list[FigureRelation] = Field(default_factory=list)
     optional_entities: list[FigureEntity] = Field(default_factory=list)
-    forbidden_emphasis: list[str] = Field(default_factory=list)
+    forbidden_emphasis: list[str] = Field(
+        default_factory=list,
+        description="Entity IDs whose visual emphasis is forbidden; not prose instructions.",
+    )
     panel_plan: list[FigurePanelPlan] = Field(min_length=1)
     reference_figure_ids: list[str] = Field(default_factory=list)
 

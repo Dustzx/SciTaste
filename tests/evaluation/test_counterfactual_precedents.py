@@ -14,15 +14,9 @@ def test_real_verified_counterfactual_ledgers_compile_once(tmp_path: Path) -> No
     outputs = Path("outputs")
     state_root = outputs / "projects/scitaste-self-development/evaluations"
     input_root = state_root / "counterfactual-taste-policy-v2-development-abstractions-v2"
-    run_id = (
-        "2026-09-17__deepseek-v41-flash__"
-        "counterfactual-taste-v2-abstraction-v3__seed-00"
-    )
+    run_id = "2026-09-17__deepseek-v41-flash__counterfactual-taste-v2-abstraction-v3__seed-00"
     ledger_root = (
-        outputs
-        / "projects/scitaste-self-development/runs"
-        / run_id
-        / "model_nodes/ledger"
+        outputs / "projects/scitaste-self-development/runs" / run_id / "model_nodes/ledger"
     )
     if not ledger_root.exists():
         pytest.skip("project-owned verified model ledger is absent in source-only CI")
