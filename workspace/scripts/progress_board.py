@@ -58,7 +58,7 @@ def alive(pid, run_id):
         cmd = Path(f'/proc/{int(pid)}/cmdline').read_bytes().decode().split('\0')
         if any('cvpr_countingdino_run.py' in a for a in cmd):
             return run_id == 'countingdino_vitl14reg_cpu_v1'
-        if any(name in a for a in cmd for name in ['cvpr_hrbench_run.py','cvpr_count_run.py','cvpr_fsc_contract.py','cvpr_fsc_vote.py','cvpr_ownership_run.py','cvpr_scalar_controls_run.py','cvpr_gui_run.py','cvpr_global_center_run.py','cvpr_zoomclick.py','cvpr_regionfocus_run.py','cvpr_doc_run.py','cvpr_intent_run.py','cvpr_intent_control_run.py','cvpr_intent_history_run.py','cvpr_route_execute.py','cvpr_route_evaluate.py']):
+        if any(name in a for a in cmd for name in ['cvpr_hrbench_run.py','cvpr_count_run.py','cvpr_fsc_contract.py','cvpr_fsc_vote.py','cvpr_ownership_run.py','cvpr_scalar_controls_run.py','cvpr_gui_run.py','cvpr_global_center_run.py','cvpr_zoomclick.py','cvpr_regionfocus_run.py','cvpr_doc_run.py','cvpr_intent_run.py','cvpr_intent_control_run.py','cvpr_intent_history_run.py','cvpr_route_execute.py','cvpr_route_evaluate.py','cvpr_route_budget_run.py','cvpr_route_budget_noimage.py']):
             return '--run-id' in cmd and cmd[cmd.index('--run-id')+1] == run_id
         if any('cvpr_chart_anchoring.py' in a for a in cmd):
             return run_id == 'bailian_qwen38_flash_anchoring_diagnostic_v1'
@@ -305,10 +305,14 @@ def snapshot():
             completed = status.get('completed_samples', 0)
             planned = status.get('selected_samples', protocol.get('selected_samples', 32))
             generation_state = status.get('status', status.get('state'))
+            uniform_repair = protocol.get('mode') == 'uniform4096_engineering_repair'
+            noimage_control = protocol.get('image_mode') == 'none'
+            route_mode_label = ('原四示例文本 · 同4096无图内部控制' if noimage_control else
+                                '原四示例基线 · 全32统一4096工程纠错' if uniform_repair else '作者四示例 API 适配基准')
             experiments[-1].update({
                 'branch_id': 'FR-ROUTE', 'diagnostic_kind': 'route_task2',
                 'mode': protocol.get('mode'),
-                'title': 'NeSy-Route Task2 作者四示例 API 适配基准',
+                'title': 'NeSy-Route Task2 '+route_mode_label,
                 'status': summary.get('status', 'completed_scored') if summary else generation_state,
                 'generation_state': generation_state,
                 'generation_actual_calls': status.get('successful_calls'),
@@ -322,10 +326,12 @@ def snapshot():
                 'output_tokens': summary.get('output_tokens', status.get('output_tokens')) if summary else status.get('output_tokens'),
                 'api_cost_cny': summary.get('cost_cny', summary.get('api_cost_cny')) if summary else None,
                 'max_logical_calls': protocol.get('max_logical_calls', planned),
+                'max_tokens_per_call': protocol.get('max_tokens_per_call'),
                 'completion_label': 'Task2 评测来源开发；基准适配，非新方法',
-                'protocol': (f"{protocol.get('model')} · Task2 官方编号区域原图与作者四个文字示例提示；"
+                'protocol': (f"{protocol.get('model')} · Task2 {'仅原文本、不传图像' if noimage_control else '官方编号区域原图'}与作者四个文字示例提示；"
                              f"固定 {planned} 个评测来源开发样本，每题一次、最多 {planned} 次逻辑调用；"
-                             'author_fourshot_api_adapter，非论文零样本成绩复现，非正式方法比较或独立确认。'),
+                             f"每次输出上限 {protocol.get('max_tokens_per_call', '待核')}；"
+                             f"{route_mode_label}，非新方法，非论文零样本成绩复现、正式方法比较或独立确认。"),
                 'finding': (summary.get('scope', '开发基准完整读出；官方条件分母和固定全样本指标分别报告，非新方法。') if summary else
                             f'开发预测 {completed}/{planned}；完整评分未落盘，不填部分成绩。'),
                 'arms': [],
