@@ -12,11 +12,53 @@ from local_research import SHARED_RACE
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORT = ROOT.parent / 'report' if (ROOT.parent / 'report').is_dir() else ROOT / 'report'
 REPORT = Path(os.environ.get('SCITASTE_REPORT_ROOT', str(DEFAULT_REPORT))).resolve()
+ZOOMBENCH_KIND = 'zoombench_original_image_common27b_development_headroom'
+ZOOMBENCH_HIGHRES_KIND = 'zoombench_highres16m_common27b_strong_control'
+ZOOMBENCH_KINDS = {ZOOMBENCH_KIND, ZOOMBENCH_HIGHRES_KIND}
+
+
+def zoombench_summary(run):
+    """Only the completed aggregate, never intermediate judge/solver records."""
+    value = read(run/'SUMMARY.json')
+    if not isinstance(value, dict) or value.get('status') != 'complete':
+        return None
+    full = value.get('full_denominator', {})
+    typed = value.get('typed_full_denominator', {})
+    resources = value.get('resources', {})
+    judges = value.get('judge_resources', {})
+    if (full.get('N') != 32 or value.get('judge_resources', {}).get('logical_terminal_records') != 32
+            or value.get('run_id') != run.name
+            or set(typed) != {'MCQ', 'OQ'} or sum(v.get('N', 0) for v in typed.values()) != 32
+            or resources.get('blocking_unresolved') != 0
+            or not isinstance(judges.get('requested_judges'), int)
+            or not 0 <= judges['requested_judges'] <= 32
+            or not isinstance(resources.get('physical_attempts'), int)
+            or not isinstance(resources.get('successful_settled'), int)
+            or not resources['physical_attempts'] >= resources['successful_settled'] >= 32+judges['requested_judges']):
+        return None
+    return {k: value[k] for k in ['status', 'kind', 'run_id', 'model', 'created_at',
+        'full_denominator', 'typed_full_denominator', 'judge_resources', 'resources',
+        'decision', 'official_score_reproduced', 'imagehash_proxy_grouped'] if k in value}
+
+
+def zoombench_source(path):
+    """Explicit aggregate allowlists exclude private requests, inputs and IDs."""
+    if path.name == 'SUMMARY.json':
+        return zoombench_summary(path.parent)
+    fields = (['kind', 'run_id', 'status', 'started_at', 'updated_at', 'pid', 'planned_samples',
+               'completed_solver_records', 'completed_judge_calls', 'resources', 'model',
+               'new_method', 'publication_ready', 'confirmation_evaluated', 'error_type']
+              if path.name == 'STATUS.json' else
+              ['schema_version', 'kind', 'run_id', 'arm', 'N', 'model', 'temperature',
+               'enable_thinking', 'vl_high_resolution_images', 'max_pixels_set', 'solver_max_tokens', 'judge_max_tokens', 'resource',
+               'first_two_gate', 'successor', 'stopping', 'scope', 'differences'])
+    value = read(path, {})
+    return {k: value[k] for k in fields if k in value}
 
 
 def study_runs():
     study = ROOT/'outputs/projects/fastresearch-cvpr2027/research'
-    return sorted([*study.glob('runs/*'), *study.glob('spacecast/runs/*'), *study.glob('hrbench/runs/*'), *study.glob('counting/runs/*'), *study.glob('counting/fsc147/runs/*'), *study.glob('gui/runs/*'), *study.glob('document/runs/*'), *study.glob('multimodal_intent/runs/*'), *study.glob('route/runs/*')])
+    return sorted([*study.glob('runs/*'), *study.glob('spacecast/runs/*'), *study.glob('hrbench/runs/*'), *study.glob('counting/runs/*'), *study.glob('counting/fsc147/runs/*'), *study.glob('gui/runs/*'), *study.glob('document/runs/*'), *study.glob('multimodal_intent/runs/*'), *study.glob('route/runs/*'), *study.glob('vps/runs/*')])
 
 
 def read(path, default=None):
@@ -58,7 +100,7 @@ def alive(pid, run_id):
         cmd = Path(f'/proc/{int(pid)}/cmdline').read_bytes().decode().split('\0')
         if any('cvpr_countingdino_run.py' in a for a in cmd):
             return run_id == 'countingdino_vitl14reg_cpu_v1'
-        if any(name in a for a in cmd for name in ['cvpr_hrbench_run.py','cvpr_count_run.py','cvpr_fsc_contract.py','cvpr_fsc_vote.py','cvpr_ownership_run.py','cvpr_scalar_controls_run.py','cvpr_gui_run.py','cvpr_global_center_run.py','cvpr_zoomclick.py','cvpr_regionfocus_run.py','cvpr_doc_run.py','cvpr_intent_run.py','cvpr_intent_control_run.py','cvpr_intent_history_run.py','cvpr_route_execute.py','cvpr_route_evaluate.py','cvpr_route_budget_run.py','cvpr_route_budget_noimage.py','cvpr_route_schema_control.py']):
+        if any(name in a for a in cmd for name in ['cvpr_hrbench_run.py','cvpr_count_run.py','cvpr_fsc_contract.py','cvpr_fsc_vote.py','cvpr_ownership_run.py','cvpr_scalar_controls_run.py','cvpr_gui_run.py','cvpr_global_center_run.py','cvpr_zoomclick.py','cvpr_regionfocus_run.py','cvpr_doc_run.py','cvpr_intent_run.py','cvpr_intent_control_run.py','cvpr_intent_history_run.py','cvpr_route_execute.py','cvpr_route_evaluate.py','cvpr_route_budget_run.py','cvpr_route_budget_noimage.py','cvpr_route_schema_control.py','cvpr_zoombench_headroom.py','cvpr_zoombench_highres_control.py']):
             return '--run-id' in cmd and cmd[cmd.index('--run-id')+1] == run_id
         if any('cvpr_chart_anchoring.py' in a for a in cmd):
             return run_id == 'bailian_qwen38_flash_anchoring_diagnostic_v1'
@@ -121,17 +163,24 @@ def sources():
         'route_preparation_acceptance': 'route/data/development32_prepared/PREPARATION_ACCEPTANCE.json',
         'route_visual_input_summary': 'route/VISUAL_INPUT_AUDIT_PUBLIC_SUMMARY.json',
         'seer_execution_audit': 'spacecast/SEER_EXECUTION_AUDIT_20261012.json',
+        'vps_plan': 'vps/PLAN.md',
+        'vps_iclr_method_review': 'vps/ICLR2027_METHOD_REVIEW_20261012.json',
     }.items():
         found['FastResearch.'+key] = study/path
     for path in [run/'SUMMARY.json' for run in study_runs() if (run/'SUMMARY.json').is_file()]:
+        if read(path.parent/'PROTOCOL.json', {}).get('kind') in ZOOMBENCH_KINDS:
+            if zoombench_summary(path.parent) is not None:
+                found['run.'+path.parent.name] = path
+            continue
         status=read(path.parent/'STATUS.json', {})
         found['run.'+path.parent.name] = path.parent/status.get('summary_file',path.name)
     for path in [run/'PARTIAL_SUMMARY.json' for run in study_runs() if (run/'PARTIAL_SUMMARY.json').is_file()]:
-        found['run.'+path.parent.name+'.partial'] = path
+        if read(path.parent/'PROTOCOL.json', {}).get('kind') not in ZOOMBENCH_KINDS:
+            found['run.'+path.parent.name+'.partial'] = path
     for path in [run/'STATUS.json' for run in study_runs() if (run/'STATUS.json').is_file()]:
         found['run.'+path.parent.name+'.status'] = path
     for run in study_runs():
-        if read(run/'PROTOCOL.json', {}).get('kind') in {'route_task2', 'route_task2_schema_control'}:
+        if read(run/'PROTOCOL.json', {}).get('kind') in {'route_task2', 'route_task2_schema_control'} | ZOOMBENCH_KINDS:
             found['run.'+run.name+'.protocol'] = run/'PROTOCOL.json'
         if read(run/'PROTOCOL.json', {}).get('diagnostic_kind') != 'document_order_screen':
             continue
@@ -170,6 +219,15 @@ def source_document(key):
     resolved = browser_source_path(path)
     if resolved is None:
         return None
+    if resolved.parent.parent.parent.name == 'vps' and resolved.parent.parent.name == 'runs':
+        if read(resolved.parent/'PROTOCOL.json', {}).get('kind') in ZOOMBENCH_KINDS:
+            if resolved.name not in {'STATUS.json', 'PROTOCOL.json', 'SUMMARY.json'}:
+                return None
+            value = zoombench_source(resolved)
+            if value is None:
+                return None
+            return {'source_key': key, 'path': str(path), 'content': json.dumps(value, ensure_ascii=False),
+                    'projection': 'aggregate_allowlist', **stamp(resolved)}
     return {'source_key': key, 'path': str(path), 'content': resolved.read_text(), **stamp(resolved)}
 
 
@@ -198,6 +256,7 @@ def snapshot():
             continue
         protocol = read(run/'PROTOCOL.json', {})
         intent = run.parent.parent.name == 'multimodal_intent' and protocol.get('mode') in {'direct', 'arcade', 'modensemble', 'controlled_history_variant'}
+        zoombench = protocol.get('kind') in ZOOMBENCH_KINDS
         route_schema = protocol.get('kind') == 'route_task2_schema_control'
         route_task2 = protocol.get('kind') in {'route_task2', 'route_task2_schema_control'}
         zoomclick = protocol.get('diagnostic_kind') == 'zoomclick_baseline_transfer'
@@ -211,9 +270,9 @@ def snapshot():
         derived_unit = run.name == 'point_unit_normalization_exploratory_v1'
         # Intent progress is available in its safe STATUS. Do not open the raw
         # text predictions merely to count rows for the browser projection.
-        predictions = [] if intent or route_task2 else read(run/('BASELINE_PREDICTIONS.json' if nested and status.get('mode')=='baseline' else 'PREDICTIONS.json'), [])
+        predictions = [] if intent or route_task2 or zoombench else read(run/('BASELINE_PREDICTIONS.json' if nested and status.get('mode')=='baseline' else 'PREDICTIONS.json'), [])
         is_live = alive(status.get('pid'), run.name)
-        summary = read(run/'SUMMARY.json') if route_task2 else read(run/status.get('summary_file','SUMMARY.json'), read(run/'PARTIAL_SUMMARY.json'))
+        summary = zoombench_summary(run) if zoombench else read(run/'SUMMARY.json') if route_task2 else read(run/status.get('summary_file','SUMMARY.json'), read(run/'PARTIAL_SUMMARY.json'))
         if route_task2 and summary and (summary.get('status') != 'completed_scored' or summary.get('completed_response_records') != summary.get('selected_samples', 32)*(2 if route_schema else 1) or (route_schema and any(summary.get('arms', {}).get(arm, {}).get('completed_response_records') != summary.get('selected_samples', 32) for arm in ['R', 'S']))):
             summary = None  # Route scientific metrics require the complete frozen summary.
         rows = []
@@ -239,6 +298,35 @@ def snapshot():
                             'finding': '评分待完成' if summary is None else summary.get('scope', '部分开发诊断；确认集未评测'),
                             'arms': rows, 'summary': summary,
                             'source_key': 'run.'+run.name+('' if (run/'SUMMARY.json').exists() else '.partial' if (run/'PARTIAL_SUMMARY.json').exists() else '.status')})
+        if zoombench:
+            highres = protocol.get('kind') == ZOOMBENCH_HIGHRES_KIND
+            phase = status.get('status')
+            solver = status.get('completed_solver_records', 0)
+            judges = status.get('completed_judge_calls', 0)
+            resources = (summary or status).get('resources', {})
+            experiments[-1].update({
+                'branch_id': 'FR-ZOOMBENCH', 'diagnostic_kind': protocol['kind'],
+                'high_resolution_control': highres,
+                'title': 'ZoomBench · 显式16M高分辨率原图强控制（非新方法）' if highres else 'ZoomBench · 默认分辨率原图基线（非新方法）',
+                'status': 'completed_scored' if summary else phase,
+                'generation_state': phase, 'completed': solver, 'planned': 32,
+                'completed_solver_records': solver, 'completed_judge_calls': judges,
+                'live': is_live, 'stale_running': phase in {'solver_running', 'solver_frozen_preparing_judge', 'judge_running'} and not is_live,
+                'model': status.get('model', protocol.get('model')),
+                'original_score_reproduced': False, 'independent_replication': False,
+                'confirmation_evaluated': False, 'new_method': False, 'publication_ready': False,
+                'actual_calls': resources.get('physical_attempts'),
+                'resources': resources, 'api_cost_cny': None,
+                'max_logical_calls': 64, 'solver_max_tokens': protocol.get('solver_max_tokens'),
+                'judge_max_tokens': protocol.get('judge_max_tokens'),
+                'completion_label': '原图基线开发筛选；共同骨干适配，非原checkpoint复现',
+                'protocol': ('原 qwen3.6-27b 共同骨干；'+('显式vl_high_resolution_images=true，最大16,777,216像素；max_pixels未单独设置；' if highres else '未设vl_high_resolution_images/max_pixels，采用供应商默认分辨率；')+'原图求解32 → 全部有效答案逐题Judge（最多32调用）→ 固定全N32评分。FOVEA直接提示适配，未执行完整主动视觉方法；官方测试来源开发，非独立确认。'),
+                'finding': ('完整全N32开发评分已落盘；覆盖与饱和门分列，不能作为新方法收益。' if summary else
+                            f'原图求解 {solver}/32；Judge成功响应 {judges}/32上限。完整评分未落盘，不显示部分成绩。'),
+                'arms': [],
+                'source_key': 'run.'+run.name+('' if summary else '.status'),
+                'protocol_source_key': 'run.'+run.name+'.protocol',
+            })
         if intent:
             mode = protocol['mode']
             control = mode == 'modensemble'
@@ -429,6 +517,10 @@ def snapshot():
             experiment['requests'] = {'attempts': len(attempts), 'successful': sum(a['status'] == 'settled' for a in attempts),
                                       'unsettled': sum(a['status'] != 'settled' for a in attempts),
                                       'retries': sum(a.get('attempt_index', 1) > 1 for a in attempts)}
+            if experiment.get('diagnostic_kind') in ZOOMBENCH_KINDS and attempts:
+                experiment['actual_calls'] = experiment['requests']['attempts']
+                experiment['api_cost_cny'] = sum(float(a.get('cost_cny') or 0) for a in attempts if a['status'] == 'settled')
+                experiment['call_cost_source'] = 'api_ledger_settled'
             if experiment.get('diagnostic_kind') in {'document_order_screen', 'intent_headroom', 'intent_arcade', 'intent_control', 'intent_history', 'route_task2', 'route_task2_schema_control'} and not experiment.get('summary') and attempts:
                 # Page-boundary STATUS snapshots can lag settled response receipts.
                 # Use the existing ledger aggregate, never raw model call records.
@@ -492,6 +584,17 @@ def snapshot():
         'runtime': {k: route_latest.get(k) for k in ['name', 'status', 'live', 'completed', 'planned', 'source_key']} if route_latest else None,
         'scope': 'Task2 评测来源开发候选；已有 easy 预览曝光保留，跨来源独立性未知。基准适配不是新方法或正式方法比较。',
     } if route_metadata or route_allocation or route_runs else None
+    zoom_runs = [e for e in by_run.values() if e.get('diagnostic_kind') in ZOOMBENCH_KINDS]
+    zoom_latest = max(zoom_runs, key=lambda e: e.get('updated_at') or '', default=None)
+    image_state = read(study/'vps/data/development32/IMAGE_STATUS.json', {})
+    zoom_candidate = {
+        'id': 'FR-ZOOMBENCH', 'role': 'high_resolution_baseline_candidate',
+        'status': 'execution_record' if zoom_latest else 'source_preparation',
+        'current_run': zoom_latest.get('name') if zoom_latest else None,
+        'images_prepared': image_state.get('decoded_images'),
+        'scope': '独立高分辨率基线候选，不增加正式视觉方法分支；共同Qwen3.6-27B适配，不是FOVEA原30B-A3B checkpoint精确复现。',
+        'runtime': {k: zoom_latest.get(k) for k in ['name', 'status', 'live', 'completed_solver_records', 'completed_judge_calls', 'planned', 'source_key']} if zoom_latest else None,
+    } if zoom_runs or image_state else None
     portfolio['observed_runtime'] = {
         'active_candidates': sum(b['stage'] not in {'stopped', 'saturated', 'archived'} for b in portfolio.get('branches', [])),
         'live_jobs': sum(bool(e.get('live')) for e in by_run.values()),
@@ -504,6 +607,7 @@ def snapshot():
             'axes': board['axes'], 'projects': projects, 'experiments': experiments, 'experiences': pool['entries'],
             'document_links': document_links, 'portfolio': portfolio,
             'route_candidate': route_candidate,
+            'zoombench_candidate': zoom_candidate,
             'budget': budget, 'maintenance': board.get('maintenance'),
             'shared_race': read(SHARED_RACE, {}),
             'verification_policy': '本页刷新只读本地文件。FastResearch本机run可核进程；OPD远端资源以共同赛马记录的实查时刻为准，刷新不重新SSH。其他研究为来源快照，未据本页重新查询远端。'}

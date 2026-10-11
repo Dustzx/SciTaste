@@ -1,7 +1,9 @@
 # Roadmap
 
 2026-10-12 public workspace integration adds optional reviewed project dossiers,
-branch publication routes, and safe Route/history execution/result adapters.
+branch publication routes, and safe Route/history and staged high-resolution-baseline execution/result adapters.
+ZoomBench adapters distinguish default and explicit high-resolution controls;
+solver and judge progress are separate, and incomplete results remain unscored.
 A fresh installation remains empty and does not launch models. Private evidence
 and upstream author code remain local; this engineering integration does not
 close scientific acceptance gates or certify reproduction. See

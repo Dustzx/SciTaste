@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-12 — Safe staged visual baseline progress
+
+- Show original-image solving and judge-all progress separately, and expose scores only after complete fixed-denominator results and accounting reconciliation.
+- Distinguish provider-default image resolution from an explicit high-resolution strong control, including visual budgets and conditional expansion gates.
+- Add synthetic projection and browser coverage; retain an empty fresh installation and exclude private requests, target values and individual predictions.
+
 ## 2026-10-10 — Unified SciTaste workspace and CCF A/B submission planning
 
 - Keep SciTaste as the full-workflow project name and prioritize Idea Research &
