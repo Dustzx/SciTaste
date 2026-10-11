@@ -31,14 +31,10 @@ def now():
 
 
 def credential():
+    """Explicit caller environment only; never search a developer account file."""
     value = os.environ.get("DASHSCOPE_API_KEY")
     if not value:
-        for line in Path("/home/good/zfx/papers/SciTaste/.env").read_text().splitlines():
-            if line.startswith("DASHSCOPE_API_KEY="):
-                value = line.split("=", 1)[1].strip().strip("\"'")
-                break
-    if not value:
-        raise RuntimeError("Authorized existing DashScope credential missing")
+        raise RuntimeError("Set DASHSCOPE_API_KEY explicitly after resource admission")
     return value
 
 

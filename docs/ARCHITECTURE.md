@@ -7882,3 +7882,17 @@ version and derivation receipt preserve source/data/spec/figure/PDF hashes, whil
 original review and paper artifacts remain unchanged. The supplement does not inherit
 scientific approval or claim a new review. This is artifact completion, not an
 additional experimental trial or evidence of a method improvement.
+
+## Optional public research workspace
+
+The `workspace/` application joins configured reviewed narratives, native project
+metadata, branch publication routes and safe local experiment aggregates. Missing
+private profiles or introductions produce empty presentation states. Publication
+targets and internal checkpoints cannot grant scientific gates. Native resource
+portfolios remain optional and use the existing integrity-checked runtime API.
+
+Independent Route/history adapters keep input manifests separate from selected
+targets, require frozen external source/data contracts and explicit admission,
+and retain full-panel scoring and bounded paid-attempt accounting. Neither browser
+refresh nor module import starts execution. The public tree excludes upstream
+author code, datasets, responses, credentials and the developer's private records.

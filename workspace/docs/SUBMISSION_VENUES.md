@@ -24,3 +24,7 @@ python scripts/sync_venues.py --source cache/venue_sources/ccfddl \
 支持类型、A/B、领域、状态、会议届次、关键词与分页。星标保存于当前浏览器的 `scitaste.venue_shortlist`，不是服务端项目目标绑定。
 
 来源许可见 [CCF-DDL LICENSE](licenses/ccf-deadlines-LICENSE)。这里只发布目录元数据与来源标识，不重分发 CCF PDF 或论文。
+
+## 分支路线
+
+公开工作台可把本地分支 portfolio 与 CCF A/B 目录和原生交付计划关联。候选目标、内部检查点和官方日期分别显示；科学门与原生交付均满足才可显示就绪。未配置分支时显示空状态；没有推算下一届日期。

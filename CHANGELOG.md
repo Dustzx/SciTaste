@@ -5545,3 +5545,7 @@ semantic versioning.
   internal generator/provenance identifiers and missing selected primary metrics.
 - Corrected finalization stage detection for quality gate, knowledge archive,
   publication export, and Stage 23 citation verification.
+
+## Unreleased · Public research workspace
+
+Added optional project dossiers, branch publication routes, safe Route/history result projections and owned execution adapters. Fresh installs remain empty and offline; private records, upstream author code, datasets and account files are excluded.

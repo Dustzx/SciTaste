@@ -106,6 +106,13 @@ class ExperimentBridge:
             raise BridgeError(400, "项目 ID 无效")
         project_id, operation = parts[2], parts[3]
         if len(parts) == 4:
+            if operation == "resource-portfolio" and method == "GET":
+                from scitaste.project import ProjectRuntime
+                from scitaste.generative_ui.project_resources import load_project_resource_portfolio
+                runtime = ProjectRuntime(self.outputs if origin == "fastresearch" else self.source / "outputs")
+                portfolio = load_project_resource_portfolio(runtime, project_id)
+                return 200, {"project_id": project_id,
+                             "resource_portfolio": portfolio.model_dump(mode="json") if portfolio else None}
             if operation == "plan" and method == "GET":
                 from scitaste.project import ProjectRuntime
                 snapshot = ProjectRuntime(self.outputs if origin == "fastresearch" else self.source / "outputs").open(project_id)

@@ -79,12 +79,17 @@ def retry_delay(index, value='', wall_time=None):
 class PaidRequester:
     def __init__(self, *, budget, run, run_id, secret, halt, prior_attempts=None,
                  post=requests.post, monotonic=time.monotonic, sleeper=time.sleep,
-                 prices=(.8, 2.7), phase_cap=20, wall_limit_seconds=1800):
+                 prices=(.8, 2.7), phase_cap=20, wall_limit_seconds=1800,
+                 allow_reasoning=False, cost_function=None, request_timeout=(15, 180)):
         self.budget, self.run, self.run_id, self.secret = budget, run, run_id, secret
         self.halt, self.prior_attempts = halt, prior_attempts or {}
         self.post, self.monotonic, self.sleep = post, monotonic, sleeper
         self.input_price, self.output_price = prices
         self.phase_cap = phase_cap
+        self.allow_reasoning, self.cost_function = allow_reasoning, cost_function
+        self.request_timeout = request_timeout
+        if len(request_timeout) != 2 or any(not 0 < v <= 600 for v in request_timeout):
+            raise ValueError('Invalid bounded HTTP timeout')
         if min(prices) <= 0 or not 0 < phase_cap <= 300 or wall_limit_seconds <= 0:
             raise ValueError('Invalid bounded request resource contract')
         self.rate, self.log_lock = threading.Lock(), threading.Lock()
@@ -115,15 +120,18 @@ class PaidRequester:
             settled = False
             try:
                 response = self.post(ENDPOINT, headers={'Authorization': 'Bearer ' + self.secret},
-                                     json=body, timeout=(15, 180))
+                                     json=body, timeout=self.request_timeout)
                 response.raise_for_status()
                 obj = response.json()
                 usage, choice = obj['usage'], obj['choices'][0]
                 inp, out = int(usage['prompt_tokens']), int(usage['completion_tokens'])
                 assert 0 <= inp <= 1000000 and 0 <= out <= cap
                 content = choice['message']['content']
-                assert isinstance(content, str) and not choice['message'].get('reasoning_content')
-                cost = (inp*self.input_price + out*self.output_price)/1e6
+                reasoning = choice['message'].get('reasoning_content')
+                assert isinstance(content, str) and (self.allow_reasoning or not reasoning)
+                cost = (self.cost_function(inp, out) if self.cost_function else
+                        (inp*self.input_price + out*self.output_price)/1e6)
+                assert 0 <= cost <= self.input_price + cap*self.output_price/1e6
                 sample, stage = key.split('|')
                 item = {'key': key, 'sample_id': sample, 'stage': stage, 'status': 'ok', 'created_at': now(),
                     'prompt_sha256': digest, 'ledger_key': ledger_key, 'attempt_index': attempt,
@@ -131,6 +139,9 @@ class PaidRequester:
                     'usage': usage, 'input_tokens': inp, 'output_tokens': out, 'token_cap': cap, 'api_cost_cny': cost,
                     'elapsed_seconds': self.monotonic()-tick, 'finish_reason': choice.get('finish_reason'),
                     'truncated': choice.get('finish_reason') == 'length', 'text': content, 'parsed': parse_json(content)}
+                if self.allow_reasoning:
+                    item['reasoning_returned'] = bool(reasoning)
+                    item['reasoning_characters'] = len(reasoning or '')
                 save(item)  # Durable successful response before releasing its reservation.
                 self.budget.change(ledger_key, settle={'status': 'settled', 'cost_cny': cost,
                     'settled_at': now(), 'response_id': obj['id'], 'usage': usage})

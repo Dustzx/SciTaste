@@ -72,6 +72,12 @@ def main():
                       and status["execution"]["gpu_launch"] is False)
                 progress = request("/api/progress")[2]
                 check("empty_report_supported", progress["projects"] == [] and progress["experiences"] == [])
+                check("empty_race_supported", progress["portfolio"].get("branches", []) == [])
+                check("empty_route_candidate_supported", progress.get("route_candidate") is None)
+                check("empty_dossiers_supported", request("/api/research/projects")[2]["projects"] == [])
+                check("empty_introductions_supported", request("/api/research/introductions")[2]["projects"] == [])
+                check("empty_export_fails_cleanly", request("/api/research/export?format=zip")[0] == 400)
+
                 _, headers, venues = request("/api/venues")
                 check("ab_catalogue_available", len(venues["venues"]) >= 300
                       and all(v["rank"] in {"A", "B"} for v in venues["venues"]))
@@ -85,6 +91,8 @@ def main():
                 auth = {"X-FastResearch-CSRF": status["csrf_token"]}
                 check("native_metadata_creation", request(path, "POST", body, auth)[0] == 201)
                 check("native_project_persisted", (fixture / "outputs/projects/fresh-fixture/PROJECT.json").is_file())
+                check("native_resource_portfolio_optional", request(path + "/fresh-fixture/resource-portfolio")[0] == 200)
+
                 check("no_raw_calls_created", not list(fixture.rglob("calls.jsonl")))
             finally:
                 process.terminate()

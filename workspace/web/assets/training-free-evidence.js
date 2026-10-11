@@ -1,0 +1,237 @@
+'use strict';
+
+// This dossier reads authored evidence and observed runs. Refreshing never starts
+// research, updates a scientific gate, or writes a native delivery record.
+window.TrainingFreeEvidence = (() => {
+  const project='fastresearch-cvpr2027';
+  const e=v=>String(v??'待核实').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const link=values=>'#/experiments/'+project+'?'+new URLSearchParams({origin:'fastresearch',...values});
+  const tag=(value,kind='')=>`<span class="tag ${kind}">${e(value)}</span>`;
+  const source=(key,title='查看原始证据')=>key?`<button class="button button-small" data-progress-source="${e(key)}">${e(title)}</button>`:'';
+  const panel=(title,body,cls='')=>`<section class="panel tf-panel ${cls}"><div class="section-head"><h2>${e(title)}</h2></div>${body}</section>`;
+  const date=value=>value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value)):'未记录';
+  const number=value=>Number.isFinite(value)?Number(value.toFixed(5)).toLocaleString('zh-CN',{maximumFractionDigits:5}):'—';
+  const text=value=>value==null?'待核实':Array.isArray(value)?value.map(text).join('；'):typeof value==='object'?JSON.stringify(value):String(value);
+  const navs=[['project-introduction','项目简介'],['project-progress','课题概览'],['method','分支与方法'],['results','完整对照结果'],['data','数据与协议'],['activity','动态与决策'],['paper-evidence','论文缺口']];
+  const supported=new Set(navs.map(([id])=>id));
+  const stopped=b=>['stopped','saturated','archived'].includes(b.stage);
+  const states={completed:'模型预测完成，评分以汇总为准',preflight:'启动预检中',running:'源记录运行中',model_completed:'模型预测完成，待冻结评分',held:'执行暂停，证据保留',preflight_failed:'启动预检失败 · 未进入模型推理',not_started:'未启动',stopped_model_review:'模型复核已停止',completed_scored:'开发官方评分完成',completed_scoring:'官方评分完成',preparing_official_scoring:'准备官方CPU评分',scoring:'官方CPU评分中',scoring_failed_evidence_preserved:'CPU评分失败，证据保留',completed_baseline:'基线完成',completed_predictions:'预测完成，待评分',completed_recovery_predictions:'恢复预测完成',completed_diagnostic_predictions:'诊断预测完成',checkpoint_predictions:'阶段预测完成',held_process_disappeared:'进程退出，已保留',held_execution_failure:'执行失败暂停',stopped_headroom:'基线饱和已停止',held_format_truncation:'格式截断已保留',source_review:'来源审核',baseline_screen:'基线筛选',development:'开发对照',independent:'独立开发复验',confirmation:'冻结确认',mechanism_design:'机制设计',stopped:'版本停止',archived:'历史归档',saturated:'基线饱和',passed:'已过门',active:'推进中',planned:'待执行',blocked:'证据缺口',complete:'已完成',pending:'待开展'};
+  const arms={controlled_history_variant:'论文历史信息流受控变体（非严格复现）',direct:'原图直接推理',arcade:'ARCADE 原代码路径（三轮、自适应2/4/8调用）',ensemble_judge:'七次独立抽样＋同信息 Judge',plurality:'共享七次抽样的免费投票',direct_equal_budget:'等总token预算直接推理',free_rewrite:'共享首答自由重写',locked_order:'锁定内容的读序修复',direct_first:'共享原图首答',full_repeat7_medoid:'七次原图 medoid',zoomclick_api:'ZoomClick API 迁移',review:'普通复核',structure:'结构重解',pixel_match:'像素对应',full_structure_replay:'完整结构重放',answer_blind_structure:'无预填摘要',state_table:'状态表',state_invalidation:'依赖失效标记',crop_plain:'普通裁剪',crop_linked:'对应裁剪',crop_shuffled:'错位对应',transform_vote:'全图变换投票',partition_sum:'分区求和',conservation_decode:'守恒纠错',class_count_only:'类别文字计数',exemplar_count_only:'官方视觉示例计数',whole_review:'全图视觉复核',whole_first:'全图首答',tile_scalar:'普通裁剪标量',halo_scalar:'上下文标量',tile_points:'普通裁剪点',halo_points:'上下文点归属',halo_unfiltered:'未作归属',halo_stitch:'常规点合并',instance_center:'全图实例中心',fragment_center:'裁剪片段中心',instance_scalar:'实例中心标量',legacy_halo_points:'旧上下文点归属',legacy_whole_review:'旧全图复核',countingdino:'CountingDINO参考',tile_points_unit:'普通点单位校准',halo_points_unit:'上下文点单位校准'};
+  const metricNames={n:'样本分母',full_accuracy:'全样本准确率',official_counted_samples:'官方条件分母',binary_correct:'二分类正确数',conditional_accuracy:'官方条件准确率',full_binary_accuracy:'全样本二分类准确率',official_macro_f1:'官方 macro-F1（条件分母）',refused_count:'拒答数',invalid_count:'无效数',missing_count:'缺失数',valid:'有效回答',correct:'正确数',score_mean:'准确率',mae_valid_only:'MAE（仅有效）',mae:'MAE',rmse_valid_only:'RMSE（仅有效）',rmse:'RMSE',text_ed:'文本 ED',text_edit:'文本 ED',text_edit_distance:'文本 ED',reading_order_ed:'读序 ED',reading_order_edit:'读序 ED',reading_order_edit_distance:'读序 ED',order_ed:'读序 ED',teds:'TEDS',TEDS:'TEDS',cdm:'CDM',CDM:'CDM',overall:'Overall',Overall:'Overall',content_preservation:'内容保留率',logical_calls:'逻辑调用',actual_calls:'实际调用',api_cost_cny:'估计费用 ¥',logical_api_cost_cny:'逻辑分摊费用 ¥',logical_cost_cny:'逻辑分摊费用 ¥',valid_n:'有效页数',order_legal_n:'合法读序页数',order_changed_n:'读序改变页数',seconds:'耗时秒',logical_seconds:'逻辑耗时秒',input_tokens:'输入 token',output_tokens:'输出 token',logical_input_tokens:'逻辑输入 token',logical_output_tokens:'逻辑输出 token',mean_relative_error:'平均相对误差',rounded_exact_diagnostic:'取整准确率（诊断）'};
+  const evidenceStatus={novelty_overlap_requires_revision:'近邻重合 · 须修订假设',development_screen_stopped_no_incremental_gain:'开发筛选已停止 · 无增量收益',frozen_development_screen_running:'冻结开发对照中',superseded_unexecuted_proposal:'历史未执行提案',hypotheses_designed_not_admitted:'静态机制提案 · 待准入',source_review_and_falsifiable_design:'来源审核与机制提案',hypothesis_unimplemented_unmeasured:'假设 · 尚未实现或实测',unimplemented_hypothesis:'假设 · 尚未实现',nested_mechanism_probe_not_separate_active_branch:'附属机制诊断 · 非独立分支'};
+  let refreshBusy=false;
+
+  async function get(path) {
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    try {const r=await fetch(path,{cache:'no-cache',signal:controller.signal});if(!r.ok)throw new Error('本地证据读取失败');return await r.json();}finally{clearTimeout(timer);}
+  }
+  async function load() {
+    const d=await get('/api/progress');
+    window.progressDocumentLinks=d.document_links||{};
+    const portfolio=d.portfolio||{}, branches=portfolio.branches||[], profile=(d.projects||[]).find(p=>p.id==='FastResearch')||{}, methods={}, audits={}, sourceAudits={};
+    const keys=branches.map(b=>({id:b.id,key:b.publication_plan?.method_iteration?.source_key||(b.id==='FR-GUI'?'FastResearch.gui_method_iteration':b.id==='FR-DOC'?'FastResearch.document_method_iteration':null)})).filter(x=>x.key);
+    const auditKeys=[{id:'FR-DOC',key:'FastResearch.document_accepted_comparator_audit'},{id:'FR-GUI',key:'FastResearch.gui_accepted_comparator_audit'}].filter(x=>Object.values(d.document_links||{}).includes(x.key));
+    const sourceAuditKeys=['intent_contract_audit','route_scorer_audit','seer_execution_audit'].map(id=>({id,key:'FastResearch.'+id})).filter(x=>Object.values(d.document_links||{}).includes(x.key));
+    const results=await Promise.allSettled([get('/api/experiments/fastresearch/projects/'+project+'/plan'),...keys.map(x=>get('/api/progress/source?key='+encodeURIComponent(x.key))),...auditKeys.map(x=>get('/api/progress/source?key='+encodeURIComponent(x.key))),...sourceAuditKeys.map(x=>get('/api/progress/source?key='+encodeURIComponent(x.key)))]);
+    const warnings=[];
+    keys.forEach((x,i)=>{const r=results[i+1];if(r.status==='fulfilled'){try{methods[x.id]={...JSON.parse(r.value.content),source_key:x.key,source_modified_at:r.value.modified_at};}catch(_){warnings.push(x.id+' 方法资料格式待核');}}else warnings.push(x.id+' 方法资料暂不可读');});
+    auditKeys.forEach((x,i)=>{const r=results[1+keys.length+i];if(r.status==='fulfilled'){try{audits[x.id]={...JSON.parse(r.value.content),source_key:x.key};}catch(_){warnings.push(x.id+' 正式对照审核格式待核');}}else warnings.push(x.id+' 正式对照审核暂不可读');});
+    sourceAuditKeys.forEach((x,i)=>{const r=results[1+keys.length+auditKeys.length+i];if(r.status==='fulfilled'){try{sourceAudits[x.id]={...JSON.parse(r.value.content),source_key:x.key,source_modified_at:r.value.modified_at};}catch(_){warnings.push(x.id+' 来源审核格式待核');}}});
+    if(results[0].status!=='fulfilled')warnings.push('原生交付计划暂不可读，未推断其完成状态');
+    const runs=(d.experiments||[]).filter(x=>x.project==='FastResearch').sort((a,b)=>Number(b.live)-Number(a.live)||(Date.parse(b.updated_at)||0)-(Date.parse(a.updated_at)||0));
+    return {d,portfolio,branches,profile,methods,audits,sourceAudits,runs,native:results[0].status==='fulfilled'?results[0].value:null,warnings};
+  }
+  function runBranch(run,c) {
+    if(run.branch_id)return run.branch_id;
+    const bound=c.branches.find(b=>b.current_run===run.name||b.runtime?.name===run.name);
+    if(bound)return bound.id;
+    if(run.diagnostic_kind==='route_task2')return 'FR-ROUTE';
+    if(/intent|arcade|hvli/i.test(run.name))return 'FR-INTENT';
+    if(/(?:document|docparse|omnidoc|puredoc|mpdoc|_doc_)/i.test(run.name))return 'FR-DOC';
+    if(/gui|zoomclick/i.test(run.name))return 'FR-GUI';
+    if(/global_center/i.test(run.name))return 'FR-COUNT2';
+    if(/fsc|countingdino|point_unit/i.test(run.name))return 'FR-COUNT1';
+    return 'FR-HISTORY';
+  }
+  const activeBranches=c=>c.branches.filter(b=>!stopped(b)).sort((a,b)=>(a.priority??99)-(b.priority??99));
+  const missingGates=(b,c)=>(c.portfolio.gates||[]).filter(g=>!(b.passed_gates||[]).includes(g.id));
+  const methodCandidates=(b,c)=>c.methods[b.id]?.method_candidates||c.methods[b.id]?.candidates||[];
+  function runtime(run) {
+    if(!run)return '当前无模型任务';
+    const label=run.live?'本机进程运行中':run.stale_running?'进程已退出 · 源状态待核':states[run.status]||'记录状态见证据';
+    return label+(run.completed!=null?' · '+run.completed+' / '+(run.planned??'待核')+(run.diagnostic_kind==='route_task2'?' 个样本':/intent/.test(run.name||'')?' 张图像':' 组'):'');
+  }
+  function gateTrack(b,c) {
+    return `<ol class="tf-gates" aria-label="${e(b.id)}科学证据门">${(c.portfolio.gates||[]).map(g=>`<li class="${(b.passed_gates||[]).includes(g.id)?'tf-gate-pass':''}"><span>${(b.passed_gates||[]).includes(g.id)?'✓':'○'}</span>${e(g.name)}</li>`).join('')}</ol>`;
+  }
+  function stats(c) {
+    const observed=c.portfolio.observed_runtime||{},budget=c.d.budget||{};
+    return `<div class="tf-metrics">${[[observed.live_jobs??c.runs.filter(r=>r.live).length,'实际模型任务','本机模型进程与落盘核查；CPU评分另列'],[activeBranches(c).length,'推进中的候选','候选数不等于运行任务'],[observed.independent_passes??c.branches.filter(b=>(b.passed_gates||[]).includes('replication')).length,'通过独立复验','开发提分与独立证据分别判定'],[number(budget.conservative_total_cny)+' / '+number(budget.cap_cny),'预算保守累计 ¥','未知预留 ¥'+number(budget.unresolved_reserved_cny)+'，不视为已结算']].map(([n,title,note],i)=>`<div class="tf-metric ${i===2?'tf-metric-warn':''}"><span>${e(title)}</span><strong data-tf-stat="${i}">${e(n)}</strong><small>${e(note)}</small></div>`).join('')}</div>`;
+  }
+  function methodFlow(b,m) {
+    return `<figure class="tf-mechanism" aria-label="${e(m.name||m.id||b.name)}候选机制图"><figcaption>拟议机制 · 有效性待对照检验</figcaption><div class="tf-flow"><div><small>共同起点</small><strong>同模型、同输入、同总预算</strong><p>${e(b.baseline?.method||b.benchmark)}</p></div><span aria-hidden="true">→</span><div><small>待检验干预</small><strong>${e(m.name||m.id)}</strong><p>${e(m.mechanism||m.design||m.hypothesis)}</p></div><span aria-hidden="true">→</span><div><small>证据读出</small><strong>完整开发 → 独立复验</strong><p>${e(m.primary_metrics||m.main_evaluation_required||m.minimum_discriminating_experiment?.primary||'主指标、内容/覆盖保护指标与全部角色成本同时报告。')}</p></div></div></figure>`;
+  }
+  function branchCard(b,c,details=false) {
+    const method=c.methods[b.id], candidates=methodCandidates(b,c), plan=b.publication_plan||{};
+    const observed=c.runs.find(r=>r.name===b.current_run)||c.runs.find(r=>runBranch(r,c)===b.id&&r.live);
+    return `<article class="tf-branch" data-tf-branch="${e(b.id)}"><div class="section-head"><div><small>${e(b.id)}</small><h3>${e(b.name)}</h3></div>${tag(stopped(b)?'已停止 · 不排队':b.work_state||states[b.stage]||'待核',stopped(b)?'amber':'blue')}</div><p class="tf-runtime">${e(runtime(observed))}</p>${gateTrack(b,c)}<p><b>研究问题：</b>${e(b.research_question||b.name)}</p><p><b>当前证据：</b>${e(b.evidence_summary)}</p><dl class="tf-facts"><div><dt>已有基线</dt><dd>${e(b.baseline?.method||'历史开发诊断')}</dd></div><div><dt>论文原模型</dt><dd>${e(b.baseline?.paper_model||'见历史协议')}</dd></div><div><dt>实际执行</dt><dd>${e(b.baseline?.execution_model||b.model||'未运行')}</dd></div></dl>${b.baseline?.gap?`<p class="tf-boundary">${e(b.baseline.gap)}</p>`:''}<p><b>下一判别：</b>${e(b.next_action)}</p>${details&&candidates.length?candidates.map(m=>`<div class="tf-method" data-tf-method="${e(m.id)}"><div class="section-head"><h3>${e(m.name||m.id)}</h3>${tag(evidenceStatus[m.status||m.state]||'候选机制 · 待验证','amber')}</div><p><b>可证伪假设：</b>${e(m.hypothesis||m.design)}</p>${methodFlow(b,m)}${m.distinction_to_nearest||m.novelty_risk?`<p><b>与近邻的区别及风险：</b>${e(m.distinction_to_nearest||m.novelty_risk)}</p>`:''}<details data-tf-details="method-${e(m.id)}"><summary>强对照、首轮判别与停止条件</summary>${['same_information_controls','main_controls','causal_ablations','falsification','stop_conditions'].filter(k=>m[k]).map(k=>`<h4>${{same_information_controls:'同信息强对照',main_controls:'主要对照',causal_ablations:'机制干预',falsification:'否证条件',stop_conditions:'停止条件'}[k]}</h4><ul>${m[k].map(s=>`<li>${e(s)}</li>`).join('')}</ul>`).join('')}${m.minimum_discriminating_experiment||m.minimal_distinguishing_experiment?`<h4>最低成本判别实验</h4><p>${e(text(m.minimum_discriminating_experiment||m.minimal_distinguishing_experiment))}</p>`:''}${m.stop_rule?`<p><b>停止规则：</b>${e(m.stop_rule)}</p>`:''}</details></div>`).join(''):''}${method?`<small class="tf-muted">方法资料复核 ${e(date(method.reviewed_at))} · ${e(evidenceStatus[method.status]||'本轮方法记录，非后台运行')}</small>`:''}<div class="actions">${!details?`<a class="button button-small" href="${link({view:'method',branch:b.id})}">配置与方法 →</a>`:''}<a class="button button-small" href="${link({view:'results',branch:b.id})}">此分支完整结果 →</a><a href="#/program?branch=${encodeURIComponent(b.id)}">投稿路线 →</a>${source(method?.source_key,'方法原始记录')}</div>${plan.primary?`<p class="tf-muted">条件性主目标 ${e(plan.primary.abbreviation||plan.primary.name)} ${e(plan.primary.year||'')}；${plan.status==='paused'?'暂停路线，不排队':'科学门与交付核验完成后才讨论投稿'}。</p>`:''}</article>`;
+  }
+  function routeCandidate(c) {
+    const candidate=c.d.route_candidate;if(!candidate)return '';
+    const run=c.runs.find(r=>r.name===candidate.current_run),prep=candidate.preparation,accepted=candidate.preparation_acceptance,audit=candidate.visual_input_audit;
+    return panel('Route Task2 · CPU准入候选',`<article data-tf-route-candidate><div class="section-head"><h3>NeSy-Route · 作者四示例 API 基准适配</h3>${tag(run?'已有执行记录':'数据准备 · 未启动模型','amber')}</div><p>${e(run?runtime(run):'元数据已盲选 '+text(candidate.selected_samples)+' 个开发候选；图像与评分输入仍须完成实际准备。')}</p><p>${e(candidate.scope)}</p><p class="tf-boundary">单独候选，不增加正式分支数；原 qwen3-vl-plus，每题一次、32 题最多 32 次逻辑调用。不是新方法，也不是正式方法对比。模型启动由根代理单独准入。</p>${accepted?.status==='passed'?`<p class="tf-scope">数据验收已完成：${e(accepted.official_original_source_images)} 原图 / ${e(accepted.payload_images)} API输入，TIFF→无损PNG无resize、原像素一致；该验收模型调用 ${e(accepted.model_calls)}，不是模型成绩。${source('FastResearch.route_preparation_acceptance','数据验收汇总')}</p>`:''}${audit?`<div class="tf-boundary" data-tf-route-visual-audit><b>输入审核安全聚合 · 非错误归因</b><p>${e(audit.summary)}</p><p>${e(audit.mechanism_boundary)}</p>${source('FastResearch.route_visual_input_summary','输入审核安全聚合')}</div>`:''}${prep?`<div class="tf-scope" data-tf-route-preparation><b>数据准备实际回执 · ${e(date(prep.updated_at))}</b><p>源状态 ${e(({running:'数据准备进行中',completed:'数据准备回执已完成',held:'数据准备暂停',failed:'数据准备失败'})[prep.status]||prep.status)}；已保存 ${e(prep.selected_images_saved??'待核')} / ${e(candidate.selected_samples??32)} 张选中图像，传输 ${e(number((prep.downloaded_body_bytes??0)/1024**2))} MiB；模型调用 ${e(prep.paid_model_calls??'待核')}。准备进程与模型进程分列，保存数量不自动代表完整准入。</p></div>`:''}<p>批准图像传输上限 ${candidate.image_transfer_cap_bytes?e(number(candidate.image_transfer_cap_bytes/1024**2))+' MiB':'待核'}；实际图像就绪数量以准备回执核实，批准额度不代表已完成下载。</p><div class="actions">${run?`<a class="button" href="${link({view:'results',run:run.name})}">查看实际进度与完整读出 →</a>`:''}${source(c.sourceAudits.route_scorer_audit?.source_key,'Task2 评分与信息权限审核')}${Object.values(c.d.document_links||{}).includes('FastResearch.route_data_preparation_allocation')?source('FastResearch.route_data_preparation_allocation','数据准备额度与边界'):''}</div></article>`);
+  }
+  function overview(c) {
+    const active=activeBranches(c), history=c.branches.filter(stopped), latest=c.runs.find(r=>active.some(b=>b.id===runBranch(r,c)));
+    return stats(c)+panel('研究问题与当前证据',`<p class="tf-lead">${e(c.portfolio.objective||c.profile.brief?.claim||'冻结权重下检验视觉机制，在相同信息和总预算下建立可复验的增量。')}</p><div class="tf-finding"><strong>当前决策</strong><p>${e(c.portfolio.selection_summary||c.profile.brief?.current)}</p></div><div class="tf-scope"><strong>正式方法对比与最新预印本探索政策</strong><p>${e(c.portfolio.baseline_policy)}</p><div class="actions">${[['FastResearch.document_accepted_comparator_audit','文档正式录用对照审核'],['FastResearch.gui_accepted_comparator_audit','GUI正式录用对照审核'],['FastResearch.document_grouping_audit','文档独立分组审核']].filter(([key])=>Object.values(c.d.document_links||{}).includes(key)).map(([key,title])=>source(key,title)).join('')}</div></div><div class="tf-evidence-axis">${Object.entries(c.profile.axis_states||{}).map(([title,state])=>`<div class="${state==='passed'?'tf-axis-pass':''}"><b>${e(title)}</b><span>${e(states[state]||'未核实')}</span></div>`).join('')}</div>`)
+      +routeCandidate(c)
+      +panel('推进中的分支',`<div class="tf-branch-grid">${active.map(b=>branchCard(b,c)).join('')}</div>`)
+      +(latest?panel('最近实验 · 开发证据',runCard(latest,c,false)+`<div class="actions"><a class="button" href="${link({view:'results',run:latest.name})}">查看全部对照与区间 →</a></div>`):panel('最近实验','<p>尚无可读的模型运行记录；方法提案不视为已启动。</p>'))
+      +`<details class="panel tf-history" data-tf-details="branch-history"><summary>停止与历史分支 · ${history.length} 条</summary><p>保留负结果和失败门；新协议准入前不恢复旧任务。</p><div class="tf-branch-grid">${history.map(b=>branchCard(b,c)).join('')}</div></details>`;
+  }
+  function intentMethod(c) {
+    const audit=c.sourceAudits.intent_contract_audit, candidate=(c.portfolio.baseline_candidates||[]).find(m=>/ARCADE|H-VLI/i.test(m.method||''));
+    const publication=candidate?.publication;
+    return `<section class="tf-comparator-audit" data-tf-comparator-audit="FR-INTENT"><h3>ARCADE · Findings 正式来源与代码契约</h3><div class="table-wrap"><table class="research-table tf-result-table"><caption>正式录用身份、开发基线与代码—论文一致性分别记录</caption><thead><tr><th>方法 / track</th><th>原模型与当前执行</th><th>代码契约与边界</th></tr></thead><tbody><tr data-tf-accepted-method><th>ARCADE / H-VLI<br>ACL 2026 Findings${candidate?.paper_url?`<br><a href="${e(candidate.paper_url)}" target="_blank" rel="noopener noreferrer">正式来源 ↗</a>`:''}${publication?`<small>${e(text(publication))}</small>`:''}</th><td>原模型 qwen3-vl-plus<br>direct 筛选、已录用 ARCADE 原代码、内部抽样强控制与论文历史受控变体分别报告，启动状态以真实 run 为准。<br>H-VLI 官方 train / H-VLI_images 子域 32 张不同图像开发；路径/哈希去重不证明场景独立，非原论文全量复现。</td><td>${audit?'原代码三轮中辩方不接收当前控方论证，后轮不继承前轮响应；最终裁判汇总六条论证。':'代码契约审核暂不可读。'}<br>该行为与论文多轮辩论叙述的一致性须单独审核；添加论证交换属于变体。官方 scorer 排除拒答并跳过缺失，必须同时报告全样本指标。<br>合成 CPU 审核：真实数据 0、模型 0，不作为方法收益。</td></tr></tbody></table></div><div class="actions">${source(audit?.source_key,'ARCADE 合成代码契约审核')}${source(c.sourceAudits.route_scorer_audit?.source_key,'NeSy-Route 评分器来源审核')}${source(c.sourceAudits.seer_execution_audit?.source_key,'SEER 执行资格审核')}</div></section>`;
+  }
+  function comparatorTables(b,c) {
+    if(b.id==='FR-INTENT')return intentMethod(c);
+    const audit=c.audits[b.id];if(!audit)return '<p class="tf-muted">正式对照审核尚无可读来源；不推断录用身份或执行准入。</p>';
+    const accepted=audit.accepted_methods||[],exploration=audit.exploration_references||[];
+    const modelText=value=>value&&typeof value==='object'&&!Array.isArray(value)?Object.entries(value).map(([role,models])=>role+'：'+text(models)).join('；'):text(value);
+    const eligibility=m=>{const verified=m.bailian?.original_configuration_verified??m.full_original_configuration_verified??m.bailian_original_configuration_verified;return (verified===false?'原配置未核实 · 执行未准入。':verified===true?'原模型接口已核；完整任务与资源准入另核。':'完整原配置与执行准入待核。')+' '+text(m.decision||m.execution_eligibility||'见审核原文');};
+    const admitted=audit.decision?.current_full_original_bailian_execution_admitted_count??audit.decision?.original_accepted_method_executable_through_verified_current_bailian_contract;
+    return `<section class="tf-comparator-audit" data-tf-comparator-audit="${e(b.id)}"><h3>正式已录用方法与最新 arXiv 探索</h3><p>官方发表身份、同任务条件与完整执行准入分别审核。正式方法 ${accepted.length} 项；${admitted!=null?'已核完整原配置执行准入 '+e(admitted)+' 项':'完整执行准入数量尚未报告'}。表中身份不代表本项目已复现。</p><div class="table-wrap"><table class="research-table tf-result-table"><caption>正式已录用方法 · 官方出处与原模型</caption><thead><tr><th>方法</th><th>官方 venue / track</th><th>原模型与角色</th><th>执行资格与缺口</th></tr></thead><tbody>${accepted.map(m=>{const publication=m.publication||{};return `<tr data-tf-accepted-method><th>${e(m.name||m.id||m.title)}${m.title&&m.title!==m.id?'<small> '+e(m.title)+'</small>':''}</th><td>${e(publication.venue||'待核')} ${e(publication.year||'')}<br>${e(publication.track||'track待核')}<br>${publication.accepted_verified===false?'官方身份待核':publication.accepted_verified===true?'官方身份已核':'身份以审核原文为准'}${publication.official_url?`<br><a href="${e(publication.official_url)}" target="_blank" rel="noopener noreferrer">官方出版证据 ↗</a>`:''}</td><td>${e(modelText(m.original_models||m.original_model))}</td><td>${m.training_free===false?'原方法含训练；仅作已录用解析器参考。 ':''}${e(eligibility(m))}</td></tr>`;}).join('')||'<tr><td colspan="4">暂无已核实的正式方法条目。</td></tr>'}</tbody></table></div><div class="table-wrap"><table class="research-table tf-result-table"><caption>最新 arXiv 探索 · 不列为正式已录用对照</caption><thead><tr><th>方法与版本</th><th>原模型</th><th>执行资格与研究判断</th></tr></thead><tbody>${exploration.map(m=>`<tr data-tf-exploration-method><th>${e(m.name||m.id||m.title)}<br>${e(m.version||'版本待核')}${m.paper?`<br><a href="${e(m.paper)}" target="_blank" rel="noopener noreferrer">预印本原文 ↗</a>`:''}</th><td>${e(modelText(m.original_models||m.original_model))}</td><td>${e(eligibility(m))}</td></tr>`).join('')||'<tr><td colspan="3">暂无已审核探索条目。</td></tr>'}</tbody></table></div>${source(audit.source_key,'正式与探索方法完整审核')}</section>`;
+  }
+  function methods(c,p) {
+    const branch=p.get('branch'), rows=branch?c.branches.filter(b=>b.id===branch):activeBranches(c);
+    return panel('分支与具体方法',`<p>方法图表示待检验的因果机制；静态提案、源码核验和真实模型结果分别记录。</p>${branchFilter(c,p)}<div class="tf-method-catalog">${rows.map(b=>branchCard(b,c,true)+comparatorTables(b,c)).join('')||'<p>没有对应分支。</p>'}</div>`);
+  }
+  function branchFilter(c,p) {
+    const values=Object.fromEntries(p);
+    return `<nav class="tags tf-branch-filter" aria-label="研究分支"><a class="tag ${!p.get('branch')?'blue':''}" href="${link({...values,branch:'',run:''})}">全部分支</a>${c.branches.map(b=>`<a class="tag ${p.get('branch')===b.id?'blue':''}" href="${link({...values,branch:b.id,run:''})}">${e(b.id)}${stopped(b)?' · 停止':''}</a>`).join('')}</nav>`;
+  }
+  function scalarMetrics(score) {
+    if(!score||typeof score!=='object')return {};
+    const found={};
+    for(const [key,value] of Object.entries(score)){
+      if(typeof value==='number'&&Number.isFinite(value))found[key]=value;
+      else if(value===null&&metricNames[key])found[key]=null;
+      else if(['metrics','scores'].includes(key)&&value&&typeof value==='object')Object.assign(found,scalarMetrics(value));
+    }
+    return found;
+  }
+  function routeResults(run) {
+    const summary=run.summary;if(!summary)return '<p class="tf-muted">完整32样本评分尚未落盘；不填部分成绩。</p>';
+    const labels={N:'固定样本分母',submitted:'提交样本',PR_eligible:'PR 可评分样本',truncated:'截断数',parse_failure:'解析失败数',schema_failure:'结构无效数',refusal:'拒答数',present_class_RM:'存在类别 RM',present_class_elements:'存在类别元素分母',absence_RM:'缺席类别 RM',absence_elements:'缺席类别元素分母',RM:'区域匹配 RM',TM:'通行匹配 TM',PR:'优先顺序 PR',region_match:'区域匹配',traverse_match:'通行匹配',cost_rank:'成本排序',all_vector_exact:'三向量全对',accuracy:'准确率',mean:'均值',count:'数量',n:'分母',n_valid:'有效分母',denominator:'分母',eligible:'符合条件数',valid:'有效数',valid_predictions:'有效预测',selected_samples:'冻结样本',completed_samples:'完成样本',full_region_match:'全样本区域匹配',full_traverse_match:'全样本通行匹配',present_class_region_accuracy:'存在类别区域准确率',missing_count:'缺失数',invalid_count:'无效数',refused_count:'拒答数',truncated_count:'截断数',successful_calls:'成功响应',attempts:'物理请求尝试',cost_cny:'费用 ¥',conservative_cost_cny:'保守费用 ¥',api_cost_cny:'费用 ¥',input_tokens:'输入 token',output_tokens:'输出 token',actual_calls:'汇总调用数'};
+    const rows=(value,path=[])=>Object.entries(value||{}).flatMap(([key,item])=>item&&typeof item==='object'&&!Array.isArray(item)?rows(item,[...path,key]):typeof item==='number'||item===null||typeof item==='boolean'?[[[...path,key].map(k=>labels[k]||k).join(' / '),item]]:[]);
+    const blocks=[['官方条件分母指标',summary.official_metrics,'沿用官方 RM/TM/PR；有效行与 PR 可评分条件各有分母。'],['固定全样本指标',summary.full_denominator_strict,'失败、无效和缺失保留在冻结样本分母；不把未定义 PR 补零。'],['官方实际分母',summary.official_denominators,'提交、有效与 PR 可评分分母分别核对。'],['覆盖与失败',summary.coverage_counts,'固定面板的覆盖数与各类失败同时披露。'],['辅助诊断',summary.diagnostics,'诊断与官方主指标分列，不作为新方法收益。']];
+    blocks.push(['实际资源',{actual_calls:summary.actual_calls,successful_calls:summary.successful_calls,input_tokens:summary.input_tokens,output_tokens:summary.output_tokens,cost_cny:summary.cost_cny,conservative_cost_cny:summary.conservative_cost_cny},'物理尝试、成功响应、实际 token 与费用分别报告；保守费用含未知预留。']);
+    return blocks.filter(([,value])=>value&&typeof value==='object').map(([title,value,note])=>`<div class="table-wrap"><table class="research-table tf-result-table" data-tf-route-metrics><caption>${e(title)} · ${e(note)}</caption><thead><tr><th>指标 / 原始层级</th><th>值</th></tr></thead><tbody>${rows(value).map(([key,item])=>`<tr><th>${e(key)}</th><td>${item===null?'—':typeof item==='boolean'?(item?'是':'否'):number(item)}</td></tr>`).join('')}</tbody></table></div>`).join('')||'<p class="tf-muted">完整汇总未提供该版本指标字段，保留未知并查看原始汇总。</p>';
+  }
+  function resultTable(run) {
+    if(run.diagnostic_kind==='route_task2')return routeResults(run);
+    const entries=run.arms?.length?run.arms:Object.entries(run.summary?.arms||{}).map(([arm,score])=>({arm,score,predictions:score?.n}));
+    if(!entries.length)return '<p class="tf-muted">尚无完整对照指标；未评分、部分输出或工程记录不填写科学成绩。</p>';
+    const primary=['n','full_accuracy','conditional_accuracy','full_binary_accuracy','official_macro_f1','refused_count','invalid_count','missing_count','valid','valid_n','correct','score_mean','mae_valid_only','mae','reading_order_ed','text_ed','teds','TEDS','cdm','CDM','overall','Overall'];
+    const showValidPages=(run.diagnostic_kind==='document_order_screen'||run.summary?.diagnostic_kind==='document_order_screen')&&entries.some(a=>Object.hasOwn(scalarMetrics(a.score),'valid_n'));
+    const keys=[...new Set(entries.flatMap(a=>Object.keys(scalarMetrics(a.score))))].filter(key=>!(key==='valid'&&showValidPages)).sort((a,b)=>(primary.includes(a)?primary.indexOf(a):99)-(primary.includes(b)?primary.indexOf(b):99));
+    return `<div class="table-wrap"><table class="research-table tf-result-table"><caption>本 run 的全部实验臂；不同 run 的模型、数据与总预算不自动可比。</caption><thead><tr><th scope="col">实验臂</th><th scope="col">预测条目</th>${keys.map(k=>`<th scope="col">${e(metricNames[k]||k)}</th>`).join('')}</tr></thead><tbody>${entries.map(a=>{const score=scalarMetrics(a.score);return `<tr data-tf-arm="${e(a.arm)}"><th scope="row">${e(a.label||arms[a.arm]||a.arm)}</th><td>${e(a.predictions??'未记录')}</td>${keys.map(k=>`<td>${score[k]!=null?(['score_mean','full_accuracy','conditional_accuracy','full_binary_accuracy','official_macro_f1'].includes(k)?(score[k]*100).toFixed(2)+'%':number(score[k])):'—'}</td>`).join('')}</tr>`;}).join('')}</tbody></table></div>`;
+  }
+  function historyComparisons(run) {
+    const rows=run.history_comparisons||[];if(!rows.length)return '';
+    return `<div class="tf-boundary"><b>完整开发配对 · 信息流与温度共同变化</b><p>信息流与温度共同变化；配对差异不能单独归因于 history，也不代表独立验证或新方法贡献。</p></div><div class="table-wrap"><table class="research-table tf-result-table"><caption>同一已登记开发面板；修正/退化相对 control，不作独立确认。</caption><thead><tr><th>history 对照</th><th>修正</th><th>退化</th><th>净正确变化</th><th>真实费用（history / 对照）</th></tr></thead><tbody>${rows.map(r=>`<tr><th>${e(r.control)}</th><td>${e(r.paired?.candidate_only_correct)}</td><td>${e(r.paired?.baseline_only_correct)}</td><td>${e(r.paired?.net_correct)}</td><td>¥${number(r.costs?.candidate_cny)} / ¥${number(r.costs?.baseline_cny)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  function pairedResults(summary) {
+    const rows=[];
+    const documentComparisons=summary?.decision?.comparisons||summary?.comparisons;
+    if(documentComparisons){
+      for(const [control,value] of Object.entries(documentComparisons))for(const [key,title] of [['order_improvement','读序 ED 改善（正值更好）'],['text_worsening','文本 ED 恶化（正值更差）']]){
+        const item=value?.[key];if(!item)continue;
+        rows.push(`<tr><td>读序修复 vs ${e(arms[control]||control)} · ${title}</td><td>${number(item.mean)}</td><td>${item.ci95?e(item.ci95.map(number).join(' 至 ')):'—'}</td><td>${e(item.n_pages??'未记录')} 页 / ${e(item.n_filename_proxy_groups??'未记录')} 文件名代理组</td><td>开发探索区间；文件名分组不证明来源独立</td></tr>`);
+      }
+    }
+    for(const [key,value] of Object.entries(summary||{}))if(key.startsWith('paired')&&value&&typeof value==='object'){
+      const items=value.delta!=null||value.cluster_bootstrap_95ci?[['',value]]:Object.entries(value);
+      for(const [arm,row] of items)if(row&&typeof row==='object'&&(row.delta!=null||row.cluster_bootstrap_95ci||row.mae_reduction_valid_paired)){
+        const secondary=row.mae_reduction_valid_paired;
+        rows.push(`<tr><td>${e(key)}${arm?' / '+e(arms[arm]||arm):''}</td><td>${number(row.delta)}</td><td>${row.cluster_bootstrap_95ci?e(row.cluster_bootstrap_95ci.map(number).join(' 至 ')):'—'}</td><td>${e(row.groups??row.n??'未记录')}</td><td>${secondary?'有效配对 MAE 降低 '+number(secondary.mean)+'；区间 '+text(secondary.cluster_bootstrap_95ci):'—'}</td></tr>`);
+      }
+    }
+    return rows.length?`<div class="table-wrap"><table class="research-table tf-result-table"><caption>原始汇总中的配对效应与 95% 区间；正负方向沿用各协议定义。</caption><thead><tr><th>对照口径</th><th>差值</th><th>95% 区间</th><th>组与分母</th><th>其他保护指标</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`:'';
+  }
+  function pipelineState(run) {
+    if(['intent_headroom','intent_arcade','intent_control','intent_history','route_task2'].includes(run.diagnostic_kind))return `<div class="tf-scope tf-pipeline-state"><p><b>真实开发执行：</b>${e(runtime(run))}；${run.summary?'冻结评分已落盘':'完整评分未落盘，不填部分准确率'}。最多 ${e(run.max_logical_calls)} 次逻辑调用；实际成功响应 ${e(run.summary?.successful_calls??run.requests?.successful??run.actual_calls??'待核')}。来源源码审核单列，不计为模型实测。</p></div>`;
+    if(!run.coordinator&&!run.scoring&&!run.generation_state)return '';
+    const phases={model_inference:'模型生成',official_cpu_scoring:'官方CPU评分',completed_scored:'完整官方评分已落盘'};
+    const scoring=run.scoring;
+    return `<div class="tf-scope tf-pipeline-state"><p><b>模型与评分分列：</b>模型进程${run.live?'运行中':'当前未运行'}；原始模型记录 ${e(run.generation_state==='completed_predictions'?'模型预测已完成（评分阶段见下）':states[run.generation_state]||run.generation_state||'未记录')}。</p>${run.coordinator?`<p><b>接续阶段：</b>${e(phases[run.coordinator.state]||run.coordinator.state)} · ${e(date(run.coordinator.updated_at))}</p>`:''}${scoring?`<p><b>官方CPU评分：</b>${scoring.live?'进程运行中':states[scoring.state]||'见源记录'}${!scoring.live&&['scoring','preparing_official_scoring'].includes(scoring.state)?' · 进程已退出，待核查':''}${Array.isArray(scoring.completed_arms)?' · 已完成 '+scoring.completed_arms.length+' / '+(run.arms?.length||4)+' 臂':''}${scoring.current_arm?' · 当前 '+e(arms[scoring.current_arm]||scoring.current_arm):''}。</p>`:'<p>CPU评分尚无状态产物；不从协调进程推断模型活跃。</p>'}<div class="actions">${source(run.coordinator?.source_key,'接续阶段证据')}${source(scoring?.source_key,'CPU评分状态证据')}</div></div>`;
+  }
+  function documentDenominators(summary) {
+    const rows=Object.entries(summary.arms||{}).map(([arm,data])=>{const d=data.metric_denominators||{};return {arm,note:'读序 '+text(d.reading_order?.Edit_dist?.ALL)+' 页 / 文本 '+text(d.text_block?.Edit_dist?.ALL)+' 页 / 表格 TEDS '+text(d.table?.TEDS?.ALL)+' 页 / 公式 CDM '+text(d.display_formula?.CDM?.ALL)+' 页'};});
+    if(!rows.length)return '各指标实际评分分母等待官方汇总；样本分母表示输入页数。';
+    return '样本分母表示输入页数。实际评分分母：'+(new Set(rows.map(row=>row.note)).size===1?rows[0].note:rows.map(row=>(arms[row.arm]||row.arm)+'：'+row.note).join('；'))+'。';
+  }
+  function intentLimits(values) {
+    return (Array.isArray(values)?values:[values]).map(value=>{
+      const s=text(value);
+      if(/distinct image paths|semantic independence/i.test(s))return '32 张图像路径/哈希不同，不证明来源或语义场景独立。';
+      if(/weight revision unknown/i.test(s))return '使用原方法模型别名 qwen3-vl-plus；供应商权重 revision 未知。';
+      if(/2048.*nonthinking|unspecified defaults/i.test(s))return '显式非思考、每调用 2048 输出上限，与作者未指定的供应商默认值不同。';
+      if(/implicit debate omits|argument exchange/i.test(s))return '原代码未进行论文叙述的论证交换；保留原代码路径，任何修订版须独立标记。';
+      return s;
+    }).join('；');
+  }
+  function runCard(run,c,full=true) {
+    const summary=run.summary||{},audit=run.mechanism_audit,branch=c.branches.find(b=>b.id===runBranch(run,c)),requests=run.requests||{};
+    const intent=['intent_headroom','intent_arcade','intent_control','intent_history'].includes(run.diagnostic_kind);
+    const scopes=[intent?'官方 train 来源开发面板；非独立验证或确认，不构成方法增益':summary.scope,run.protocol].filter(Boolean);
+    const gate=summary.expansion_gate_passed??summary.gate_passed??run.screen_gate_passed??summary.expansion_gate_authorized??summary.numerical_expansion_gate;
+    const intentNext={root_controlled_history_paired_analysis_required:'等待论文历史信息流受控变体的配对及真实成本核查；非新方法',accepted_arcade_comparator_same_panel:'按同一冻结开发面板比较已录用 ARCADE 原代码路径',paired_comparator_analysis_required:'等待同面板强对照配对分析',root_paired_analysis_required:'等待根代理核查同面板配对效果与实际成本'};
+    const decision=intent&&summary.gate?(run.diagnostic_kind==='intent_headroom'?(summary.gate.saturated===true?'Direct 已触及冻结饱和门，停止此候选辩论扩展。':'Direct 尚未触及饱和门；不代表方法已产生增益。'):'固定开发对照已完成；不代表科学扩展门通过。')+' '+text(intentNext[String(summary.gate.next_action).toLowerCase()]||summary.gate.next_action):summary.decision&&typeof summary.decision==='object'?summary.decision:summary.decision||summary.disposition||run.finding;
+    const document=run.diagnostic_kind==='document_order_screen'||summary.diagnostic_kind==='document_order_screen';
+    const decisionText=audit?.finding|| (decision&&typeof decision==='object'?(decision.screen_gate_passed===true?'冻结开发门通过；仍须固定唯一配置后做未曝光开发复验，不开启确认。':decision.screen_gate_passed===false?'冻结开发门未通过，停止此版本；保留全部失败，不继续扫提示、总token上限或读序规则。':text(decision)):text(decision));
+    const documentGates=decision&&typeof decision==='object'?decision.gates:null;
+    const gateNames={complete32x4:'32页×4臂完整',at_least30_valid_each_arm:'各臂至少30有效页',at_least30_common_scored_order_pages:'至少30共同读序评分页',same_official_order_page_denominator:'官方读序评分分母一致',at_least30_common_scored_text_pages:'至少30共同文本评分页',same_official_text_page_denominator:'官方文本评分分母一致',direct_order_error_pages_at_least8:'首答至少8页读序错误',locked_order_improvement_at_least_0_03:'读序ED改善至少0.03',text_worsening_at_most_0_005:'文本ED恶化不超过0.005',overall_drop_at_most1:'Overall下降不超过1点',official_all_metrics_finite:'官方全部指标有效',scorer_no_cdm_or_teds_exceptions:'CDM/TEDS无评分异常'};
+    return `<article class="tf-run" data-tf-run="${e(run.name)}"><div class="section-head"><div><small>${e(branch?.name||(run.diagnostic_kind==='route_task2'?'Route · CPU准入候选':'历史实验'))} · ${e(date(run.updated_at))}</small><h3>${e(run.title||summary.title||run.name)}</h3></div>${tag(run.live?'进程运行中':run.stale_running?'进程退出待核':states[run.status]||'状态见证据',run.live?'green':'amber')}</div><p>${e(runtime(run))}</p>${pipelineState(run)}<p class="tf-scope">${scopes.map(e).join('；')||'评测范围待核，不能视为独立确认。'}</p>${document?`<p class="tf-muted">ED 越低越好；TEDS、CDM、Overall 为百分制，越高越好。读序不进入 Overall。缺失指标显示 —，不补零；${e(documentDenominators(summary))}</p>`:''}${resultTable(run)}${historyComparisons(run)}${full?pairedResults(summary):''}${decision?`<div class="tf-finding ${gate===false||audit?.adjudication==='stop_v2_no_incremental_effect'?'tf-boundary':''}"><strong>${audit?'独立机制仲裁 · 优先当前研究决策':gate===false?'未通过扩展门 · 保留负证据':'本轮读出与边界'}</strong><p>${e(decisionText)}</p></div>${documentGates?`<details data-tf-details="gates-${e(run.name)}" ${gate===false?'open':''}><summary>${audit?'原冻结开发门逐项核查（保留，不代表扩批授权）':'冻结开发门逐项核查'}</summary><ul class="tf-gates">${Object.entries(documentGates).map(([key,passed])=>`<li class="${passed?'tf-gate-pass':''}"><span>${passed?'✓':'○'}</span>${e(gateNames[key]||key)}</li>`).join('')}</ul></details>`:''}`:''}${audit?`<div class="tf-boundary" data-tf-mechanism-audit><strong>干预效应与对照核验</strong><ul>${(audit.ui_required_conclusions||[]).slice(1).map(value=>`<li>${e(value)}</li>`).join('')}</ul>${source(audit.source_key,'独立机制审计证据')}</div>`:''}${summary.limits||summary.limitations?`<p class="tf-boundary"><b>可比范围：</b>${e(intent?intentLimits(summary.limits||summary.limitations):text(summary.limits||summary.limitations))}</p>`:''}<div class="tf-run-meta"><span>尝试 ${e(requests.attempts??summary.attempts??'未记录')} · 成功 ${e(requests.successful??summary.successful_calls??'未记录')} · 未结算 ${e(requests.unsettled??'未记录')}</span><span>${['intent_control','intent_history','route_task2'].includes(run.diagnostic_kind)?'物理请求尝试':document?'成功响应调用':'原始汇总调用'} ${e(summary.actual_calls??run.actual_calls??'见原始证据')} · 费用 ¥${number(summary.api_cost_cny??run.api_cost_cny)}</span></div><p class="tf-muted">${summary.confirmation_evaluated===true?'该 run 标记已评确认，独立性与冻结证据仍需核查。':'此记录不作为已通过独立确认的证明。'} ${summary.publication_ready===true?'原始汇总标记就绪，最终以原生交付计划为准。':'尚未形成投稿就绪结论。'}</p><div class="actions">${source(run.source_key,'本轮结果证据')}${source('run.'+run.name+'.status','运行状态证据')}${source(run.protocol_source_key,'冻结适配协议')}</div>${full?`<details data-tf-details="run-${e(run.name)}"><summary>完整汇总字段（含失败与未验证标记）</summary><pre class="tf-json">${e(JSON.stringify(summary,null,2))}</pre></details>`:''}</article>`;
+  }
+  function results(c,p) {
+    const rows=c.runs.filter(r=>!p.get('branch')||runBranch(r,c)===p.get('branch')), wanted=p.get('run'), selected=rows.find(r=>r.name===wanted)||rows[0];
+    const pending=rows.filter(r=>r.live||!stopped(c.branches.find(b=>b.id===runBranch(r,c))||{})), history=rows.filter(r=>!pending.includes(r));
+    return panel('完整对照结果',`<p>按单个冻结协议报告完整分母、全部实验臂、失败、成本与配对区间；已有 Max 迁移诊断不作为原模型复现。</p>${branchFilter(c,p)}${rows.length?`<label class="tf-run-select">选择运行<select data-tf-run-select aria-label="选择真实运行">${rows.map(r=>`<option value="${e(r.name)}" ${r===selected?'selected':''}>${e(r.name)} · ${e(runtime(r))}</option>`).join('')}</select></label>${selected?runCard(selected,c):''}`:'<p>该分支尚无真实模型结果。静态方法提案和合成 scorer 验收不填入模型结果表。</p>'}${!wanted&&pending.length>1?`<details data-tf-details="other-active-runs"><summary>其他候选分支运行 · ${pending.filter(r=>r!==selected).length} 条</summary>${pending.filter(r=>r!==selected).map(r=>runCard(r,c)).join('')}</details>`:''}${!wanted&&history.some(r=>r!==selected)?`<details class="tf-history" data-tf-details="run-history"><summary>历史与停止运行 · ${history.filter(r=>r!==selected).length} 条</summary><p>历史 run 按各自协议保留，未筛掉退步或失败实验臂。</p>${history.filter(r=>r!==selected).map(r=>runCard(r,c)).join('')}</details>`:''}`);
+  }
+  function dataPage(c,p) {
+    const branch=p.get('branch'), rows=c.branches.filter(b=>!branch||b.id===branch);
+    return panel('数据、信息权限与评分协议',`<p>开发暴露、独立开发复验与保留确认分开维护；已查看答案的测试反馈属于开发，不能重新命名为未见确认。</p>${branchFilter(c,p)}${rows.map(b=>{const m=c.methods[b.id],contract=m?.freeze_contract;return `<article class="tf-data" data-tf-data="${e(b.id)}"><h3>${e(b.name)}</h3><dl class="tf-facts"><div><dt>任务与数据</dt><dd>${e(b.benchmark)}</dd></div><div><dt>当前模型</dt><dd>${e(b.model)}</dd></div><div><dt>执行状态</dt><dd>${e(b.compute_state||'见真实进程与落盘记录')}</dd></div><div><dt>准入与扩展</dt><dd>${e(b.promotion_rule||'历史版本保持停止')}</dd></div></dl>${contract?`<h4>冻结合同</h4><dl class="tf-facts">${[['模型',contract.model],['模型 revision',contract.model_revision],['数据 revision',contract.dataset_revision],['开发 manifest',contract.development_manifest_sha256],['独立开发 manifest',contract.independent_manifest_sha256],['确认 manifest',contract.confirmation_manifest_sha256],['划分规则',contract.split_rule],['搜索预算',contract.search_budget],['成本边界',contract.cost_rule]].map(([label,value])=>`<div><dt>${label}</dt><dd>${e(text(value))}</dd></div>`).join('')}</dl>`:''}${m?.verified_engineering?`<div class="tf-boundary"><strong>评分工程验收 · 与模型结果分开</strong><p>${e(m.verified_engineering.scope)}</p><p>${e(m.verified_engineering.metric_warning)}</p>${source('FastResearch.document_scorer_validation','文本 / 表格 / 读序验收')}${source('FastResearch.document_cdm_validation','公式 CDM 验收')}</div>`:''}${m?.cost_contract_before_any_call?`<details data-tf-details="cost-${e(b.id)}"><summary>全部角色与工具预算合同</summary><pre class="tf-json">${e(JSON.stringify(m.cost_contract_before_any_call,null,2))}</pre></details>`:''}<div class="actions">${source(m?.source_key,'方法与协议原文')}${b.id==='FR-DOC'?source('FastResearch.document_data_manifest','文档开发清单元数据')+source('FastResearch.document_execution_source_audit','文档执行来源审核'):b.id==='FR-GUI'?source('FastResearch.gui_execution_source_audit','GUI执行来源审核'):''}${source(b.id==='FR-DOC'?'FastResearch.baselines':b.id==='FR-GUI'?'FastResearch.gui_manifest':b.id.startsWith('FR-COUNT')?'FastResearch.fsc147_manifest':'FastResearch.results','数据或基线证据')}</div></article>`;}).join('')}`);
+  }
+  function activity(c) {
+    const events=[...c.runs.map(r=>({time:r.updated_at,kind:r.live?'实际运行':'运行记录',title:r.title||r.name,detail:runtime(r),key:r.source_key})),...Object.values(c.sourceAudits).map(a=>({time:a.reviewed_at||a.source_modified_at,kind:'来源审核 · 非模型实测',title:a.source_key.includes('intent_contract')?'ARCADE 代码与评分契约':a.source_key.includes('route_scorer')?'NeSy-Route 官方评分器审核':'SEER 执行资格审核',detail:a.headline||(a.information_flow?'合成 CPU 代码契约；真实数据 0、模型调用 0。未验证论文任务收益。':'源码/资料审核；不作为已复现实验。'),key:a.source_key})),...Object.entries(c.methods).map(([id,m])=>({time:m.reviewed_at,kind:'静态方法审阅',title:id+' · 方法迭代',detail:m.summary||m.decision||'本轮机制提案，尚未表示实际模型运行',key:m.source_key}))].sort((a,b)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0));
+    return panel('下一判别与接续决策',`<div class="tf-next-grid">${activeBranches(c).map((b,i)=>`<article><small>0${i+1} · ${e(b.id)}</small><h3>${e(b.name)}</h3><p>${e(b.next_action)}</p><a href="${link({view:'method',branch:b.id})}">方法与停止条件 →</a></article>`).join('')}</div><p class="tf-muted">${e(c.portfolio.execution_policy)}</p>`)+panel('动态日志 · 实际运行与审阅分列',`<p>时间取自各自产物与审阅记录；页面刷新不改研究复核时间，也不会启动实验。</p><ol class="tf-timeline">${events.map(t=>`<li><div>${tag(t.kind,t.kind==='实际运行'?'green':'')}<time>${e(date(t.time))}</time></div><div><h3>${e(t.title)}</h3><p>${e(t.detail)}</p>${source(t.key)}</div></li>`).join('')}</ol>`);
+  }
+  function paper(c) {
+    const native=c.native,plan=native?.submission_plan,work=plan?.work_items||[];
+    return panel('论文主张与科学缺口',`<p>论文需要机制、同预算强对照、独立复验、消融与确认共同支撑。页面完整、评分器运行或稿件生成不等于科学成立。</p><div class="tf-branch-grid">${activeBranches(c).map(b=>`<article class="tf-branch"><h3>${e(b.name)}</h3>${gateTrack(b,c)}<p><b>尚缺：</b>${missingGates(b,c).map(g=>e(g.name)).join('、')||'赛马科学门已满足，继续核交付证据'}</p><p>${e(b.publication_plan?.strategy||b.next_action)}</p><a href="#/program?branch=${encodeURIComponent(b.id)}">主目标、备选与内部检查点 →</a></article>`).join('')}</div>`)+panel('原生交付计划引用',plan?`<div class="section-head"><p>项目 r${e(native.revision)} · 计划 r${e(plan.plan_revision)}</p>${tag(native.publication_ready===true&&plan.publication_ready===true?'原生标记就绪 · 仍需提交核验':'原生交付尚未就绪','amber')}</div><p>原生内部目标 ${e(date(plan.internal_deadline_at))} · ${e(plan.deadline_note)}</p><div class="table-wrap"><table class="research-table tf-result-table"><thead><tr><th>交付项</th><th>原生状态</th><th>原内部日期</th><th>证据项数</th></tr></thead><tbody>${work.map(w=>`<tr><th>${e(w.title)}</th><td>${e(states[w.state]||w.state)}</td><td>${e(date(w.due_at))}</td><td>${e(w.evidence?.length??0)}</td></tr>`).join('')}</tbody></table></div><p class="tf-boundary">原生周计划是共享历史交付记录；其中已完成的历史基准工作不授予当前分支的近期基线准入或独立科学门。</p><div class="actions"><a class="button" href="${link({view:'plan'})}">进入原生研究计划 →</a>${source('FastResearch.project','项目主记录')}</div>`:'<p>原生交付计划暂不可读；未推断其状态。<a href="'+link({view:'plan'})+'">进入原生计划核查 →</a></p>');
+  }
+  async function render(params=new URLSearchParams()) {
+    let c;
+    try {c=await load();}catch(_){return `<div class="tf-dossier">${panel('研究证据暂不可读',`<p>本地进展接口读取失败，未推断任务运行或完成状态。</p><div class="actions"><a class="button" href="${link({view:'plan'})}">原生研究计划 →</a><button class="button" data-tf-refresh>重新读取本地证据</button></div>`)}</div>`;}
+    if (!c.branches.length && !c.runs.length) return `<div class="tf-dossier">${panel('暂无研究项目','<p>尚未配置分支或实验记录。可在实验工作台创建课题；本页不会启动模型调用。</p><a href="#/experiments">打开实验工作台 →</a>')}</div>`;
+    const view=supported.has(params.get('view'))?params.get('view'):'project-progress';
+    const content=view==='project-introduction'?await window.ResearchIntroduction.render('fastresearch-cvpr2027'):view==='method'?methods(c,params):view==='results'?results(c,params):view==='data'?dataPage(c,params):view==='activity'?activity(c):view==='paper-evidence'?paper(c):overview(c);
+    return `<div class="tf-dossier" data-tf-observed="${e(c.portfolio.observed_runtime?.observed_at||c.d.generated_at)}"><a class="back-link" href="#/experiments">← 全部课题</a><div class="page-title"><div><h1>SciTaste · Training-free 视觉研究</h1><p>分支假设 → 冻结对照 → 独立复验 → 机制与论文</p></div>${tag('CVPR 2027 · 条件性目标','blue')}</div><nav class="tabs lab-tabs tf-tabs" aria-label="Training-free研究工作区">${navs.map(([id,title])=>`<a class="tab ${view===id?'active':''}" ${view===id?'aria-current="page"':''} href="${link({view:id})}">${title}</a>`).join('')}</nav><div class="tf-provenance"><span>研究复核 ${e(date(c.portfolio.reviewed_at))}</span><span>本地运行核查 ${e(date(c.portfolio.observed_runtime?.observed_at||c.d.generated_at))}</span><button class="button button-small" data-tf-refresh>刷新本地证据</button></div><div class="tf-native-links"><a href="#/race">分支赛马 →</a><a href="#/program">投稿规划 →</a><a href="${link({view:'plan'})}">原生研究计划 →</a><a href="${link({view:'resources'})}">原生资源 →</a><a href="${link({view:'run-stage-explorer'})}">原生实验登记 →</a></div>${c.warnings.length?`<p class="tf-boundary">${c.warnings.map(e).join('；')}</p>`:''}${content}<p class="tf-muted tf-refresh-note">页面可见时每 60 秒读取本地证据；只刷新展示，不发起模型调用。来源不可读时保留未知，不提升科学门。</p></div>`;
+  }
+  async function refresh() {
+    if(refreshBusy||!document.querySelector('.tf-dossier')||document.querySelector('#detail-dialog')?.open)return;
+    const hash=location.hash;refreshBusy=true;
+    try {
+      const open=[...document.querySelectorAll('.tf-dossier details[open][data-tf-details]')].map(d=>d.dataset.tfDetails),scroll=window.scrollY;
+      const html=await render(new URLSearchParams(hash.split('?')[1]||''));
+      const current=document.querySelector('.tf-dossier');
+      if(current&&location.hash===hash){current.outerHTML=html;for(const item of document.querySelectorAll('.tf-dossier details[data-tf-details]'))if(open.includes(item.dataset.tfDetails))item.open=true;window.scrollTo(0,scroll);}
+    }finally{refreshBusy=false;}
+  }
+  document.addEventListener('click',event=>{if(event.target.closest('[data-tf-refresh]'))refresh();});
+  document.addEventListener('change',event=>{if(event.target.matches('[data-tf-run-select]')){const p=new URLSearchParams(location.hash.split('?')[1]||'');p.set('view','results');p.set('run',event.target.value);location.hash=link(Object.fromEntries(p)).slice(1);}});
+  setInterval(()=>{if(!document.hidden)refresh();},60000);
+  return {render,refresh,supports:view=>supported.has(view||'project-progress')};
+})();

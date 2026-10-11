@@ -42,8 +42,46 @@ window.SciTasteProgram = (() => {
     }
     return cached;
   }
+  const planStates={candidate:'候选路线 · 未就绪',paused:'暂停路线 · 不排队',ready:'证据已就绪 · 待交付核验'};
+  const checkpointStates={passed:'已完成',active:'推进中',planned:'待执行',blocked:'证据缺口',pending:'待执行',paused:'暂停'};
+  const iterationStates={hypotheses_designed_not_admitted:'本轮提案已整理 · 待准入',source_review_and_falsifiable_design:'本轮来源审核与机制提案已整理',completed_review_round:'本轮并行审查已完成'};
+  function targetHtml(target, role) {
+    if (!target) return `<div class="publication-target"><small>${role}</small><strong>待选定</strong></div>`;
+    const title=[target.abbreviation||target.name,target.year].filter(Boolean).join(' ');
+    const officialDate=target.kind==='journal'?'常规投稿日期 / 专刊以官网核实':target.deadline_at?`${target.deadline_status==='official'?'官方论文截止':'目录截稿记录'}：${date(target.deadline_at)} · 北京时间`:'官方截稿：待核实，不推算下一届';
+    const milestoneLabels={'abstract-registration':'官方摘要 / 注册截止','supplementary-submission':'官方补充材料截止'};
+    const milestones=(target.official_milestones||[]).filter(m=>milestoneLabels[m.kind]);
+    return `<div class="publication-target" data-plan-venue="${esc(target.venue_id||'')}"><small>${role} · CCF ${esc(target.rank||'待核')} · ${target.kind==='journal'?'期刊':'会议'}</small><strong><a href="${href('program',{q:target.abbreviation||target.name})}">${esc(title)}</a></strong><p>${esc(target.fit||'适配理由待复核')}</p><small>${esc(officialDate)}</small>${milestones.length?`<div class="publication-official-dates">${milestones.map(m=>`<small><b>${milestoneLabels[m.kind]}：</b>${esc(date(m.deadline_at))} · 北京时间</small>`).join('')}</div>`:''}${/^https:\/\//i.test(target.url||'')?external(target.url,'官网核验'):''}${(target.official_sources||[]).filter(s=>/^https:\/\//i.test(s.url||'')).slice(0,1).map(s=>external(s.url,'官方日期来源')).join('')}</div>`;
+  }
+  function deliveryHtml(reference) {
+    if (!reference) return '';
+    return `<details class="publication-delivery"><summary>原生周计划引用 · ${reference.internal_deadline_at?esc(date(reference.internal_deadline_at)):'内部目标待核'} · 项目 r${esc(reference.project_revision)}</summary><p>${esc(reference.deadline_note||'共享项目内部目标；不是官方截稿，也不替代分支科学证据。')}</p><p>分支检查点为当前条件性路线；原生周计划内部目标独立保留。</p><small>${esc(reference.project_id)} · ${esc(reference.plan_id)} · 计划 r${esc(reference.plan_revision)} · ${reference.publication_ready?'原生交付标记就绪':'原生交付尚未就绪'}</small>${reference.source_key?`<button class="button button-small" data-progress-source="${esc(reference.source_key)}">查看原生交付记录</button>`:''}</details>`;
+  }
+  function parallelHtml(iteration) {
+    if (!iteration) return '';
+    return `<details class="publication-parallel"><summary>${esc(iterationStates[iteration.status]||'并行协作记录')} · ${(iteration.roles||[]).length} 个角色</summary><div class="tags">${(iteration.roles||[]).map(r=>`<span class="tag">${r.branch_id?esc(r.branch_id)+' · ':''}${esc(r.role)}</span>`).join('')}</div><p>${esc(iteration.arbitration)}。付费执行共享 ${esc(iteration.paid_worker_max)} 个 worker，累计上限 ¥${esc(iteration.cumulative_cny_cap)}。</p><small>${esc(iteration.holdout_rule)} ${esc(iteration.continuity)}</small></details>`;
+  }
+  function publicationCard(branch, gates) {
+    const plan=branch.publication_plan||{}, next=(plan.checkpoints||[]).find(c=>c.state!=='passed'), passed=new Set(branch.passed_gates||[]);
+    const pending=gates.filter(g=>!passed.has(g.id));
+    const checkpoint=c=>`<li><div><strong>${esc(c.title)}</strong><span class="tag">${esc(checkpointStates[c.state]||c.state||'待执行')}</span></div><small>内部检查点 ${c.due_at?esc(date(c.due_at))+' · 北京时间':'待安排'}；不是官方截稿</small><p>${esc(c.acceptance||'验收条件待补充')}</p></li>`;
+    return `<article class="publication-route" data-plan-branch="${esc(branch.id)}"><div class="section-head"><div><small>${esc(branch.id)}</small><h3>${esc(branch.name)}</h3></div><span class="tag ${plan.status==='paused'?'amber':plan.status==='ready'?'green':'blue'}">${esc(planStates[plan.status]||'投稿路线待制定')}</span></div><p>${esc(plan.strategy||'按独立证据与同预算强对照确定投稿路线。')}</p><div class="publication-targets">${targetHtml(plan.primary,'主目标')}${(plan.alternatives||[]).map(t=>targetHtml(t,'备选目标')).join('')}</div><p class="publication-readiness"><b>科学证据门：</b>${pending.length?'待通过 '+pending.map(g=>esc(g.name)).join('、'):'赛马证据门已通过；交付完成仍以原生计划为准'}</p><p><b>下一决策：</b>${esc(plan.next_decision||branch.next_action||'待研究复核')}</p>${next?`<p class="publication-next"><b>下一内部检查点：</b>${esc(next.title)} · ${next.due_at?esc(date(next.due_at)):'待安排'}</p>`:''}<details class="publication-checkpoints"><summary>内部检查点与验收条件 · ${(plan.checkpoints||[]).length} 项</summary><ol>${(plan.checkpoints||[]).map(checkpoint).join('')}</ol></details>${deliveryHtml(plan.delivery_reference)}${plan.method_iteration?`<div class="publication-iteration"><small>并行方法迭代 · ${esc(iterationStates[plan.method_iteration.status]||'本轮提案记录 · 非后台运行')}</small><p>${esc(plan.method_iteration.summary||'方法提案需先核基线、预算与独立验证条件。')}</p>${plan.method_iteration.source_key?`<button class="button button-small" data-progress-source="${esc(plan.method_iteration.source_key)}">查看方法迭代证据</button>`:''}</div>`:''}<div class="card-foot"><a class="button button-small" href="#/race?branch=${encodeURIComponent(branch.id)}">查看此分支赛马 →</a><a href="${esc((plan.delivery_url||'').startsWith('#/')?plan.delivery_url:'#/experiments')}">原生交付状态 →</a></div></article>`;
+  }
+  async function publicationRoutes(params) {
+    const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),8000);
+    try {
+      const response=await fetch('/api/progress',{cache:'no-cache',signal:controller.signal});
+      if (!response.ok) throw new Error('progress unavailable');
+      const d=await response.json(), portfolio=d.portfolio||{}, all=portfolio.branches||[], selected=params.get('branch')||'';
+      window.progressDocumentLinks=d.document_links||{};
+      const rows=all.filter(b=>!selected||b.id===selected), active=rows.filter(b=>b.publication_plan?.status!=='paused'), paused=rows.filter(b=>b.publication_plan?.status==='paused');
+      return `<section class="panel publication-routes"><div class="section-head"><div><h2>分支投稿路线</h2><p>以实验闭环决定主目标、备选与内部检查点。</p></div><a href="#/race">赛马总览 →</a></div><p class="lab-muted">${all.length} 条分支已有路线；${all.filter(b=>b.publication_plan?.status==='paused').length} 条暂停。候选目标不代表投稿就绪；交付状态引用原生 submission_plan，目录星标仅为浏览器收藏。</p>${parallelHtml(portfolio.parallel_iteration)}<div class="tags publication-branch-filter"><a class="tag ${selected?'':'blue'}" href="${href('program',{...Object.fromEntries(params),branch:''})}">全部分支</a>${all.map(b=>`<a class="tag ${selected===b.id?'blue':''}" href="${href('program',{...Object.fromEntries(params),branch:b.id})}">${esc(b.id)}</a>`).join('')}</div>${selected?'<p class="lab-muted">仅聚焦此分支路线；下方 CCF 目录保持原筛选条件。</p>':''}<div class="publication-route-grid">${active.map(b=>publicationCard(b,portfolio.gates||[])).join('')}</div>${paused.length?`<details class="publication-paused" ${selected?'open':''}><summary>暂停与历史投稿路线 · ${paused.length} 条</summary><p>保留适配目标和重开条件；暂停路线不进入实验队列。</p><div class="publication-route-grid">${paused.map(b=>publicationCard(b,portfolio.gates||[])).join('')}</div></details>`:''}${!rows.length?'<p class="muted">没有对应分支；可切回全部分支。</p>':''}</section>`;
+    } catch (_) {
+      return '<section class="panel publication-routes"><h2>分支投稿路线暂不可用</h2><p>本地进展资料尚未读取成功。下方 CCF A/B 目录仍可浏览和筛选。</p><a href="#/race">打开分支赛马 →</a></section>';
+    } finally {clearTimeout(timer);}
+  }
   async function render(p) {
-    const d=await load(), year=p.get('year')||'', q=p.get('q')||'';
+    const [d,routes]=await Promise.all([load(),publicationRoutes(p)]), year=p.get('year')||'', q=p.get('q')||'';
     const shortlist=d.venues.filter(v=>saved.includes(v.id));
     const years=[...new Set(d.venues.flatMap(v=>v.editions.map(e=>e.year)))].sort((a,b)=>b-a).map(String);
     let list=d.venues.filter(v=>(!p.get('kind')||v.kind===p.get('kind'))&&(!p.get('rank')||v.rank===p.get('rank'))&&(!p.get('area')||v.categories.includes(p.get('area')))&&(!p.get('saved')||saved.includes(v.id))&&(!year||v.kind==='journal'||v.editions.some(e=>String(e.year)===year))&&(!p.get('window')||state(v,edition(v,year))===p.get('window'))&&(!q||match([v.name,v.abbreviation,v.publisher,v.categories.map(c=>d.categories[c])],q)));
@@ -55,6 +93,7 @@ window.SciTasteProgram = (() => {
     const size=24,pages=Math.max(1,Math.ceil(list.length/size)),page=Math.max(1,Math.min(Number(p.get('page'))||1,pages));
     const link=number=>{const values=Object.fromEntries(p);values.page=number;return href('program',values);};
     return pageTitle('投稿规划','面向 CCF A/B 类会议与期刊，从研究方向选择目标与时间窗口。',`<a class="button" href="#/experiments">课题与交付计划 →</a>`)
+      + routes
       + `<details class="panel scitaste-mission"><summary><strong>SciTaste · Idea Research & Discovery</strong><span>五阶段科研与共享 Taste</span></summary><div class="mission-body"><div class="eyebrow">SCITASTE · SCIENTIFIC TASTE FOR AUTONOMOUS RESEARCH</div><h2>让科研判断贯穿全流程</h2><p>当前重点：Idea Research & Discovery</p><div class="idea-chain"><span>快速检索</span><b>→</b><span>证据综合</span><b>→</b><span>Idea 构造</span><b>→</b><span>Taste 指导优化</span></div><div class="research-stages">${[['01','Idea','当前重点'],['02','Experiment','实验规划与验证'],['03','Writing','论文组织与表达'],['04','Figure','科研图表设计'],['05','Review','批判性评价与改进']].map(([n,t,s])=>`<div><small>${n}</small><strong>${t}</strong><span>${s}</span></div>`).join('')}</div><p class="taste-shared"><b>Shared Scientific Taste</b> · 表示与学习判断原则、指导研究决策、检验跨阶段迁移与有限预算下的有效性。</p></div></details>`
       + `<div class="lab-stats venue-stats">${[['conference_A','A 类会议'],['conference_B','B 类会议'],['journal_A','A 类期刊'],['journal_B','B 类期刊']].map(([key,title])=>`<div><strong>${d.counts[key]||0}</strong><span>${title}</span></div>`).join('')}</div>`
       + `<section class="panel venue-sources"><p>会议接入 ${external(d.sources.conferences.url,'CCF-DDL')}；期刊使用 CCF 第七版（2026）目录镜像。${external(d.sources.journals.official_catalogue_url,'CCF 官方说明')}</p><small>会议快照 ${esc(d.synced_at)} · ${esc(d.sources.conferences.commit.slice(0,12))}；期刊目录更新 ${esc(d.sources.journals.catalogue_updated_on)}。社区截稿记录请在投稿前核会议官网。</small><details><summary>来源与同步方式</summary><p>${esc(d.sources.journals.access_note)}</p><p>网页同步读取本地最新快照；维护命令 <code>python scripts/sync_venues.py --refresh</code> 更新会议数据。期刊目录保留独立版本与 PDF 页码，未核投稿时间。</p></details></section>`

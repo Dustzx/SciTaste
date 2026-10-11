@@ -22,6 +22,9 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 import research_registry
 import progress_board
+import research_dossiers
+import research_introductions
+import research_export
 import venue_catalog
 from scitaste_bridge import BRIDGE, BridgeError
 from studio_gateway import StudioGateway
@@ -43,6 +46,7 @@ def state():
     document_signature = tuple((str(p.relative_to(ROOT)), p.stat().st_mtime_ns, p.stat().st_size) for p in doc_paths if p.exists())
     progress_paths = [progress_board.REPORT / p for p in ['STATUS_BOARD.json', 'EXPERIENCE_POOL.json', 'sources.json']]
     progress_paths += list(progress_board.sources().values())
+    progress_paths += research_dossiers.signature_paths()
     study = ROOT / 'outputs/projects/fastresearch-cvpr2027/research'
     progress_paths += [study/'API_LEDGER.json', *study.glob('runs/*/STATUS.json'), *study.glob('runs/*/PREDICTIONS.json')]
     progress_paths += [p for run in progress_board.study_runs() for p in [run/'STATUS.json', run/'PREDICTIONS.json']]
@@ -249,6 +253,20 @@ class Handler(BaseHTTPRequestHandler):
                     self.respond(json.dumps(catalogue, ensure_ascii=False).encode(), 'application/json; charset=utf-8', etag=etag, head=head)
             elif path == '/api/progress':
                 self.respond(json.dumps(progress_board.snapshot(), ensure_ascii=False).encode(), 'application/json; charset=utf-8', head=head)
+            elif path == '/api/research/introductions':
+                self.respond(json.dumps(research_introductions.snapshot(), ensure_ascii=False).encode(), 'application/json; charset=utf-8', head=head)
+            elif path == '/api/research/projects':
+                self.respond(json.dumps(research_dossiers.snapshot(), ensure_ascii=False).encode(), 'application/json; charset=utf-8', head=head)
+            elif path == '/api/research/export':
+                query = parse_qs(request.query)
+                try:
+                    body, mime, filename = research_export.build(
+                        project=query.get('project', ['all'])[0],
+                        format=query.get('format', ['markdown'])[0])
+                except ValueError:
+                    self.error_json(400, '导出仅支持已审阅课题的Markdown或ZIP，请使用页面下载入口', head)
+                else:
+                    self.respond(body, mime, filename=filename, head=head)
             elif path == '/api/progress/source':
                 key = parse_qs(request.query).get('key', [''])[0]
                 doc = progress_board.source_document(key)

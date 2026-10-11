@@ -1,5 +1,12 @@
 # Roadmap
 
+2026-10-12 public workspace integration adds optional reviewed project dossiers,
+branch publication routes, and safe Route/history execution/result adapters.
+A fresh installation remains empty and does not launch models. Private evidence
+and upstream author code remain local; this engineering integration does not
+close scientific acceptance gates or certify reproduction. See
+`workspace/docs/PUBLIC_WORKSPACE.md` for configuration and execution boundaries.
+
 2026-10-10 priority: SciTaste remains the unified full-workflow project; current
 implementation focuses on Idea Research & Discovery. Integrate rapid retrieval,
 evidence synthesis, idea construction and Taste-guided refinement through the

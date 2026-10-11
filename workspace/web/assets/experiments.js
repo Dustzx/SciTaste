@@ -9,6 +9,12 @@ window.FastResearchLab = (() => {
   const names = {title:'标题',status:'状态',reported_status:'登记状态',observed_state:'证据状态',run_id:'实验 ID',run_ref_id:'运行证据',model_name:'模型',model:'模型',provider:'模型来源',condition:'方法条件',evidence_scope:'证据范围',seed:'种子',stage:'阶段',stage_number:'阶段',stage_id:'阶段 ID',name:'名称',label:'名称',reason:'原因',reason_code:'状态原因',reason_codes:'状态原因',warnings:'核查提示',metric:'指标',value:'数值',baseline:'基线',candidate:'候选',baseline_value:'基线成绩',candidate_value:'候选成绩',comparable:'可比',resource_id:'资源 ID',metrics_state:'指标可用性',metrics_reason_code:'指标说明',role:'角色',availability:'可用性',paper_id:'论文 ID',state:'证据状态',source_locator:'来源记录',model_id:'模型型号',current:'当前选择',summary:'摘要',research_direction:'研究方向',counts:'记录计数',budget:'预算',resources:'资源',target_venue:'目标会议',next_gate:'下一门槛',publication_ready:'可投稿判定',completed:'已完成',total:'总计'};
   const stateNames = {planning:'规划中',planned:'协议已登记',active:'进行中',complete:'已完成',completed:'已完成',blocked:'阻塞',failed:'失败',draft:'草案',unavailable:'不可用',available:'可用',not_started:'未开始',unknown:'待核实',generated:'视图已整理',no_matching_evidence:'缺少匹配证据',clarification_required:'需要明确对象','protocol-only':'协议记录','no-registered-comparable-metrics':'未登记可比指标',protocol_only:'协议记录',none:'无',false:'否',true:'是'};
   const route = (project='', values={}) => '#/experiments' + (project ? '/' + encodeURIComponent(project) : '') + (Object.keys(values).length ? '?' + new URLSearchParams(values) : '');
+  const promotedProjects = ['voa','rrmot-cvpr2027'];
+  const reportId = project => window.ResearchProjects.projects().find(p=>p.project_id===project)?.report_id || ({voa:'VOA','rrmot-cvpr2027':'RRMOT','fastresearch-cvpr2027':'FastResearch'}[project]);
+  function exportCard(html, p) {
+    const report=reportId(p.project_id);
+    return report?html.replace(/<\/article>\s*$/,`<div class="actions"><a class="button button-small" href="#/experiments/${encodeURIComponent(p.project_id)}?origin=fastresearch&view=project-introduction">项目简介 · 图解 →</a></div>`+window.ResearchProjects.exportControls(report,true)+'</article>'):html;
+  }
   const labButton = (label, action, value='', style='') => `<button class="button ${style}" data-lab-action="${esc(action)}" data-value="${esc(value)}">${esc(label)}</button>`;
   const translated = value => value == null ? '未记录' : stateNames[String(value)] || String(value);
   const rawText = value => value == null ? '未记录' : typeof value === 'object' ? JSON.stringify(value) : translated(value);
@@ -76,31 +82,78 @@ window.FastResearchLab = (() => {
   }
 
   async function gallery() {
-    await window.ProjectEvidence.cards();
-    const responses=await Promise.allSettled(['fastresearch'].map(async origin=>({origin,body:await api(origin+'/projects')})));
-    projects=[]; const failures=[];
-    for (const [i,r] of responses.entries()) {
-      if (r.status==='fulfilled') projects.push(...r.value.body.projects.map(p=>({...p,origin:r.value.origin})));
-      else failures.push((i ? 'SciTaste' : 'SciTaste') + '：' + r.reason.message);
-    }
-    projects.sort((a,b)=>Number(b.project_id==='voa')-Number(a.project_id==='voa'));
-    return pageTitle('实验工作台','从研究候选建立课题，维护协议、运行、证据与研究对话。',labButton('新建课题','create-project','','primary'))
+    current=null;
+    const responses=await Promise.allSettled([window.ProjectEvidence.cards(),window.ResearchProjects.load(),api('fastresearch/projects')]);
+    const failures=[], merged=new Map();
+    if (responses[1].status==='fulfilled') for (const p of window.ResearchProjects.projects()) merged.set(p.project_id,{...p,origin:'fastresearch'});
+    else failures.push(responses[1].reason.message);
+    if (responses[2].status==='fulfilled') for (const p of responses[2].value.projects) merged.set(p.project_id,{...(merged.get(p.project_id) || {}),...p,origin:'fastresearch',native_available:true});
+    else failures.push('原生课题：'+responses[2].reason.message);
+    if (responses[0].status==='rejected') failures.push('VOA档案：'+responses[0].reason.message);
+    projects=[...merged.values()];
+    const priority=id=>promotedProjects.includes(id)?promotedProjects.indexOf(id):-1;
+    projects.sort((a,b)=>(priority(a.project_id)<0?promotedProjects.length:priority(a.project_id))-(priority(b.project_id)<0?promotedProjects.length:priority(b.project_id)));
+    const profileIds=new Set(window.ResearchProjects.projects().map(p=>p.project_id));
+    if (profileIds.size) promotedProjects.forEach(id=>profileIds.add(id));
+    const reviewed=projects.filter(p=>profileIds.has(p.project_id)), mainProjects=reviewed.length?reviewed:projects;
+    const otherProjects=reviewed.length?projects.filter(p=>!profileIds.has(p.project_id)):[];
+    const projectCard=p=>window.ProjectEvidence.card(p) || window.ResearchProjects.card(p) || `<article class="card" data-lab-project="${esc(p.project_id)}"><div class="card-top">${tag(translated(p.status),p.status==='complete'?'green':'blue')}<span class="card-id">r${p.revision}</span></div><h3><a href="${route(p.project_id,{origin:p.origin})}">${esc(p.title || p.project_id)}</a></h3><p class="description clamp-three">${esc(p.research_direction)}</p><div class="tags">${p.target_venue?tag(p.target_venue):''}${tag(p.run_count+' 个运行记录')}${tag(p.paper_count+' 个论文记录')}</div><div class="card-foot"><span>${esc(p.project_id)}</span><a href="${route(p.project_id,{origin:p.origin})}">打开课题 →</a></div></article>`;
+    return pageTitle('实验工作台','按研究问题查看全部课题的方法版本、数据预算、实验结果、案例与证据边界。',labButton('新建课题','create-project','','primary'))
       + `<div class="lab-banner"><div><div class="eyebrow">SCITASTE / SCIENTIFIC WORKSPACE</div><h2>从实验到论文，完整研究工作区。</h2><p>Idea 调研与已有实验、论文产物共享同一研究工作区。完整桌面提供研究计划、资源配置、评审与修订；本页保留快捷证据入口。</p></div><div class="actions"><a class="button primary" href="/studio/#/?lang=zh-CN">打开完整研究桌面 →</a><a class="button" href="#/program">CCF A/B · 投稿规划</a></div></div>`
       + (failures.length ? `<div class="note warning">${esc(failures.join('；'))}</div>` : '')
-      + ['fastresearch'].map(origin=>`<div class="section-head"><h2>我的课题 · 含已迁移项目</h2><span class="count-text">${projects.filter(p=>p.origin===origin).length} 项</span></div><div class="cards lab-projects"><button class="card lab-create-card" data-lab-action="create-project"><span>＋</span><h3>创建研究课题</h3><p>选择目标、benchmark 与验证门槛</p></button>${projects.filter(p=>p.origin===origin).map(p=>window.ProjectEvidence.card(p) || `<article class="card" data-lab-project="${esc(p.project_id)}"><div class="card-top">${tag(translated(p.status),p.status==='complete' ? 'green' : 'blue')}<span class="card-id">r${p.revision}</span></div><h3><a href="${route(p.project_id,{origin})}">${esc(p.title || p.project_id)}</a></h3><p class="description clamp-three">${esc(p.research_direction)}</p><div class="tags">${p.target_venue ? tag(p.target_venue) : ''}${tag(p.run_count+' 个运行记录')}${tag(p.paper_count+' 个论文记录')}</div><div class="card-foot"><span>${esc(p.project_id)}</span><a href="${route(p.project_id,{origin})}">打开课题 →</a></div></article>`).join('')}</div><div class="divider"></div>`).join('');
+      + (reviewed.length ? window.ResearchProjects.exportControls('all') : '')
+      + `<div class="section-head"><h2>${reviewed.length?'研究报告 · 全部课题':'我的课题 · 含已迁移项目'}</h2><span class="count-text">${mainProjects.length} 项</span></div><div class="cards lab-projects" data-reviewed-projects><button class="card lab-create-card" data-lab-action="create-project"><span>＋</span><h3>创建研究课题</h3><p>选择目标、benchmark 与验证门槛</p></button>${mainProjects.map(p=>exportCard(projectCard(p),p)).join('')}</div>`
+      + (otherProjects.length?`<details class="panel rp-native-history"><summary>其他原生课题 · 含历史验收 · ${otherProjects.length}项</summary><p class="lab-muted">原有课题的计划、资源、对话与证据入口继续保留。</p><div class="cards lab-projects">${otherProjects.map(projectCard).join('')}</div></details>`:'');
   }
 
   async function projectPage(project, p, epoch) {
+    if (project==='fastresearch-cvpr2027' && p.get('dossier')!=='reviewed' && (p.get('origin') || 'fastresearch')==='fastresearch' && window.TrainingFreeEvidence?.supports(p.get('view'))) {
+      current=null;
+      return window.TrainingFreeEvidence.render(p);
+    }
     if (project==='voa' && (p.get('origin') || 'fastresearch')==='fastresearch') {
       current=null;
       return window.ProjectEvidence.render(p);
     }
     const origin=p.get('origin') || 'fastresearch', pane=p.get('view') || 'project-progress';
+    if (origin==='fastresearch') {
+      try {
+        await window.ResearchProjects.load();
+        if (epoch!==renderEpoch) return '';
+        const profile=window.ResearchProjects.projects().find(item=>item.project_id===project);
+        const researchView=['project-introduction','project-progress','project-overview','method','run-stage-explorer','data','cases','paper-evidence'].includes(pane);
+        if (profile && (researchView || !profile.native_available)) {
+          current=null;
+          return window.ResearchProjects.render(project,p,{nativeAvailable:profile.native_available});
+        }
+      } catch (_) { /* Optional dossiers never hide a native project. */ }
+    }
     const backendView=['resources','plan','conversations'].includes(pane) ? 'project-progress' : pane;
     const query={view:backendView};
     for (const k of ['run_id','paper_id','baseline_run_id','candidate_run_id']) if (p.get(k)) query[k]=p.get(k);
     const context={origin,project,query,pane};
     const path=basePath(context);
+    // These native records have dedicated, read-only APIs. Building the full
+    // evidence surface first needlessly scans every registered run artifact.
+    if (pane==='plan') {
+      const [plan,record]=await Promise.all([api(path+'/plan'),api(path+'/metadata')]);
+      if (epoch!==renderEpoch) return '';
+      current={...context};
+      return pageTitle(record?.title || project,'研究计划与官方日期') + projectNav(project,origin,pane) + deliveryPlan(plan) + `<a class="button primary" href="/studio/#/projects/${encodeURIComponent(project)}?lang=zh-CN">进入完整研究桌面 →</a>`;
+    }
+    if (pane==='conversations') {
+      current={...context};
+      const html=await conversationsPage();
+      return epoch===renderEpoch?html:'';
+    }
+    if (pane==='resources') {
+      const [record,resources,protocols]=await Promise.all([api(path+'/metadata'),api(path+'/resource-portfolio'),origin==='fastresearch'?api(path+'/protocols'):Promise.resolve(null)]);
+      if (epoch!==renderEpoch) return '';
+      current={...context,protocols};
+      return `<a class="back-link" href="#/experiments">← 全部课题</a>`+pageTitle(record?.title || project,'原生资源绑定与登记预算')+projectNav(project,origin,pane)
+        + `<section class="panel lab-component"><div class="section-head"><h2>项目资源配置</h2>${tag('原生只读绑定','blue')}</div>${progressBoard({resource_portfolio:resources.resource_portfolio},'resources')}</section>`
+        + protocolPanel(query)+`<a class="button primary" href="/studio/#/projects/${encodeURIComponent(project)}?lang=zh-CN">完整研究桌面 · 维护资源 →</a>`;
+    }
     if (backendView==='run-comparison' && (!query.baseline_run_id || !query.candidate_run_id)) {
       const doc=await api(path+'/workspace?view=run-stage-explorer');
       if (epoch!==renderEpoch) return '';
@@ -111,11 +164,6 @@ window.FastResearchLab = (() => {
     const [doc,record]=await Promise.all([api(path+'/workspace?'+new URLSearchParams(query)),api(path+'/metadata')]);
     if (epoch!==renderEpoch) return '';
     current={...context,doc};
-    if (pane==='conversations') return conversationsPage();
-    if (pane==='plan') {
-      const plan=await api(path+'/plan');
-      return pageTitle(record?.title || project,'研究计划与官方日期') + projectNav(project,origin,pane) + deliveryPlan(plan) + `<a class="button primary" href="/studio/#/projects/${encodeURIComponent(project)}?lang=zh-CN">进入完整研究桌面 →</a>`;
-    }
     if (origin==='fastresearch' && ['run-stage-explorer','run-comparison','resources'].includes(pane)) current.protocols=await api(path+'/protocols');
     const selection=listSelections(doc.renderer);
     const selectionBar=backendView==='run-stage-explorer' ? `<div class="toolbar"><label>实验<select id="lab-run-select"><option value="">当前登记选择</option>${selection.runs.map(r=>`<option value="${esc(r.run_id)}" ${r.run_id===query.run_id ? 'selected' : ''}>${esc(r.run_id)} · ${esc(translated(r.reported_status || r.status))}</option>`).join('')}</select></label></div>` : backendView==='paper-evidence' ? `<div class="toolbar"><label>论文<select id="lab-paper-select"><option value="">当前登记选择</option>${selection.papers.map(r=>`<option value="${esc(r.paper_id)}" ${r.paper_id===query.paper_id ? 'selected' : ''}>${esc(r.title || r.paper_id)}</option>`).join('')}</select></label></div>` : '';
@@ -179,7 +227,12 @@ window.FastResearchLab = (() => {
 
   async function render(project,p) {
     const epoch=++renderEpoch;
-    try { await loadStatus(); return project ? await projectPage(project,p,epoch) : await gallery(); }
+    try {
+      if (!project) return await gallery();
+      const html=await projectPage(project,p,epoch), report=reportId(project);
+      if (epoch!==renderEpoch) return '';
+      return html+(report?window.ResearchProjects.exportControls(report):'');
+    }
     catch (error) { return pageTitle('实验工作台','') + empty('实验资料暂时不可用',error.message,labButton('重新同步','refresh')); }
   }
   function modernModelCard(m) {

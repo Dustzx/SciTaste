@@ -18,6 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+workspace-experiments = ["Pillow>=11.3,<13", "requests>=2.32,<3", "numpy>=1.24,<3"]
 figures = ["CairoSVG>=2.8,<3"]
 researchharness = [
   "json5>=0.14,<1",
