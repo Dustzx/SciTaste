@@ -58,7 +58,7 @@ def alive(pid, run_id):
         cmd = Path(f'/proc/{int(pid)}/cmdline').read_bytes().decode().split('\0')
         if any('cvpr_countingdino_run.py' in a for a in cmd):
             return run_id == 'countingdino_vitl14reg_cpu_v1'
-        if any(name in a for a in cmd for name in ['cvpr_hrbench_run.py','cvpr_count_run.py','cvpr_fsc_contract.py','cvpr_fsc_vote.py','cvpr_ownership_run.py','cvpr_scalar_controls_run.py','cvpr_gui_run.py','cvpr_global_center_run.py','cvpr_zoomclick.py','cvpr_regionfocus_run.py','cvpr_doc_run.py','cvpr_intent_run.py','cvpr_intent_control_run.py','cvpr_intent_history_run.py','cvpr_route_execute.py','cvpr_route_evaluate.py','cvpr_route_budget_run.py','cvpr_route_budget_noimage.py']):
+        if any(name in a for a in cmd for name in ['cvpr_hrbench_run.py','cvpr_count_run.py','cvpr_fsc_contract.py','cvpr_fsc_vote.py','cvpr_ownership_run.py','cvpr_scalar_controls_run.py','cvpr_gui_run.py','cvpr_global_center_run.py','cvpr_zoomclick.py','cvpr_regionfocus_run.py','cvpr_doc_run.py','cvpr_intent_run.py','cvpr_intent_control_run.py','cvpr_intent_history_run.py','cvpr_route_execute.py','cvpr_route_evaluate.py','cvpr_route_budget_run.py','cvpr_route_budget_noimage.py','cvpr_route_schema_control.py']):
             return '--run-id' in cmd and cmd[cmd.index('--run-id')+1] == run_id
         if any('cvpr_chart_anchoring.py' in a for a in cmd):
             return run_id == 'bailian_qwen38_flash_anchoring_diagnostic_v1'
@@ -131,7 +131,7 @@ def sources():
     for path in [run/'STATUS.json' for run in study_runs() if (run/'STATUS.json').is_file()]:
         found['run.'+path.parent.name+'.status'] = path
     for run in study_runs():
-        if read(run/'PROTOCOL.json', {}).get('kind') == 'route_task2':
+        if read(run/'PROTOCOL.json', {}).get('kind') in {'route_task2', 'route_task2_schema_control'}:
             found['run.'+run.name+'.protocol'] = run/'PROTOCOL.json'
         if read(run/'PROTOCOL.json', {}).get('diagnostic_kind') != 'document_order_screen':
             continue
@@ -198,7 +198,8 @@ def snapshot():
             continue
         protocol = read(run/'PROTOCOL.json', {})
         intent = run.parent.parent.name == 'multimodal_intent' and protocol.get('mode') in {'direct', 'arcade', 'modensemble', 'controlled_history_variant'}
-        route_task2 = protocol.get('kind') == 'route_task2'
+        route_schema = protocol.get('kind') == 'route_task2_schema_control'
+        route_task2 = protocol.get('kind') in {'route_task2', 'route_task2_schema_control'}
         zoomclick = protocol.get('diagnostic_kind') == 'zoomclick_baseline_transfer'
         document = protocol.get('diagnostic_kind') == 'document_order_screen'
         nested = 'conservation_decode' in protocol.get('arms', [])
@@ -213,7 +214,7 @@ def snapshot():
         predictions = [] if intent or route_task2 else read(run/('BASELINE_PREDICTIONS.json' if nested and status.get('mode')=='baseline' else 'PREDICTIONS.json'), [])
         is_live = alive(status.get('pid'), run.name)
         summary = read(run/'SUMMARY.json') if route_task2 else read(run/status.get('summary_file','SUMMARY.json'), read(run/'PARTIAL_SUMMARY.json'))
-        if route_task2 and summary and (summary.get('status') != 'completed_scored' or summary.get('completed_response_records') != summary.get('selected_samples')):
+        if route_task2 and summary and (summary.get('status') != 'completed_scored' or summary.get('completed_response_records') != summary.get('selected_samples', 32)*(2 if route_schema else 1) or (route_schema and any(summary.get('arms', {}).get(arm, {}).get('completed_response_records') != summary.get('selected_samples', 32) for arm in ['R', 'S']))):
             summary = None  # Route scientific metrics require the complete frozen summary.
         rows = []
         for arm in protocol.get('arms', ['未生成']):
@@ -307,10 +308,10 @@ def snapshot():
             generation_state = status.get('status', status.get('state'))
             uniform_repair = protocol.get('mode') == 'uniform4096_engineering_repair'
             noimage_control = protocol.get('image_mode') == 'none'
-            route_mode_label = ('原四示例文本 · 同4096无图内部控制' if noimage_control else
+            route_mode_label = ('R/S schema与review普通强控制（非新方法）' if route_schema else '原四示例文本 · 同4096无图内部控制' if noimage_control else
                                 '原四示例基线 · 全32统一4096工程纠错' if uniform_repair else '作者四示例 API 适配基准')
             experiments[-1].update({
-                'branch_id': 'FR-ROUTE', 'diagnostic_kind': 'route_task2',
+                'branch_id': 'FR-ROUTE', 'diagnostic_kind': 'route_task2_schema_control' if route_schema else 'route_task2',
                 'mode': protocol.get('mode'),
                 'title': 'NeSy-Route Task2 '+route_mode_label,
                 'status': summary.get('status', 'completed_scored') if summary else generation_state,
@@ -325,11 +326,15 @@ def snapshot():
                 'input_tokens': summary.get('input_tokens', status.get('input_tokens')) if summary else status.get('input_tokens'),
                 'output_tokens': summary.get('output_tokens', status.get('output_tokens')) if summary else status.get('output_tokens'),
                 'api_cost_cny': summary.get('cost_cny', summary.get('api_cost_cny')) if summary else None,
-                'max_logical_calls': protocol.get('max_logical_calls', planned),
+                'max_logical_calls': protocol.get('max_logical_calls', planned*(2 if route_schema else 1)),
+                'completed_response_records': status.get('completed_response_records', completed),
+                'expected_response_records': protocol.get('expected_response_records', planned*(2 if route_schema else 1)),
+                'arm_progress': status.get('arms', {}) if route_schema else {},
+                'ordinary_control': route_schema,
                 'max_tokens_per_call': protocol.get('max_tokens_per_call'),
                 'completion_label': 'Task2 评测来源开发；基准适配，非新方法',
                 'protocol': (f"{protocol.get('model')} · Task2 {'仅原文本、不传图像' if noimage_control else '官方编号区域原图'}与作者四个文字示例提示；"
-                             f"固定 {planned} 个评测来源开发样本，每题一次、最多 {planned} 次逻辑调用；"
+                             f"固定 {planned} 个评测来源开发样本，{'每题R/S各一次，最多64次逻辑调用' if route_schema else '每题一次、最多32次逻辑调用'}；"
                              f"每次输出上限 {protocol.get('max_tokens_per_call', '待核')}；"
                              f"{route_mode_label}，非新方法，非论文零样本成绩复现、正式方法比较或独立确认。"),
                 'finding': (summary.get('scope', '开发基准完整读出；官方条件分母和固定全样本指标分别报告，非新方法。') if summary else
@@ -424,11 +429,11 @@ def snapshot():
             experiment['requests'] = {'attempts': len(attempts), 'successful': sum(a['status'] == 'settled' for a in attempts),
                                       'unsettled': sum(a['status'] != 'settled' for a in attempts),
                                       'retries': sum(a.get('attempt_index', 1) > 1 for a in attempts)}
-            if experiment.get('diagnostic_kind') in {'document_order_screen', 'intent_headroom', 'intent_arcade', 'intent_control', 'intent_history', 'route_task2'} and not experiment.get('summary') and attempts:
+            if experiment.get('diagnostic_kind') in {'document_order_screen', 'intent_headroom', 'intent_arcade', 'intent_control', 'intent_history', 'route_task2', 'route_task2_schema_control'} and not experiment.get('summary') and attempts:
                 # Page-boundary STATUS snapshots can lag settled response receipts.
                 # Use the existing ledger aggregate, never raw model call records.
                 experiment['actual_calls'] = experiment['requests']['successful']
-                if experiment.get('diagnostic_kind') in {'intent_control', 'intent_history', 'route_task2'}:
+                if experiment.get('diagnostic_kind') in {'intent_control', 'intent_history', 'route_task2', 'route_task2_schema_control'}:
                     experiment['actual_calls'] = experiment['requests']['attempts']
                     experiment['successful_logical_calls'] = experiment['generation_actual_calls']
                 experiment['api_cost_cny'] = sum(float(a.get('cost_cny') or 0) for a in attempts if a['status'] == 'settled')
@@ -473,7 +478,7 @@ def snapshot():
         'elapsed_seconds', 'max_rss_bytes'] if k in preparation_receipt}
     if preparation:
         preparation['updated_at'] = stamp(preparation_path).get('modified_at')
-    route_runs = [e for e in by_run.values() if e.get('diagnostic_kind') == 'route_task2']
+    route_runs = [e for e in by_run.values() if e.get('diagnostic_kind') in {'route_task2', 'route_task2_schema_control'}]
     route_latest = max(route_runs, key=lambda e: e.get('updated_at') or '', default=None)
     route_candidate = {
         'id': 'FR-ROUTE', 'role': 'cpu_admission_candidate',
