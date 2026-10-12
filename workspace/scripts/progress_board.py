@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
 from publication_plans import project_routes
 from local_research import SHARED_RACE
 
@@ -14,11 +15,14 @@ DEFAULT_REPORT = ROOT.parent / 'report' if (ROOT.parent / 'report').is_dir() els
 REPORT = Path(os.environ.get('SCITASTE_REPORT_ROOT', str(DEFAULT_REPORT))).resolve()
 ZOOMBENCH_KIND = 'zoombench_original_image_common27b_development_headroom'
 ZOOMBENCH_HIGHRES_KIND = 'zoombench_highres16m_common27b_strong_control'
-ZOOMBENCH_KINDS = {ZOOMBENCH_KIND, ZOOMBENCH_HIGHRES_KIND}
+ZOOMBENCH_GRID_KIND = 'ordinary_grid_pixel_detail_causal_control'
+ZOOMBENCH_KINDS = {ZOOMBENCH_KIND, ZOOMBENCH_HIGHRES_KIND, ZOOMBENCH_GRID_KIND}
 
 
 def zoombench_summary(run):
     """Only the completed aggregate, never intermediate judge/solver records."""
+    if read(run/'PROTOCOL.json', {}).get('kind') == ZOOMBENCH_GRID_KIND:
+        return zoombench_grid_summary(run)
     value = read(run/'SUMMARY.json')
     if not isinstance(value, dict) or value.get('status') != 'complete':
         return None
@@ -41,17 +45,65 @@ def zoombench_summary(run):
         'decision', 'official_score_reproduced', 'imagehash_proxy_grouped'] if k in value}
 
 
+def zoombench_grid_summary(run):
+    """Both complete arms and settled resources precede any grid score display."""
+    if read(run/'STATUS.json', {}).get('status') != 'completed_scored':
+        return None
+    value = read(run/'SUMMARY.json')
+    if not isinstance(value, dict) or value.get('run_id') != run.name or value.get('N_each') != 32:
+        return None
+    arms = value.get('arms', {})
+    if set(arms) != {'grid_native', 'grid_degraded'}:
+        return None
+    requested = 0
+    safe_arms = {}
+    arm_fields = ['status', 'full_denominator', 'typed_full_denominator', 'judge_resources',
+                  'decision', 'official_score_reproduced', 'imagehash_proxy_grouped']
+    for name, arm in arms.items():
+        if not isinstance(arm, dict):
+            return None
+        typed = arm.get('typed_full_denominator', {})
+        judges = arm.get('judge_resources', {})
+        n = judges.get('requested_judges')
+        receipts = judges.get('successful_response_receipts')
+        if (arm.get('status') != 'complete' or arm.get('full_denominator', {}).get('N') != 32
+                or set(typed) != {'MCQ', 'OQ'}
+                or any(not isinstance(v, dict) or v.get('N') != 16 for v in typed.values())
+                or judges.get('logical_terminal_records') != 32
+                or type(n) is not int or not 0 <= n <= 32
+                or type(receipts) is not int or not 0 <= receipts <= n):
+            return None
+        requested += n
+        safe_arms[name] = {k: arm[k] for k in arm_fields if k in arm}
+    paired = value.get('paired', {})
+    pair_counts = [paired.get(k) for k in ['native_only_correct', 'degraded_only_correct', 'both_correct', 'both_wrong']]
+    resources = value.get('resources', {})
+    attempts, settled = resources.get('physical_attempts'), resources.get('successful_settled')
+    if (paired.get('N') != 32 or any(type(n) is not int or n < 0 for n in pair_counts)
+            or sum(pair_counts) != 32 or resources.get('blocking_unresolved') != 0
+            or type(attempts) is not int or type(settled) is not int
+            or not attempts >= settled >= 64 + requested):
+        return None
+    safe = {k: value[k] for k in ['schema_version', 'run_id', 'N_each', 'paired', 'decision',
+                                'resources', 'protocol_sha256', 'created_at'] if k in value}
+    safe['arms'] = safe_arms
+    return safe
+
+
 def zoombench_source(path):
     """Explicit aggregate allowlists exclude private requests, inputs and IDs."""
     if path.name == 'SUMMARY.json':
         return zoombench_summary(path.parent)
     fields = (['kind', 'run_id', 'status', 'started_at', 'updated_at', 'pid', 'planned_samples',
-               'completed_solver_records', 'completed_judge_calls', 'resources', 'model',
+               'completed_solver_records', 'completed_judge_calls', 'solver_records', 'judge_calls', 'resources', 'model',
                'new_method', 'publication_ready', 'confirmation_evaluated', 'error_type']
               if path.name == 'STATUS.json' else
               ['schema_version', 'kind', 'run_id', 'arm', 'N', 'model', 'temperature',
                'enable_thinking', 'vl_high_resolution_images', 'max_pixels_set', 'solver_max_tokens', 'judge_max_tokens', 'resource',
-               'first_two_gate', 'successor', 'stopping', 'scope', 'differences'])
+               'first_two_gate', 'successor', 'stopping', 'scope', 'differences',
+               'arms', 'question_types', 'solver_cap', 'judge_cap', 'image_contract', 'first_gate',
+               'schedule', 'coverage_required_each_arm', 'anchors', 'baseline_prompt_difference',
+               'decision', 'new_method', 'official_score_reproduced', 'publication_ready', 'confirmation_evaluated'])
     value = read(path, {})
     return {k: value[k] for k in fields if k in value}
 
@@ -77,12 +129,12 @@ def project_brief(path):
     if not path.is_file():
         return {'available': False, 'sections': []}
     content = path.read_text()
-    headings = list(re.finditer(r'^##\s+(.+)$', content, re.M))
+    headings = list(re.finditer(r'^##\s+(.+)$', content, re.MULTILINE))
     sections = []
     for i, heading in enumerate(headings):
         body = content[heading.end():headings[i+1].start() if i+1 < len(headings) else len(content)].strip()
         sections.append({'title': heading[1], 'markdown': body,
-                         'tables': len(re.findall(r'^\|\s*[-:]+', body, re.M))})
+                         'tables': len(re.findall(r'^\|\s*[-:]+', body, re.MULTILINE))})
     intro = content[:headings[0].start()] if headings else content
     def statement(label):
         match = re.search(r'\*\*' + label + r'[^*]*\*\*\s*(.+)', intro)
@@ -100,6 +152,8 @@ def alive(pid, run_id):
         cmd = Path(f'/proc/{int(pid)}/cmdline').read_bytes().decode().split('\0')
         if any('cvpr_countingdino_run.py' in a for a in cmd):
             return run_id == 'countingdino_vitl14reg_cpu_v1'
+        if any(Path(a).name == 'cvpr_zoombench_grid_detail_control.py' for a in cmd):
+            return run_id == 'bailian_qwen36_27b_zoombench_grid_detail_control_v1'
         if any(name in a for a in cmd for name in ['cvpr_hrbench_run.py','cvpr_count_run.py','cvpr_fsc_contract.py','cvpr_fsc_vote.py','cvpr_ownership_run.py','cvpr_scalar_controls_run.py','cvpr_gui_run.py','cvpr_global_center_run.py','cvpr_zoomclick.py','cvpr_regionfocus_run.py','cvpr_doc_run.py','cvpr_intent_run.py','cvpr_intent_control_run.py','cvpr_intent_history_run.py','cvpr_route_execute.py','cvpr_route_evaluate.py','cvpr_route_budget_run.py','cvpr_route_budget_noimage.py','cvpr_route_schema_control.py','cvpr_zoombench_headroom.py','cvpr_zoombench_highres_control.py']):
             return '--run-id' in cmd and cmd[cmd.index('--run-id')+1] == run_id
         if any('cvpr_chart_anchoring.py' in a for a in cmd):
@@ -128,7 +182,7 @@ def report_experiments(path, project):
     if not path.is_file():
         return []
     text = path.read_text()
-    section = re.search(r'## 4[.、\s].*?(?=\n## 5|\Z)', text, re.S)
+    section = re.search(r'## 4[.、\s].*?(?=\n## 5|\Z)', text, re.DOTALL)
     if not section:
         return []
     rows = []
@@ -219,15 +273,15 @@ def source_document(key):
     resolved = browser_source_path(path)
     if resolved is None:
         return None
-    if resolved.parent.parent.parent.name == 'vps' and resolved.parent.parent.name == 'runs':
-        if read(resolved.parent/'PROTOCOL.json', {}).get('kind') in ZOOMBENCH_KINDS:
-            if resolved.name not in {'STATUS.json', 'PROTOCOL.json', 'SUMMARY.json'}:
-                return None
-            value = zoombench_source(resolved)
-            if value is None:
-                return None
-            return {'source_key': key, 'path': str(path), 'content': json.dumps(value, ensure_ascii=False),
-                    'projection': 'aggregate_allowlist', **stamp(resolved)}
+    if (resolved.parent.parent.parent.name == 'vps' and resolved.parent.parent.name == 'runs'
+            and read(resolved.parent/'PROTOCOL.json', {}).get('kind') in ZOOMBENCH_KINDS):
+        if resolved.name not in {'STATUS.json', 'PROTOCOL.json', 'SUMMARY.json'}:
+            return None
+        value = zoombench_source(resolved)
+        if value is None:
+            return None
+        return {'source_key': key, 'path': str(path), 'content': json.dumps(value, ensure_ascii=False),
+                'projection': 'aggregate_allowlist', **stamp(resolved)}
     return {'source_key': key, 'path': str(path), 'content': resolved.read_text(), **stamp(resolved)}
 
 
@@ -300,29 +354,31 @@ def snapshot():
                             'source_key': 'run.'+run.name+('' if (run/'SUMMARY.json').exists() else '.partial' if (run/'PARTIAL_SUMMARY.json').exists() else '.status')})
         if zoombench:
             highres = protocol.get('kind') == ZOOMBENCH_HIGHRES_KIND
+            grid = protocol.get('kind') == ZOOMBENCH_GRID_KIND
             phase = status.get('status')
-            solver = status.get('completed_solver_records', 0)
-            judges = status.get('completed_judge_calls', 0)
+            solver = status.get('solver_records' if grid else 'completed_solver_records', 0)
+            judges = status.get('judge_calls' if grid else 'completed_judge_calls', 0)
             resources = (summary or status).get('resources', {})
             experiments[-1].update({
                 'branch_id': 'FR-ZOOMBENCH', 'diagnostic_kind': protocol['kind'],
-                'high_resolution_control': highres,
-                'title': 'ZoomBench · 显式16M高分辨率原图强控制（非新方法）' if highres else 'ZoomBench · 默认分辨率原图基线（非新方法）',
+                'high_resolution_control': highres, 'grid_detail_control': grid,
+                'title': 'ZoomBench · 双臂网格像素细节普通控制（非新方法）' if grid else 'ZoomBench · 显式16M高分辨率原图强控制（非新方法）' if highres else 'ZoomBench · 默认分辨率原图基线（非新方法）',
                 'status': 'completed_scored' if summary else phase,
-                'generation_state': phase, 'completed': solver, 'planned': 32,
+                'generation_state': phase, 'completed': 32 if grid and summary else None if grid else solver, 'planned': 32,
+                'expected_solver_records': 64 if grid else 32,
                 'completed_solver_records': solver, 'completed_judge_calls': judges,
-                'live': is_live, 'stale_running': phase in {'solver_running', 'solver_frozen_preparing_judge', 'judge_running'} and not is_live,
+                'live': is_live, 'stale_running': phase in {'solver_running', 'solver_frozen_preparing_judge', 'both_solvers_frozen_preparing_judges', 'judge_running'} and not is_live,
                 'model': status.get('model', protocol.get('model')),
                 'original_score_reproduced': False, 'independent_replication': False,
                 'confirmation_evaluated': False, 'new_method': False, 'publication_ready': False,
                 'actual_calls': resources.get('physical_attempts'),
                 'resources': resources, 'api_cost_cny': None,
-                'max_logical_calls': 64, 'solver_max_tokens': protocol.get('solver_max_tokens'),
-                'judge_max_tokens': protocol.get('judge_max_tokens'),
-                'completion_label': '原图基线开发筛选；共同骨干适配，非原checkpoint复现',
-                'protocol': ('原 qwen3.6-27b 共同骨干；'+('显式vl_high_resolution_images=true，最大16,777,216像素；max_pixels未单独设置；' if highres else '未设vl_high_resolution_images/max_pixels，采用供应商默认分辨率；')+'原图求解32 → 全部有效答案逐题Judge（最多32调用）→ 固定全N32评分。FOVEA直接提示适配，未执行完整主动视觉方法；官方测试来源开发，非独立确认。'),
-                'finding': ('完整全N32开发评分已落盘；覆盖与饱和门分列，不能作为新方法收益。' if summary else
-                            f'原图求解 {solver}/32；Judge成功响应 {judges}/32上限。完整评分未落盘，不显示部分成绩。'),
+                'max_logical_calls': 128 if grid else 64, 'solver_max_tokens': protocol.get('solver_cap' if grid else 'solver_max_tokens'),
+                'judge_max_tokens': protocol.get('judge_cap' if grid else 'judge_max_tokens'),
+                'completion_label': '同一候选双臂普通控制；非新方法' if grid else '原图基线开发筛选；共同骨干适配，非原checkpoint复现',
+                'protocol': ('同一32图两臂；原图＋4个固定象限视图；仅tile像素细节不同；64求解全部冻结后才接续最多64次Judge；每臂固定全N32，普通控制非新方法。' if grid else '原 qwen3.6-27b 共同骨干；'+('显式vl_high_resolution_images=true，最大16,777,216像素；max_pixels未单独设置；' if highres else '未设vl_high_resolution_images/max_pixels，采用供应商默认分辨率；')+'原图求解32 → 全部有效答案逐题Judge（最多32调用）→ 固定全N32评分。FOVEA直接提示适配，未执行完整主动视觉方法；官方测试来源开发，非独立确认。'),
+                'finding': (('双臂完整全N32普通控制评分已落盘，须根仲裁，不代表新方法或扩展准入。' if grid else '完整全N32开发评分已落盘；覆盖与饱和门分列，不能作为新方法收益。') if summary else
+                            f'求解记录 {solver}/{64 if grid else 32}；Judge成功响应 {judges}/{64 if grid else 32}上限。完整评分未落盘，不显示部分成绩。'),
                 'arms': [],
                 'source_key': 'run.'+run.name+('' if summary else '.status'),
                 'protocol_source_key': 'run.'+run.name+'.protocol',

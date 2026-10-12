@@ -4,6 +4,9 @@
 branch publication routes, and safe Route/history and staged high-resolution-baseline execution/result adapters.
 ZoomBench adapters distinguish default and explicit high-resolution controls;
 solver and judge progress are separate, and incomplete results remain unscored.
+Paired grid-detail controls share one candidate and expose both complete arm
+denominators and the default/high-resolution anchors; fixed-run workers are
+recognized without an artificial command-line identifier.
 A fresh installation remains empty and does not launch models. Private evidence
 and upstream author code remain local; this engineering integration does not
 close scientific acceptance gates or certify reproduction. See

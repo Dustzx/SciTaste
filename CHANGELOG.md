@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-12 — Paired visual detail controls
+
+- Display two ordinary grid-control arms as one development candidate, separating solver and judge progress and withholding partial scores.
+- Require complete arm denominators and settled receipts before showing paired results, with both default-resolution and high-resolution anchors.
+- Recognize the fixed-run grid worker without requiring a nonexistent command-line run ID; keep private research inputs and responses local.
+
 ## 2026-10-12 — Safe staged visual baseline progress
 
 - Show original-image solving and judge-all progress separately, and expose scores only after complete fixed-denominator results and accounting reconciliation.
