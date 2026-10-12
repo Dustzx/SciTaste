@@ -365,6 +365,44 @@ with tempfile.TemporaryDirectory() as tmp:
     (run / "STATUS.json").unlink()
     check("grid_protocol_alone_not_execution", not get()["experiments"])
     put(run / "STATUS.json", status)
+    root_decision = {
+        "decision": (
+            "stop_native_grid_expansion_preserve_negative_"
+            "and_unplanned_degradation_observation"
+        ),
+        "full_denominator": {"N_each": 32, "grid_native": 19, "grid_degraded": 19},
+        "predeclared_native_net3_each_gate": False,
+        "native_paired_net": {"default": -3, "highres": -2, "degraded": 0},
+        "new_method": False,
+        "independent_confirmation": False,
+        "publication_ready": False,
+        "private_targets": "secret",
+    }
+    put(run / "ROOT_READOUT_DECISION.json", root_decision)
+    grid_root_stop = get()
+    check(
+        "grid_root_stop_precedes_old_summary",
+        grid_root_stop["experiments"][0]["summary"]["root_readout_decision"][
+            "predeclared_native_net3_each_gate"
+        ]
+        is False
+        and "根仲裁" in grid_root_stop["experiments"][0]["finding"],
+    )
+    with patch.object(
+        b, "sources", return_value={"fixture.root": run / "ROOT_READOUT_DECISION.json"}
+    ):
+        check(
+            "grid_root_source_sanitized",
+            "private_targets" not in b.source_document("fixture.root")["content"],
+        )
+    root_decision["full_denominator"]["grid_native"] = 20
+    put(run / "ROOT_READOUT_DECISION.json", root_decision)
+    check(
+        "grid_reject_stale_root_readout",
+        "root_readout_decision" not in get()["experiments"][0]["summary"],
+    )
+    root_decision["full_denominator"]["grid_native"] = 19
+    put(run / "ROOT_READOUT_DECISION.json", root_decision)
     check(
         "grid_private_unindexed",
         "run.fixture_zoom.partial" not in b.sources()

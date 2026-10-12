@@ -87,6 +87,16 @@ def zoombench_grid_summary(run):
     safe = {k: value[k] for k in ['schema_version', 'run_id', 'N_each', 'paired', 'decision',
                                 'resources', 'protocol_sha256', 'created_at'] if k in value}
     safe['arms'] = safe_arms
+    root = read(run/'ROOT_READOUT_DECISION.json', {})
+    root_full = root.get('full_denominator', {})
+    if (root.get('decision') == 'stop_native_grid_expansion_preserve_negative_and_unplanned_degradation_observation'
+            and root_full.get('N_each') == 32
+            and all(root_full.get(a) == arms[a]['full_denominator'].get('correct') for a in arms)
+            and root.get('predeclared_native_net3_each_gate') is False):
+        safe['root_readout_decision'] = {k: root[k] for k in ['schema_version', 'created_at', 'decision',
+            'scope', 'full_denominator', 'typed_full_denominator', 'predeclared_native_net3_each_gate',
+            'native_paired_net', 'conclusions', 'resources', 'actual_wait', 'next_action',
+            'new_method', 'independent_confirmation', 'publication_ready'] if k in root}
     return safe
 
 
@@ -94,6 +104,8 @@ def zoombench_source(path):
     """Explicit aggregate allowlists exclude private requests, inputs and IDs."""
     if path.name == 'SUMMARY.json':
         return zoombench_summary(path.parent)
+    if path.name == 'ROOT_READOUT_DECISION.json':
+        return (zoombench_grid_summary(path.parent) or {}).get('root_readout_decision')
     fields = (['kind', 'run_id', 'status', 'started_at', 'updated_at', 'pid', 'planned_samples',
                'completed_solver_records', 'completed_judge_calls', 'solver_records', 'judge_calls', 'resources', 'model',
                'new_method', 'publication_ready', 'confirmation_evaluated', 'error_type']
@@ -275,7 +287,7 @@ def source_document(key):
         return None
     if (resolved.parent.parent.parent.name == 'vps' and resolved.parent.parent.name == 'runs'
             and read(resolved.parent/'PROTOCOL.json', {}).get('kind') in ZOOMBENCH_KINDS):
-        if resolved.name not in {'STATUS.json', 'PROTOCOL.json', 'SUMMARY.json'}:
+        if resolved.name not in {'STATUS.json', 'PROTOCOL.json', 'SUMMARY.json', 'ROOT_READOUT_DECISION.json'}:
             return None
         value = zoombench_source(resolved)
         if value is None:
@@ -377,7 +389,7 @@ def snapshot():
                 'judge_max_tokens': protocol.get('judge_cap' if grid else 'judge_max_tokens'),
                 'completion_label': '同一候选双臂普通控制；非新方法' if grid else '原图基线开发筛选；共同骨干适配，非原checkpoint复现',
                 'protocol': ('同一32图两臂；原图＋4个固定象限视图；仅tile像素细节不同；64求解全部冻结后才接续最多64次Judge；每臂固定全N32，普通控制非新方法。' if grid else '原 qwen3.6-27b 共同骨干；'+('显式vl_high_resolution_images=true，最大16,777,216像素；max_pixels未单独设置；' if highres else '未设vl_high_resolution_images/max_pixels，采用供应商默认分辨率；')+'原图求解32 → 全部有效答案逐题Judge（最多32调用）→ 固定全N32评分。FOVEA直接提示适配，未执行完整主动视觉方法；官方测试来源开发，非独立确认。'),
-                'finding': (('双臂完整全N32普通控制评分已落盘，须根仲裁，不代表新方法或扩展准入。' if grid else '完整全N32开发评分已落盘；覆盖与饱和门分列，不能作为新方法收益。') if summary else
+                'finding': (('根仲裁：原始细节网格预设增益门失败，停止此版扩展；降采样结果保留为未预设普通控制观察，不改候选、不扫参数。' if grid and summary.get('root_readout_decision') else '双臂完整全N32普通控制评分已落盘，须根仲裁，不代表新方法或扩展准入。' if grid else '完整全N32开发评分已落盘；覆盖与饱和门分列，不能作为新方法收益。') if summary else
                             f'求解记录 {solver}/{64 if grid else 32}；Judge成功响应 {judges}/{64 if grid else 32}上限。完整评分未落盘，不显示部分成绩。'),
                 'arms': [],
                 'source_key': 'run.'+run.name+('' if summary else '.status'),

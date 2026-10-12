@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-12 — Reviewed decision precedence
+
+- Prefer a validated root review over a completed control summary that is still awaiting adjudication. Reject stale reviews with mismatched denominators or scores.
+- Keep a failed frozen candidate distinct from an unplanned winning control; show the stop decision in the candidate and result views.
+
 ## 2026-10-12 — Paired visual detail controls
 
 - Display two ordinary grid-control arms as one development candidate, separating solver and judge progress and withholding partial scores.

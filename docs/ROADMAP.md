@@ -6,7 +6,9 @@ ZoomBench adapters distinguish default and explicit high-resolution controls;
 solver and judge progress are separate, and incomplete results remain unscored.
 Paired grid-detail controls share one candidate and expose both complete arm
 denominators and the default/high-resolution anchors; fixed-run workers are
-recognized without an artificial command-line identifier.
+recognized without an artificial command-line identifier. Root adjudication takes
+precedence after aggregate consistency checks, preserving failed candidate gates
+and the distinction between a frozen candidate and an unplanned control.
 A fresh installation remains empty and does not launch models. Private evidence
 and upstream author code remain local; this engineering integration does not
 close scientific acceptance gates or certify reproduction. See
