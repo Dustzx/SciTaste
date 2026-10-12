@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-12 — Safe diagram development controls
+
+- Add optional diagram candidate and direct-screen, five-arm comparison, and same-representation solver-control views. Show complete denominators, paired readouts, and run/family/project costs without reading private questions, representations, targets or responses.
+- Separate new calls from reused historical responses and reference scores. Preserve original results and gates; expand reviewed support, uncertainty and fixed next-action fields without granting scientific readiness or execution authority.
+- Keep unknown diagnostic kinds closed, recognize fixed worker identities, and prefer the current candidate action. Synthetic projection and browser checks cover the new paths; fresh installations remain empty and offline.
+
 ## 2026-10-12 — Reviewed decision precedence
 
 - Prefer a validated root review over a completed control summary that is still awaiting adjudication. Reject stale reviews with mismatched denominators or scores.

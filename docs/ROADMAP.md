@@ -9,6 +9,11 @@ denominators and the default/high-resolution anchors; fixed-run workers are
 recognized without an artificial command-line identifier. Root adjudication takes
 precedence after aggregate consistency checks, preserving failed candidate gates
 and the distinction between a frozen candidate and an unplanned control.
+Optional diagram views now distinguish a direct screen, a complete five-arm
+comparison and a same-representation solver-prompt control. Only safe aggregates
+are projected; historical responses, reference scores and new costs stay separate.
+Reviewed support, uncertainty and next actions remain distinct from original
+scientific gates, and unknown diagnostic kinds have no private-data fallback.
 A fresh installation remains empty and does not launch models. Private evidence
 and upstream author code remain local; this engineering integration does not
 close scientific acceptance gates or certify reproduction. See

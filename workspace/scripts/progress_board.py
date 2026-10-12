@@ -7,8 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from publication_plans import project_routes
 from local_research import SHARED_RACE
+from publication_plans import project_routes
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORT = ROOT.parent / 'report' if (ROOT.parent / 'report').is_dir() else ROOT / 'report'
@@ -17,6 +17,201 @@ ZOOMBENCH_KIND = 'zoombench_original_image_common27b_development_headroom'
 ZOOMBENCH_HIGHRES_KIND = 'zoombench_highres16m_common27b_strong_control'
 ZOOMBENCH_GRID_KIND = 'ordinary_grid_pixel_detail_causal_control'
 ZOOMBENCH_KINDS = {ZOOMBENCH_KIND, ZOOMBENCH_HIGHRES_KIND, ZOOMBENCH_GRID_KIND}
+DIAGRAM_SCREEN_KIND = 'flowgen_easy_direct_saturation_screen'
+DIAGRAM_COMPARISON_KIND = 'flowgen_visible_topology_acquisition_diagnostic'
+DIAGRAM_UNIFORM_KIND = 'flowgen_uniform_mermaid_solver_control'
+DIAGRAM_KINDS = {DIAGRAM_SCREEN_KIND, DIAGRAM_COMPARISON_KIND, DIAGRAM_UNIFORM_KIND}
+DIAGRAM_RUNS = {
+    'cvpr_flowgen_screen.py': 'bailian_qwen35_122b_flowgen_easy_direct_screen_v1',
+    'cvpr_flowgen_diagnostic.py': 'bailian_qwen35_122b_flowgen_easy_textflow_comparison_v1',
+    'cvpr_textflow_solver_control.py': 'bailian_qwen35_122b_flowgen_textflow_uniform_solver_v1',
+}
+DIAGRAM_ARMS = ('direct', 'learned_fixed', 'learned_high', 'textflow_mermaid', 'gold_diagnostic')
+DIAGRAM_RESOURCE_FIELDS = ('physical_attempts', 'successful_settled', 'run_conservative_cny',
+    'project_conservative_cny', 'blocking_unresolved', 'retry_unknown_count',
+    'reused_direct_physical_attempts', 'reused_direct_conservative_cny', 'family_conservative_cny')
+
+
+def diagram_resources(value):
+    return {k: v for k, v in (value or {}).items()
+            if k in DIAGRAM_RESOURCE_FIELDS and type(v) in (int, float)}
+
+
+def diagram_metric(value):
+    """Full16 aggregate only; no sample identities or answer-bearing fields."""
+    if not isinstance(value, dict) or value.get('N') != 16:
+        return None
+    correct, invalid = value.get('correct'), value.get('invalid')
+    if (type(correct) is not int or type(invalid) is not int
+            or not 0 <= correct <= 16 or not 0 <= invalid <= 16 - correct):
+        return None
+    return {'N': 16, 'correct': correct, 'invalid': invalid, 'accuracy': correct / 16}
+
+
+def diagram_summary(run):
+    """The scorer certifies 80 terminal slots through five complete N16 arms.
+
+    We never open its PRIVATE, PRED, calls or ALL_* evidence to re-score in UI.
+    A missing/partial/invalid summary remains unknown even if STATUS says done.
+    """
+    kind = read(run / 'PROTOCOL.json', {}).get('kind')
+    if kind not in DIAGRAM_KINDS:
+        return None
+    value = read(run / 'SUMMARY.json', {})
+    if value.get('status') != 'complete' or value.get('run_id') != run.name or value.get('kind') != kind:
+        return None
+    resources = diagram_resources(value.get('resources'))
+    if (resources.get('blocking_unresolved') != 0 if kind != DIAGRAM_UNIFORM_KIND
+            else resources.get('blocking_unresolved', 0) != 0):
+        return None
+    safe = {k: value[k] for k in ('schema_version', 'kind', 'run_id', 'status', 'decision',
+        'saturated', 'engineering_valid', 'semantic_acquisition_repair_proposal_eligible',
+        'new_method', 'original_model_reproduction', 'formal_method_comparison_completed',
+        'comparison_type', 'confirmation_evaluated', 'publication_ready') if k in value}
+    safe['resources'] = resources
+    if kind == DIAGRAM_SCREEN_KIND:
+        metric = diagram_metric(value.get('direct'))
+        if metric is None or resources.get('successful_settled', 0) < 16:
+            return None
+        safe['direct'] = metric
+    elif kind == DIAGRAM_COMPARISON_KIND:
+        arms = value.get('arms', {})
+        if value.get('N_each') != 16 or set(arms) != set(DIAGRAM_ARMS):
+            return None
+        safe_arms = {arm: diagram_metric(arms[arm]) for arm in DIAGRAM_ARMS}
+        learned = value.get('learned_request_counts', {})
+        if (any(v is None for v in safe_arms.values())
+                or set(learned) != set(DIAGRAM_ARMS[1:4])
+                or any(type(v) is not int or not 0 <= v <= 16 for v in learned.values())
+                or resources.get('successful_settled', 0) < 64 + sum(learned.values())
+                or resources.get('reused_direct_physical_attempts', 0) < 16):
+            return None
+        safe.update(N_each=16, arms=safe_arms, learned_request_counts=learned,
+                    terminal_solver_slots=80, prior_development_score_exposed=True)
+        safe['paired'] = {name: {k: row[k] for k in ('N', 'wins', 'losses', 'net')
+                        if k in row and type(row[k]) is int}
+                        for name, row in value.get('paired', {}).items()
+                        if name in {b + '_vs_' + a for a, b in [('direct','learned_fixed'),
+                            ('direct','learned_high'), ('direct','gold_diagnostic'),
+                            ('learned_fixed','learned_high'), ('direct','textflow_mermaid'),
+                            ('learned_high','textflow_mermaid')]} and isinstance(row, dict)}
+    elif kind == DIAGRAM_UNIFORM_KIND:
+        references = value.get('reference_arms', {})
+        expected = set(DIAGRAM_ARMS) - {'textflow_mermaid'}
+        current = diagram_metric(value.get('uniform_solver'))
+        original = diagram_metric(value.get('original_textflow_solver'))
+        if (value.get('N') != 16 or not isinstance(references, dict) or set(references) != expected
+                or current is None or original is None
+                or resources.get('successful_settled', 0) < 16
+                or resources.get('physical_attempts', 0) < 16):
+            return None
+        safe_refs = {arm: diagram_metric(metric) for arm, metric in references.items()}
+        if any(metric is None for metric in safe_refs.values()):
+            return None
+        paired = {}
+        for key in ('paired_uniform_vs_direct', 'paired_uniform_vs_highJSON'):
+            row = value.get(key, {})
+            if (not isinstance(row, dict) or row.get('N') != 16
+                    or any(type(row.get(k)) is not int for k in ('wins', 'losses', 'net'))
+                    or not 0 <= row['wins'] <= 16 or not 0 <= row['losses'] <= 16 - row['wins']
+                    or row['net'] != row['wins'] - row['losses']):
+                return None
+            paired[key] = {k: row[k] for k in ('N', 'wins', 'losses', 'net')}
+        safe.update(N=16, uniform_solver=current, reference_arms=safe_refs,
+                    original_textflow_solver=original, paired=paired,
+                    terminal_solver_slots=16, prior_development_score_exposed=True)
+        if type(value.get('prompt_contract_engineering_valid')) is bool:
+            safe['prompt_contract_engineering_valid'] = value['prompt_contract_engineering_valid']
+        if (type(value.get('oracle_minus_strongest_deployable')) is int
+                and -16 <= value['oracle_minus_strongest_deployable'] <= 16):
+            safe['oracle_minus_strongest_deployable'] = value['oracle_minus_strongest_deployable']
+    else:
+        return None
+    root = read(run / 'ROOT_READOUT_DECISION.json', {})
+    # Root adjudication remains separate from the original summary/gate.
+    root_safe = {k: root[k] for k in ('decision', 'scope', 'next_action', 'new_method',
+        'independent_confirmation', 'publication_ready', 'created_at', 'reviewed_at')
+        if k in root and type(root[k]) in (str, bool)}
+    for key in ('conclusions', 'supported', 'unknown'):
+        if (isinstance(root.get(key), list) and len(root[key]) <= 32
+                and all(isinstance(x, str) and len(x) <= 4096 for x in root[key])):
+            root_safe[key] = root[key]
+    if isinstance(root.get('next_action'), dict):
+        root_safe['next_action'] = {k: root['next_action'][k] for k in (
+            'uniform_solver_control', 'safe_tools', 'new_method_proposal_or_expansion_authorized_by_this_readout')
+            if k in root['next_action'] and type(root['next_action'][k]) in (str, bool)}
+    if root_safe:
+        safe['root_readout_decision'] = root_safe
+    return safe
+
+
+def diagram_source(path):
+    if read(path.parent / 'PROTOCOL.json', {}).get('kind') not in DIAGRAM_KINDS:
+        return None
+    if path.name == 'SUMMARY.json':
+        return diagram_summary(path.parent)
+    if path.name == 'ROOT_READOUT_DECISION.json':
+        return (diagram_summary(path.parent) or {}).get('root_readout_decision')
+    fields = (('kind', 'run_id', 'status', 'updated_at', 'pid', 'completed_calls',
+               'panel_records', 'max_logical_calls', 'logical_panel_calls_including_reused_direct',
+               'new_method', 'publication_ready', 'error_type') if path.name == 'STATUS.json' else
+              ('schema_version', 'kind', 'run_id', 'N', 'N_each', 'model', 'scope',
+               'difficulty_scope', 'temperature', 'enable_thinking', 'solver_cap',
+               'max_logical_calls', 'logical_panel_calls_including_reused_direct',
+               'max_physical_attempts', 'max_new_physical_attempts', 'phase_cny', 'project_cny',
+               'family_max_physical_attempts', 'interpretation',
+               'single_paid_worker', 'gpu_jobs', 'schedule', 'adaptations', 'limitations',
+               'new_method', 'formal_accepted_comparator', 'formal_method_comparison_completed',
+               'confirmation_evaluated', 'publication_ready'))
+    value = read(path, {})
+    safe = {k: value[k] for k in fields if k in value}
+    if path.name == 'STATUS.json':
+        safe['resources'] = diagram_resources(value.get('resources'))
+    if path.name == 'PROTOCOL.json':
+        safe['arms'] = (list(DIAGRAM_ARMS) if value.get('kind') == DIAGRAM_COMPARISON_KIND else
+                        ['uniform_solver'] if value.get('kind') == DIAGRAM_UNIFORM_KIND else ['direct'])
+        anchor = value.get('direct_anchor', {})
+        safe['direct_anchor'] = {k: anchor[k] for k in ('run_id', 'N', 'reused_physical_calls',
+            'incremental_new_calls', 'prior_cost_cny', 'prior_development_score_exposed',
+            'same_exact_requests') if k in anchor}
+    return safe
+
+
+def diagram_experiment(run, status, protocol):
+    comparison = protocol['kind'] == DIAGRAM_COMPARISON_KIND
+    uniform = protocol['kind'] == DIAGRAM_UNIFORM_KIND
+    summary = diagram_summary(run)
+    phase = status.get('status', 'unknown')
+    is_live = alive(status.get('pid'), run.name) and phase not in {'completed_scored', 'held_preserve_no_regeneration'}
+    resource = (summary or diagram_source(run / 'STATUS.json')).get('resources', {})
+    arms = DIAGRAM_ARMS if comparison else ('uniform_solver',) if uniform else ('direct',)
+    return {'project': 'FastResearch', 'name': run.name, 'branch_id': 'FR-DIAGRAM',
+        'diagnostic_kind': protocol['kind'], 'status': phase, 'generation_state': phase,
+        'verification': 'local_process_and_artifacts', 'live': is_live,
+        'stale_running': phase == 'running' and not is_live,
+        'completed': status.get('completed_calls'), 'planned': 112 if comparison else 16,
+        'panel_records': status.get('panel_records', status.get('completed_calls')),
+        'logical_panel_calls_including_reused_direct': 128 if comparison else 16,
+        'reused_direct_records': 16 if comparison else 0,
+        'terminal_solver_slots': 80 if comparison and summary else 16 if summary else None,
+        'updated_at': status.get('updated_at') or stamp(run / 'STATUS.json').get('modified_at'),
+        'title': 'FlowGen · TextFlow 同 Mermaid 统一 solver 控制' if uniform else 'FlowGen · TextFlow / JSON 强对照（原 direct16 只读复用）' if comparison else 'FlowGen · easy16 direct 饱和筛选',
+        'model': protocol.get('model'), 'max_logical_calls': 112 if comparison else 16,
+        'protocol': '原 Qwen3.5-122B · easy16可见拓扑开发适配 · ' + ('同16条冻结 Mermaid；统一JSON臂求解提示，16次新增solver，无新提取或响应复用' if uniform else '112次新增请求上限＋16条已评分 direct 复用；128逻辑记录／80终态槽' if comparison else '16次原图直接推理；无方法收益主张'),
+        'scope': '公开来源开发面板；非原生FlowGen QA，非独立来源或未见确认。' + ('沿用已曝光16条表示与题目；历史参照不作新调用，不修订原TextFlow成绩。' if uniform else '原direct16已评分并曝光，只读复用不增加独立样本。' if comparison else ''),
+        'arms': [{'arm': arm, 'label': {'direct':'原图 direct（此前筛选复用）' if comparison else '原图 direct',
+                    'learned_fixed':'JSON 固定1024提取', 'learned_high':'JSON 高预算8192提取',
+                    'textflow_mermaid':'TextFlow Mermaid · 已录用算法适配',
+                    'uniform_solver':'同 Mermaid · 统一 solver 提示（新增16调用）',
+                    'gold_diagnostic':'源结构 oracle · 仅诊断'}[arm],
+                  'predictions': summary.get('learned_request_counts', {}).get(arm, 16) if summary else None,
+                  'score': (summary['arms'][arm] if comparison else summary['uniform_solver'] if uniform else summary['direct']) if summary else None}
+                 for arm in arms],
+        'summary': summary, 'resources': resource,
+        'actual_calls': resource.get('physical_attempts'), 'api_cost_cny': resource.get('run_conservative_cny'),
+        'finding': '统一提示工程控制完整；原结果与历史参照分别保留，不作为新方法。' if summary and uniform else '完整开发读出，仍须根仲裁；不自动扩展或提升科学门。' if summary else '仅安全进度；完整80终态槽评分未落盘。' if comparison else '仅安全进度；完整16条评分未落盘。',
+        'source_key': 'run.' + run.name + ('' if summary else '.status'),
+        'protocol_source_key': 'run.' + run.name + '.protocol'}
 
 
 def zoombench_summary(run):
@@ -122,7 +317,7 @@ def zoombench_source(path):
 
 def study_runs():
     study = ROOT/'outputs/projects/fastresearch-cvpr2027/research'
-    return sorted([*study.glob('runs/*'), *study.glob('spacecast/runs/*'), *study.glob('hrbench/runs/*'), *study.glob('counting/runs/*'), *study.glob('counting/fsc147/runs/*'), *study.glob('gui/runs/*'), *study.glob('document/runs/*'), *study.glob('multimodal_intent/runs/*'), *study.glob('route/runs/*'), *study.glob('vps/runs/*')])
+    return sorted([*study.glob('runs/*'), *study.glob('spacecast/runs/*'), *study.glob('hrbench/runs/*'), *study.glob('counting/runs/*'), *study.glob('counting/fsc147/runs/*'), *study.glob('gui/runs/*'), *study.glob('document/runs/*'), *study.glob('multimodal_intent/runs/*'), *study.glob('route/runs/*'), *study.glob('vps/runs/*'), *study.glob('diagram/runs/*')])
 
 
 def read(path, default=None):
@@ -162,6 +357,9 @@ def project_brief(path):
 def alive(pid, run_id):
     try:
         cmd = Path(f'/proc/{int(pid)}/cmdline').read_bytes().decode().split('\0')
+        for script, expected in DIAGRAM_RUNS.items():
+            if any(Path(a).name == script for a in cmd):
+                return run_id == expected and '--operation' in cmd and cmd[cmd.index('--operation') + 1] == 'run'
         if any('cvpr_countingdino_run.py' in a for a in cmd):
             return run_id == 'countingdino_vitl14reg_cpu_v1'
         if any(Path(a).name == 'cvpr_zoombench_grid_detail_control.py' for a in cmd):
@@ -234,6 +432,10 @@ def sources():
     }.items():
         found['FastResearch.'+key] = study/path
     for path in [run/'SUMMARY.json' for run in study_runs() if (run/'SUMMARY.json').is_file()]:
+        if path.parent.parent.parent.name == 'diagram':
+            if diagram_summary(path.parent) is not None:
+                found['run.'+path.parent.name] = path
+            continue
         if read(path.parent/'PROTOCOL.json', {}).get('kind') in ZOOMBENCH_KINDS:
             if zoombench_summary(path.parent) is not None:
                 found['run.'+path.parent.name] = path
@@ -241,13 +443,15 @@ def sources():
         status=read(path.parent/'STATUS.json', {})
         found['run.'+path.parent.name] = path.parent/status.get('summary_file',path.name)
     for path in [run/'PARTIAL_SUMMARY.json' for run in study_runs() if (run/'PARTIAL_SUMMARY.json').is_file()]:
-        if read(path.parent/'PROTOCOL.json', {}).get('kind') not in ZOOMBENCH_KINDS:
+        if path.parent.parent.parent.name != 'diagram' and read(path.parent/'PROTOCOL.json', {}).get('kind') not in ZOOMBENCH_KINDS:
             found['run.'+path.parent.name+'.partial'] = path
     for path in [run/'STATUS.json' for run in study_runs() if (run/'STATUS.json').is_file()]:
         found['run.'+path.parent.name+'.status'] = path
     for run in study_runs():
-        if read(run/'PROTOCOL.json', {}).get('kind') in {'route_task2', 'route_task2_schema_control'} | ZOOMBENCH_KINDS:
+        if read(run/'PROTOCOL.json', {}).get('kind') in {'route_task2', 'route_task2_schema_control'} | ZOOMBENCH_KINDS | DIAGRAM_KINDS:
             found['run.'+run.name+'.protocol'] = run/'PROTOCOL.json'
+            if read(run/'PROTOCOL.json', {}).get('kind') in DIAGRAM_KINDS and (run/'ROOT_READOUT_DECISION.json').is_file():
+                found['run.'+run.name+'.root_readout'] = run/'ROOT_READOUT_DECISION.json'
         if read(run/'PROTOCOL.json', {}).get('diagnostic_kind') != 'document_order_screen':
             continue
         if (run/'MECHANISM_AUDIT.json').is_file():
@@ -285,6 +489,17 @@ def source_document(key):
     resolved = browser_source_path(path)
     if resolved is None:
         return None
+    diagram_root = ROOT / 'outputs/projects/fastresearch-cvpr2027/research/diagram/runs'
+    if resolved.is_relative_to(diagram_root):
+        if (resolved.parent.parent != diagram_root
+                or resolved.name not in {'STATUS.json', 'PROTOCOL.json', 'SUMMARY.json', 'ROOT_READOUT_DECISION.json'}
+                or read(resolved.parent/'PROTOCOL.json', {}).get('kind') not in DIAGRAM_KINDS):
+            return None
+        value = diagram_source(resolved)
+        if value is None:
+            return None
+        return {'source_key': key, 'path': str(path), 'content': json.dumps(value, ensure_ascii=False),
+                'projection': 'aggregate_allowlist', **stamp(resolved)}
     if (resolved.parent.parent.parent.name == 'vps' and resolved.parent.parent.name == 'runs'
             and read(resolved.parent/'PROTOCOL.json', {}).get('kind') in ZOOMBENCH_KINDS):
         if resolved.name not in {'STATUS.json', 'PROTOCOL.json', 'SUMMARY.json', 'ROOT_READOUT_DECISION.json'}:
@@ -321,6 +536,10 @@ def snapshot():
         if not status:
             continue
         protocol = read(run/'PROTOCOL.json', {})
+        if run.parent.parent.name == 'diagram':
+            if protocol.get('kind') in DIAGRAM_KINDS:
+                experiments.append(diagram_experiment(run, status, protocol))
+            continue  # Never open diagram predictions/private calls, including unknown kinds.
         intent = run.parent.parent.name == 'multimodal_intent' and protocol.get('mode') in {'direct', 'arcade', 'modensemble', 'controlled_history_variant'}
         zoombench = protocol.get('kind') in ZOOMBENCH_KINDS
         route_schema = protocol.get('kind') == 'route_task2_schema_control'
@@ -585,6 +804,10 @@ def snapshot():
             experiment['requests'] = {'attempts': len(attempts), 'successful': sum(a['status'] == 'settled' for a in attempts),
                                       'unsettled': sum(a['status'] != 'settled' for a in attempts),
                                       'retries': sum(a.get('attempt_index', 1) > 1 for a in attempts)}
+            if experiment.get('diagnostic_kind') in DIAGRAM_KINDS:
+                experiment['actual_calls'] = len(attempts)
+                experiment['settled_cost_cny'] = sum(float(a.get('cost_cny') or 0) for a in attempts if a['status'] == 'settled')
+                experiment['call_cost_source'] = 'safe_status_summary_and_api_ledger_aggregate'
             if experiment.get('diagnostic_kind') in ZOOMBENCH_KINDS and attempts:
                 experiment['actual_calls'] = experiment['requests']['attempts']
                 experiment['api_cost_cny'] = sum(float(a.get('cost_cny') or 0) for a in attempts if a['status'] == 'settled')
@@ -663,6 +886,19 @@ def snapshot():
         'scope': '独立高分辨率基线候选，不增加正式视觉方法分支；共同Qwen3.6-27B适配，不是FOVEA原30B-A3B checkpoint精确复现。',
         'runtime': {k: zoom_latest.get(k) for k in ['name', 'status', 'live', 'completed_solver_records', 'completed_judge_calls', 'planned', 'source_key']} if zoom_latest else None,
     } if zoom_runs or image_state else None
+    diagram_runs = [e for e in by_run.values() if e.get('diagnostic_kind') in DIAGRAM_KINDS]
+    diagram_latest = max(diagram_runs, key=lambda e: (bool(e.get('live')), e.get('updated_at') or ''), default=None)
+    diagram_metadata = next((x for x in portfolio.get('cpu_candidates', []) if x.get('id') == 'FR-DIAGRAM'), {})
+    diagram_candidate = {
+        'id': 'FR-DIAGRAM', 'role': 'cpu_admission_candidate',
+        'current_run': diagram_latest.get('name') if diagram_latest else None,
+        'status': 'execution_record' if diagram_latest else 'source_review',
+        'name': diagram_metadata.get('name', 'FlowGen · 可见拓扑开发诊断'),
+        'evidence_summary': diagram_metadata.get('evidence_summary'),
+        'next_action': diagram_metadata.get('current_action') or diagram_metadata.get('next_action'),
+        'scope': 'easy16来源开发适配；direct筛选已曝光，后续复用不计独立样本。候选不增加正式方法分支或科学门。',
+        'runtime': {k: diagram_latest.get(k) for k in ('name', 'status', 'live', 'completed', 'planned', 'source_key')} if diagram_latest else None,
+    } if diagram_runs or diagram_metadata else None
     portfolio['observed_runtime'] = {
         'active_candidates': sum(b['stage'] not in {'stopped', 'saturated', 'archived'} for b in portfolio.get('branches', [])),
         'live_jobs': sum(bool(e.get('live')) for e in by_run.values()),
@@ -676,6 +912,7 @@ def snapshot():
             'document_links': document_links, 'portfolio': portfolio,
             'route_candidate': route_candidate,
             'zoombench_candidate': zoom_candidate,
+            'diagram_candidate': diagram_candidate,
             'budget': budget, 'maintenance': board.get('maintenance'),
             'shared_race': read(SHARED_RACE, {}),
             'verification_policy': '本页刷新只读本地文件。FastResearch本机run可核进程；OPD远端资源以共同赛马记录的实查时刻为准，刷新不重新SSH。其他研究为来源快照，未据本页重新查询远端。'}
