@@ -20,16 +20,21 @@ ZOOMBENCH_KINDS = {ZOOMBENCH_KIND, ZOOMBENCH_HIGHRES_KIND, ZOOMBENCH_GRID_KIND}
 DIAGRAM_SCREEN_KIND = 'flowgen_easy_direct_saturation_screen'
 DIAGRAM_COMPARISON_KIND = 'flowgen_visible_topology_acquisition_diagnostic'
 DIAGRAM_UNIFORM_KIND = 'flowgen_uniform_mermaid_solver_control'
-DIAGRAM_KINDS = {DIAGRAM_SCREEN_KIND, DIAGRAM_COMPARISON_KIND, DIAGRAM_UNIFORM_KIND}
+DIAGRAM_TOOLS_KIND = 'flowgen_textflow_safe_tools_matched_review'
+DIAGRAM_KINDS = {DIAGRAM_SCREEN_KIND, DIAGRAM_COMPARISON_KIND, DIAGRAM_UNIFORM_KIND, DIAGRAM_TOOLS_KIND}
 DIAGRAM_RUNS = {
     'cvpr_flowgen_screen.py': 'bailian_qwen35_122b_flowgen_easy_direct_screen_v1',
     'cvpr_flowgen_diagnostic.py': 'bailian_qwen35_122b_flowgen_easy_textflow_comparison_v1',
     'cvpr_textflow_solver_control.py': 'bailian_qwen35_122b_flowgen_textflow_uniform_solver_v1',
+    'cvpr_textflow_tools_control.py': 'bailian_qwen35_122b_flowgen_textflow_safe_tools_matched_review_v1',
 }
 DIAGRAM_ARMS = ('direct', 'learned_fixed', 'learned_high', 'textflow_mermaid', 'gold_diagnostic')
+DIAGRAM_TOOL_ARMS = ('safe_tools', 'matched_review')
+DIAGRAM_TOOL_TERMINALS = ('text_first', 'tool_final', 'invalid_first', 'invalid_CPU')
 DIAGRAM_RESOURCE_FIELDS = ('physical_attempts', 'successful_settled', 'run_conservative_cny',
     'project_conservative_cny', 'blocking_unresolved', 'retry_unknown_count',
-    'reused_direct_physical_attempts', 'reused_direct_conservative_cny', 'family_conservative_cny')
+    'reused_direct_physical_attempts', 'reused_direct_conservative_cny', 'family_conservative_cny',
+    'family_physical_attempts')
 
 
 def diagram_resources(value):
@@ -49,7 +54,7 @@ def diagram_metric(value):
 
 
 def diagram_summary(run):
-    """The scorer certifies 80 terminal slots through five complete N16 arms.
+    """Only full N16 aggregates: screen, five-arm, uniform or tool/review pair.
 
     We never open its PRIVATE, PRED, calls or ALL_* evidence to re-score in UI.
     A missing/partial/invalid summary remains unknown even if STATUS says done.
@@ -61,7 +66,7 @@ def diagram_summary(run):
     if value.get('status') != 'complete' or value.get('run_id') != run.name or value.get('kind') != kind:
         return None
     resources = diagram_resources(value.get('resources'))
-    if (resources.get('blocking_unresolved') != 0 if kind != DIAGRAM_UNIFORM_KIND
+    if (resources.get('blocking_unresolved') != 0 if kind not in {DIAGRAM_UNIFORM_KIND, DIAGRAM_TOOLS_KIND}
             else resources.get('blocking_unresolved', 0) != 0):
         return None
     safe = {k: value[k] for k in ('schema_version', 'kind', 'run_id', 'status', 'decision',
@@ -125,6 +130,54 @@ def diagram_summary(run):
         if (type(value.get('oracle_minus_strongest_deployable')) is int
                 and -16 <= value['oracle_minus_strongest_deployable'] <= 16):
             safe['oracle_minus_strongest_deployable'] = value['oracle_minus_strongest_deployable']
+    elif kind == DIAGRAM_TOOLS_KIND:
+        arms, references = value.get('arms'), value.get('reference_arms')
+        terminals, engineering = value.get('tool_terminal_kind_counts'), value.get('engineering_valid_each')
+        pair_rows = value.get('paired')
+        if (value.get('N') != 16 or value.get('reused_uniform_first_calls') != 16
+                or not isinstance(arms, dict) or set(arms) != set(DIAGRAM_TOOL_ARMS)
+                or not isinstance(references, dict) or set(references) != set(DIAGRAM_ARMS)
+                or not isinstance(terminals, dict) or set(terminals) != set(DIAGRAM_TOOL_TERMINALS)
+                or any(type(v) is not int or not 0 <= v <= 16 for v in terminals.values())
+                or sum(terminals.values()) != 16
+                or not isinstance(engineering, dict) or set(engineering) != set(DIAGRAM_TOOL_ARMS)
+                or not isinstance(pair_rows, dict)):
+            return None
+        safe_arms = {arm: diagram_metric(arms[arm]) for arm in DIAGRAM_TOOL_ARMS}
+        safe_refs = {arm: diagram_metric(references[arm]) for arm in DIAGRAM_ARMS}
+        if (any(v is None for v in (*safe_arms.values(), *safe_refs.values()))
+                or any(type(engineering[a]) is not bool or engineering[a] != (safe_arms[a]['invalid'] <= 1)
+                       for a in DIAGRAM_TOOL_ARMS)
+                or terminals['invalid_first'] + terminals['invalid_CPU'] > safe_arms['safe_tools']['invalid']):
+            return None
+        physical, settled, family = (resources.get(k) for k in
+                                     ('physical_attempts', 'successful_settled', 'family_physical_attempts'))
+        if (any(type(v) is not int for v in (physical, settled, family))
+                or not 32 + terminals['tool_final'] <= settled <= physical <= 48
+                or family != 144 + physical or family > 192):
+            return None
+        paired = {}
+        for key in ('safe_tools_vs_direct', 'safe_tools_vs_highJSON', 'matched_review_vs_direct',
+                    'matched_review_vs_highJSON', 'safe_tools_vs_matched_review'):
+            row = pair_rows.get(key, {})
+            candidate, control = key.split('_vs_')
+            control_metric = safe_arms[control] if control in safe_arms else safe_refs['learned_high' if control == 'highJSON' else control]
+            if (not isinstance(row, dict) or row.get('N') != 16
+                    or any(type(row.get(k)) is not int for k in ('wins', 'losses', 'net'))
+                    or not 0 <= row['wins'] <= 16 or not 0 <= row['losses'] <= 16 - row['wins']
+                    or row['net'] != row['wins'] - row['losses']
+                    or row['net'] != safe_arms[candidate]['correct'] - control_metric['correct']):
+                return None
+            paired[key] = {k: row[k] for k in ('N', 'wins', 'losses', 'net')}
+        oracle_gap = safe_refs['gold_diagnostic']['correct'] - max(
+            safe_refs['direct']['correct'], safe_refs['learned_high']['correct'],
+            *(row['correct'] for row in safe_arms.values()))
+        if type(value.get('oracle_minus_strongest_deployable')) is not int or value['oracle_minus_strongest_deployable'] != oracle_gap:
+            return None
+        safe.update(N=16, arms=safe_arms, reference_arms=safe_refs, paired=paired,
+                    terminal_solver_slots=32, prior_development_score_exposed=True,
+                    reused_uniform_first_calls=16, tool_terminal_kind_counts=dict(terminals),
+                    engineering_valid_each=dict(engineering), oracle_minus_strongest_deployable=oracle_gap)
     else:
         return None
     root = read(run / 'ROOT_READOUT_DECISION.json', {})
@@ -153,13 +206,14 @@ def diagram_source(path):
     if path.name == 'ROOT_READOUT_DECISION.json':
         return (diagram_summary(path.parent) or {}).get('root_readout_decision')
     fields = (('kind', 'run_id', 'status', 'updated_at', 'pid', 'completed_calls',
-               'panel_records', 'max_logical_calls', 'logical_panel_calls_including_reused_direct',
+               'panel_records', 'max_logical_calls', 'completed_solver_slots', 'max_solver_slots',
+               'logical_panel_calls_including_reused_direct',
                'new_method', 'publication_ready', 'error_type') if path.name == 'STATUS.json' else
               ('schema_version', 'kind', 'run_id', 'N', 'N_each', 'model', 'scope',
                'difficulty_scope', 'temperature', 'enable_thinking', 'solver_cap',
                'max_logical_calls', 'logical_panel_calls_including_reused_direct',
                'max_physical_attempts', 'max_new_physical_attempts', 'phase_cny', 'project_cny',
-               'family_max_physical_attempts', 'interpretation',
+               'family_max_physical_attempts', 'family_prior_physical_attempts', 'cpu_batch_deadline_seconds', 'interpretation',
                'single_paid_worker', 'gpu_jobs', 'schedule', 'adaptations', 'limitations',
                'new_method', 'formal_accepted_comparator', 'formal_method_comparison_completed',
                'confirmation_evaluated', 'publication_ready'))
@@ -169,6 +223,7 @@ def diagram_source(path):
         safe['resources'] = diagram_resources(value.get('resources'))
     if path.name == 'PROTOCOL.json':
         safe['arms'] = (list(DIAGRAM_ARMS) if value.get('kind') == DIAGRAM_COMPARISON_KIND else
+                        list(DIAGRAM_TOOL_ARMS) if value.get('kind') == DIAGRAM_TOOLS_KIND else
                         ['uniform_solver'] if value.get('kind') == DIAGRAM_UNIFORM_KIND else ['direct'])
         anchor = value.get('direct_anchor', {})
         safe['direct_anchor'] = {k: anchor[k] for k in ('run_id', 'N', 'reused_physical_calls',
@@ -180,36 +235,42 @@ def diagram_source(path):
 def diagram_experiment(run, status, protocol):
     comparison = protocol['kind'] == DIAGRAM_COMPARISON_KIND
     uniform = protocol['kind'] == DIAGRAM_UNIFORM_KIND
+    tools = protocol['kind'] == DIAGRAM_TOOLS_KIND
     summary = diagram_summary(run)
     phase = status.get('status', 'unknown')
     is_live = alive(status.get('pid'), run.name) and phase not in {'completed_scored', 'held_preserve_no_regeneration'}
     resource = (summary or diagram_source(run / 'STATUS.json')).get('resources', {})
-    arms = DIAGRAM_ARMS if comparison else ('uniform_solver',) if uniform else ('direct',)
+    arms = DIAGRAM_ARMS if comparison else DIAGRAM_TOOL_ARMS if tools else ('uniform_solver',) if uniform else ('direct',)
     return {'project': 'FastResearch', 'name': run.name, 'branch_id': 'FR-DIAGRAM',
         'diagnostic_kind': protocol['kind'], 'status': phase, 'generation_state': phase,
         'verification': 'local_process_and_artifacts', 'live': is_live,
         'stale_running': phase == 'running' and not is_live,
-        'completed': status.get('completed_calls'), 'planned': 112 if comparison else 16,
+        'completed': status.get('completed_calls'), 'planned': 112 if comparison else 48 if tools else 16,
+        'completed_solver_slots': status.get('completed_solver_slots') if tools else None,
+        'max_solver_slots': 32 if tools else None,
+        'reused_uniform_first_calls': 16 if tools else 0,
         'panel_records': status.get('panel_records', status.get('completed_calls')),
-        'logical_panel_calls_including_reused_direct': 128 if comparison else 16,
+        'logical_panel_calls_including_reused_direct': 128 if comparison else 64 if tools else 16,
         'reused_direct_records': 16 if comparison else 0,
-        'terminal_solver_slots': 80 if comparison and summary else 16 if summary else None,
+        'terminal_solver_slots': (32 if tools else 80 if comparison else 16) if summary else None,
         'updated_at': status.get('updated_at') or stamp(run / 'STATUS.json').get('modified_at'),
-        'title': 'FlowGen · TextFlow 同 Mermaid 统一 solver 控制' if uniform else 'FlowGen · TextFlow / JSON 强对照（原 direct16 只读复用）' if comparison else 'FlowGen · easy16 direct 饱和筛选',
-        'model': protocol.get('model'), 'max_logical_calls': 112 if comparison else 16,
-        'protocol': '原 Qwen3.5-122B · easy16可见拓扑开发适配 · ' + ('同16条冻结 Mermaid；统一JSON臂求解提示，16次新增solver，无新提取或响应复用' if uniform else '112次新增请求上限＋16条已评分 direct 复用；128逻辑记录／80终态槽' if comparison else '16次原图直接推理；无方法收益主张'),
-        'scope': '公开来源开发面板；非原生FlowGen QA，非独立来源或未见确认。' + ('沿用已曝光16条表示与题目；历史参照不作新调用，不修订原TextFlow成绩。' if uniform else '原direct16已评分并曝光，只读复用不增加独立样本。' if comparison else ''),
+        'title': 'FlowGen · TextFlow 安全工具 / 匹配 review 控制' if tools else 'FlowGen · TextFlow 同 Mermaid 统一 solver 控制' if uniform else 'FlowGen · TextFlow / JSON 强对照（原 direct16 只读复用）' if comparison else 'FlowGen · easy16 direct 饱和筛选',
+        'model': protocol.get('model'), 'max_logical_calls': 112 if comparison else 48 if tools else 16,
+        'protocol': '原 Qwen3.5-122B · easy16可见拓扑开发适配 · ' + ('两臂各16终态；最多48新调用，review首答16仅引用；工具首答可直接结束，实际调用/token不同' if tools else '同16条冻结 Mermaid；统一JSON臂求解提示，16次新增solver，无新提取或响应复用' if uniform else '112次新增请求上限＋16条已评分 direct 复用；128逻辑记录／80终态槽' if comparison else '16次原图直接推理；无方法收益主张'),
+        'scope': '公开来源开发面板；非原生FlowGen QA，非独立来源或未见确认。' + ('同16条模型Mermaid与公共问题；工具不读取源GT。匹配review复用统一solver首答16，不计新增调用。' if tools else '沿用已曝光16条表示与题目；历史参照不作新调用，不修订原TextFlow成绩。' if uniform else '原direct16已评分并曝光，只读复用不增加独立样本。' if comparison else ''),
         'arms': [{'arm': arm, 'label': {'direct':'原图 direct（此前筛选复用）' if comparison else '原图 direct',
                     'learned_fixed':'JSON 固定1024提取', 'learned_high':'JSON 高预算8192提取',
                     'textflow_mermaid':'TextFlow Mermaid · 已录用算法适配',
                     'uniform_solver':'同 Mermaid · 统一 solver 提示（新增16调用）',
+                    'safe_tools':'TextFlow 安全七工具（最多两次求解调用）',
+                    'matched_review':'普通匹配 review（首答16引用＋16新复核）',
                     'gold_diagnostic':'源结构 oracle · 仅诊断'}[arm],
                   'predictions': summary.get('learned_request_counts', {}).get(arm, 16) if summary else None,
-                  'score': (summary['arms'][arm] if comparison else summary['uniform_solver'] if uniform else summary['direct']) if summary else None}
+                  'score': (summary['arms'][arm] if comparison or tools else summary['uniform_solver'] if uniform else summary['direct']) if summary else None}
                  for arm in arms],
         'summary': summary, 'resources': resource,
         'actual_calls': resource.get('physical_attempts'), 'api_cost_cny': resource.get('run_conservative_cny'),
-        'finding': '统一提示工程控制完整；原结果与历史参照分别保留，不作为新方法。' if summary and uniform else '完整开发读出，仍须根仲裁；不自动扩展或提升科学门。' if summary else '仅安全进度；完整80终态槽评分未落盘。' if comparison else '仅安全进度；完整16条评分未落盘。',
+        'finding': '完整32终态的已录用工具算法及普通review控制；仍须根仲裁，不修旧门。' if summary and tools else '统一提示工程控制完整；原结果与历史参照分别保留，不作为新方法。' if summary and uniform else '完整开发读出，仍须根仲裁；不自动扩展或提升科学门。' if summary else '仅安全进度；完整32终态槽评分未落盘。' if tools else '仅安全进度；完整80终态槽评分未落盘。' if comparison else '仅安全进度；完整16条评分未落盘。',
         'source_key': 'run.' + run.name + ('' if summary else '.status'),
         'protocol_source_key': 'run.' + run.name + '.protocol'}
 
