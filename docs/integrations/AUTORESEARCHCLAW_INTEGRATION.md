@@ -189,4 +189,4 @@ validate literature collection, experiment execution, paper generation, or
 effectiveness. Source entries emitted while web search is disabled are planning
 artifacts, not independently verified knowledge and are not automatically
 ingested into the Knowledge Library. See
-`docs/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md`.
+`docs/archive/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md`.

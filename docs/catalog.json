@@ -1,0 +1,1395 @@
+{
+  "schema_version": "1.0",
+  "inventory_scope": "all Markdown under docs, including retained historical material",
+  "live_status_authority": "native project submission_plan and project state/plan/results; report is a projection",
+  "documents": [
+    {
+      "path": "ARCHITECTURE.md",
+      "title": "SciTaste 架构",
+      "category": "entry",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "BOUNDED_MODEL_NODES.md",
+      "title": "Bounded model nodes",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "a34115745c9de8a7142e3770042ba3d1a35aad06cc6834a5be17ba50dd757705"
+    },
+    {
+      "path": "CLUSTERED_POWER_ANALYSIS.md",
+      "title": "Pilot-to-formal clustered power analysis",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a"
+    },
+    {
+      "path": "DATASET_PACKAGE_ACQUISITION.md",
+      "title": "Large dataset package acquisition",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "40c13f3f5df3bd6dcd0c08ca4610d8d1496230f4a913acddc6b067ff8c427e84"
+    },
+    {
+      "path": "DATA_ACQUISITION_APPROVAL.md",
+      "title": "Data acquisition approval",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "b6c6baaa05ac09d8e2545d064e27f3dc9d227f8854399297e4e63ac1bd4dce40"
+    },
+    {
+      "path": "EVALUATION_PRELAUNCH.md",
+      "title": "Evaluation prelaunch contracts",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "0adf0654d9d502aebf368911c5351242ba8c7fa2c56fe7f2e8d010dc0b5b7ded"
+    },
+    {
+      "path": "EXPERIMENT_DECISION_DOSSIER.md",
+      "title": "Experiment decision dossier",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "703c52389d5a818e6b1a8f3ace2414f6b8e4f134748b9a7011a2abec88eac484"
+    },
+    {
+      "path": "FULL_WORKFLOW.md",
+      "title": "Project-owned full workflow",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "87b6aafdb89d041860bee22f91885ce294b89209e0124b8dd0c922328fcba9a3"
+    },
+    {
+      "path": "GROUNDED_TASTE_DISTILLATION.md",
+      "title": "Grounded contrastive Scientific Taste distillation",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "e95c0160c4821fabf0759421ae5f4a46ed17e9644c589f6eeb3a3dc91a6de49d"
+    },
+    {
+      "path": "ICLR_2027_EVALUATION_ADDENDUM_V2.md",
+      "title": "ICLR 2027 evaluation contract addendum v2",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760"
+    },
+    {
+      "path": "ICLR_2027_EVALUATION_PLAN.md",
+      "title": "SciTaste ICLR 2027 evaluation contract",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "a220109511f0bf6f1f5e506abb316ae2078609980f0824ceb577fff837f728a4"
+    },
+    {
+      "path": "ICLR_2027_EXPERIMENT_STRATEGY_V1.md",
+      "title": "ICLR 2027 core experiment strategy",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "97c9c42b567878a7ec5eff4514891bcc2374b1f959cb07770a811f26d55d0746"
+    },
+    {
+      "path": "INNOVATION_MAP.md",
+      "title": "SciTaste Innovation Map",
+      "category": "entry",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "MATCHED_BUDGET_STUDY.md",
+      "title": "Matched-budget system study",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "f4fb2b4a90a895679a36438f4dc541701e788700287a7a5c30e3e7f4d74a9a9c"
+    },
+    {
+      "path": "NATIVE_EXECUTION.md",
+      "title": "SciTaste native execution",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "4ccda55f9039c00bca56a3b64533a7ee5d061997e4d071b6ba27923a1cf0d3a4"
+    },
+    {
+      "path": "PAPER_REVIEW_LOOP.md",
+      "title": "Project-owned paper review loop",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "7ce5e0bd9acd44ddfde1948e9df5665c4f7239f703023446981596e0ae38d3bb"
+    },
+    {
+      "path": "PROJECT_INFORMATION_FLOW.md",
+      "title": "Project information flow for scientific writing",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "caa3d31a505ed75462149474f413eac71aac46422d32d0ce442ca675c25839a7"
+    },
+    {
+      "path": "PROJECT_RUNTIME.md",
+      "title": "Project runtime",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "7f9419fa100380690ae2e89db6ac79d6e957d9f1a223f5c6c86c3d4e95007424"
+    },
+    {
+      "path": "README.md",
+      "title": "SciTaste 文档入口",
+      "category": "entry",
+      "role": "navigation",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "ROADMAP.md",
+      "title": "SciTaste 路线图",
+      "category": "entry",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "SCIENTIFIC_REFERENCE_MINING.md",
+      "title": "Decision-gap-driven Scientific Reference mining",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "a35c26b4fd8f265f4ce1ff4ff6deef18ba0acfd759296253c7dfc9cfbf1886d4"
+    },
+    {
+      "path": "SCIENTIFIC_REFERENCE_QUALITY.md",
+      "title": "Content-grounded Scientific Reference quality",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "1b6d01a3e76ad79ee3a0773379ea683cdf73274fcba025f3c033c608e5df1a54"
+    },
+    {
+      "path": "SCITASTEBENCH_V3_TREATMENT_MANIFEST.md",
+      "title": "SciTasteBench v3 Treatment Manifest",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "1944541c7176065b7acb6c24bc3db30600ec17474181f544c7791b280760d6ee"
+    },
+    {
+      "path": "TASTE_CORPUS_CURATION.md",
+      "title": "High-quality source abstraction for Scientific Taste",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "d091ece13eaa71e80bd9b9a51ba7babba2f4166b169c8033e18804a3632e373a"
+    },
+    {
+      "path": "TASTE_DELIBERATIVE_SELECTION.md",
+      "title": "Decision-grounded Scientific Taste selection",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "860fcb511ceb4869701d3d0ce04c9dfc5a00e68296a25ab1dead7095b20c5889"
+    },
+    {
+      "path": "TOOL_INTELLIGENCE.md",
+      "title": "Tool Intelligence",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "34d5d276145b7b4145fc7fe676058c558d3c0e305dd27e0b9589ed2ea7e0b5f6"
+    },
+    {
+      "path": "WRITING_TASTE.md",
+      "title": "Writing Taste",
+      "category": "entry",
+      "role": "frozen-reference",
+      "owner": "module-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "9c1bffa671ef6fd5612d5941feff31619d22dd0a8f45eddc26117fa374a86db1"
+    },
+    {
+      "path": "archive/README.md",
+      "title": "历史档案",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "archive/experiments/autoresearchclaw_phase75_smoke_2026-09-02.md",
+      "title": "AutoResearchClaw Phase 7.5 real-substrate smoke run",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/autoresearchclaw_phase75_smoke_2026-09-02.md"
+    },
+    {
+      "path": "archive/experiments/bailian_intrinsic_smoke_2026-09-02.md",
+      "title": "Bailian intrinsic calibration smoke run",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/bailian_intrinsic_smoke_2026-09-02.md"
+    },
+    {
+      "path": "archive/experiments/bailian_visual_smoke_2026-09-02.md",
+      "title": "Bailian visual-taste calibration smoke run",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/bailian_visual_smoke_2026-09-02.md"
+    },
+    {
+      "path": "archive/experiments/bounded_native_mainline_acceptance_2026-09-09.md",
+      "title": "Bounded native mainline acceptance — 2026-09-09",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/bounded_native_mainline_acceptance_2026-09-09.md"
+    },
+    {
+      "path": "archive/experiments/knowledge_rag_publication_preacceptance_2026-09-03.md",
+      "title": "Knowledge RAG publication preacceptance status — 2026-09-03",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/knowledge_rag_publication_preacceptance_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/matched_budget_formal_base_acceptance_v4_2026-09-03.md",
+      "title": "Matched-budget formal base acceptance v4",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/matched_budget_formal_base_acceptance_v4_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/matched_budget_formal_preacceptance_2026-09-03.md",
+      "title": "Matched-budget formal preacceptance: diagnosis/base",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/matched_budget_formal_preacceptance_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/matched_budget_formal_preacceptance_v2_2026-09-03.md",
+      "title": "Matched-budget formal preacceptance v2: diagnosis/base",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/matched_budget_formal_preacceptance_v2_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/matched_budget_local_pilot_plan_2026-09-03.md",
+      "title": "Phase 9-B local RTX 3090 pilot plan",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/matched_budget_local_pilot_plan_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/matched_budget_matrix_status_2026-09-09.md",
+      "title": "Phase 9 exact-protocol matrix status — 2026-09-09",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/matched_budget_matrix_status_2026-09-09.md"
+    },
+    {
+      "path": "archive/experiments/matched_budget_phase9_plan_2026-09-03.md",
+      "title": "Phase 9 matched-budget plan acceptance",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/matched_budget_phase9_plan_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/native_code_repair_acceptance_2026-09-09.md",
+      "title": "Bounded native code repair acceptance — 2026-09-09",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/native_code_repair_acceptance_2026-09-09.md"
+    },
+    {
+      "path": "archive/experiments/phase3_external_corpus_acceptance_2026-09-02.md",
+      "title": "Phase 3 external-corpus acceptance",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/phase3_external_corpus_acceptance_2026-09-02.md"
+    },
+    {
+      "path": "archive/experiments/qwen3vl4b_local_smoke_2026-09-03.md",
+      "title": "Qwen3-VL-4B local RTX 3090 smoke run",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/qwen3vl4b_local_smoke_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/scitastebench_phase8_offline_2026-09-03.md",
+      "title": "SciTasteBench Phase 8 offline acceptance",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/scitastebench_phase8_offline_2026-09-03.md"
+    },
+    {
+      "path": "archive/experiments/writing_taste_self_audit_2026-09-08.md",
+      "title": "Writing Taste self-audit — 2026-09-08",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/writing_taste_self_audit_2026-09-08.md"
+    },
+    {
+      "path": "archive/experiments/zhipu_glm52_four_condition_preacceptance_2026-09-04.md",
+      "title": "Zhipu GLM-5.2 four-condition preacceptance — 2026-09-04",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/zhipu_glm52_four_condition_preacceptance_2026-09-04.md"
+    },
+    {
+      "path": "archive/experiments/zhipu_glm52_knowledge_rag_preacceptance_2026-09-04.md",
+      "title": "Zhipu GLM-5.2 Knowledge RAG preacceptance — 2026-09-04",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/zhipu_glm52_knowledge_rag_preacceptance_2026-09-04.md"
+    },
+    {
+      "path": "archive/experiments/zhipu_glm53_full_workflow_advisory_2026-09-05.md",
+      "title": "GLM-5.3-Flash Full Workflow advisory engineering run",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/zhipu_glm53_full_workflow_advisory_2026-09-05.md"
+    },
+    {
+      "path": "archive/experiments/zhipu_glm53_model_node_probe_2026-09-05.md",
+      "title": "Zhipu GLM-5.3-Flash bounded-model-node engineering probe",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md"
+    },
+    {
+      "path": "archive/experiments/zhipu_glm53_native_code_generation_2026-09-07.md",
+      "title": "GLM-5.3-Flash native-code generation engineering probe",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/zhipu_glm53_native_code_generation_2026-09-07.md"
+    },
+    {
+      "path": "archive/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md",
+      "title": "GLM-5.3-Flash project-owned Stage 1–3 engineering acceptance",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md"
+    },
+    {
+      "path": "archive/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md",
+      "title": "Project-owned AutoResearchClaw search preacceptance",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md"
+    },
+    {
+      "path": "archive/planning/MAINLINE_DELIVERY_HISTORY.md",
+      "title": "Mainline delivery history — superseded by the ten-day submission plan",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/MAINLINE_DELIVERY_HISTORY.md"
+    },
+    {
+      "path": "archive/planning/MAINLINE_DELIVERY_PLAN.md",
+      "title": "投稿主线与十天交付计划",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical",
+      "previous_path": "docs/MAINLINE_DELIVERY_PLAN.md"
+    },
+    {
+      "path": "archive/snapshots/ARCHITECTURE.pre-20261012.md",
+      "title": "Architecture",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "archive/snapshots/GENERATIVE_UI.pre-20261012.md",
+      "title": "Evidence-Grounded Generative Research Interface",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "archive/snapshots/ROADMAP.pre-20261012.md",
+      "title": "Roadmap",
+      "category": "archive",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "cases/FULL_WORKFLOW_FINALIZATION_RECOVERY.md",
+      "title": "Full Workflow finalization recovery self-iteration",
+      "category": "cases",
+      "role": "case-study",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "cases/OPEN_QUESTION_INTAKE.md",
+      "title": "Open-question intake self-iteration",
+      "category": "cases",
+      "role": "case-study",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "cases/README.md",
+      "title": "案例材料",
+      "category": "cases",
+      "role": "case-study",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "cases/SCITASTE_ICLR2027_WRITING.md",
+      "title": "SciTaste ICLR 2027 writing self-iteration",
+      "category": "cases",
+      "role": "case-study",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "cases/SCITASTE_SELF_ITERATION.md",
+      "title": "SciTaste self-iteration case",
+      "category": "cases",
+      "role": "case-study",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "evaluation/GENERATION_AS_CONTENT_EVALUATION.md",
+      "title": "Generation as Content Evaluation",
+      "category": "evaluation",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/GENERATION_AS_CONTENT_EVALUATION.md"
+    },
+    {
+      "path": "evaluation/HUMAN_PREFERENCE_ANALYSIS.md",
+      "title": "H1/H2 human preference analysis",
+      "category": "evaluation",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/HUMAN_PREFERENCE_ANALYSIS.md"
+    },
+    {
+      "path": "evaluation/MODEL_ROLE_CONFORMANCE.md",
+      "title": "Model-role conformance and selection",
+      "category": "evaluation",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/MODEL_ROLE_CONFORMANCE.md"
+    },
+    {
+      "path": "evaluation/OBJECTIVE_ANALYSIS.md",
+      "title": "Preregistered objective analysis",
+      "category": "evaluation",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/OBJECTIVE_ANALYSIS.md"
+    },
+    {
+      "path": "evaluation/README.md",
+      "title": "评测与科学合同",
+      "category": "evaluation",
+      "role": "navigation",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "evaluation/SCITASTEBENCH.md",
+      "title": "SciTasteBench",
+      "category": "evaluation",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/SCITASTEBENCH.md"
+    },
+    {
+      "path": "evaluation/TRACK_A_TASTE_MECHANISM_SUITE.md",
+      "title": "Track-A Taste mechanism pilot suite",
+      "category": "evaluation",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/TRACK_A_TASTE_MECHANISM_SUITE.md"
+    },
+    {
+      "path": "guides/COMMUNICATION_LOOP.md",
+      "title": "Communication Loop",
+      "category": "guides",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/COMMUNICATION_LOOP.md"
+    },
+    {
+      "path": "guides/EXPERIMENT_DESIGN_LOOP.md",
+      "title": "Experiment design loop",
+      "category": "guides",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/EXPERIMENT_DESIGN_LOOP.md"
+    },
+    {
+      "path": "guides/FIGURE_SYSTEM.md",
+      "title": "Figure System",
+      "category": "guides",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/FIGURE_SYSTEM.md"
+    },
+    {
+      "path": "guides/GENERATIVE_UI.md",
+      "title": "SciTaste 界面使用与边界",
+      "category": "guides",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/GENERATIVE_UI.md"
+    },
+    {
+      "path": "guides/NATIVE_CODE_GENERATION.md",
+      "title": "Native code generation",
+      "category": "guides",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/NATIVE_CODE_GENERATION.md"
+    },
+    {
+      "path": "guides/OUTPUT_LAYOUT.md",
+      "title": "Output layout and naming",
+      "category": "guides",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/OUTPUT_LAYOUT.md"
+    },
+    {
+      "path": "guides/PROJECT_DOCUMENT_INTERFACE.md",
+      "title": "Living project document interface",
+      "category": "guides",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/PROJECT_DOCUMENT_INTERFACE.md"
+    },
+    {
+      "path": "guides/README.md",
+      "title": "工作流与产品使用",
+      "category": "guides",
+      "role": "navigation",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "integrations/AGENT_LABORATORY_ADAPTER.md",
+      "title": "Agent Laboratory adapter",
+      "category": "integrations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/AGENT_LABORATORY_ADAPTER.md"
+    },
+    {
+      "path": "integrations/AUTORESEARCHCLAW_INTEGRATION.md",
+      "title": "AutoResearchClaw integration",
+      "category": "integrations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/AUTORESEARCHCLAW_INTEGRATION.md"
+    },
+    {
+      "path": "integrations/EXTERNAL_SYSTEM_ADAPTERS.md",
+      "title": "External system adapters",
+      "category": "integrations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/EXTERNAL_SYSTEM_ADAPTERS.md"
+    },
+    {
+      "path": "integrations/MLRC_PERCEPTION_RUNTIME.md",
+      "title": "MLRC Perception split runtime",
+      "category": "integrations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/MLRC_PERCEPTION_RUNTIME.md"
+    },
+    {
+      "path": "integrations/README.md",
+      "title": "外部系统集成",
+      "category": "integrations",
+      "role": "navigation",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "operations/API_MODEL_IDENTITY.md",
+      "title": "Hosted-model identity for formal evidence",
+      "category": "operations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/API_MODEL_IDENTITY.md"
+    },
+    {
+      "path": "operations/API_PROVIDERS.md",
+      "title": "API provider strategy",
+      "category": "operations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/API_PROVIDERS.md"
+    },
+    {
+      "path": "operations/COMPUTE_RESOURCES.md",
+      "title": "Shared compute resources",
+      "category": "operations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/COMPUTE_RESOURCES.md"
+    },
+    {
+      "path": "operations/DATASET_LICENSE_POLICY.md",
+      "title": "Dataset license policy",
+      "category": "operations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/DATASET_LICENSE_POLICY.md"
+    },
+    {
+      "path": "operations/DATA_SOURCES.md",
+      "title": "External corpus policy",
+      "category": "operations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/DATA_SOURCES.md"
+    },
+    {
+      "path": "operations/README.md",
+      "title": "资源、来源与运行维护",
+      "category": "operations",
+      "role": "navigation",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "operations/REVIEW_FOLLOWUP_ACTIVATION.md",
+      "title": "Review follow-up activation",
+      "category": "operations",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/REVIEW_FOLLOWUP_ACTIVATION.md"
+    },
+    {
+      "path": "research/ACQUIRED_ASSET_HANDOFF.md",
+      "title": "Acquired resources to Native tasks",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md",
+      "title": "AI review substitution protocol v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "12a258465fee5bb7f65e3f6e56910c63c7f67fbedf9d021b8c3f5165ccef3f95"
+    },
+    {
+      "path": "research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V2.md",
+      "title": "AI review operational-finality protocol v2",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "c9f3025189698cc3bbcb2e26666ba2f7fb6840f8cf68ee08081643e990748503"
+    },
+    {
+      "path": "research/AUTORESEARCHCLAW_NATIVE_SESSION_EXECUTION.md",
+      "title": "Native AutoResearchClaw execution with session model transport",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md",
+      "title": "Accepted AutoResearch evaluation audit v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af"
+    },
+    {
+      "path": "research/AUTORESEARCH_CONTRIBUTION_TYPE_AUDIT_V2.md",
+      "title": "AutoResearch contribution-type audit v2",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/AUTORESEARCH_METHOD_CENSUS_CANDIDATE_V3.md",
+      "title": "AutoResearch method census candidate v3",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/AUTORESEARCH_METHOD_CENSUS_FOURTH_SCREEN_V6.md",
+      "title": "AutoResearch evidence census: independent fourth screen v6",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "8793a80eeba09256794ee268db77ad4376ff0fa37bedcdfdfe1474428c7972e4"
+    },
+    {
+      "path": "research/AUTORESEARCH_METHOD_CENSUS_SECOND_SCREEN_V4.md",
+      "title": "AutoResearch method census: independent second screen v4",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/AUTORESEARCH_METHOD_CENSUS_THIRD_SCREEN_V5.md",
+      "title": "AutoResearch evidence census: independent third screen v5",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/COMPLETENESS_FIRST_EXECUTION_PLAN.md",
+      "title": "Completeness-first mainline",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/CORE_CAPABILITY_STATUS.md",
+      "title": "Core capability status",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/CORE_COMPLETION_SPRINT.md",
+      "title": "Core completion sprint",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/CVPR27_MAINLINE_EXIT_CRITERIA.md",
+      "title": "CVPR 2027 mainline exit criteria",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/EVIDENCE_GUIDED_RESEARCH_REASONING.md",
+      "title": "Evidence-guided scientific reasoning",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/EXECUTABLE_BENCHMARK_QUALIFICATION_AUDIT_V1.md",
+      "title": "Executable benchmark qualification for the ICLR 2027 evidence stack",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "2226f02fda88af56811f226f98c576abd4b34d4e72c63a6e3a9a1fba50ab2675"
+    },
+    {
+      "path": "research/ICLR27_BLIND_REVIEW_20260917.md",
+      "title": "Independent ICLR 2027 blind review — 2026-09-17",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/ICLR27_EXPERIMENT_MATRIX_V1.md",
+      "title": "ICLR 2027 experiment matrix v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "e42e09d0e56d51521d45086c6108117739c187300534ddad03f8bb4b954f739e"
+    },
+    {
+      "path": "research/ICLR27_FRESH_BLIND_REVIEW_20260918.md",
+      "title": "Fresh-context ICLR 2027 review — 2026-09-18",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/LIFECYCLE_TASTE_POLICY_FORMALIZATION_V1.md",
+      "title": "Lifecycle Scientific Taste policy: v1 formalization with signed-v2 amendment",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/MLRC_FIRST_PREFLIGHT_ACQUISITION_AUDIT_V1.md",
+      "title": "MLRC first-preflight acquisition audit v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "fdf6a3e5e72efe4ce115deeee19d1b13091aec88eec2b40bacabd6f46b577313"
+    },
+    {
+      "path": "research/MLRC_META_VISUAL_FORK_DEVELOPMENT_V1.md",
+      "title": "First real visual-fork qualification: MLRC Meta-Learning development",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/MLRC_NATIVE_EXECUTION_READINESS_V1.md",
+      "title": "Independent SciTaste Native execution readiness v1",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/MLRC_VISION_MAINLINE_STATUS_V1.md",
+      "title": "MLRC vision mainline: development outcomes and next independent task",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/MLR_BENCH_TEN_BRIEF_QUALIFICATION_AUDIT_V1.md",
+      "title": "MLR-Bench ten-brief qualification audit v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "80e262060babda5b19f62b3f3071242a1c021cc6490107a74c7e02c10913809b"
+    },
+    {
+      "path": "research/MODEL_RESOURCE_ROLE_PLAN_V1.md",
+      "title": "Model resource inventory and role plan",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/OBJECTIVE_TASTE_BRANCHING.md",
+      "title": "Objective counterfactual tests of Scientific Taste",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/OPEN_RESEARCH_BENCHMARK_COMPARISON.md",
+      "title": "Paper-oriented complete-research comparison",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/README.md",
+      "title": "研究资料与协议",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_FORECASTING_V1.md",
+      "title": "Cross-series forecasting research: source and protocol",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md",
+      "title": "SciTasteBench four-layer protocol v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "94d6630c668d4b446bdfc60d0d5357b8aa7b3aa2dcad6614f101c8aa2fef5a72"
+    },
+    {
+      "path": "research/SCITASTEBENCH_FULL_TASK_PROTOCOL_V2.md",
+      "title": "SciTasteBench: complete research and evidence-responsive judgment",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_GEOMETRY_V1.md",
+      "title": "Confidence-guided geometric inference",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_ICLR27_STUDY_DESIGN.md",
+      "title": "SciTasteBench and external validation: ICLR 2027 study design",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_PERTURBATION_V1.md",
+      "title": "Compositional perturbation research: source and task contract",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_PHYSICAL_ROLLOUT_V1.md",
+      "title": "Physical rollout from short-horizon evidence",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_POPULATION_SHIFT_V1.md",
+      "title": "Population variation and probability evidence",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_QM9_GAP_V1.md",
+      "title": "Molecular gap extrapolation: prospective complete research task",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_TASK_DATA_V1.md",
+      "title": "SciTasteBench authored full-task data — current population",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTEBENCH_VALIDATION_RESERVE_V2.md",
+      "title": "SciTasteBench independent validation reserve v2",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTE_CAPABILITY_DRIVEN_AUTORESEARCH_PROGRAM_V4.md",
+      "title": "SciTaste capability-driven AutoResearch program v4",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "f097f48bae5effe053e7a17c7e7d99ea69ca98f30bffdaa6de16849e0232f161"
+    },
+    {
+      "path": "research/SCITASTE_COMPLETE_AUTORESEARCH_PROGRAM_V3.md",
+      "title": "SciTaste complete AutoResearch program v3",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md",
+      "title": "SciTaste experiment decision brief v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "ed57093e0f6047b093e45a2ffebef92205ab439aa4e3382ec25ddb3e71d4d8d5"
+    },
+    {
+      "path": "research/SCITASTE_IDEA_POSITIONING_V1.md",
+      "title": "SciTaste idea and positioning memo v1",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md",
+      "title": "SciTaste lifecycle evidence program v2",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "dd3bcffe9f88503751ae0365ba94611cb4ca7d9d4dcd449454e472f062f35fbd"
+    },
+    {
+      "path": "research/SCITASTE_RELATED_WORK_DRIVEN_AUTORESEARCH_PROGRAM_V7.md",
+      "title": "SciTaste related-work-driven AutoResearch program v7 to v10 handoff",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "80f1edc373c6b9d7b0cad375d1c736100fb78f9df1fe4852f1560295989fc81e"
+    },
+    {
+      "path": "research/VENUE_EVIDENCE_GAP_CRITIC.md",
+      "title": "Venue-aware evidence-gap critic",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/WRITING_TASTE_REFERENCE_STUDY_V1.md",
+      "title": "Writing Taste Reference Study v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "015b99ea5aa449ca8d8aef7b7e6627b73668f81368ec9376250c39ef21161ea8"
+    },
+    {
+      "path": "research/protocols/AAAR_EXPERIMENT_DESIGN_RIGHTS_PILOT_V1.md",
+      "title": "AAAR experiment-design rights pilot v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "fda34fbef8f57218955493168b1beecd522ce807177de0836e2dfe79b2222a5b"
+    },
+    {
+      "path": "research/protocols/AAAR_POST_ACQUISITION_PIPELINE_V1.md",
+      "title": "AAAR post-acquisition pipeline v1",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md",
+      "title": "Agent Laboratory best-native adapter audit v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71"
+    },
+    {
+      "path": "research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md",
+      "title": "Matched AutoResearch prepilot governance protocol v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339"
+    },
+    {
+      "path": "research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V2.md",
+      "title": "Matched idea-to-paper package-preference prepilot governance v2",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "c2c403500bff61f696ff6b309b179485fd8f0c6713e01e9da6d44d73c51ca6c4"
+    },
+    {
+      "path": "research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V3.md",
+      "title": "Matched idea-to-paper package-preference prepilot governance v3",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "2ce7d670b22fb8646f2174cc318a2c085e588869ea0fee58208ee75d10a3d592"
+    },
+    {
+      "path": "research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md",
+      "title": "Matched idea-to-paper package-preference prepilot governance v4",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe"
+    },
+    {
+      "path": "research/protocols/E2_MLRC_PERCEPTION_NATIVE_PAIR_V1.md",
+      "title": "E2 MLRC Perception Native Pair v1",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md",
+      "title": "External adapter compatibility audit v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73"
+    },
+    {
+      "path": "research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md",
+      "title": "ICLR 2027 dual-estimand prepilot governance v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812"
+    },
+    {
+      "path": "research/protocols/README.md",
+      "title": "研究协议",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md",
+      "title": "SciTasteBench v2 curation and local-model governance",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "000b426c473163b1791fd8364ce40f6df50e0d3db5b53b17ae7eeeebd39cdddc"
+    },
+    {
+      "path": "research/protocols/SCITASTEBENCH_V3_H1H2_HUMAN_EVALUATION_V1.md",
+      "title": "SciTasteBench v3 H1/H2 human evaluation protocol v1",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/protocols/STANDING_LOCAL_RESOURCE_READ_POLICY_V1.md",
+      "title": "Standing local-resource read policy v1",
+      "category": "research",
+      "role": "research-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md",
+      "title": "TinyScientist best-native adapter audit v1",
+      "category": "research",
+      "role": "frozen-reference",
+      "owner": "project-research-maintainer",
+      "edit_policy": "preserve-bound-bytes",
+      "preserved_sha256": "9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251"
+    },
+    {
+      "path": "tasks/BOARD.md",
+      "title": "Parallel Task Board",
+      "category": "tasks",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "tasks/README.md",
+      "title": "Parallel Window Dispatch",
+      "category": "tasks",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "tasks/WINDOW_2.md",
+      "title": "Window 2 Dispatch: Tool Intelligence — Durable Project Loop",
+      "category": "tasks",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "tasks/WINDOW_3.md",
+      "title": "Window 3 Dispatch: Complete Multilingual Generative UI",
+      "category": "tasks",
+      "role": "historical-record",
+      "owner": "project-research-maintainer",
+      "edit_policy": "historical"
+    },
+    {
+      "path": "taste/AI_TASTE_ABSTRACTION_REVIEW.md",
+      "title": "AI-only grounded Taste abstraction review",
+      "category": "taste",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/AI_TASTE_ABSTRACTION_REVIEW.md"
+    },
+    {
+      "path": "taste/EXPERIENCE_INTEGRATION.md",
+      "title": "子课题经验接入 SciTaste 的规范",
+      "category": "taste",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/EXPERIENCE_INTEGRATION.md"
+    },
+    {
+      "path": "taste/README.md",
+      "title": "Taste 与经验迭代",
+      "category": "taste",
+      "role": "navigation",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place"
+    },
+    {
+      "path": "taste/RECURSIVE_TASTE_POLICY.md",
+      "title": "Recursive Scientific Taste policy development",
+      "category": "taste",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/RECURSIVE_TASTE_POLICY.md"
+    },
+    {
+      "path": "taste/TASTE_CORPUS_PAIRING.md",
+      "title": "Matched and mismatched Taste corpus qualification",
+      "category": "taste",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/TASTE_CORPUS_PAIRING.md"
+    },
+    {
+      "path": "taste/TASTE_MEMORY_LEARNING.md",
+      "title": "Outcome-gated continual Scientific Taste",
+      "category": "taste",
+      "role": "current-guide",
+      "owner": "module-maintainer",
+      "edit_policy": "update-in-place",
+      "previous_path": "docs/TASTE_MEMORY_LEARNING.md"
+    }
+  ]
+}

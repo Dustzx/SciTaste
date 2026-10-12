@@ -204,7 +204,7 @@ immutable historical strata. Because no current approved DeepSeek sentinel
 window exists, the current model remains pending until a task-excluded
 authenticated identity probe.
 The future probe must use the sentinel-bracketed temporal protocol in
-`docs/API_MODEL_IDENTITY.md`; a returned alias alone is not a frozen checkpoint.
+`docs/operations/API_MODEL_IDENTITY.md`; a returned alias alone is not a frozen checkpoint.
 
 The official Zhipu page identifies `glm-5.3-flash` as a native multimodal model
 with a 1M context window, 128K maximum output, thinking, function calling,

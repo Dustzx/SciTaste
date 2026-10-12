@@ -119,3 +119,22 @@ make demo
   coordination cost exceeds their parallelism benefit.
 - Child windows use separate worktrees, stay inside assigned path ownership, and
   return clean feature-branch commits to main for review and integration.
+
+## Documentation maintenance
+
+- Start from `docs/README.md` and the module indexes. Keep `docs/ARCHITECTURE.md`
+  focused on present boundaries and `docs/ROADMAP.md` on directions/exit gates.
+  Do not prepend daily experiment updates or repair logs to either document.
+- Run status, exact metrics, cost, next experiments and scientific decisions live
+  in the corresponding project's canonical state/plan/results, with report/UI
+  projections linking that evidence. Do not duplicate them across general docs.
+- Reuse a module document before creating a new Markdown file. New live docs go
+  in guides/taste/evaluation/operations/integrations; research holds source and
+  protocol materials, archive holds superseded snapshots and completed logs.
+- `docs/catalog.json` records the whole documentation inventory. Entries marked
+  frozen-reference preserve original paths/bytes because existing configurations
+  bind them. Evolve a real contract through its existing versioning process;
+  documentation cleanup alone must not rewrite its SHA, configs or permissions.
+- After moving docs, update active links and the inventory, check moved bytes and
+  frozen references, and run `python scripts/check_documentation.py`. Do not
+  start experiments or run the full repository suite for documentation cleanup.

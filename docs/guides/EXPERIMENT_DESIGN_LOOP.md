@@ -43,7 +43,7 @@ prevents a completed planning object, a model-generated suggestion, or a stale
 approval from launching API/GPU work.
 
 The resource decision is derived from the versioned corpus in
-[`research/data/autoresearch_evaluation_resources_v2.yaml`](research/data/autoresearch_evaluation_resources_v2.yaml).
+[`../research/data/autoresearch_evaluation_resources_v2.yaml`](../research/data/autoresearch_evaluation_resources_v2.yaml).
 Corpus prose cannot set `eligible=true`: `scitaste.evaluation` recomputes the
 answer from use-specific gates. `reference` and `code_audit` permit citation and
 read-only inspection only. `task_source` additionally requires a frozen
@@ -69,6 +69,6 @@ tools, resources, or environment receive their own labels. Everything else
 remains unresolved.
 
 The accepted-paper basis for the external task stack is documented in
-[`research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md`](research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md),
+[`../research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md`](../research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md),
 and the paper-level protocol is in
-[`ICLR_2027_EVALUATION_PLAN.md`](ICLR_2027_EVALUATION_PLAN.md).
+[`../ICLR_2027_EVALUATION_PLAN.md`](../ICLR_2027_EVALUATION_PLAN.md).

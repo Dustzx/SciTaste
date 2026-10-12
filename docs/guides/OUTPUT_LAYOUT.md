@@ -20,7 +20,7 @@ the revision-guarded runtime rather than by editing symlinks manually:
 .venv/bin/scitaste project paper build --help
 ```
 
-See [`PROJECT_RUNTIME.md`](PROJECT_RUNTIME.md) for creation, registration,
+See [`../PROJECT_RUNTIME.md`](../PROJECT_RUNTIME.md) for creation, registration,
 selection, dry-run, and optimistic-concurrency examples.
 
 The canonical hierarchy is:
@@ -109,7 +109,7 @@ runs/<run-id>/stages/{discovery,evidence,communication,figure}/
 Every directory has a `STAGE.json` explaining what it completed. Its paper is
 owned by the same project and contains `main.md`, `main.tex`, `build.json`, an
 optional compiled `main.pdf`, and editable SVG/draw.io figure files. See
-[`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).
+[`../FULL_WORKFLOW.md`](../FULL_WORKFLOW.md).
 
 An interactively advanced native Discovery run uses immutable command steps
 under one mutable, self-hashed head:
@@ -183,7 +183,7 @@ experiment definition/source. `artifacts/` contains exact handler outputs such a
 ranked retrieval results and bounded experiment stdout, stderr, independently
 derived metrics, and execution metadata. `records/` is the contiguous
 predecessor-hashed action chain. Stage decision logs bind the record identities.
-See [`NATIVE_EXECUTION.md`](NATIVE_EXECUTION.md).
+See [`../NATIVE_EXECUTION.md`](../NATIVE_EXECUTION.md).
 
 A project-owned AutoResearchClaw source bootstrap has its own explicit boundary:
 

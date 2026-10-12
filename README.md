@@ -179,14 +179,16 @@ variables and are not stored in source, YAML, or output receipts.
 
 ## Documentation
 
+Start with the [documentation home](docs/README.md) for current guides, source-bound contracts and historical records.
+
 | Start here | Then go deeper |
 |---|---|
 | [Architecture](docs/ARCHITECTURE.md) | [Scientific Taste and the innovation map](docs/INNOVATION_MAP.md) |
-| [Full workflow](docs/FULL_WORKFLOW.md) | [Generation as Content](docs/GENERATIVE_UI.md) |
-| [Output layout](docs/OUTPUT_LAYOUT.md) | [Native execution](docs/NATIVE_EXECUTION.md) |
+| [Full workflow](docs/FULL_WORKFLOW.md) | [Generation as Content](docs/guides/GENERATIVE_UI.md) |
+| [Output layout](docs/guides/OUTPUT_LAYOUT.md) | [Native execution](docs/NATIVE_EXECUTION.md) |
 | [Roadmap](docs/ROADMAP.md) | [Evaluation prelaunch gates](docs/EVALUATION_PRELAUNCH.md) |
-| [Taste corpus curation](docs/TASTE_CORPUS_CURATION.md) | [Matched/placebo qualification](docs/TASTE_CORPUS_PAIRING.md) |
-| [Shared compute and model assets](docs/COMPUTE_RESOURCES.md) | [ICLR 2027 experiment strategy](docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md) |
+| [Taste corpus curation](docs/TASTE_CORPUS_CURATION.md) | [Matched/placebo qualification](docs/taste/TASTE_CORPUS_PAIRING.md) |
+| [Shared compute and model assets](docs/operations/COMPUTE_RESOURCES.md) | [ICLR 2027 experiment strategy](docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md) |
 
 ## Development
 

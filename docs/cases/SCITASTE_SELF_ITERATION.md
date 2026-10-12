@@ -102,7 +102,7 @@ The project record freezes the alternatives, current cost baseline, hard safety
 boundaries, and falsifiable acceptance gates. It remains
 `retrieval_eligible=false`, and the registered Phase 9 protocol is not modified
 mid-study. The detailed run ledger is
-`docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md`.
+`docs/archive/experiments/zhipu_glm53_model_node_probe_2026-09-05.md`.
 
 The same design has now entered the actual `run full` evidence path. A
 content-addressed GLM-5.3-Flash condition and a separate caller switch must both
@@ -113,7 +113,7 @@ is ambiguous, it records unknown cost and refuses a repeat. This is a concrete
 dogfooding result for the earlier “tool intelligence” idea, but remains
 engineering/recovery evidence rather than evidence of better scientific taste.
 The corresponding real Full Workflow run is indexed in
-`docs/experiments/zhipu_glm53_full_workflow_advisory_2026-09-05.md`.
+`docs/archive/experiments/zhipu_glm53_full_workflow_advisory_2026-09-05.md`.
 
 ## Project-owned substrate-action case
 
@@ -129,7 +129,7 @@ no API-cost log, and web search was disabled. The generated search terms are
 broad fragments rather than an accepted literature strategy. These negatives
 are retained rather than converted into a taste-quality success. The detailed
 ledger is
-`docs/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md`.
+`docs/archive/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md`.
 
 A follow-up closes the remaining source-ownership gap. The same project created
 Stages 1–2 through a registered bootstrap run, issued an immutable source
@@ -139,7 +139,7 @@ increment used 4,571; cost was again unavailable and the selected response again
 reached its completion ceiling. This is a stronger lifecycle result, but it
 retains the same engineering-only classification. The receipt and manifest
 ledger is
-`docs/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md`.
+`docs/archive/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md`.
 
 ## Native execution ownership case
 

@@ -219,7 +219,7 @@ precede a successful export; the current intake is not such a qualified release.
 Canonical deliverable: `task-freeze`, specifically research questions with
 distinguishable explanations and evidence-bounded conclusions. The current
 machine-readable design is
-[`scientific_design_v1.json`](../../configs/benchmark/scientific_design_v1.json).
+`scientific_design_v1.json`（本地研究材料：`configs/benchmark/scientific_design_v1.json`，公开仓库不含）.
 The read-only interface is `scitaste.benchmark.scientific_design`.
 
 This is a **prospective development successor**, written after the six original

@@ -55,7 +55,7 @@ Before an external condition can change from `disabled` to `enabled`, it needs:
 
 These requirements are now executable admission policy rather than a checklist
 alone. The tracked corpus
-[`research/data/autoresearch_evaluation_resources_v2.yaml`](research/data/autoresearch_evaluation_resources_v2.yaml)
+[`../research/data/autoresearch_evaluation_resources_v2.yaml`](../research/data/autoresearch_evaluation_resources_v2.yaml)
 binds official repositories, exact commits, code/data license evidence, native
 interfaces, requirements, and unresolved gates. `evaluate_resource_feasibility`
 derives readiness independently for citation, code audit, benchmark-task use,
@@ -150,7 +150,7 @@ Agent Laboratory documents `deepseek-chat`/DeepSeek V3 and accepts task meaning
 through a research-topic/YAML interface rather than exact starting bytes. Both
 also need matched sandbox and telemetry qualification. These findings are
 recorded in
-[`EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md`](research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md).
+[`EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md`](../research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md).
 They block this exact matched-backbone design; they do not score either external
 system and do not justify a pseudo-implementation.
 

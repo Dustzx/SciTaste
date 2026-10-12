@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-12 — Documentation ownership and navigation
+
+- Add one documentation home and module indexes; organize mutable guides by
+  responsibility and move completed experiment logs and old delivery plans to
+  archive. Preserve source-bound contracts and all existing experiment/config
+  bytes. Original long architecture, roadmap and UI documents remain archived.
+- Replace accumulating architecture/roadmap/UI logs with concise current guides.
+  Project state, scientific acceptance and results remain owned by project records.
+- Register documentation ownership and a local inventory/link check; no model,
+  benchmark, data acquisition or research execution is triggered by the cleanup.
+
 ## 2026-10-12 — Separate native predictions from reviewed metrics
 
 - Document how source-bound experience becomes reviewed Taste and optional skills, with explicitly ineligible synthetic Writing/race templates. This specification does not implement automatic imports, policy learning or branch ranking.

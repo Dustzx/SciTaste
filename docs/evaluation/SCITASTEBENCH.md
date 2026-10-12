@@ -10,14 +10,14 @@ from fixed scientific obligations, atomic assertions and independent reproductio
 and scientific requirements; it cannot be relabeled as atomic-claim support.
 Novelty/overall ordinal ratings remain supplementary and uncalibrated.
 
-[`scientific_design_v1.json`](../configs/benchmark/scientific_design_v1.json)
+`scientific_design_v1.json`（本地研究材料：`configs/benchmark/scientific_design_v1.json`，公开仓库不含）
 specifies six research questions, competing predictions, seven required
 discrimination contrasts, strong domain references and counterexamples. The
-[`scientific_design`](../src/scitaste/benchmark/scientific_design.py) interface
+[`scientific_design`](../../src/scitaste/benchmark/scientific_design.py) interface
 reports missing evidence without certifying scientific validity. These designs
 follow consumed outcomes; no historical assignment becomes formally qualified.
 
-[`scientific_claims`](../src/scitaste/benchmark/scientific_claims.py) binds original
+[`scientific_claims`](../../src/scitaste/benchmark/scientific_claims.py) binds original
 manuscripts, frozen code/configuration and public results. Fixed task obligations
 cannot be diluted by additional claims. Numerical corruption, omission and
 scope-preserving wording contrasts test limited evidence-consistency validity,
@@ -62,7 +62,7 @@ completion. In particular, the measured reviewer-shift procedures from all three
 real systems now have explicit average/tail scientific contrasts in the main
 manuscript; original failures and secondary evaluator recoveries remain disclosed.
 
-The authoritative [task-data population](research/SCITASTEBENCH_TASK_DATA_V1.md)
+The authoritative [task-data population](../research/SCITASTEBENCH_TASK_DATA_V1.md)
 contains seven candidate families: Concrete, Bike, graph structure, molecular
 force risk, microscopy restoration, model combination and natural reviewer shift.
 This is not a formally released or independently validated benchmark population.
@@ -84,14 +84,14 @@ and scores the exact bound replies; no expected label is included in requests.
 
 ## Earlier materialization snapshot — 2026-10-01
 
-The October 1 [task-data population](research/SCITASTEBENCH_TASK_DATA_V1.md) included
+The October 1 [task-data population](../research/SCITASTEBENCH_TASK_DATA_V1.md) included
 one staged graph-research family with three real graph contexts, source-bound
 discovery/confirmation access, actual fitted and diffusion reference runs, and
 public-evidence claim anchors. This makes **three candidate families**, not five
 independent tasks or any formal framework results. Independent numeric checking
 does not certify a paper judge. The next priority is actual system comparison.
 
-[First authored data pack](research/SCITASTEBENCH_TASK_DATA_V1.md): two independent
+[First authored data pack](../research/SCITASTEBENCH_TASK_DATA_V1.md): two independent
 dataset families now have real observations, frozen group/time partitions, runnable
 reference code, objective scoring and public-validation review evidence. Concrete
 contains 1,030 rows in 329 recipe groups; Bike contains 17,379 hourly observations.
@@ -104,7 +104,7 @@ comparison and broader task coverage remain. Existing datasets are not relabeled
 
 ## Current direction — complete research tasks, 2026-09-30
 
-The [full-task v2 protocol](research/SCITASTEBENCH_FULL_TASK_PROTOCOL_V2.md)
+The [full-task v2 protocol](../research/SCITASTEBENCH_FULL_TASK_PROTOCOL_V2.md)
 supersedes the decision-only publication positioning below. Its primary comparison
 is SciTaste against actual external autonomous research frameworks, from a research
 question through experiments, evidence-supported paper and review-driven revision.
@@ -140,7 +140,7 @@ replace named whole-agent comparisons on external research tasks.
 **2026-09-24 quality ruling:** the current SciTasteBench is a narrow internal
 decision-mechanism instrument, **not** a complete public benchmark release or a
 top-conference-grade standalone benchmark. The
-[project-level quality audit](../outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_QUALITY_AUDIT.md)
+project-level quality audit（本地研究材料：`outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_QUALITY_AUDIT.md`，公开仓库不含）
 aligns the actual data, completed result tables, accepted benchmark comparators,
 construct-validity gaps, and conflicting inventory snapshots. In particular,
 the 36 natural cases are unbalanced AI-proxy development data, not a formal
@@ -177,13 +177,13 @@ ceiling alone does not prove equal total resource use. Direct and planning have
 now completed the same 30-case NewtonBench *development* comparison with
 Qwen3.8-Max: task-cluster regret was 0.106355 and 0.095253 respectively,
 but planning changed only 1/30 actions and used over twice the conservative
-API-cost ceiling. The local [development report](../outputs/projects/scitaste-self-development/evaluations/scitastebench-decision-baselines-development-v1/REPORT.md)
+API-cost ceiling. The local development report（本地研究材料：`outputs/projects/scitaste-self-development/evaluations/scitastebench-decision-baselines-development-v1/REPORT.md`，公开仓库不含）
 retains exact interpretation and receipts. A separate salted-hash partition
 then used five source task groups as observed-outcome reflection memory and
 five disjoint groups as 15 targets. On those targets reflection changed
 **zero** direct decisions (both regret 0.117475) while raising the
 conservative API-cost ceiling from USD 0.180816 to USD 0.859236; see the
-[reflection development report](../outputs/projects/scitaste-self-development/evaluations/scitastebench-reflection-development-v1/REPORT.md).
+reflection development report（本地研究材料：`outputs/projects/scitaste-self-development/evaluations/scitastebench-reflection-development-v1/REPORT.md`，公开仓库不含）.
 This is retrospective generic-memory evidence, not prospective delayed-credit
 learning. Genuine tool search has not run, and the full engineering exit still
 fails. Image requests now use `ImageEvidenceDecisionBackend` through
@@ -229,7 +229,7 @@ its visible artifact records; byte verification runs before public requests
 are written. Each competing policy receives the same request and artifact
 root, while the private key file stays with the scorer.
 
-The CVPR 2027 [engineering and paper exit criteria](research/CVPR27_MAINLINE_EXIT_CRITERIA.md)
+The CVPR 2027 [engineering and paper exit criteria](../research/CVPR27_MAINLINE_EXIT_CRITERIA.md)
 now fix the v1 scope: SciTasteBench is the decision benchmark; unchanged
 external benchmarks own complete-agent outcomes. The older ICLR-labelled
 four-layer design files are historical study protocols, not the current venue
@@ -239,14 +239,14 @@ or a public-release certificate.
 
 The concrete ICLR study matrix, case anatomy, causal arms, formal population
 floor, and external benchmark division are summarized in
-[`SCITASTEBENCH_ICLR27_STUDY_DESIGN.md`](research/SCITASTEBENCH_ICLR27_STUDY_DESIGN.md).
+[`SCITASTEBENCH_ICLR27_STUDY_DESIGN.md`](../research/SCITASTEBENCH_ICLR27_STUDY_DESIGN.md).
 The paper-facing experiment hierarchy is frozen separately in
-[`ICLR27_EXPERIMENT_MATRIX_V1.md`](research/ICLR27_EXPERIMENT_MATRIX_V1.md).
+[`ICLR27_EXPERIMENT_MATRIX_V1.md`](../research/ICLR27_EXPERIMENT_MATRIX_V1.md).
 That hierarchy currently compares named Auto Research systems on external
 tasks, Full versus Native Base for causal attribution, and Raw/RAG, generic
 memory, mismatched Taste, and policy-gate removals for ablations. This is
 **insufficient** for a SciTasteBench method-comparison claim. The corrected
-[next-study design](../outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_NEXT_STUDY.md)
+next-study design（本地研究材料：`outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_NEXT_STUDY.md`，公开仓库不含）
 adds independent direct, reflection, and planning/search decision-policy
 baselines on the fork interface, and requires an agent-compatible task mode for
 real whole-system baselines. A direct decision policy is a baseline, not an
@@ -437,7 +437,7 @@ confirmation closed, and locates the next problem in construct validity and
 applicability/action mapping rather than context length or interface plumbing.
 
 The current ICLR design authority is the
-[`four-layer protocol`](research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md). It
+[`four-layer protocol`](../research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md). It
 connects source and abstraction evidence (SA), held-out decisions (D), delayed
 credit learning (L), and complete externally scored projects (P). The layers
 retain separate endpoints rather than producing an opaque aggregate benchmark
@@ -696,7 +696,7 @@ corpus bytes, inconsistent rubric versions, fewer than two labels, duplicate
 reviewers, unnecessary or unresolved adjudication, source-group leakage, or
 the formal 120-case/three-domain/six-family floor. The full scientific and GPU
 contract is in
-[`SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md`](research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md).
+[`SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md`](../research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md).
 
 ## Capability-boundary diagnostics
 

@@ -33,4 +33,4 @@ Route Task2：`cvpr_route_run.py` / `cvpr_route_score.py` 为 CPU 合同与解�
 
 ## 子课题经验接入
 
-统一按[经验接入规范](../../docs/EXPERIENCE_INTEGRATION.md)维护：原始证据 → 隔离经验 → 有来源的 Taste → 具体决策点使用与反馈；稳定流程再封装 skill。规范含 Writing Taste 与分支赛马示例，区分现有能力与待实现接口。网页经验池只投影展示，不等同自动学习或策略更新。
+统一按[经验接入规范](../../docs/taste/EXPERIENCE_INTEGRATION.md)维护：原始证据 → 隔离经验 → 有来源的 Taste → 具体决策点使用与反馈；稳定流程再封装 skill。规范含 Writing Taste 与分支赛马示例，区分现有能力与待实现接口。网页经验池只投影展示，不等同自动学习或策略更新。

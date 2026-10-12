@@ -81,7 +81,7 @@ and agent-compatible whole-system mode remain missing. The 36 natural developmen
 are unbalanced AI-proxy records, not a formal set; the proposed 120-case natural
 formal release has zero admissions. Thus design is **promising but not frozen
 for release**, and engineering completion is **not yet achieved**. The detailed
-counts and counterexamples live in `docs/SCITASTEBENCH.md` and the project's
+counts and counterexamples live in `docs/evaluation/SCITASTEBENCH.md` and the project's
 `SCITASTEBENCH_QUALITY_AUDIT.md`; do not copy those run details into the paper.
 
 ## Second exit: research and paper quality

@@ -70,7 +70,7 @@ flowchart LR
 | 有来源的开发库 | `taste/reviewed_library.py`、`scripts/compile_reviewed_development_library.py` | 核对 source quality、抽象及实际审核链；保留 `human_verified=false`、`formal_evidence_eligible=false` |
 | 历史记忆准入 | `taste/memory.py` 的 `TasteMemory.reflect` / admission | 反思先隔离；其 admission 类型明确要求人工审核，不能用子智能体结果伪填 human 字段 |
 | 检索和 Planning Taste | `taste/retriever.py`、`taste/controller.py`、`project/planning_taste.py` | planning 冻结 library/hash，先构造候选池，再判断迁移，留下 INPUT/RESULT/ADVICE；不会因此更新策略或建立有效性 |
-| Writing Taste | `writing/taste.py`、`writing/venue_taste.py`、[Writing Taste 文档](WRITING_TASTE.md) | 通用完整性优先于风格；场所 profile 是 advisory，诊断不会自行改稿或授予投稿资格 |
+| Writing Taste | `writing/taste.py`、`writing/venue_taste.py`、[Writing Taste 文档](../WRITING_TASTE.md) | 通用完整性优先于风格；场所 profile 是 advisory，诊断不会自行改稿或授予投稿资格 |
 | 写作案例检索 | `writing/contracts.py:retrieve_contract_taste` 与 `CommunicationWorkflow` | 已有 `COMMUNICATION` 阶段下的 `WRITING_DECISION` 策略按段落/修辞角色/主张强度检索，并记录 case IDs；不代表所有写作节点自动加载同一库 |
 | 网页共享经验 | workspace 的 `scripts/progress_board.py` 读取本地 `report/EXPERIENCE_POOL.json` | 目前是只读展示投影，不是自动准入、检索或模型训练接口 |
 
@@ -147,4 +147,4 @@ Skill 同样保留 ID/版本、触发条件、输入/输出、步骤、依赖与
 
 > 将这次迭代整理为 SciTaste 候选经验。项目/阶段是……；当时考虑了……，选择……；证据在……；结果和反例是……。请先保留原始来源及曝光，再拆出可迁移 Taste、程序规则和可选 skill；接入 Writing/赛马的……决策点，未经验证不要标为已学会。
 
-可填写示例见 [Writing 与赛马候选](../examples/experience_integration/candidates.jsonl)，来源见 [合成来源样例](../examples/experience_integration/sources.json)。两例均为**合成模板、不可执行检索、没有真实结果或正式资格**，仅展示现有 `TasteCase` 字段，不自动导入任何库。
+可填写示例见 [Writing 与赛马候选](../../examples/experience_integration/candidates.jsonl)，来源见 [合成来源样例](../../examples/experience_integration/sources.json)。两例均为**合成模板、不可执行检索、没有真实结果或正式资格**，仅展示现有 `TasteCase` 字段，不自动导入任何库。

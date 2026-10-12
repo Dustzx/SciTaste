@@ -128,7 +128,7 @@ Verification:
 
 The complete metric definitions, source links, human-study design, statistical
 boundary, reproduction commands, exact fingerprints, and result tables are in
-`docs/GENERATION_AS_CONTENT_EVALUATION.md`. The recommended manuscript seam is a
+`docs/evaluation/GENERATION_AS_CONTENT_EVALUATION.md`. The recommended manuscript seam is a
 separate fourth interface-evaluation layer: evidence-grounded task completion is
 primary, time is the main efficiency endpoint, and proposal/execution
 comprehension is a non-inferiority safety gate. It must remain separate from
@@ -147,7 +147,7 @@ The user authorized Window 3 to create a temporary project and operate the
 receiver as a realistic research-project user. Commit `89613d6`
 (`test(ui): record researcher workspace walkthrough`) makes the Chromium probe
 select any available server-issued quick intent and records the exact walkthrough
-and claim boundary in `docs/GENERATION_AS_CONTENT_EVALUATION.md`.
+and claim boundary in `docs/evaluation/GENERATION_AS_CONTENT_EVALUATION.md`.
 
 The repository-external project `evidence-ui-research-experience` was built with
 two actual `run full` native offline executions at seeds 7 and 11, not with a UI
@@ -284,14 +284,14 @@ state.
    runtime rerendering, malicious locale input, accessibility state, project
    switching, and English/Chinese desktop/mobile rendering. Package every
    receiver asset in the wheel.
-7. Update `docs/GENERATIVE_UI.md`, run focused UI/CLI tests with owned-module
+7. Update `docs/guides/GENERATIVE_UI.md`, run focused UI/CLI tests with owned-module
    coverage, Ruff, `node --check`, `make check`, `git diff --check`, visual
    inspection and wheel-content verification. Return clean logical commits.
 
 Owned implementation paths remain `src/scitaste/generative_ui/**`,
 `tests/generative_ui/**`, focused
 `tests/integration/test_generative_ui_cli.py`, and
-`docs/GENERATIVE_UI.md`. This task may update this dispatch document only for
+`docs/guides/GENERATIVE_UI.md`. This task may update this dispatch document only for
 coordination status. Do not modify README, CHANGELOG, ROADMAP, ARCHITECTURE,
 model-node internals, project runtime, workflow code or credentials.
 
@@ -357,7 +357,7 @@ evidence-grounded, auditable and useful when no model provider is configured.
 - the smallest UI CLI registration/configuration changes required in
   `src/scitaste/cli.py` and `src/scitaste/generative_ui/serve_cli.py`;
 - `tests/generative_ui/` and focused `tests/integration/` UI/CLI coverage;
-- `docs/GENERATIVE_UI.md`.
+- `docs/guides/GENERATIVE_UI.md`.
 
 Do not edit `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `CHANGELOG.md`, README,
 other task documents, model-node internals, `full_workflow.py`, project runtime,
@@ -454,7 +454,7 @@ tests before continuing.
    evidence IDs, cross-project entities, duplicate plan entries, stale
    snapshots, oversized questions/provider responses, provider errors and
    attempts to smuggle commands, URLs, actions or executable authority.
-3. Update `docs/GENERATIVE_UI.md` with the exact current/future boundary,
+3. Update `docs/guides/GENERATIVE_UI.md` with the exact current/future boundary,
    progress semantics, intent lifecycle, model/fallback behavior, API examples,
    trust diagram, operator configuration and known limitations.
 4. Run focused UI/CLI tests, Ruff, `node --check`, `make check`, owned-module

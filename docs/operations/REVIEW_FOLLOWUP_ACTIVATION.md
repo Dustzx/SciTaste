@@ -26,7 +26,7 @@ A rolling API alias is not rejected merely because it is rolling. DeepSeek's
 current official route is `deepseek-flash` / `DeepSeek-V4.1-Flash`, whereas
 GLM-5.3-Flash currently requires a temporal-only stratum. Both require
 approved authenticated sentinels around any later call window; drift closes the
-window and creates a non-pooled stratum. See `docs/API_MODEL_IDENTITY.md`.
+window and creates a non-pooled stratum. See `docs/operations/API_MODEL_IDENTITY.md`.
 
 That first bounded acquisition has completed below its aggregate 8 MiB ceiling,
 with exact receipts and without reading the acquired files. The next decision is

@@ -64,7 +64,7 @@ control and provenance, not language-model writing quality. The optional
 `writing-taste` semantic node can propose a bounded paper strategy and findings,
 but it cannot edit the manuscript or suppress registered limitations. A future
 live writer must consume the same contracts and critic outputs without changing
-routing. See [`WRITING_TASTE.md`](WRITING_TASTE.md).
+routing. See [`../WRITING_TASTE.md`](../WRITING_TASTE.md).
 
 Project-owned venue reports enter this loop through
 `project paper review route-state`. The command revalidates the complete review

@@ -1,0 +1,516 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-10-12",
+  "scope": "local-documentation-reorganization",
+  "original_markdown_count": 148,
+  "moves": [
+    {
+      "old": "docs/AGENT_LABORATORY_ADAPTER.md",
+      "new": "docs/integrations/AGENT_LABORATORY_ADAPTER.md",
+      "original_sha256": "495405764c8e6722858c859ee961c8c4fa0ca49022838d44831545fd4f2a6ac6"
+    },
+    {
+      "old": "docs/AI_TASTE_ABSTRACTION_REVIEW.md",
+      "new": "docs/taste/AI_TASTE_ABSTRACTION_REVIEW.md",
+      "original_sha256": "f6707df55c78ababfeae2797a2dc59b534fffe03a1b4baa1629da0d7765d06fa"
+    },
+    {
+      "old": "docs/API_MODEL_IDENTITY.md",
+      "new": "docs/operations/API_MODEL_IDENTITY.md",
+      "original_sha256": "5d016f843bb0ac14f8b7e93d7f87e89585a0b326e2aecf83c9a6a3dc8d217447"
+    },
+    {
+      "old": "docs/API_PROVIDERS.md",
+      "new": "docs/operations/API_PROVIDERS.md",
+      "original_sha256": "03637f770bb6c6a40ea649a9aa1ba6dbee3d510ef716a40a0c72755afabd0c40"
+    },
+    {
+      "old": "docs/AUTORESEARCHCLAW_INTEGRATION.md",
+      "new": "docs/integrations/AUTORESEARCHCLAW_INTEGRATION.md",
+      "original_sha256": "bc8d00e076f75f05ae6796fc3b39045ba497b31d301924990efa69d8df3c4e07"
+    },
+    {
+      "old": "docs/COMMUNICATION_LOOP.md",
+      "new": "docs/guides/COMMUNICATION_LOOP.md",
+      "original_sha256": "2a7f68c02fb92df2fc3a21e567514a4c36d4fb1d2a597c0aa6c0cebbb6ba3e9f"
+    },
+    {
+      "old": "docs/COMPUTE_RESOURCES.md",
+      "new": "docs/operations/COMPUTE_RESOURCES.md",
+      "original_sha256": "06d6dac9e8ce1a2e96b5e637c72f89a7fd522fc660f092af0eb933665cda6220"
+    },
+    {
+      "old": "docs/DATASET_LICENSE_POLICY.md",
+      "new": "docs/operations/DATASET_LICENSE_POLICY.md",
+      "original_sha256": "1dfa0f69ce251f9ec2f118134d2342cb547d384d0f1cf8419171f7006c77813e"
+    },
+    {
+      "old": "docs/DATA_SOURCES.md",
+      "new": "docs/operations/DATA_SOURCES.md",
+      "original_sha256": "268b568bdff361a9995aaec6c9ce23b567d0bd6230572091e04157334684c05b"
+    },
+    {
+      "old": "docs/EXPERIENCE_INTEGRATION.md",
+      "new": "docs/taste/EXPERIENCE_INTEGRATION.md",
+      "original_sha256": "2e88ba668278f0e0adf58ae53604e9e41e56b1cc97b075f3bed5329492b010b4"
+    },
+    {
+      "old": "docs/EXPERIMENT_DESIGN_LOOP.md",
+      "new": "docs/guides/EXPERIMENT_DESIGN_LOOP.md",
+      "original_sha256": "553a2aeb75a94759a66c3704627a4f1ce16fce13ab9c62e8ef2caac4b2bb36fa"
+    },
+    {
+      "old": "docs/EXTERNAL_SYSTEM_ADAPTERS.md",
+      "new": "docs/integrations/EXTERNAL_SYSTEM_ADAPTERS.md",
+      "original_sha256": "748fb58adf7e25c4c3a615a30ce2a020293852ffe59ba9b8a356b19a921297a8"
+    },
+    {
+      "old": "docs/FIGURE_SYSTEM.md",
+      "new": "docs/guides/FIGURE_SYSTEM.md",
+      "original_sha256": "cee54e0786afb104d2b7b39632bd0aa7e0df15f5e61be46d88c82376a31d63f6"
+    },
+    {
+      "old": "docs/GENERATION_AS_CONTENT_EVALUATION.md",
+      "new": "docs/evaluation/GENERATION_AS_CONTENT_EVALUATION.md",
+      "original_sha256": "b098ac87edaeec83d5e1c3001b8de03f80b4b6e2f4a9e71e50dc1065af9b4fe2"
+    },
+    {
+      "old": "docs/GENERATIVE_UI.md",
+      "new": "docs/guides/GENERATIVE_UI.md",
+      "original_sha256": "7ff59d35a8e5a0bec0b9b9f0d075acaccbcbaf94aa22d9d67cf8f285cffdb1e2"
+    },
+    {
+      "old": "docs/HUMAN_PREFERENCE_ANALYSIS.md",
+      "new": "docs/evaluation/HUMAN_PREFERENCE_ANALYSIS.md",
+      "original_sha256": "22201e6c02654134c37bceb5635672b10e1bb85434323c7d5af9b3cdad1ea917"
+    },
+    {
+      "old": "docs/MAINLINE_DELIVERY_HISTORY.md",
+      "new": "docs/archive/planning/MAINLINE_DELIVERY_HISTORY.md",
+      "original_sha256": "7e29b26fe6de37c95f83e1ded87ad944ee51ca0700ddc0987739ad32d45d8122"
+    },
+    {
+      "old": "docs/MAINLINE_DELIVERY_PLAN.md",
+      "new": "docs/archive/planning/MAINLINE_DELIVERY_PLAN.md",
+      "original_sha256": "c57b004b2c10f8fd6e472588816f548ff0c3ae86c831ee45f3bcaaf73043f711"
+    },
+    {
+      "old": "docs/MLRC_PERCEPTION_RUNTIME.md",
+      "new": "docs/integrations/MLRC_PERCEPTION_RUNTIME.md",
+      "original_sha256": "53f8c0a63a18950f13161a15463feda63dd5faee7ad52122d719d8e6e056edcd"
+    },
+    {
+      "old": "docs/MODEL_ROLE_CONFORMANCE.md",
+      "new": "docs/evaluation/MODEL_ROLE_CONFORMANCE.md",
+      "original_sha256": "40855178020029e94b4e6813efc8aa3e887b6920805ad9ab64cd335f79572143"
+    },
+    {
+      "old": "docs/NATIVE_CODE_GENERATION.md",
+      "new": "docs/guides/NATIVE_CODE_GENERATION.md",
+      "original_sha256": "9be8a2fc468e4150dc9cfcfd12700c9fd378ba1f142969c0c4f0bf55b33dd3b9"
+    },
+    {
+      "old": "docs/OBJECTIVE_ANALYSIS.md",
+      "new": "docs/evaluation/OBJECTIVE_ANALYSIS.md",
+      "original_sha256": "66c3511cc2bc8c9f36b571e41a656dc110cc6939636c742cdc57cf72daf7e5d8"
+    },
+    {
+      "old": "docs/OUTPUT_LAYOUT.md",
+      "new": "docs/guides/OUTPUT_LAYOUT.md",
+      "original_sha256": "93ce8a446026a7d70917d7b88f588c5a1dac7f32e11dea424a76eaf4eb6ddb58"
+    },
+    {
+      "old": "docs/PROJECT_DOCUMENT_INTERFACE.md",
+      "new": "docs/guides/PROJECT_DOCUMENT_INTERFACE.md",
+      "original_sha256": "c9450c9d826b4e218baf415a7b5047fb701837bda40d9d72cbca637988d38021"
+    },
+    {
+      "old": "docs/RECURSIVE_TASTE_POLICY.md",
+      "new": "docs/taste/RECURSIVE_TASTE_POLICY.md",
+      "original_sha256": "775b7cf6602a89802f4b7e1dc5add60660bd5b6a14fb5716e228a3d9b87bdc05"
+    },
+    {
+      "old": "docs/REVIEW_FOLLOWUP_ACTIVATION.md",
+      "new": "docs/operations/REVIEW_FOLLOWUP_ACTIVATION.md",
+      "original_sha256": "6b33f0c0ad2ef10518ac396891e4f8bf72195b36c733c36e59b009a2824c6344"
+    },
+    {
+      "old": "docs/SCITASTEBENCH.md",
+      "new": "docs/evaluation/SCITASTEBENCH.md",
+      "original_sha256": "fe9b0ce2f1f95aeb107dffc662005c82c0b26c378761228c5914f910c3ea12df"
+    },
+    {
+      "old": "docs/TASTE_CORPUS_PAIRING.md",
+      "new": "docs/taste/TASTE_CORPUS_PAIRING.md",
+      "original_sha256": "57f4b505df25982ac8b0a974bcdf0bbdd819cd40374fdc43ddb26ccb080a1617"
+    },
+    {
+      "old": "docs/TASTE_MEMORY_LEARNING.md",
+      "new": "docs/taste/TASTE_MEMORY_LEARNING.md",
+      "original_sha256": "72ef878d77419958346f43e53fd932ffa1ce0e3b3c3c670852cf019a9e2e3f23"
+    },
+    {
+      "old": "docs/TRACK_A_TASTE_MECHANISM_SUITE.md",
+      "new": "docs/evaluation/TRACK_A_TASTE_MECHANISM_SUITE.md",
+      "original_sha256": "8e8b0ada6990606c859b5b8e77470ed5cd84e7cf1bde333a880ac752739fa2ce"
+    },
+    {
+      "old": "docs/experiments/autoresearchclaw_phase75_smoke_2026-09-02.md",
+      "new": "docs/archive/experiments/autoresearchclaw_phase75_smoke_2026-09-02.md",
+      "original_sha256": "fd671c8acb1fab111d1706898122696f5cf381e4e88dab8408768f31f3b0522c"
+    },
+    {
+      "old": "docs/experiments/bailian_intrinsic_smoke_2026-09-02.md",
+      "new": "docs/archive/experiments/bailian_intrinsic_smoke_2026-09-02.md",
+      "original_sha256": "04f7d84302abff2fe04900ab440cb4015a50e270d330ab8bbc556c9644dab820"
+    },
+    {
+      "old": "docs/experiments/bailian_visual_smoke_2026-09-02.md",
+      "new": "docs/archive/experiments/bailian_visual_smoke_2026-09-02.md",
+      "original_sha256": "6b4b6eacf0816add89bec1906ad7f1abc46b36eee1f99fe2eaa921dcaca18abd"
+    },
+    {
+      "old": "docs/experiments/bounded_native_mainline_acceptance_2026-09-09.md",
+      "new": "docs/archive/experiments/bounded_native_mainline_acceptance_2026-09-09.md",
+      "original_sha256": "24e2d5f97328268549a1c3fc46fcc46051d456b08cc0f4f5b10c4418c5d94d41"
+    },
+    {
+      "old": "docs/experiments/knowledge_rag_publication_preacceptance_2026-09-03.md",
+      "new": "docs/archive/experiments/knowledge_rag_publication_preacceptance_2026-09-03.md",
+      "original_sha256": "65b521a33c5ceb78afac8f4cfef58244821b71f51a6bbb36adee668548c7a27c"
+    },
+    {
+      "old": "docs/experiments/matched_budget_formal_base_acceptance_v4_2026-09-03.md",
+      "new": "docs/archive/experiments/matched_budget_formal_base_acceptance_v4_2026-09-03.md",
+      "original_sha256": "9942717790f1e9232c70ff59c66697bd1da4c995cde339d600ba9bde22aa741b"
+    },
+    {
+      "old": "docs/experiments/matched_budget_formal_preacceptance_2026-09-03.md",
+      "new": "docs/archive/experiments/matched_budget_formal_preacceptance_2026-09-03.md",
+      "original_sha256": "828f6e2b57c6fa1402cc74193a9267a87dc814a0b4505409793d8629814d88e9"
+    },
+    {
+      "old": "docs/experiments/matched_budget_formal_preacceptance_v2_2026-09-03.md",
+      "new": "docs/archive/experiments/matched_budget_formal_preacceptance_v2_2026-09-03.md",
+      "original_sha256": "9e908b19d93404a402d311aac843dc8ecb0eaeff9d7e1181af366b3b8eb5d7b4"
+    },
+    {
+      "old": "docs/experiments/matched_budget_local_pilot_plan_2026-09-03.md",
+      "new": "docs/archive/experiments/matched_budget_local_pilot_plan_2026-09-03.md",
+      "original_sha256": "72127d725ff663ee851287da04eabdb5a40e470ab088f15ac7726df28349145e"
+    },
+    {
+      "old": "docs/experiments/matched_budget_matrix_status_2026-09-09.md",
+      "new": "docs/archive/experiments/matched_budget_matrix_status_2026-09-09.md",
+      "original_sha256": "c1ec9a9f3d7529ae1f5f03a27e14286521e71c6262bbcc75b73c74694e8fe1e5"
+    },
+    {
+      "old": "docs/experiments/matched_budget_phase9_plan_2026-09-03.md",
+      "new": "docs/archive/experiments/matched_budget_phase9_plan_2026-09-03.md",
+      "original_sha256": "c06cb2b92cfa6eabd48900297d98e823a8b72648fc0dc9d70affc0038b922725"
+    },
+    {
+      "old": "docs/experiments/native_code_repair_acceptance_2026-09-09.md",
+      "new": "docs/archive/experiments/native_code_repair_acceptance_2026-09-09.md",
+      "original_sha256": "9fb4b739f8f4992e542f5d98ac7fac0e48eb14f9984eb5ba1302e620b3c3f148"
+    },
+    {
+      "old": "docs/experiments/phase3_external_corpus_acceptance_2026-09-02.md",
+      "new": "docs/archive/experiments/phase3_external_corpus_acceptance_2026-09-02.md",
+      "original_sha256": "546ebb2f57b4e36d9ff179e36dd026164b114edab9e5392804fcfc8e63a4af7e"
+    },
+    {
+      "old": "docs/experiments/qwen3vl4b_local_smoke_2026-09-03.md",
+      "new": "docs/archive/experiments/qwen3vl4b_local_smoke_2026-09-03.md",
+      "original_sha256": "ee54a0599f2ac36d77275cffa05bdcb560b4b6a321a730c418d0af2848646bd9"
+    },
+    {
+      "old": "docs/experiments/scitastebench_phase8_offline_2026-09-03.md",
+      "new": "docs/archive/experiments/scitastebench_phase8_offline_2026-09-03.md",
+      "original_sha256": "952013c2e268dbe3320c1b418c887acf492d385983c9c0d48199e2fd83e0f502"
+    },
+    {
+      "old": "docs/experiments/writing_taste_self_audit_2026-09-08.md",
+      "new": "docs/archive/experiments/writing_taste_self_audit_2026-09-08.md",
+      "original_sha256": "9263684ecff1639fec3d413a46f13de0b1838f6b3ab0e90f7a4e0992e04f30b8"
+    },
+    {
+      "old": "docs/experiments/zhipu_glm52_four_condition_preacceptance_2026-09-04.md",
+      "new": "docs/archive/experiments/zhipu_glm52_four_condition_preacceptance_2026-09-04.md",
+      "original_sha256": "da8fcc8b832939778351adc490a8b358e59d5868dae9d3e764be0ee6c633f8d1"
+    },
+    {
+      "old": "docs/experiments/zhipu_glm52_knowledge_rag_preacceptance_2026-09-04.md",
+      "new": "docs/archive/experiments/zhipu_glm52_knowledge_rag_preacceptance_2026-09-04.md",
+      "original_sha256": "90698b72b6e84db610c34c7496bbd08cb86ed8cdfaf9ac6e66ce35dc0fb3b874"
+    },
+    {
+      "old": "docs/experiments/zhipu_glm53_full_workflow_advisory_2026-09-05.md",
+      "new": "docs/archive/experiments/zhipu_glm53_full_workflow_advisory_2026-09-05.md",
+      "original_sha256": "673ce45452ccd39892214d8a25befbcb6a353c0885a2422676663d5b150d5c97"
+    },
+    {
+      "old": "docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md",
+      "new": "docs/archive/experiments/zhipu_glm53_model_node_probe_2026-09-05.md",
+      "original_sha256": "374f896edef9658c8e2a84717c1262b0407505b17101c1e19f77f7fad79a7dba"
+    },
+    {
+      "old": "docs/experiments/zhipu_glm53_native_code_generation_2026-09-07.md",
+      "new": "docs/archive/experiments/zhipu_glm53_native_code_generation_2026-09-07.md",
+      "original_sha256": "5d8c1dd3efc1abaf86c86d237c0f1b8429a250604aa44cd5cda622c08a26abd1"
+    },
+    {
+      "old": "docs/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md",
+      "new": "docs/archive/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md",
+      "original_sha256": "b23ceb3dcedc852ddfe237391b226d1f66b6635610cce18f8e465c51214c917f"
+    },
+    {
+      "old": "docs/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md",
+      "new": "docs/archive/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md",
+      "original_sha256": "0c765c89ea502284e18f94980a30109a6232560934100a07d8ae2abad4439221"
+    }
+  ],
+  "snapshots": [
+    {
+      "original": "docs/ARCHITECTURE.md",
+      "snapshot": "docs/archive/snapshots/ARCHITECTURE.pre-20261012.md",
+      "sha256": "1eb3a999699f96d43145f88e389ef2b0377db39da30b2410c99ed463b95e4667"
+    },
+    {
+      "original": "docs/ROADMAP.md",
+      "snapshot": "docs/archive/snapshots/ROADMAP.pre-20261012.md",
+      "sha256": "0eb293a8aeb30b9f69b27fe1e7e1169644a519596256d8e827c25e30ae15d6d3"
+    },
+    {
+      "original": "docs/GENERATIVE_UI.md",
+      "snapshot": "docs/archive/snapshots/GENERATIVE_UI.pre-20261012.md",
+      "sha256": "7ff59d35a8e5a0bec0b9b9f0d075acaccbcbaf94aa22d9d67cf8f285cffdb1e2"
+    }
+  ],
+  "protected": [
+    {
+      "path": "docs/BOUNDED_MODEL_NODES.md",
+      "sha256": "a34115745c9de8a7142e3770042ba3d1a35aad06cc6834a5be17ba50dd757705"
+    },
+    {
+      "path": "docs/CLUSTERED_POWER_ANALYSIS.md",
+      "sha256": "d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a"
+    },
+    {
+      "path": "docs/DATASET_PACKAGE_ACQUISITION.md",
+      "sha256": "40c13f3f5df3bd6dcd0c08ca4610d8d1496230f4a913acddc6b067ff8c427e84"
+    },
+    {
+      "path": "docs/DATA_ACQUISITION_APPROVAL.md",
+      "sha256": "b6c6baaa05ac09d8e2545d064e27f3dc9d227f8854399297e4e63ac1bd4dce40"
+    },
+    {
+      "path": "docs/EVALUATION_PRELAUNCH.md",
+      "sha256": "0adf0654d9d502aebf368911c5351242ba8c7fa2c56fe7f2e8d010dc0b5b7ded"
+    },
+    {
+      "path": "docs/EXPERIMENT_DECISION_DOSSIER.md",
+      "sha256": "703c52389d5a818e6b1a8f3ace2414f6b8e4f134748b9a7011a2abec88eac484"
+    },
+    {
+      "path": "docs/FULL_WORKFLOW.md",
+      "sha256": "87b6aafdb89d041860bee22f91885ce294b89209e0124b8dd0c922328fcba9a3"
+    },
+    {
+      "path": "docs/GROUNDED_TASTE_DISTILLATION.md",
+      "sha256": "e95c0160c4821fabf0759421ae5f4a46ed17e9644c589f6eeb3a3dc91a6de49d"
+    },
+    {
+      "path": "docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md",
+      "sha256": "b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760"
+    },
+    {
+      "path": "docs/ICLR_2027_EVALUATION_PLAN.md",
+      "sha256": "a220109511f0bf6f1f5e506abb316ae2078609980f0824ceb577fff837f728a4"
+    },
+    {
+      "path": "docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md",
+      "sha256": "97c9c42b567878a7ec5eff4514891bcc2374b1f959cb07770a811f26d55d0746"
+    },
+    {
+      "path": "docs/MATCHED_BUDGET_STUDY.md",
+      "sha256": "f4fb2b4a90a895679a36438f4dc541701e788700287a7a5c30e3e7f4d74a9a9c"
+    },
+    {
+      "path": "docs/NATIVE_EXECUTION.md",
+      "sha256": "4ccda55f9039c00bca56a3b64533a7ee5d061997e4d071b6ba27923a1cf0d3a4"
+    },
+    {
+      "path": "docs/PAPER_REVIEW_LOOP.md",
+      "sha256": "7ce5e0bd9acd44ddfde1948e9df5665c4f7239f703023446981596e0ae38d3bb"
+    },
+    {
+      "path": "docs/PROJECT_INFORMATION_FLOW.md",
+      "sha256": "caa3d31a505ed75462149474f413eac71aac46422d32d0ce442ca675c25839a7",
+      "reason": "Preserve source paths also used by the supported local layout; no contract rebinding."
+    },
+    {
+      "path": "docs/PROJECT_RUNTIME.md",
+      "sha256": "7f9419fa100380690ae2e89db6ac79d6e957d9f1a223f5c6c86c3d4e95007424"
+    },
+    {
+      "path": "docs/SCIENTIFIC_REFERENCE_MINING.md",
+      "sha256": "a35c26b4fd8f265f4ce1ff4ff6deef18ba0acfd759296253c7dfc9cfbf1886d4"
+    },
+    {
+      "path": "docs/SCIENTIFIC_REFERENCE_QUALITY.md",
+      "sha256": "1b6d01a3e76ad79ee3a0773379ea683cdf73274fcba025f3c033c608e5df1a54"
+    },
+    {
+      "path": "docs/SCITASTEBENCH_V3_TREATMENT_MANIFEST.md",
+      "sha256": "1944541c7176065b7acb6c24bc3db30600ec17474181f544c7791b280760d6ee"
+    },
+    {
+      "path": "docs/TASTE_CORPUS_CURATION.md",
+      "sha256": "d091ece13eaa71e80bd9b9a51ba7babba2f4166b169c8033e18804a3632e373a"
+    },
+    {
+      "path": "docs/TASTE_DELIBERATIVE_SELECTION.md",
+      "sha256": "860fcb511ceb4869701d3d0ce04c9dfc5a00e68296a25ab1dead7095b20c5889"
+    },
+    {
+      "path": "docs/TOOL_INTELLIGENCE.md",
+      "sha256": "34d5d276145b7b4145fc7fe676058c558d3c0e305dd27e0b9589ed2ea7e0b5f6"
+    },
+    {
+      "path": "docs/WRITING_TASTE.md",
+      "sha256": "9c1bffa671ef6fd5612d5941feff31619d22dd0a8f45eddc26117fa374a86db1",
+      "reason": "Preserve source paths also used by the supported local layout; no contract rebinding."
+    },
+    {
+      "path": "docs/research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V1.md",
+      "sha256": "12a258465fee5bb7f65e3f6e56910c63c7f67fbedf9d021b8c3f5165ccef3f95"
+    },
+    {
+      "path": "docs/research/AI_REVIEW_SUBSTITUTION_PROTOCOL_V2.md",
+      "sha256": "c9f3025189698cc3bbcb2e26666ba2f7fb6840f8cf68ee08081643e990748503"
+    },
+    {
+      "path": "docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md",
+      "sha256": "8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af"
+    },
+    {
+      "path": "docs/research/AUTORESEARCH_METHOD_CENSUS_FOURTH_SCREEN_V6.md",
+      "sha256": "8793a80eeba09256794ee268db77ad4376ff0fa37bedcdfdfe1474428c7972e4"
+    },
+    {
+      "path": "docs/research/EXECUTABLE_BENCHMARK_QUALIFICATION_AUDIT_V1.md",
+      "sha256": "2226f02fda88af56811f226f98c576abd4b34d4e72c63a6e3a9a1fba50ab2675"
+    },
+    {
+      "path": "docs/research/ICLR27_EXPERIMENT_MATRIX_V1.md",
+      "sha256": "e42e09d0e56d51521d45086c6108117739c187300534ddad03f8bb4b954f739e"
+    },
+    {
+      "path": "docs/research/MLRC_FIRST_PREFLIGHT_ACQUISITION_AUDIT_V1.md",
+      "sha256": "fdf6a3e5e72efe4ce115deeee19d1b13091aec88eec2b40bacabd6f46b577313"
+    },
+    {
+      "path": "docs/research/MLR_BENCH_TEN_BRIEF_QUALIFICATION_AUDIT_V1.md",
+      "sha256": "80e262060babda5b19f62b3f3071242a1c021cc6490107a74c7e02c10913809b"
+    },
+    {
+      "path": "docs/research/SCITASTEBENCH_FOUR_LAYER_PROTOCOL_V1.md",
+      "sha256": "94d6630c668d4b446bdfc60d0d5357b8aa7b3aa2dcad6614f101c8aa2fef5a72"
+    },
+    {
+      "path": "docs/research/SCITASTE_CAPABILITY_DRIVEN_AUTORESEARCH_PROGRAM_V4.md",
+      "sha256": "f097f48bae5effe053e7a17c7e7d99ea69ca98f30bffdaa6de16849e0232f161"
+    },
+    {
+      "path": "docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md",
+      "sha256": "ed57093e0f6047b093e45a2ffebef92205ab439aa4e3382ec25ddb3e71d4d8d5"
+    },
+    {
+      "path": "docs/research/SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md",
+      "sha256": "dd3bcffe9f88503751ae0365ba94611cb4ca7d9d4dcd449454e472f062f35fbd"
+    },
+    {
+      "path": "docs/research/SCITASTE_RELATED_WORK_DRIVEN_AUTORESEARCH_PROGRAM_V7.md",
+      "sha256": "80f1edc373c6b9d7b0cad375d1c736100fb78f9df1fe4852f1560295989fc81e"
+    },
+    {
+      "path": "docs/research/WRITING_TASTE_REFERENCE_STUDY_V1.md",
+      "sha256": "015b99ea5aa449ca8d8aef7b7e6627b73668f81368ec9376250c39ef21161ea8"
+    },
+    {
+      "path": "docs/research/protocols/AAAR_EXPERIMENT_DESIGN_RIGHTS_PILOT_V1.md",
+      "sha256": "fda34fbef8f57218955493168b1beecd522ce807177de0836e2dfe79b2222a5b"
+    },
+    {
+      "path": "docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md",
+      "sha256": "b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71"
+    },
+    {
+      "path": "docs/research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md",
+      "sha256": "c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339"
+    },
+    {
+      "path": "docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V2.md",
+      "sha256": "c2c403500bff61f696ff6b309b179485fd8f0c6713e01e9da6d44d73c51ca6c4"
+    },
+    {
+      "path": "docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V3.md",
+      "sha256": "2ce7d670b22fb8646f2174cc318a2c085e588869ea0fee58208ee75d10a3d592"
+    },
+    {
+      "path": "docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md",
+      "sha256": "d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe"
+    },
+    {
+      "path": "docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md",
+      "sha256": "ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73"
+    },
+    {
+      "path": "docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md",
+      "sha256": "c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812"
+    },
+    {
+      "path": "docs/research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md",
+      "sha256": "000b426c473163b1791fd8364ce40f6df50e0d3db5b53b17ae7eeeebd39cdddc"
+    },
+    {
+      "path": "docs/research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md",
+      "sha256": "9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251"
+    }
+  ],
+  "config_modified": false,
+  "research_outputs_modified": false,
+  "preexisting_unresolved_links": [
+    {
+      "source": "docs/evaluation/SCITASTEBENCH.md",
+      "resolved": "configs/benchmark/scientific_design_v1.json",
+      "original_target": "../configs/benchmark/scientific_design_v1.json"
+    },
+    {
+      "source": "docs/evaluation/SCITASTEBENCH.md",
+      "resolved": "outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_QUALITY_AUDIT.md",
+      "original_target": "../outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_QUALITY_AUDIT.md"
+    },
+    {
+      "source": "docs/evaluation/SCITASTEBENCH.md",
+      "resolved": "outputs/projects/scitaste-self-development/evaluations/scitastebench-decision-baselines-development-v1/REPORT.md",
+      "original_target": "../outputs/projects/scitaste-self-development/evaluations/scitastebench-decision-baselines-development-v1/REPORT.md"
+    },
+    {
+      "source": "docs/evaluation/SCITASTEBENCH.md",
+      "resolved": "outputs/projects/scitaste-self-development/evaluations/scitastebench-reflection-development-v1/REPORT.md",
+      "original_target": "../outputs/projects/scitaste-self-development/evaluations/scitastebench-reflection-development-v1/REPORT.md"
+    },
+    {
+      "source": "docs/evaluation/SCITASTEBENCH.md",
+      "resolved": "outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_NEXT_STUDY.md",
+      "original_target": "../outputs/projects/scitaste-self-development/docs/records/SCITASTEBENCH_NEXT_STUDY.md"
+    },
+    {
+      "source": "docs/research/SCITASTEBENCH_FULL_TASK_PROTOCOL_V2.md",
+      "resolved": "configs/benchmark/scientific_design_v1.json",
+      "original_target": "../../configs/benchmark/scientific_design_v1.json"
+    }
+  ]
+}
