@@ -7,6 +7,7 @@
 ## 常用入口
 
 - [经验接入规范](EXPERIENCE_INTEGRATION.md)
+- [先写完整稿、审稿驱动实验与重写](EXPERIENCE_INTEGRATION.md#41-先写完整稿再用审稿驱动实验)
 - [Writing Taste](../WRITING_TASTE.md)
 - [有来源的抽象](../GROUNDED_TASTE_DISTILLATION.md)
 - [决策选择](../TASTE_DELIBERATIVE_SELECTION.md)

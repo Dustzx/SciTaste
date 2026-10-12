@@ -120,6 +120,23 @@ make demo
 - Child windows use separate worktrees, stay inside assigned path ownership, and
   return clean feature-branch commits to main for review and integration.
 
+## Writing iteration
+
+- User workflow (2026-10-12): produce a complete, polished manuscript; obtain
+  objective target-venue reviews from fresh-context subagents using a sourced
+  venue form; map decisive concerns to authorized experiments; reconcile actual
+  results with the argument; rewrite the whole paper and review substantive
+  revisions. Follow `docs/taste/EXPERIENCE_INTEGRATION.md`, sections 4.1–4.3.
+- Keep process labels such as SIMULATED and TODO out of manuscript prose. Use
+  traceable facts and preserve material limitations. Unmeasured target evidence
+  belongs in a separate reviewer-visible conditional brief, never fabricated
+  result tables or assertions of measured gains.
+- Record all reviews and manuscript/evidence versions. Separate conditional
+  scientific promise from current evidence sufficiency; an AI recommendation
+  does not establish acceptance. Contradictory results can narrow a claim or stop
+  a branch. Do not sample reviewers until positive or retune held-out data to fit
+  a prewritten story. This workflow does not expand execution/resource authority.
+
 ## Documentation maintenance
 
 - Start from `docs/README.md` and the module indexes. Keep `docs/ARCHITECTURE.md`

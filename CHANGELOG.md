@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-12 — Paper-first Writing Taste workflow
+
+- Record the user's complete-draft → venue-review → experiment → evidence
+  reconciliation → rewrite/re-review workflow in the existing experience guide
+  and maintainer instructions, with a reusable objective review prompt.
+- Keep polished manuscript presentation, reviewer-visible evidence conditions,
+  actual result provenance and full review history distinct. Preserve existing
+  writing/review contracts; no autonomous scheduler, Taste admission, empirical
+  effectiveness, review execution or experiment launch is implied.
+
+
 ## 2026-10-12 — Documentation ownership and navigation
 
 - Add one documentation home and module indexes; organize mutable guides by

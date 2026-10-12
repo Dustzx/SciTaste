@@ -3,6 +3,12 @@
 Phase 6 turns supported evidence into an auditable paper structure and routes
 reviewer feedback to the research action it actually requires.
 
+For project-level paper-first iteration, follow the
+[complete-draft and review-driven experiment workflow](../taste/EXPERIENCE_INTEGRATION.md#41-先写完整稿再用审稿驱动实验).
+An early target argument uses a reviewer-visible conditional evidence brief;
+this does not relax the native evidence-backed drafting invariants below or
+implement an autonomous manuscript/review/experiment scheduler.
+
 ```text
 Evidence
 → Narrative taste review
