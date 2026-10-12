@@ -12,6 +12,11 @@ and the distinction between a frozen candidate and an unplanned control.
 Optional diagram views now distinguish a direct screen, a complete five-arm
 comparison and a same-representation solver-prompt control. Only safe aggregates
 are projected; historical responses, reference scores and new costs stay separate.
+Safe-tool and matched-review views distinguish actual new calls from reused first
+answers and require both full terminal-slot denominators before showing scores.
+Run, family and project costs remain separate; equal ceilings do not establish
+equal resource use. Root decisions remain reviewed aggregates, without upgrading
+failed gates or publication readiness.
 Reviewed support, uncertainty and next actions remain distinct from original
 scientific gates, and unknown diagnostic kinds have no private-data fallback.
 A fresh installation remains empty and does not launch models. Private evidence

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-12 — Safe tool and matched-review progress
+
+- Project optional TextFlow safe-tool and matched-review controls with actual new calls, terminal solver slots, and separate run/family/project accounting. Historical first answers remain references and are never billed as new calls.
+- Withhold partial scores; show complete two-arm results, paired comparisons and reviewed root decisions only through safe aggregate allowlists. Preserve prior scientific gates and disclose that equal call ceilings do not imply equal tokens or costs.
+- Keep unknown kinds closed and private representations, tool receipts, questions, targets and responses local. Synthetic source-projection and desktop/mobile checks cover these boundaries without model calls.
+
 ## 2026-10-12 — Safe diagram development controls
 
 - Add optional diagram candidate and direct-screen, five-arm comparison, and same-representation solver-control views. Show complete denominators, paired readouts, and run/family/project costs without reading private questions, representations, targets or responses.

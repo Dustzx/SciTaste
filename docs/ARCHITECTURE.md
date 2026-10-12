@@ -7896,3 +7896,13 @@ targets, require frozen external source/data contracts and explicit admission,
 and retain full-panel scoring and bounded paid-attempt accounting. Neither browser
 refresh nor module import starts execution. The public tree excludes upstream
 author code, datasets, responses, credentials and the developer's private records.
+
+The diagram adapter recognizes only explicit diagnostic kinds and fixed worker
+identities. Safe-tool and matched-review progress reads allowlisted protocol and
+status fields; complete two-arm summaries must validate full denominators,
+terminal kinds, paired aggregate consistency and bounded family accounting.
+Historical first answers are references, not new requests. Reviewed root decisions
+remain separate from source execution state and original scientific gates. Unknown
+kinds have no private-data fallback. Browser projections never open model
+representations, CPU tool receipts, questions, targets or original responses, and
+refresh never starts a model or tool execution.
