@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "illustrative_only": true,
+  "real_execution": false,
+  "cases": [
+    {
+      "source_id": "writing-example",
+      "context": "A synthetic results section follows development chronology although complete evidence is already available.",
+      "alternatives": [
+        "Reorganize by research question and preserve material limitations",
+        "Keep chronology and strengthen unsupported claims"
+      ],
+      "chosen": "Reorganize by research question and preserve material limitations",
+      "outcome": "No real rewrite, reader review or effectiveness measurement was executed."
+    },
+    {
+      "source_id": "race-example",
+      "context": "A synthetic branch improves an exposed development metric but uses more calls than its comparator.",
+      "alternatives": [
+        "Prepare an information- and budget-matched mechanism control",
+        "Declare general superiority and expand automatically"
+      ],
+      "chosen": "Prepare an information- and budget-matched mechanism control",
+      "outcome": "No real branch selection, experiment or transfer evaluation was executed."
+    }
+  ]
+}

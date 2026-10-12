@@ -1,5 +1,12 @@
 # Architecture
 
+The [experience integration specification](EXPERIENCE_INTEGRATION.md) separates
+source-bound observations, reviewed Taste precedents, executable skills and hard
+controller constraints. Writing contract retrieval and Planning Taste are existing
+consumption points; the workspace experience pool is a display projection. A
+universal external-experience importer and branch-ranking application remain
+future work, with illustrative ineligible templates provided for integration.
+
 The `workspace/` product entry integrates Idea discovery, literature/benchmark
 evidence, local project report projections, branch comparison, shared experience
 and CCF A/B submission planning with the native `src/scitaste` runtime. The public
@@ -7906,3 +7913,13 @@ remain separate from source execution state and original scientific gates. Unkno
 kinds have no private-data fallback. Browser projections never open model
 representations, CPU tool receipts, questions, targets or original responses, and
 refresh never starts a model or tool execution.
+
+The native diagram-parsing projection keeps source execution and independent
+root adjudication separate. A complete prediction summary remains unscored;
+reviewed continuous macro precision/recall/F1 requires the exact summary hash,
+full fixed denominator, valid metric bounds and consistent development gates.
+Malformed reviews hide reviewed metrics without rewriting source completion.
+The adapter reads only allowlisted protocol, status, summary and root fields;
+current-phase resource totals and the closed prior family are distinct. It does
+not read native predictions, targets or responses, launch execution, grant paid
+expansion, or treat development headroom as a new method or publication readiness.

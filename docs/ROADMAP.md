@@ -1,5 +1,11 @@
 # Roadmap
 
+2026-10-12 experience integration specification separates source evidence,
+quarantined cases, reviewed Taste, explicit skill use and hard constraints.
+Writing and race templates illustrate existing contracts without admitting
+examples or implementing a universal importer, policy update or branch ranker.
+See `docs/EXPERIENCE_INTEGRATION.md` for present consumption points and gaps.
+
 2026-10-12 public workspace integration adds optional reviewed project dossiers,
 branch publication routes, and safe Route/history and staged high-resolution-baseline execution/result adapters.
 ZoomBench adapters distinguish default and explicit high-resolution controls;
@@ -17,6 +23,11 @@ answers and require both full terminal-slot denominators before showing scores.
 Run, family and project costs remain separate; equal ceilings do not establish
 equal resource use. Root decisions remain reviewed aggregates, without upgrading
 failed gates or publication readiness.
+The optional native diagram view preserves completed-unscored prediction records
+while showing independently hash-bound root metrics. Continuous full-panel
+precision, recall and F1 remain distinct from custom QA accuracy; development
+headroom only permits source/method preparation. Current-phase accounting and
+the closed historical family remain separate, without paid or readiness grants.
 Reviewed support, uncertainty and next actions remain distinct from original
 scientific gates, and unknown diagnostic kinds have no private-data fallback.
 A fresh installation remains empty and does not launch models. Private evidence

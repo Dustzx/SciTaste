@@ -30,3 +30,7 @@ Route Task2：`cvpr_route_run.py` / `cvpr_route_score.py` 为 CPU 合同与解�
 ## 验证
 
 运行 `python workspace/scripts/check_workspace.py` 验证空安装、可选资料端点、原生资源接口及元数据写入；全程无 API/GPU。执行器合成合同测试不使用真实图像或标签。真实原方法重现还需要前述未分发合同，不由这些工程检查证明。
+
+## 子课题经验接入
+
+统一按[经验接入规范](../../docs/EXPERIENCE_INTEGRATION.md)维护：原始证据 → 隔离经验 → 有来源的 Taste → 具体决策点使用与反馈；稳定流程再封装 skill。规范含 Writing Taste 与分支赛马示例，区分现有能力与待实现接口。网页经验池只投影展示，不等同自动学习或策略更新。

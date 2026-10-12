@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-12 — Separate native predictions from reviewed metrics
+
+- Document how source-bound experience becomes reviewed Taste and optional skills, with explicitly ineligible synthetic Writing/race templates. This specification does not implement automatic imports, policy learning or branch ranking.
+- Add an optional native diagram-parsing view with fixed full-panel continuous precision, recall and F1, separate from custom question-answer accuracy.
+- Preserve the prediction summary as completed and unscored; display independent root metrics only after validating the summary hash, full denominator and development headroom contract. Preparation permission grants no paid expansion or publication readiness.
+- Separate current-phase costs from the closed historical family, and keep targets, predictions and response bodies outside the product projection. Synthetic projection and desktop/mobile checks cover the new path.
+
 ## 2026-10-12 — Safe tool and matched-review progress
 
 - Project optional TextFlow safe-tool and matched-review controls with actual new calls, terminal solver slots, and separate run/family/project accounting. Historical first answers remain references and are never billed as new calls.

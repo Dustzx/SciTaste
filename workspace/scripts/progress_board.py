@@ -1,6 +1,7 @@
 """Read-only report projection and local run evidence; never launches research."""
 import hashlib
 import json
+import math
 import os
 import re
 from datetime import datetime
@@ -21,12 +22,14 @@ DIAGRAM_SCREEN_KIND = 'flowgen_easy_direct_saturation_screen'
 DIAGRAM_COMPARISON_KIND = 'flowgen_visible_topology_acquisition_diagnostic'
 DIAGRAM_UNIFORM_KIND = 'flowgen_uniform_mermaid_solver_control'
 DIAGRAM_TOOLS_KIND = 'flowgen_textflow_safe_tools_matched_review'
-DIAGRAM_KINDS = {DIAGRAM_SCREEN_KIND, DIAGRAM_COMPARISON_KIND, DIAGRAM_UNIFORM_KIND, DIAGRAM_TOOLS_KIND}
+DIAGRAM_NATIVE_KIND = 'flowgen_native_triplet_parsing_screen'
+DIAGRAM_KINDS = {DIAGRAM_SCREEN_KIND, DIAGRAM_COMPARISON_KIND, DIAGRAM_UNIFORM_KIND, DIAGRAM_TOOLS_KIND, DIAGRAM_NATIVE_KIND}
 DIAGRAM_RUNS = {
     'cvpr_flowgen_screen.py': 'bailian_qwen35_122b_flowgen_easy_direct_screen_v1',
     'cvpr_flowgen_diagnostic.py': 'bailian_qwen35_122b_flowgen_easy_textflow_comparison_v1',
     'cvpr_textflow_solver_control.py': 'bailian_qwen35_122b_flowgen_textflow_uniform_solver_v1',
     'cvpr_textflow_tools_control.py': 'bailian_qwen35_122b_flowgen_textflow_safe_tools_matched_review_v1',
+    'cvpr_flowgen_native_screen.py': 'bailian_qwen35_122b_flowgen_native_parsing_screen_v1',
 }
 DIAGRAM_ARMS = ('direct', 'learned_fixed', 'learned_high', 'textflow_mermaid', 'gold_diagnostic')
 DIAGRAM_TOOL_ARMS = ('safe_tools', 'matched_review')
@@ -40,6 +43,92 @@ DIAGRAM_RESOURCE_FIELDS = ('physical_attempts', 'successful_settled', 'run_conse
 def diagram_resources(value):
     return {k: v for k, v in (value or {}).items()
             if k in DIAGRAM_RESOURCE_FIELDS and type(v) in (int, float)}
+
+
+def native_diagram_resources(value):
+    """Safe current phase and closed-family accounting, never attempt bindings."""
+    if not isinstance(value, dict):
+        return {}
+    safe = {k: v for k, v in diagram_resources(value).items() if math.isfinite(v) and v >= 0}
+    for key in ('phase_cny', 'project_cap_cny', 'physical_cap'):
+        if type(value.get(key)) in (int, float) and math.isfinite(value[key]):
+            safe[key] = value[key]
+    closed = value.get('closed_family')
+    prior_ids = list(DIAGRAM_RUNS.values())[:-1]
+    if (isinstance(closed, dict) and closed.get('closed') is True
+            and closed.get('run_ids') == prior_ids
+            and type(closed.get('physical_attempts')) is int and 0 < closed['physical_attempts'] <= 192
+            and type(closed.get('conservative_cny')) in (int, float)
+            and math.isfinite(closed['conservative_cny']) and 0 <= closed['conservative_cny'] <= 20):
+        safe['closed_family'] = {key: closed[key] for key in
+                                 ('run_ids', 'physical_attempts', 'conservative_cny', 'closed')}
+    return safe
+
+
+def native_diagram_summary(run):
+    """Prediction completion never implies scoring; only hash-bound root metrics."""
+    value = read(run/'SUMMARY.json', {})
+    if (value.get('kind') != DIAGRAM_NATIVE_KIND or value.get('run_id') != run.name
+            or value.get('status') != 'completed_unscored' or value.get('N') != 16
+            or 'score' not in value or value['score'] is not None or value.get('GT_read') is not False
+            or any(value.get(key) is not False for key in
+                   ('new_method', 'confirmation_evaluated', 'publication_ready'))):
+        return None
+    counts = value.get('terminal_status_counts')
+    resources = native_diagram_resources(value.get('resources'))
+    physical, settled = resources.get('physical_attempts'), resources.get('successful_settled')
+    if (not isinstance(counts, dict) or set(counts) != {'ok', 'truncated', 'refusal', 'error'}
+            or any(type(v) is not int or not 0 <= v <= 16 for v in counts.values()) or sum(counts.values()) != 16
+            or type(physical) is not int or type(settled) is not int or not 16 == settled <= physical <= 31
+            or 'closed_family' not in resources
+            or resources.get('phase_cny') != 20 or resources.get('physical_cap') != 31
+            or resources.get('project_cap_cny') != 300
+            or any(type(resources.get(k)) not in (int, float) or not 0 <= resources[k] <= cap
+                   for k, cap in (('run_conservative_cny', 20), ('project_conservative_cny', 300)))
+            or type(resources.get('retry_unknown_count')) is not int
+            or not 0 <= resources['retry_unknown_count'] <= physical - settled):
+        return None
+    safe = {'kind': DIAGRAM_NATIVE_KIND, 'run_id': run.name, 'N': 16,
+            'status': 'completed_unscored', 'score': None, 'GT_read': False,
+            'terminal_status_counts': counts, 'resources': resources,
+            'new_method': False, 'confirmation_evaluated': False, 'publication_ready': False}
+    root = read(run/'ROOT_READOUT_DECISION.json', {})
+    macro, invalid, gate = root.get('official_macro'), root.get('invalid'), root.get('headroom_gate')
+    if (root.get('owner') == 'root' and root.get('run_id') == run.name
+            and root.get('kind') == DIAGRAM_NATIVE_KIND and root.get('N') == 16
+            and root.get('status') == 'complete_root_audited'
+            and isinstance(root.get('evidence_sha256'), dict)
+            and root['evidence_sha256'].get('SUMMARY.json') == stamp(run/'SUMMARY.json').get('sha256')
+            and isinstance(macro, dict) and all(type(macro.get(k)) in (int, float)
+                and math.isfinite(macro[k]) and 0 <= macro[k] <= 1 for k in ('precision', 'recall', 'f1_score'))
+            and type(invalid) is int and 0 <= invalid <= 16
+            and type(root.get('engineering_valid')) is bool and root['engineering_valid'] == (invalid <= 1)
+            and isinstance(gate, dict) and type(gate.get('valid_predictions')) is int
+            and gate['valid_predictions'] == 16 - invalid and type(gate.get('minimum_valid')) is int
+            and gate['minimum_valid'] == 15
+            and type(gate.get('saturated')) is bool and gate['saturated'] == (macro['f1_score'] >= .95)
+            and type(gate.get('semantic_loss_fullN')) in (int, float)
+            and math.isfinite(gate['semantic_loss_fullN']) and 0 <= gate['semantic_loss_fullN'] <= 1
+            and type(gate.get('valid_images_f1_le_0_90')) is int
+            and 0 <= gate['valid_images_f1_le_0_90'] <= gate['valid_predictions']
+            and type(gate.get('passes_development_headroom')) is bool
+            and gate['passes_development_headroom'] == (root['engineering_valid'] and not gate['saturated']
+                and gate['semantic_loss_fullN'] >= .10 and gate['valid_images_f1_le_0_90'] >= 8)
+            and gate.get('action') == ('source_method_preparation_only' if gate['passes_development_headroom']
+                                      else 'stop_native_panel_no_auto_expand')
+            and gate.get('automatic_paid_expansion') is False):
+        reviewed = {'owner': 'root', 'kind': DIAGRAM_NATIVE_KIND, 'run_id': run.name, 'N': 16,
+                    'status': 'complete_root_audited', 'official_macro': {k: macro[k] for k in
+                    ('precision', 'recall', 'f1_score')}, 'invalid': invalid,
+                    'engineering_valid': root['engineering_valid']}
+        for key in ('decision', 'scope', 'created_at', 'reviewed_at', 'next_action'):
+            if isinstance(root.get(key), str) and len(root[key]) <= 4096:
+                reviewed[key] = root[key]
+        reviewed['headroom_gate'] = {k: gate[k] for k in ('valid_predictions', 'minimum_valid',
+            'saturated', 'semantic_loss_fullN', 'valid_images_f1_le_0_90',
+            'passes_development_headroom', 'action', 'automatic_paid_expansion')}
+        safe['root_readout_decision'] = reviewed
+    return safe
 
 
 def diagram_metric(value):
@@ -62,6 +151,8 @@ def diagram_summary(run):
     kind = read(run / 'PROTOCOL.json', {}).get('kind')
     if kind not in DIAGRAM_KINDS:
         return None
+    if kind == DIAGRAM_NATIVE_KIND:
+        return native_diagram_summary(run)
     value = read(run / 'SUMMARY.json', {})
     if value.get('status') != 'complete' or value.get('run_id') != run.name or value.get('kind') != kind:
         return None
@@ -220,10 +311,12 @@ def diagram_source(path):
     value = read(path, {})
     safe = {k: value[k] for k in fields if k in value}
     if path.name == 'STATUS.json':
-        safe['resources'] = diagram_resources(value.get('resources'))
+        safe['resources'] = (native_diagram_resources(value.get('resources')) if value.get('kind') == DIAGRAM_NATIVE_KIND
+                             else diagram_resources(value.get('resources')))
     if path.name == 'PROTOCOL.json':
         safe['arms'] = (list(DIAGRAM_ARMS) if value.get('kind') == DIAGRAM_COMPARISON_KIND else
                         list(DIAGRAM_TOOL_ARMS) if value.get('kind') == DIAGRAM_TOOLS_KIND else
+                        ['native_triplet_parsing'] if value.get('kind') == DIAGRAM_NATIVE_KIND else
                         ['uniform_solver'] if value.get('kind') == DIAGRAM_UNIFORM_KIND else ['direct'])
         anchor = value.get('direct_anchor', {})
         safe['direct_anchor'] = {k: anchor[k] for k in ('run_id', 'N', 'reused_physical_calls',
@@ -236,6 +329,8 @@ def diagram_experiment(run, status, protocol):
     comparison = protocol['kind'] == DIAGRAM_COMPARISON_KIND
     uniform = protocol['kind'] == DIAGRAM_UNIFORM_KIND
     tools = protocol['kind'] == DIAGRAM_TOOLS_KIND
+    if protocol['kind'] == DIAGRAM_NATIVE_KIND:
+        return native_diagram_experiment(run, status, protocol)
     summary = diagram_summary(run)
     phase = status.get('status', 'unknown')
     is_live = alive(status.get('pid'), run.name) and phase not in {'completed_scored', 'held_preserve_no_regeneration'}
@@ -273,6 +368,33 @@ def diagram_experiment(run, status, protocol):
         'finding': '完整32终态的已录用工具算法及普通review控制；仍须根仲裁，不修旧门。' if summary and tools else '统一提示工程控制完整；原结果与历史参照分别保留，不作为新方法。' if summary and uniform else '完整开发读出，仍须根仲裁；不自动扩展或提升科学门。' if summary else '仅安全进度；完整32终态槽评分未落盘。' if tools else '仅安全进度；完整80终态槽评分未落盘。' if comparison else '仅安全进度；完整16条评分未落盘。',
         'source_key': 'run.' + run.name + ('' if summary else '.status'),
         'protocol_source_key': 'run.' + run.name + '.protocol'}
+
+
+def native_diagram_experiment(run, status, protocol):
+    summary = diagram_summary(run)
+    phase = status.get('status', 'unknown')
+    live = phase == 'running' and alive(status.get('pid'), run.name)
+    resources = (summary or {}).get('resources') or native_diagram_resources(status.get('resources'))
+    reviewed = (summary or {}).get('root_readout_decision')
+    return {'project': 'FastResearch', 'name': run.name, 'branch_id': 'FR-DIAGRAM',
+        'diagnostic_kind': DIAGRAM_NATIVE_KIND, 'status': phase, 'generation_state': phase,
+        'verification': 'local_process_and_artifacts', 'live': live,
+        'stale_running': phase == 'running' and not live,
+        'completed': status.get('completed_calls'), 'planned': 16, 'max_logical_calls': 16,
+        'updated_at': status.get('updated_at') or stamp(run/'STATUS.json').get('modified_at'),
+        'model': protocol.get('model'), 'title': 'FlowGen · 原生三元组解析开发筛选',
+        'protocol': '官方原生三元组解析提示的共同122B API适配；16新逻辑调用／最多31物理尝试／独立阶段¥20。旧家族封闭保留。',
+        'scope': '沿用同16张已曝光开发图；官方triplet parsing与此前custom QA不同。无新方法或独立确认。',
+        'arms': [], 'summary': summary, 'resources': resources,
+        'requests': {'attempts': resources.get('physical_attempts'), 'successful': resources.get('successful_settled'),
+                     'unsettled': resources['physical_attempts'] - resources['successful_settled']
+                         if all(type(resources.get(k)) is int for k in ('physical_attempts', 'successful_settled')) else None},
+        'actual_calls': resources.get('physical_attempts'), 'api_cost_cny': resources.get('run_conservative_cny'),
+        'finding': '根审阅的官方逐图macro P/R/F1已绑定；预测SUMMARY仍为完成未评分，原QA失败门保持。' if reviewed else
+                   '16条原生解析预测完成，尚未根审评分；不填问答准确率或投稿就绪。' if summary else
+                   '仅安全进度；完整16预测与根审指标尚未落盘。',
+        'source_key': 'run.'+run.name+('' if summary else '.status'),
+        'protocol_source_key': 'run.'+run.name+'.protocol'}
 
 
 def zoombench_summary(run):
@@ -861,6 +983,9 @@ def snapshot():
     ledger = read(study/'API_LEDGER.json', {})
     for experiment in experiments:
         if experiment.get('verification') == 'local_process_and_artifacts':
+            if experiment.get('diagnostic_kind') == DIAGRAM_NATIVE_KIND:
+                # Native UI uses only safe phase STATUS/SUMMARY resources; no native ledger or private evidence.
+                continue
             attempts = [a for a in ledger.get('attempts', {}).values() if a['run_id'] == experiment['name']]
             experiment['requests'] = {'attempts': len(attempts), 'successful': sum(a['status'] == 'settled' for a in attempts),
                                       'unsettled': sum(a['status'] != 'settled' for a in attempts),
