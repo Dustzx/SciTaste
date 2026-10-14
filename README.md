@@ -59,7 +59,9 @@ working interface alone do not establish those claims.
 The integrated [research workspace](workspace/README.md) provides literature and
 benchmark discovery, source-bound project progress, shared experience, branch
 comparison, and CCF A/B conference and journal planning. Its default web path
-does not call model APIs or launch research jobs.
+does not call model APIs or launch research jobs. Repository-owned [core skills](skills/catalog.json)
+are available at `/#/skills`; `research-report` prepares portable, version-bound
+reporting tasks with the complete procedure and templates for an executing assistant.
 
 ## Why scientific taste?
 

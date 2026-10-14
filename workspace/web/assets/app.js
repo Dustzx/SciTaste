@@ -49,7 +49,7 @@ function buildIndexes() {
 
 function navigation() {
   const current = route()[0];
-  const nav = [['overview','◫','研究总览',''],['progress','↗','研究进展',''],['experience','◎','共享经验池',''],['race','⇄','分支赛马',''],['benchmarks','▦','Benchmark',registry.benchmarks.length],['scores','≋','文献成绩',registry.results.length],['methods','⌘','方法候选池',registry.methods.length],['resources','▤','模型与资源',''],['experiments','⚗','实验工作台',''],['program','◈','投稿规划',''],['hotspots','↗','近期热点',app.inbox.items.length],['ideas','◇','研究 Idea',registry.ideas.length],['shortlist','☆','研究清单',Object.values(bookmarks).filter(Boolean).length],['evidence','⌁','证据与维护','']];
+  const nav = [['overview','◫','研究总览',''],['progress','↗','研究进展',''],['experience','◎','共享经验池',''],['skills','✧','核心技能',''],['race','⇄','分支赛马',''],['benchmarks','▦','Benchmark',registry.benchmarks.length],['scores','≋','文献成绩',registry.results.length],['methods','⌘','方法候选池',registry.methods.length],['resources','▤','模型与资源',''],['experiments','⚗','实验工作台',''],['program','◈','投稿规划',''],['hotspots','↗','近期热点',app.inbox.items.length],['ideas','◇','研究 Idea',registry.ideas.length],['shortlist','☆','研究清单',Object.values(bookmarks).filter(Boolean).length],['evidence','⌁','证据与维护','']];
   $('#navigation').innerHTML = nav.map(([path,symbol,text,count]) => `<a href="#/${path}" class="nav-link ${current === path ? 'active' : ''}" ${current === path ? 'aria-current="page"' : ''}><span class="nav-symbol" aria-hidden="true">${symbol}</span>${text}${count !== '' ? `<span class="nav-count">${count}</span>` : ''}</a>`).join('') + '<a class="nav-link" href="/studio/#/?lang=zh-CN"><span class="nav-symbol">▣</span>完整研究桌面</a>';
   $('#breadcrumb').textContent = nav.find(x => x[0] === current)?.[2] || '研究文档';
   $('#sidebar-date').textContent = '核实截止 ' + registry.as_of;
@@ -328,6 +328,7 @@ async function render() {
   if (['experiments','resources'].includes(page)) $('#main').innerHTML = '<div class="loading"><span class="loader"></span>正在读取项目证据…</div>';
   switch (page) {
     case 'overview': html = `<section class="panel program-entry"><div><div class="eyebrow">SCITASTE / IDEA RESEARCH & DISCOVERY</div><h2>用科学判断构造值得研究的 Idea</h2><p>快速检索 → 证据综合 → Idea 构造 → Taste 指导优化。共享判断与经验逐步贯穿实验、写作、图表和评审。</p></div><div class="actions"><a class="button primary" href="#/program">选择投稿目标 →</a><a class="button" href="/studio/#/?lang=zh-CN">完整研究桌面 ↗</a></div></section>` + overview(); break;
+    case 'skills': html = await SciTasteSkills.render(id); break;
     case 'program': html = await SciTasteProgram.render(params()); break;
     case 'progress': html = await FastResearchProgress.progress(params()); break;
     case 'experience': html = await FastResearchProgress.experience(params()); break;

@@ -59,3 +59,14 @@ cd workspace
 可选环境变量 `SCITASTE_RESEARCH_PROFILES_ROOT`、`SCITASTE_RESEARCH_INTRODUCTIONS_ROOT` 指向用户自行审阅的本地资料目录；`SCITASTE_SHARED_RACE_PATH` 可接入本地共享赛马汇总。缺失资料直接省略，不构造实验记录。配置格式与执行边界见 [公开工作台合同](docs/PUBLIC_WORKSPACE.md)。资料导出只包含已配置的叙述和摘要，公开版不打包数据图像。
 
 独立实验脚本不属于默认网页依赖。需要使用时可显式安装 `.[workspace-experiments]`；调用者还必须自行准备源码许可证、固定上游版本、独立输入/图像清单、密封标签、来源合同及资源准入。作者本机的这些文件均未同步，因此这里提供实现，未声称开箱复现原论文分数。`DASHSCOPE_API_KEY` 只从调用者环境读取，不搜索任何账户文件。
+
+## 核心技能
+
+打开`/#/skills`查看仓库内核心skill。首项research-report用于动机、近邻、具体实现与证据的汇报整理；规范与模板随根目录`skills/`分发，不依赖作者目录。页面可下载技能包，或填写项目名/目录和目标，生成携带完整技能与SHA的任务Markdown/ZIP交给执行助手。准备任务不调用模型，不自动完成报告或启动实验。
+
+```bash
+.venv/bin/python workspace/scripts/platform_skills.py list
+.venv/bin/python workspace/scripts/platform_skills.py task research-report --project ./my-project --output report-task.zip
+```
+
+在仓库根运行；输出文件已存在时拒绝覆盖。API为`GET /api/skills`，任务准备使用`skill=research-report&format=task`；详细用法及边界见[技能接入](docs/CORE_SKILLS.md)。

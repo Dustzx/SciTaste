@@ -1,0 +1,4 @@
+interface:
+  display_name: "科研 Idea 汇报整理"
+  short_description: "凝练研究动机、近邻差异和具体实现，让读者快速理解价值与证据边界"
+  default_prompt: "使用 $research-report 整理这些课题，讲清研究动机、相关工作区别、方法实现及证据，更新现有汇报入口。"

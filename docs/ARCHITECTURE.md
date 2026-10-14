@@ -38,6 +38,10 @@ flowchart LR
 
 Knowledge 保存已知事实，Taste 保存“此情境为何选择这个行动”的经验。Planning Taste 冻结库和输入，留下建议及采用记录；Writing contract 有专门检索接点。网页共享经验池是展示投影。通用外部经验自动导入和赛马建议应用仍需显式贯通，详见[经验接入规范](taste/EXPERIENCE_INTEGRATION.md)。
 
+## 核心流程技能
+
+第一方可复用流程随仓库`skills/catalog.json`与`skills/<id>/`分发。workspace的`platform_skills.py`按显式文件清单加载、绑定完整内容SHA，并为执行助手准备任务；`/#/skills`提供规范、模板、技能包和任务下载。首项research-report用于汇报整理。注册/准备不调用模型，也不自动进入原生harness动作选择；科学事实、Taste策略与执行授权仍由原模块维护。
+
 ## 数据与信息权威
 
 | 信息 | 唯一维护位置 |

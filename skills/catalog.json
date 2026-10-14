@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "id": "research-report",
+      "name": "科研 Idea 汇报整理",
+      "version": "1.0.0",
+      "description": "把研究动机、近邻差异、训练与推理、例子和当前证据讲清楚，维护已有汇报。",
+      "entry": "research-report/SKILL.md",
+      "files": [
+        "SKILL.md",
+        "agents/openai.yaml",
+        "references/workbench.md",
+        "references/report-template.md"
+      ],
+      "when_to_use": [
+        "整理课题简介、项目简报或PPT资料",
+        "审视motivation、核心机制与近邻差别",
+        "同步已有报告、页面与导出"
+      ],
+      "outputs": [
+        "清楚的研究问题与机制",
+        "具体近邻的已覆盖范围与实质差别",
+        "训练/推理及输入输出例子",
+        "证据、未知与下一判别",
+        "已有报告与平台入口的对齐"
+      ],
+      "authority": "procedure-only",
+      "execution": "assistant-handoff",
+      "default_goal": "整理项目汇报，讲清Motivation、近邻差异、具体实现与证据，并对齐现有展示入口。"
+    }
+  ]
+}

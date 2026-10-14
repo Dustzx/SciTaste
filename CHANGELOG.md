@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-14 — Repository-owned reporting skill
+
+- Bundle portable research-report instructions and templates in skills/catalog.json.
+- Add a core-skills workspace, read-only API and CLI for inspecting, downloading
+  and preparing complete SHA-bound assistant tasks. Preparation performs no model,
+  experiment, remote execution or arbitrary project-file read.
+- Preserve current scientific plans and report adapters; packaging this procedure
+  does not add the local-only rich-report/screenshot pipeline to the public build.
+
 ## 2026-10-12 — Paper-first Writing Taste workflow
 
 - Record the user's complete-draft → venue-review → experiment → evidence

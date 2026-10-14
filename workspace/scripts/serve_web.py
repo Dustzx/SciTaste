@@ -25,6 +25,7 @@ import progress_board
 import research_dossiers
 import research_introductions
 import research_export
+import platform_skills
 import venue_catalog
 from scitaste_bridge import BRIDGE, BridgeError
 from studio_gateway import StudioGateway
@@ -245,6 +246,15 @@ class Handler(BaseHTTPRequestHandler):
                         "counts": {k: len(registry[k]) for k in ("benchmarks", "results", "methods", "ideas")},
                         "uptime_seconds": round(time.time() - STARTED), "data_version": snapshot["etag"].strip('"')}
                 self.respond(json.dumps(body).encode(), "application/json; charset=utf-8", head=head)
+            elif path == '/api/skills':
+                try:
+                    body, mime, filename = platform_skills.response(parse_qs(request.query))
+                except KeyError:
+                    self.error_json(404, '未登记该核心技能', head)
+                except ValueError:
+                    self.error_json(400, '技能请求或规范不完整，请使用核心技能入口', head)
+                else:
+                    self.respond(body, mime, filename=filename, head=head)
             elif path == '/api/venues':
                 catalogue, etag = venue_catalog.snapshot()
                 if self.headers.get('If-None-Match') == etag:

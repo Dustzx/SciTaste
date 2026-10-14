@@ -155,3 +155,12 @@ make demo
 - After moving docs, update active links and the inventory, check moved bytes and
   frozen references, and run `python scripts/check_documentation.py`. Do not
   start experiments or run the full repository suite for documentation cleanup.
+
+## Repository-owned core skills
+
+For research brief, project introduction or presentation reporting, read
+`skills/research-report/SKILL.md` and the relevant references. Reuse the project's
+existing report structure and source records. The skill does not authorize new
+experiments, model calls or research-direction changes. Core skill metadata lives
+in `skills/catalog.json`; workspace task preparation carries the complete
+version-bound instructions for an executing assistant.
