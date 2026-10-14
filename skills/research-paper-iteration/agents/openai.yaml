@@ -1,0 +1,4 @@
+interface:
+  display_name: "科研论文实证迭代"
+  short_description: "完整意向终稿、独立会议审稿与关键实验闭环；偏离时重写复审，一致时保留结构定稿"
+  default_prompt: "使用 $research-paper-iteration 检查当前项目的idea与实测支持，按目标会议推进完整意向终稿、独立审稿、关键实验与证据对齐，再依偏差重写复审或稳定定稿。"

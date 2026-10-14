@@ -1,6 +1,6 @@
 # 子课题经验接入 SciTaste 的规范
 
-版本：1.1，2026-10-12。适用于 Idea、Experiment、Writing、Figure、Review，以及跨子课题赛马。本文约定后续接入方式，不把尚未实现的自动同步描述为现有能力。
+版本：1.2，2026-10-14。适用于 Idea、Experiment、Writing、Figure、Review，以及跨子课题赛马。本文约定接入方式，不把尚未实现的自动同步描述为现有能力。
 
 经验先保留为有来源的决策案例，再提炼 Taste；稳定、可重复执行的流程才封装成 skill。一次实验涨分、一次修改被认可、一个 skill 文件，都不能单独证明学到了有效的 Scientific Taste。
 
@@ -76,7 +76,7 @@ flowchart LR
 
 **现阶段推荐走 AI 审核的开发候选路径。** 原生经验处置链和外部来源抽象的开发库路径已有各自合同；二者尚不能视为一条通用、自动的 import/promotion 管道。外部子课题先保留真实来源和 retrospective 标记，再接来源抽象与审核，不伪造原生执行记录。
 
-当前未提供“放一个 skill 文件就自动接入 SciTaste”的通用注册器。要使用 skill，执行端需显式读取其内容，绑定版本，并记录在哪个决策/执行点采用。`SKILL.md` 的存在、网页显示成功和库能加载，分别只证明文件、展示和工程接入完成。
+仓库内核心流程现可通过`skills/catalog.json`显式登记，由工作台`/#/skills`查看/下载及准备携带完整规范和版本SHA的任务包，详见[技能接入](../../workspace/docs/CORE_SKILLS.md)。这不是“放一个文件就自动进入科研控制器”：执行端仍需读取内容、核授权，并记录在哪个决策/执行点采用。`SKILL.md`存在、网页显示成功和库能加载，分别只证明文件、展示和工程接入完成。
 
 人工审核字段属于旧路径的明确类型约束，不是本规范给日常经验整理增加人工审批。AI 开发路径继续保留真实 AI/session 来源及资格边界；不能把它包装成已获人工或正式实验认可的记忆。
 
@@ -135,6 +135,8 @@ flowchart LR
 现有 `PaperArgumentContract` 可表示主张与 planned/available/unavailable 证据载体；`EvidencePaperDraftInput` 绑定证据与可用数值；`VenueReviewPacket` 和 `VenuePaperReviewMaterial` 绑定确切稿件及审稿输入。已注册评审可经 `project paper review route-state → plan-iteration → design-followup` 形成问题与后续实验依赖，之后按实际结果闭合问题、修订并复审。沿用各自合同；计划不自动成为 evidence，改写不自动关闭实验问题。
 
 这条流程目前进入维护者约定及共享经验展示，**尚未实现“自动写整稿—派审—跑实验—再写”的通用调度器，也未自动将该原则设为可检索 Taste**。当前原生写作入口仍要求合法的已知证据与主张；实验前的目标论证和条件包由项目显式保存，不能伪装成已准入的实测稿件来绕过入口。
+
+完整流程另随仓库[research-paper-iteration](../../skills/research-paper-iteration/SKILL.md)分发。实测支持冻结主张与范围时，保留已审意向稿的主线，主要填真实数值、图表和必要限制以收敛实际终稿；核心机制或比较改变时重写复审。保持结构不能成为隐藏偏差的理由。技能附带独立项目的有界教训与每轮记录模板，任务包准备仍不自动执行循环。
 
 ## 5. 赛马经验的接入规范
 

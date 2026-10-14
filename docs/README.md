@@ -39,7 +39,7 @@
 
 这些详细文件可从对应模块入口阅读。日常经验和进度不再向它们追加；实际修改研究合同要按已有版本与证据绑定流程进行，不能由整理文档静默重签旧实验。
 
-核心流程技能见[平台接入说明](../workspace/docs/CORE_SKILLS.md)与[research-report](../skills/research-report/SKILL.md)；经验和证据仍按上述权威维护，技能准备不执行研究。
+核心流程技能见[平台接入说明](../workspace/docs/CORE_SKILLS.md)、[research-report](../skills/research-report/SKILL.md)和[research-paper-iteration](../skills/research-paper-iteration/SKILL.md)；经验和证据仍按上述权威维护，技能准备不执行研究。
 
 ## 后续新增和更新规则
 

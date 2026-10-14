@@ -4,9 +4,9 @@
 
 ## 在平台使用
 
-1. 打开`/#/skills`，选择“科研 Idea 汇报整理”。
-2. 填项目名/目录和任务目标，点“准备汇报任务”。
-3. 复制完整任务或下载任务Markdown/ZIP，交给执行助手；助手核对用户项目入口和授权后整理既有报告。
+1. 打开`/#/skills`，选择汇报整理或论文实证迭代。
+2. 填项目名/目录和任务目标，点“准备技能任务”。
+3. 复制完整任务或下载任务Markdown/ZIP，交给执行助手；助手核对用户项目入口和授权后按所选技能执行。
 
 技能包包含完整规范、工作台适配说明、报告模板、agents元数据和SHA清单。任务包另带TASK.md/TASK.json；完整修订SHA绑定目录元数据和全部说明文件。平台只准备材料，未调用模型，也未生成研究结论。UI填写的目录仅为任务数据，服务器不会据此读取任意文件。
 
@@ -19,6 +19,7 @@
 .venv/bin/python workspace/scripts/platform_skills.py show research-report
 .venv/bin/python workspace/scripts/platform_skills.py task research-report --project ./my-project --goal '整理课题简介和汇报' --output report-task.zip
 .venv/bin/python workspace/scripts/platform_skills.py export research-report --output research-report.zip
+.venv/bin/python workspace/scripts/platform_skills.py task research-paper-iteration --project ./my-project --output paper-task.zip
 ```
 
 输出需明确指定，已有文件不覆盖。无需模型、GPU或私有项目。
@@ -34,6 +35,14 @@
 先从可追溯经验提炼稳定且有边界的做法，再增加`skills/<id>/`并显式登记catalog。给出适用情境、交付物、版本、文件清单和引用说明。版本更改应更新version，完整revision随内容自动变化。只打包已登记的有界文本文件，不能以任意路径或脚本执行扩展权限。
 
 技能是procedure-only；事实经验、Taste策略与科学效果分别维护。注册不自动改变控制器决策或启动研究。本接点供用户与执行助手复用；与原生研究harness的自动动作选择分别处理。
+
+## 科研论文实证迭代
+
+`research-paper-iteration`复用已有同名技能，补齐idea/正向证据判断、完整意向终稿、独立会议审稿、关键实验、实测偏差分流与实际终稿。技能页用流程卡展示顺序；包内包含审稿任务、每轮记录模板、定稿规则及来自独立项目的脱敏教训。
+
+意向正文采用完整终稿体例，不插入过程标签；假设/符号目标与实际证据单独随稿记录，审稿人能区分条件竞争力和当前证据。实测改变主要论证则重写复审，一致则保留已审结构填真实结果；不从AI正评推断录用。
+
+平台准备任务时不运行完整循环。执行助手在用户已授权研究迭代时按技能接续各阶段；实际实验遵守其环境的experiment-autopilot和项目资源门。只请求整理技能或进展不启动实验。脱敏经验是有范围的来源案例，不是已学会Taste或已验证中稿率。
 
 ## 公开版本边界
 

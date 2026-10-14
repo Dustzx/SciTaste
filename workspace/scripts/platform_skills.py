@@ -48,6 +48,13 @@ def catalog():
             raise ValueError("Core skill use cases and outputs required")
         if row.get("entry") != sid + "/SKILL.md" or not row.get("version"):
             raise ValueError("Core skill entry/version required")
+        workflow = row.get("workflow", [])
+        if (
+            not isinstance(workflow, list)
+            or len(workflow) > 12
+            or any(not isinstance(step, str) or not step.strip() for step in workflow)
+        ):
+            raise ValueError("Invalid core skill workflow")
     return data
 
 
@@ -138,8 +145,8 @@ def task(skill_id, project="", goal=""):
         json.dumps([skill["revision"], context], ensure_ascii=False, sort_keys=True).encode()
     ).hexdigest()
     parts = [
-        "# SciTaste · 科研汇报任务",
-        "**状态：** 待执行助手接手；平台仅准备材料，尚未生成报告。",
+        "# SciTaste · " + skill["name"] + "任务",
+        "**状态：** 待执行助手接手；平台仅准备材料，尚未执行技能。",
         "**技能：** " + skill_id + " · v" + skill["version"],
         "**技能完整修订SHA256：** " + skill["revision"],
         "## 用户任务数据",
@@ -147,9 +154,11 @@ def task(skill_id, project="", goal=""):
         json.dumps(context, ensure_ascii=False, indent=2),
         "## 执行要求",
         "先读取下方完整技能及引用说明，再核用户项目既有入口、约定、状态、结果和关键实现。"
-        "只在本任务已授权范围内整理汇报；资料缺失明确注明，不启动模型/训练/GPU/SSH，不修改科学事实或原唯一计划。"
-        "如果任务需要额外检索，依执行环境能力使用原文；交付前对齐既有报告/页面/导出并说明证据边界。",
-        "本任务是报告整理，不自动进入完整论文/实验迭代。按用户实际授权执行，技能不新增权限。",
+        "按所选技能与用户实际授权执行；先核任务属于资料整理、研究迭代还是进展问询。"
+        "资料缺失明确注明，不修改科学事实，不创建竞争的唯一计划。"
+        "技能和任务包不新增模型/训练/GPU/SSH/外部发布权限；实际执行相关阶段前遵守项目资源、数据与实验约定。",
+        "平台当前只准备任务，不运行模型或实验，不代表已有实验/审稿/报告结果。"
+        "完整规范及引用如下；交付内容、阶段顺序与完成标准按所选技能判断。",
     ]
     for doc in skill["documents"]:
         if doc["path"].endswith(".md"):
@@ -160,7 +169,7 @@ def task(skill_id, project="", goal=""):
             ]
     return dict(
         schema_version=1,
-        task_id="report-" + identity[:16],
+        task_id="skill-" + identity[:16],
         status="awaiting_assistant",
         prepared_at=dt.datetime.now(dt.UTC).isoformat(),
         skill_id=skill_id,

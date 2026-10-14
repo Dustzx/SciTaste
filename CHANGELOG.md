@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-14 — Evidence-driven paper iteration skill
+
+- Bundle research-paper-iteration with sourced project lessons, independent venue
+  review tasks and claim/evidence reconciliation templates. Preserve reviewed
+  structure when evidence agrees; rewrite and re-review substantive deviations.
+- Make core-skill task preparation follow the selected procedure and display its
+  workflow. Task packaging does not run reviews, experiments or automatic Taste admission.
+
 ## 2026-10-14 — Repository-owned reporting skill
 
 - Bundle portable research-report instructions and templates in skills/catalog.json.

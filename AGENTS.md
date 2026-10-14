@@ -164,3 +164,9 @@ existing report structure and source records. The skill does not authorize new
 experiments, model calls or research-direction changes. Core skill metadata lives
 in `skills/catalog.json`; workspace task preparation carries the complete
 version-bound instructions for an executing assistant.
+
+For explicitly authorized paper/idea iteration, read
+`skills/research-paper-iteration/SKILL.md`: complete intended manuscript,
+fresh-context venue review, claim-critical experiments, evidence reconciliation,
+and either substantive rewrite/review or structure-preserving finalization.
+Skill maintenance alone does not start that research loop or grant resources.

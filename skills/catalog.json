@@ -28,6 +28,43 @@
       "authority": "procedure-only",
       "execution": "assistant-handoff",
       "default_goal": "整理项目汇报，讲清Motivation、近邻差异、具体实现与证据，并对齐现有展示入口。"
+    },
+    {
+      "id": "research-paper-iteration",
+      "name": "科研论文实证迭代",
+      "version": "1.1.0",
+      "description": "判断idea与实测支持，以完整意向终稿、独立会议审稿和关键实验闭环收敛到实际终稿。",
+      "entry": "research-paper-iteration/SKILL.md",
+      "files": [
+        "SKILL.md",
+        "agents/openai.yaml",
+        "references/review-and-evidence.md",
+        "references/iteration-record.md",
+        "references/project-lessons.md"
+      ],
+      "when_to_use": [
+        "持续推进已授权的论文或idea迭代",
+        "以会议审稿暴露关键科学缺口",
+        "实测后重写复审或保持结构定稿"
+      ],
+      "outputs": [
+        "贡献潜力与当前实测支持的分别判断",
+        "完整意向稿、随稿证据说明和写作参考",
+        "新上下文审稿及意见到关键实验的映射",
+        "冻结主张与真实结果的逐项偏差记录",
+        "有实测支持的实际终稿与可迁移经验"
+      ],
+      "workflow": [
+        "贡献与证据判断",
+        "完整意向终稿",
+        "独立会议审稿",
+        "关键实验",
+        "预期与实测对齐",
+        "偏离：重写复审／一致：稳定定稿"
+      ],
+      "authority": "procedure-only",
+      "execution": "assistant-handoff",
+      "default_goal": "先核项目idea与正向实测证据，按当前目标会议推进完整意向终稿、独立审稿与关键实验；实测偏离则重写复审，一致则保留主线填入真实结果定稿。仅在现有授权范围执行。"
     }
   ]
 }

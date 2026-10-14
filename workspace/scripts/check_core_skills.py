@@ -66,6 +66,29 @@ def main():
         ),
         "portable zip member names",
     )
+    paper = skills.get("research-paper-iteration")
+    paper_task = skills.task("research-paper-iteration", "./paper-project")
+    check(
+        paper_task["skill_revision"] != prepared["skill_revision"]
+        and paper_task["context"]["project"] == "./paper-project"
+        and paper["name"] in paper_task["prompt"],
+        "selected paper procedure has distinct identity and task context",
+    )
+    check(
+        all(
+            d["content"] in paper_task["prompt"]
+            for d in paper["documents"]
+            if d["path"].endswith(".md")
+        ),
+        "paper workflow, review tasks and source lessons reach executing assistant",
+    )
+    with zipfile.ZipFile(io.BytesIO(skills.package("research-paper-iteration", paper_task))) as z:
+        check(
+            z.read("TASK.md").decode() == paper_task["prompt"]
+            and "research-paper-iteration/references/project-lessons.md" in z.namelist()
+            and not any(n.startswith("research-report/") for n in z.namelist()),
+            "paper package carries the selected skill and exact prompt",
+        )
     for request in [
         dict(skill=["unknown"]),
         dict(skill=["../secret"]),
@@ -92,6 +115,15 @@ def main():
         check(
             "research-report" in output and "./elsewhere" in output,
             "relocated clone layout compiles task",
+        )
+        paper_output = subprocess.check_output(
+            [sys.executable, str(script), "task", "research-paper-iteration"],
+            cwd=root,
+            text=True,
+        )
+        check(
+            "research-paper-iteration/references/review-and-evidence.md" in paper_output,
+            "relocated clone also compiles paper iteration task",
         )
         with patch.object(skills, "SKILLS", root / "skills"):
             old_revision = skills.get("research-report")["revision"]

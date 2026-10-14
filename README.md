@@ -62,6 +62,9 @@ comparison, and CCF A/B conference and journal planning. Its default web path
 does not call model APIs or launch research jobs. Repository-owned [core skills](skills/catalog.json)
 are available at `/#/skills`; `research-report` prepares portable, version-bound
 reporting tasks with the complete procedure and templates for an executing assistant.
+`research-paper-iteration` adds complete intended manuscripts, independent venue
+reviews, claim-critical experiments and evidence-driven finalization instructions.
+Preparing either task does not execute the research workflow.
 
 ## Why scientific taste?
 

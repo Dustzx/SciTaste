@@ -40,7 +40,7 @@ Knowledge 保存已知事实，Taste 保存“此情境为何选择这个行动�
 
 ## 核心流程技能
 
-第一方可复用流程随仓库`skills/catalog.json`与`skills/<id>/`分发。workspace的`platform_skills.py`按显式文件清单加载、绑定完整内容SHA，并为执行助手准备任务；`/#/skills`提供规范、模板、技能包和任务下载。首项research-report用于汇报整理。注册/准备不调用模型，也不自动进入原生harness动作选择；科学事实、Taste策略与执行授权仍由原模块维护。
+第一方可复用流程随仓库`skills/catalog.json`与`skills/<id>/`分发。workspace的`platform_skills.py`按显式文件清单加载、绑定完整内容SHA，并为执行助手准备任务；`/#/skills`提供规范、模板、流程展示、技能包和任务下载。research-report用于汇报整理；research-paper-iteration用于完整意向稿、独立会议审稿、关键实验及证据驱动定稿。任务编排提示遵循所选技能，准备任务与实际执行分别记录。注册/准备不调用模型，也不自动进入原生harness动作选择；科学事实、Taste策略与执行授权仍由原模块维护。
 
 ## 数据与信息权威
 

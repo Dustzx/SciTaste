@@ -62,11 +62,12 @@ cd workspace
 
 ## 核心技能
 
-打开`/#/skills`查看仓库内核心skill。首项research-report用于动机、近邻、具体实现与证据的汇报整理；规范与模板随根目录`skills/`分发，不依赖作者目录。页面可下载技能包，或填写项目名/目录和目标，生成携带完整技能与SHA的任务Markdown/ZIP交给执行助手。准备任务不调用模型，不自动完成报告或启动实验。
+打开`/#/skills`查看仓库内核心skill。research-report用于动机、近邻、具体实现与证据的汇报整理；research-paper-iteration用于完整意向稿→独立审稿→关键实验→证据对齐→重写复审或稳定定稿。规范、模板及脱敏项目教训随根目录`skills/`分发，不依赖作者目录。页面可下载技能包，或填写项目名/目录和目标，生成携带完整技能与SHA的任务Markdown/ZIP交给执行助手。准备任务不调用模型，不自动完成报告或启动实验。
 
 ```bash
 .venv/bin/python workspace/scripts/platform_skills.py list
 .venv/bin/python workspace/scripts/platform_skills.py task research-report --project ./my-project --output report-task.zip
+.venv/bin/python workspace/scripts/platform_skills.py task research-paper-iteration --project ./my-project --output paper-task.zip
 ```
 
 在仓库根运行；输出文件已存在时拒绝覆盖。API为`GET /api/skills`，任务准备使用`skill=research-report&format=task`；详细用法及边界见[技能接入](docs/CORE_SKILLS.md)。

@@ -14,6 +14,11 @@ from playwright.sync_api import sync_playwright
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8765")
+    parser.add_argument(
+        "--skill",
+        default="research-report",
+        choices=["research-report", "research-paper-iteration"],
+    )
     args = parser.parse_args()
     base = args.url.rstrip("/")
     checks = []
@@ -33,16 +38,18 @@ def main():
             lambda r: mutations.append(r.url) if r.method not in {"GET", "HEAD"} else None,
         )
         page.goto(base + "/#/skills")
-        page.locator('[data-core-skill="research-report"]').wait_for(timeout=60000)
+        card = page.locator('[data-core-skill="' + args.skill + '"]')
+        card.wait_for(timeout=60000)
         check(
             page.locator("nav a[aria-current=page]").inner_text().strip().endswith("核心技能"),
             "core skill discoverable in platform navigation",
         )
-        page.locator("[data-core-skill] a").click()
+        card.locator("a").click()
         page.locator("[data-skill-prepare]").wait_for()
         check(
-            page.locator(".skill-documents details").count() == 3,
-            "full skill and both references visible",
+            page.locator(".skill-documents details").count()
+            == (3 if args.skill == "research-report" else 4),
+            "full selected skill and references visible",
         )
         malicious = '<img src=x onerror="window.__skillXSS=1">'
         page.locator("#skill-project").fill("my-paper")
@@ -89,18 +96,22 @@ def main():
             "desktop no horizontal overflow",
         )
         mobile = browser.new_page(viewport=dict(width=390, height=844))
-        mobile.goto(base + "/#/skills/research-report")
+        mobile.goto(base + "/#/skills/" + args.skill)
         mobile.locator("[data-skill-prepare]").wait_for(timeout=60000)
         check(
             mobile.evaluate("document.documentElement.scrollWidth<=innerWidth+1"),
             "mobile no horizontal overflow",
         )
         # Registered content must render as literal text even if future instructions include HTML.
-        with urlopen(base + "/api/skills?skill=research-report") as response:
+        if args.skill == "research-paper-iteration":
+            check(
+                page.locator(".skill-workflow li").count() == 6, "paper iteration workflow visible"
+            )
+        with urlopen(base + "/api/skills?skill=" + args.skill) as response:
             doc = json.load(response)
         doc["documents"][0]["content"] = malicious
-        page.route("**/api/skills?skill=research-report", lambda route: route.fulfill(json=doc))
-        page.goto(base + "/#/skills/research-report")
+        page.route("**/api/skills?skill=" + args.skill, lambda route: route.fulfill(json=doc))
+        page.goto(base + "/#/skills/" + args.skill)
         page.reload()
         page.locator(".skill-documents").wait_for()
         check(
