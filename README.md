@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="https://dustzx.github.io/SciTaste/">Project page</a> ·
+  <a href="#research-platform">Research platform</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/INNOVATION_MAP.md">Innovations</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
@@ -25,8 +26,10 @@
 </p>
 
 <p align="center">
-  <img src="site/assets/scitaste-lineage.webp" width="880" alt="Evidence converges at a scientific compass and continues through experiment, paper, and review.">
+  <a href="#research-platform"><img src="site/assets/platform-overview.png" width="1100" alt="SciTaste research platform: navigation for project progress, shared experience, core skills, branch comparison, literature, experiments, and submission planning."></a>
 </p>
+
+<p align="center"><sub>The local research platform, captured from the public repository with no private project records.</sub></p>
 
 Generating more ideas, experiments, and prose is not enough. Autonomous research
 also needs judgment: **which action is scientifically worthwhile now, why, what
@@ -42,6 +45,62 @@ is available only as an optional compatibility adapter and external baseline.
 > are still pending, so no current result establishes SciTaste's headline
 > effectiveness claim.
 
+## Research platform
+
+SciTaste includes a **local web platform for organizing research and deciding what
+to do next**. Browse literature and benchmarks, inspect project evidence, compare
+research branches, prepare reports, and connect each project to a submission plan.
+The platform brings the five research stages and shared experience into one place;
+the current development focus is Idea Research & Discovery.
+
+| Workspace | What it provides |
+|---|---|
+| **Discovery** | Benchmark and method browsing, literature-reported scores, research hypotheses, search, and shortlists. Literature scores are kept distinct from local measurements. |
+| **Project progress** | Source-bound project briefs, motivation, related-work distinctions, method explanations, and evidence summaries when local project records are connected. |
+| **Branch comparison** | Compare recorded branches, blockers, evidence, and publication routes alongside the shared experience pool. |
+| **Submission planning** | A/B conferences from a pinned CCF-DDL snapshot and A/B journals from a CCF directory mirror, with filters, favorites, and timezone-aware conference deadlines. Unknown journal dates remain unknown. |
+| **Native research desktop** | Create project metadata and inspect project lineage, plans, runs, papers, and evidence at `/studio/`. |
+| **Core skills and handoff** | Download reusable procedures and templates, or prepare a project task with the complete skill and its version/SHA for an executing assistant. |
+
+<table>
+  <tr>
+    <td width="50%"><a href="site/assets/platform-skills.png"><img src="site/assets/platform-skills.png" alt="Core skills page with research-report and research-paper-iteration procedures and task preparation."></a></td>
+    <td width="50%"><a href="site/assets/platform-program.png"><img src="site/assets/platform-program.png" alt="Submission planning page with CCF A/B conferences and journals, area and rank filters, and deadline information."></a></td>
+  </tr>
+  <tr>
+    <td align="center">Reusable core skills and task preparation</td>
+    <td align="center">CCF A/B conference and journal planning</td>
+  </tr>
+</table>
+
+Two [repository-owned core skills](workspace/docs/CORE_SKILLS.md) are available at
+`/#/skills`:
+
+- **[research-report](skills/research-report/SKILL.md)** — explain the motivation,
+  novelty, concrete differences from nearby work, implementation, and measured
+  evidence; organize visual material for reports and presentations.
+- **[research-paper-iteration](skills/research-paper-iteration/SKILL.md)** — develop
+  a complete intended manuscript, obtain independent venue-style reviews, run
+  claim-critical experiments within authorization, and revise against actual
+  evidence before finalizing the paper.
+
+The **shared experience pool** stores project lessons, decisions, outcomes, and
+their applicability; **core skills** encode reusable working procedures. Preparing
+a skill task does not call a model, launch an experiment, or execute the procedure.
+
+**What a fresh clone includes.** The public platform, literature/benchmark snapshots,
+submission directory, native desktop, and both skills are reusable. Project progress,
+branch results, and shared experience start empty. Connect your own records with
+`SCITASTE_REPORT_ROOT` and the optional project-source settings in the
+[workspace guide](workspace/README.md) and [data contract](workspace/docs/PUBLIC_WORKSPACE.md).
+Project adapters currently use defined project identifiers; arbitrary report schemas
+need an adapter. Public report exports contain configured narratives and summaries;
+the author's local screenshot/PPT image-pack pipeline is not included in this release.
+
+The screenshots above show the public version. Start it locally using the
+[quick start](#quick-start); the [project page](https://dustzx.github.io/SciTaste/)
+is a presentation site, while the research platform runs on your machine.
+
 ## Current focus: Idea Research & Discovery
 
 **Learning Scientific Taste for Efficient Research Idea Discovery** is the current
@@ -55,16 +114,6 @@ Shared Scientific Taste. The long-term scope remains unchanged. The research
 questions concern learning Taste, using it in decisions, transferring it across
 stages, and measuring its effectiveness under finite budgets. Retrieval and a
 working interface alone do not establish those claims.
-
-The integrated [research workspace](workspace/README.md) provides literature and
-benchmark discovery, source-bound project progress, shared experience, branch
-comparison, and CCF A/B conference and journal planning. Its default web path
-does not call model APIs or launch research jobs. Repository-owned [core skills](skills/catalog.json)
-are available at `/#/skills`; `research-report` prepares portable, version-bound
-reporting tasks with the complete procedure and templates for an executing assistant.
-`research-paper-iteration` adds complete intended manuscripts, independent venue
-reviews, claim-critical experiments and evidence-driven finalization instructions.
-Preparing either task does not execute the research workflow.
 
 ## Why scientific taste?
 
@@ -132,13 +181,27 @@ git clone https://github.com/Dustzx/SciTaste.git
 cd SciTaste
 python3.12 -m venv .venv
 .venv/bin/pip install -c requirements/python312-dev-study.lock -e '.[dev,study]'
+.venv/bin/python workspace/scripts/serve_web.py --host 127.0.0.1 --port 8765
+```
+
+Open **<http://127.0.0.1:8765>** for the research platform. Use `/#/skills` for core
+skills, `/#/program` for submission planning, and `/studio/` for the native desktop.
+Default browsing and project metadata operations do not call model APIs or launch
+GPU jobs. See the [workspace guide](workspace/README.md) for local record integration
+and an optional persistent service.
+
+To inspect the offline controller separately, run the CLI demo:
+
+```bash
 .venv/bin/scitaste run demo --output outputs/demo --seed 7
 ```
 
 Inspect `outputs/demo/research_state.json`, `decisions.jsonl`, and
-`demo_summary.json` to see the selected actions and transitions.
+`demo_summary.json` to see the selected actions and transitions. The CLI's default
+`outputs/` and the integrated platform's `workspace/outputs/` are separate roots.
+Create projects through the platform to keep them in its output tree.
 
-Create a project and open its local workspace:
+Alternatively, create a CLI project and open its native interface on port 8766:
 
 ```bash
 .venv/bin/scitaste project init \
@@ -146,10 +209,10 @@ Create a project and open its local workspace:
   --title "My research project" \
   --research-direction "A falsifiable research direction"
 
-.venv/bin/scitaste ui serve --outputs-root outputs
+.venv/bin/scitaste ui serve --outputs-root outputs --port 8766
 ```
 
-Open <http://127.0.0.1:8765>. Loopback access establishes its protected browser
+Open <http://127.0.0.1:8766>. Loopback access establishes its protected browser
 session automatically; the main page has no credential field.
 
 For the complete offline Discovery → Evidence → Communication → Figure path, use
@@ -189,6 +252,7 @@ Start with the [documentation home](docs/README.md) for current guides, source-b
 | Start here | Then go deeper |
 |---|---|
 | [Architecture](docs/ARCHITECTURE.md) | [Scientific Taste and the innovation map](docs/INNOVATION_MAP.md) |
+| [Research platform](workspace/README.md) | [Portable core skills](workspace/docs/CORE_SKILLS.md) |
 | [Full workflow](docs/FULL_WORKFLOW.md) | [Generation as Content](docs/guides/GENERATIVE_UI.md) |
 | [Output layout](docs/guides/OUTPUT_LAYOUT.md) | [Native execution](docs/NATIVE_EXECUTION.md) |
 | [Roadmap](docs/ROADMAP.md) | [Evaluation prelaunch gates](docs/EVALUATION_PRELAUNCH.md) |
