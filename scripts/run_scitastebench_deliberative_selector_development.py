@@ -766,7 +766,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--embedding-model",
         type=Path,
-        default=Path("/media/good/dxhismyson/weights/Qwen3-Embedding-0.6B"),
+        default=Path("/local/weights/Qwen3-Embedding-0.6B"),
     )
     parser.add_argument("--embedding-device", default=None)
     parser.add_argument("--embedding-maximum-tokens", type=int, default=2_048)

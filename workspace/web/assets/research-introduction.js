@@ -1,11 +1,11 @@
-/* Source-reviewed explanations shared by all nine research workspaces. */
+/* Source-reviewed explanations shared by locally configured research workspaces. */
 window.ResearchIntroduction = (() => {
   const e = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const text = value => Array.isArray(value) ? value.join('；') : typeof value === 'object' && value ? JSON.stringify(value) : value;
   const list = value => `<ul>${(Array.isArray(value)?value:[value]).filter(Boolean).map(x=>`<li>${e(text(x))}</li>`).join('')}</ul>`;
   const source = key => `<button class="button button-small" data-progress-source="${e(key)}">${e(key)}</button>`;
   const section = (id, label, body) => `<section class="panel ri-section" id="ri-${id}"><div class="section-head"><h2>${label}</h2></div>${body}</section>`;
-  const asset = url => typeof url === 'string' && /^\/assets\/(?:research-introductions\/[a-z0-9-]+\/[a-z0-9-]+\.(?:svg|png)|projects\/voa\/cases\/[a-z0-9_-]+\.jpg)$/.test(url) ? url : '';
+  const asset = url => typeof url === 'string' && /^\/assets\/(?:research-introductions\/[a-z0-9-]+\/[a-z0-9-]+\.(?:svg|png)|projects\/[a-z0-9-]+\/cases\/[a-z0-9_-]+\.jpg)$/.test(url) ? url : '';
   async function load() {
     const response = await fetch('/api/research/introductions', {cache:'no-cache'});
     if (!response.ok) throw new Error('项目简介暂时不可读');

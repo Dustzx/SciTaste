@@ -68,7 +68,7 @@ checkpoint:
   checkpoint_id: qwen3-5-4b-remote-b4e05070
   expected_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
   expected_bytes: 9342907469
-  destination_path: /media/sdb/wwh/models/Qwen3.5-4B
+  destination_path: /local/models/Qwen3.5-4B
   destination_present: true
   observed_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
 remote_state_mutation_performed: false

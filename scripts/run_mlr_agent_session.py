@@ -63,7 +63,7 @@ def isolated_command(workspace, state, upstream, overlay, codex, token, base_url
         "--tmpfs",
         "/home",
         "--dir",
-        "/home/good",
+        "/local",
     ]
     for location in (
         "/usr",
@@ -95,7 +95,7 @@ def isolated_command(workspace, state, upstream, overlay, codex, token, base_url
         "/launcher-bin",
         "--bind",
         str(state / "codex-state"),
-        "/home/good/.codex",
+        "/local/.codex",
         "--bind",
         str(workspace),
         "/work",

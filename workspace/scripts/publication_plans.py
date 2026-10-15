@@ -58,14 +58,14 @@ def project_routes(portfolio, catalogue, native, iterations):
                     'work_id': native_item['work_id'], 'state': native_item['state'],
                     'due_at': native_item.get('due_at'),
                     'note': '共享项目历史交付记录；不代替本分支科学门或新的基线准入。'}
-        route['delivery_url'] = '#/experiments/fastresearch-cvpr2027?origin=fastresearch&view=plan'
+        route['delivery_url'] = '#/experiments/' + str(native.get('project_id') or '') + '?origin=fastresearch&view=plan'
         route['delivery_reference'] = {
             'project_id': native.get('project_id'), 'project_revision': native.get('revision'),
             'plan_id': delivery.get('plan_id'), 'plan_revision': delivery.get('plan_revision'),
             'publication_ready': native.get('publication_ready', False),
             'internal_deadline_at': delivery.get('internal_deadline_at'),
             'deadline_note': delivery.get('deadline_note'),
-            'source_key': 'FastResearch.project'}
+            'source_key': native.get('source_key')}
         item = iterations.get(branch['id'])
         if item:
             route['method_iteration'] = {'available': True, 'summary': item.get('summary') or item.get('decision') or route.get('method_summary'),

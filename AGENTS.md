@@ -35,7 +35,7 @@ make demo
   never infer milestone completion from calendar date or a finished side task.
 
 - Before training, evaluation, data audit, GPU launch/resume/queue or active
-  waiting, read `/home/good/.codex/skills/experiment-autopilot/SKILL.md` fully.
+  waiting, read `${CODEX_HOME}/skills/experiment-autopilot/SKILL.md` fully.
   Use measured throughput, actually wait/check/continue authorized work, and keep
   concise project evidence. Pure status requests do not start new experiments;
   short local yields are not permission for frequent remote polling. Resource
@@ -98,6 +98,16 @@ make demo
   fail-closed.
 
 ## Change discipline
+
+- Public releases contain platform capabilities, public reference material and
+  generic procedures only. Keep managed research project identities, proposals,
+  implementations, progress, scores, manuscripts, plans, datasets, screenshots,
+  resource endpoints and credentials local unless explicitly released by the owner.
+- Review the entire staged tree, filenames, skills and media before publishing;
+  use `scripts/check_publication_privacy.py --staged --policy <local-policy.json>`.
+  The private identity policy stays outside the repository. Capture product
+  screenshots from an isolated empty installation. Ignore rules alone do not
+  protect files already tracked, commit history or screenshot pixels.
 
 - Treat the submodule pin as immutable except in a dedicated dependency update.
 - Keep public models backward-compatible or increment `schema_version` and add a

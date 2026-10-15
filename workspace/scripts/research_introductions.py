@@ -5,19 +5,14 @@ from pathlib import Path
 import progress_board
 
 ROOT = Path(__file__).resolve().parents[1]
-from local_research import INTRODUCTIONS as DIRECTORY
+from local_research import INTRODUCTIONS as DIRECTORY, project_mapping
 ASSETS = ROOT / 'web/assets/research-introductions'
-MAPPING = {'revise-opd': 'reviseOPD', 'attn-opd': 'attnOPD',
-           'jev-verifier': 'jevVerifier', 'scitaste-self-development': 'SciTaste',
-           'fastresearch-cvpr2027': 'FastResearch', 'voa': 'VOA',
-           'image-centric-active-vision': 'Image_centric', 'oc-sod': 'OC-SOD',
-           'rrmot-cvpr2027': 'RRMOT'}
 
 
 def validate(payload, project_id, indexed):
     if (not isinstance(payload, dict) or payload.get('schema_version') != 1
             or payload.get('project_id') != project_id
-            or payload.get('report_id') != MAPPING.get(project_id)):
+            or payload.get('report_id') != project_mapping().get(project_id)):
         raise ValueError('Project introduction identity mismatch')
     for key in ('motivation', 'idea', 'method', 'contribution', 'evidence', 'diagram'):
         if not isinstance(payload.get(key), dict):
@@ -67,7 +62,7 @@ def validate(payload, project_id, indexed):
 
 
 def get(project_id):
-    if project_id not in MAPPING:
+    if project_id not in project_mapping():
         raise ValueError('Unknown reviewed introduction')
     path = DIRECTORY / (project_id + '.json')
     if not path.is_file():
@@ -84,9 +79,9 @@ def get(project_id):
 
 
 def snapshot():
-    return dict(schema_version=1, projects=[value for project in MAPPING if (value := get(project)) is not None],
+    return dict(schema_version=1, projects=[value for project in project_mapping() if (value := get(project)) is not None],
                 scope='reviewed_explanations_not_new_experiments')
 
 
 def signature_paths():
-    return [DIRECTORY / (project + '.json') for project in MAPPING]
+    return [DIRECTORY / (project + '.json') for project in project_mapping()]

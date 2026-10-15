@@ -4,7 +4,7 @@ resource:
   resource_id: scijudge-4b-2605-remote-da748ee3
   model_id: OpenMOSS-Team/SciJudge-4B-2605
   model_revision: 06109d60950dd15ac9a0fa7f804280386c25b113
-  local_path: /media/sdb/wwh/models/SciJudge-4B-2605
+  local_path: /local/models/SciJudge-4B-2605
   storage_scope: gpu_host
   storage_gpu_resource_id: gpu-host-3090-2
   checkpoint_sha256: da748ee3f99aa3c28e037dc2baae64f37f597582c3987f38898ccc37432f0976

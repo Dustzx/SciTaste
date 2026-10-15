@@ -4,7 +4,7 @@ resource:
   resource_id: qwen3-5-9b-remote-eb331598
   model_id: Qwen/Qwen3.5-9B
   model_revision: c202236235762e1c871ad0ccb60c8ee5ba337b9a
-  local_path: /media/sdb/wwh/models/Qwen3.5-9B
+  local_path: /local/models/Qwen3.5-9B
   storage_scope: gpu_host
   storage_gpu_resource_id: gpu-host-3090-2
   checkpoint_sha256: eb33159890e4493dd7fa36b611020576535ecbcf776bcfd3f540f92914f63884

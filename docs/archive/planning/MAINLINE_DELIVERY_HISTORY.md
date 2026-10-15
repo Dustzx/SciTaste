@@ -153,7 +153,7 @@ this development package for a positive paper table.
 
 The broader P1 protocol still needs explicit formal task/benchmark scope and whole
 idea-to-paper endpoints. GPU experiments use separately declared remote resources;
-RRMOT and local GPUs are not touched by this CPU/session package. Qwen APIs prohibited.
+Excluded study and local GPUs are not touched by this CPU/session package. Qwen APIs prohibited.
 
 ## Working cadence
 

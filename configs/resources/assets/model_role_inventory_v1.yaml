@@ -35,7 +35,7 @@ role_status_vocabulary:
 sources:
   - source_id: local-weights-20260915
     location: local
-    root: /media/good/dxhismyson/weights
+    root: /local/weights
     visibility: visible
     observation_method: directory names, regular-file sizes, config/tokenizer metadata
     top_level_entries: 19
@@ -53,12 +53,12 @@ sources:
       memory_total_mib: 24576
       memory_free_mib: 22694
     excluded_non_model_entries:
-      - FEA
-      - FEA_reproduction_sources_private_20260901
+      - excluded-study
+      - private-study-sources
       - focus
   - source_id: remote-model-root-pending-sync
     location: remote
-    root: /media/sdb/wwh/models
+    root: /local/models
     visibility: not-visible-from-local-host
     synchronization_status: pending
     live_claims_permitted: false

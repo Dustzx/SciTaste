@@ -111,7 +111,7 @@ must open a new non-pooled stratum if the provider identity changes.
 An existing local Qwen checkpoint can instead run without a server or API key:
 
 ```bash
-export SCITASTE_LOCAL_MODEL_PATH=/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+export SCITASTE_LOCAL_MODEL_PATH=/local/weights/Qwen3-VL-2B-Instruct
 scitaste taste calibrate \
   --backend local-transformers \
   --config configs/backends/local_transformers_qwen3vl2b.example.yaml \

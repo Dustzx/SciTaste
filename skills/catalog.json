@@ -4,7 +4,7 @@
     {
       "id": "research-report",
       "name": "科研 Idea 汇报整理",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "把研究动机、近邻差异、训练与推理、例子和当前证据讲清楚，维护已有汇报。",
       "entry": "research-report/SKILL.md",
       "files": [
@@ -32,7 +32,7 @@
     {
       "id": "research-paper-iteration",
       "name": "科研论文实证迭代",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "判断idea与实测支持，以完整意向终稿、独立会议审稿和关键实验闭环收敛到实际终稿。",
       "entry": "research-paper-iteration/SKILL.md",
       "files": [

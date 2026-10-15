@@ -391,8 +391,8 @@ def verify_external_formal_study(
         blockers.append("audit-protocol-mismatch")
     if audit.get("status") != "passed" or audit.get("failure_count") != 0:
         blockers.append("integrity-audit-failed")
-    if result.get("rrmot_touched") is not False:
-        blockers.append("rrmot-boundary-violated")
+    if result.get("excluded_project_touched") is not False:
+        blockers.append("excluded-project-boundary-violated")
     if result.get("deferred_validation_project_executed") is not False:
         blockers.append("deferred-project-boundary-violated")
 
@@ -629,8 +629,8 @@ def _inspect_protocol(
             blockers.append("downstream-project-identity-mismatch")
         if separation.get("execution_authorized_in_this_study") is not False:
             blockers.append("downstream-project-not-deferred")
-        if "RRMOT" not in separation.get("isolation_targets", []):
-            blockers.append("rrmot-isolation-missing")
+        if "Excluded study" not in separation.get("isolation_targets", []):
+            blockers.append("excluded-project-isolation-missing")
     if repository_root is not None:
         root = Path(repository_root).resolve(strict=True)
         for item in payload.get("runtime_bundle", {}).get("sources", []):

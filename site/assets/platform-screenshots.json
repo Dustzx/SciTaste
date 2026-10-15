@@ -1,0 +1,9 @@
+{
+  "scope": "Public product screenshots from isolated empty project sources; no private proposals or results.",
+  "reviewed_on": "2026-10-15",
+  "approved_media_sha256": {
+    "site/assets/platform-overview.png": "21c83b872f7b00d22bea1fbb42c2a795370b529ce753e314a9404fc807781fcb",
+    "site/assets/platform-program.png": "e38745057cdf158def7d5438fa2377bb85332fe25392c61e77d53ab33c7611f6",
+    "site/assets/platform-skills.png": "02de8939117d32729e71959463ac31e15e138ccbb16f6bd21af3e406d034ef14"
+  }
+}

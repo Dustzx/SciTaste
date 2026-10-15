@@ -300,7 +300,7 @@ tracks:
       usage_scope: One identical checkpoint and execution envelope for every native condition.
       model_id: Qwen3-VL-2B-Instruct
       model_revision: local-tree-47f9c0e0
-      checkpoint_source_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+      checkpoint_source_path: /local/weights/Qwen3-VL-2B-Instruct
       checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
       device_count: 8
       device_name: NVIDIA GeForce RTX 3090

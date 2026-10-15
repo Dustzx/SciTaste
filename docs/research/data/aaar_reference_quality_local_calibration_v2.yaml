@@ -39,7 +39,7 @@ calibration_plan:
 model:
   provider: local-transformers
   model: Qwen/Qwen3-VL-2B-Instruct@local-snapshot-47f9c0e0
-  checkpoint_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  checkpoint_path: /local/weights/Qwen3-VL-2B-Instruct
   checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
   checkpoint_regular_file_bytes: 4266648961
   checkpoint_regular_files: 12

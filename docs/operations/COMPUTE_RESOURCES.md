@@ -52,7 +52,7 @@ A later same-day observation found **all eight devices at 100% utilization**,
 It is retained as `outputs/resources/GPU_3090_2_OBSERVATION_20260925T113222Z.json`.
 The isolated remote environment is pinned in
 `requirements/mlrc-meta-remote-py312.lock`. It has since been installed in
-`/home/ubuntu/scitaste-runs/mlrc-meta-dev-20260925/venv`, with the exact
+`/local/scitaste-runs/mlrc-meta-dev-20260925/venv`, with the exact
 development data and bundle staged alongside it. The dedicated environment
 imports successfully without GPU allocation; all transferred data bytes match
 the local digest. See `outputs/resources/REMOTE_MLRC_META_ENVIRONMENT_20260925.json`.

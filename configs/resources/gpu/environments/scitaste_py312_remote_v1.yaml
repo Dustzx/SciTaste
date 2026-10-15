@@ -3,7 +3,7 @@ resource:
   kind: python_gpu_environment
   resource_id: scitaste-py312-remote-development-v1
   host_resource_id: gpu-host-3090-2
-  path: /media/sdb/wwh/envs/scitaste-py312
+  path: /local/envs/scitaste-py312
   python_version: 3.12.7
   cuda_available: true
   packages:

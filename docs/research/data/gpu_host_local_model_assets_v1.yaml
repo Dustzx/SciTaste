@@ -2,7 +2,7 @@ schema_version: "1.0"
 inventory_id: gpu-host-local-model-assets-20260912-v1
 gpu_resource_id: gpu-host-local-3090
 hostname: local
-model_root: /media/good/dxhismyson/weights
+model_root: /local/weights
 observed_at: 2026-09-12T14:32:06+08:00
 observation_method: read-only-local
 assets:
@@ -12,14 +12,14 @@ assets:
     architecture: BertModel
     total_regular_file_bytes: 976948668
     status: discovered-unhashed
-  - asset_id: fea-project-assets-local
-    path_name: FEA
+  - asset_id: excluded-study-assets
+    path_name: excluded-study
     category: experiment-project-assets
     architecture: null
     total_regular_file_bytes: 34745179042
     status: non-model-asset
-  - asset_id: fea-reproduction-private-local
-    path_name: FEA_reproduction_sources_private_20260901
+  - asset_id: excluded-study-sources
+    path_name: private-study-sources
     category: experiment-source-assets
     architecture: null
     total_regular_file_bytes: 17726216879

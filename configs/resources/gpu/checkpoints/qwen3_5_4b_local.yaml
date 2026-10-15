@@ -4,7 +4,7 @@ resource:
   resource_id: qwen3-5-4b-local-b4e05070
   model_id: Qwen/Qwen3.5-4B
   model_revision: local-tree-b4e05070
-  local_path: /media/good/dxhismyson/weights/Qwen3.5-4B
+  local_path: /local/weights/Qwen3.5-4B
   checkpoint_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
   checkpoint_bytes: 9342907469
   format: Hugging Face safetensors

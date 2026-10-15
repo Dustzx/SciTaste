@@ -23,9 +23,13 @@ def check(root: Path) -> dict:
     actual = {p.relative_to(docs).as_posix() for p in docs.rglob("*.md")}
     errors = []
     if len(paths) != len(set(paths)) or set(paths) != actual:
-        errors.append({"inventory_missing": sorted(actual - set(paths)),
-                       "inventory_stale": sorted(set(paths) - actual),
-                       "duplicate_paths": len(paths) != len(set(paths))})
+        errors.append(
+            {
+                "inventory_missing": sorted(actual - set(paths)),
+                "inventory_stale": sorted(set(paths) - actual),
+                "duplicate_paths": len(paths) != len(set(paths)),
+            }
+        )
     for path in paths:
         if Path(path).is_absolute() or ".." in Path(path).parts:
             errors.append({"unsafe_inventory_path": path})
@@ -33,19 +37,31 @@ def check(root: Path) -> dict:
     def hash_file(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
+    redactions = {item["path"]: item for item in migration.get("privacy_redactions", [])}
+
+    def retained_or_redacted(path: str, original: str) -> bool:
+        candidate = root / path
+        if not candidate.is_file():
+            return False
+        actual = hash_file(candidate)
+        redaction = redactions.get(path, {})
+        return actual == original or (
+            redaction.get("original_sha256") == original
+            and redaction.get("public_sha256") == actual
+            and redaction.get("reason") == "owner-required privacy redaction"
+        )
+
     for item in migration["protected"]:
-        p = root / item["path"]
-        if not p.is_file() or hash_file(p) != item["sha256"]:
+        if not retained_or_redacted(item["path"], item["sha256"]):
             errors.append({"preserved_reference_changed": item["path"]})
     for item in migration["snapshots"]:
-        p = root / item["snapshot"]
-        if not p.is_file() or hash_file(p) != item["sha256"]:
+        if not retained_or_redacted(item["snapshot"], item["sha256"]):
             errors.append({"snapshot_changed": item["snapshot"]})
     for item in migration["moves"]:
         if (root / item["old"]).exists() or not (root / item["new"]).is_file():
             errors.append({"incomplete_move": item["old"]})
         if item["new"].startswith("docs/archive/"):
-            if hash_file(root / item["new"]) != item["original_sha256"]:
+            if not retained_or_redacted(item["new"], item["original_sha256"]):
                 errors.append({"archived_record_changed": item["new"]})
 
     # Source-preserving snapshots are historical data, not active navigation.
@@ -68,15 +84,24 @@ def check(root: Path) -> dict:
             candidate = p.parent / part
             if not candidate.exists():
                 errors.append({"broken_link": item["path"], "target": target})
-    mutable_root = {item["path"] for item in entries
-                    if "/" not in item["path"] and item["role"] != "frozen-reference"}
+    mutable_root = {
+        item["path"]
+        for item in entries
+        if "/" not in item["path"] and item["role"] != "frozen-reference"
+    }
     if mutable_root != {"README.md", "ARCHITECTURE.md", "ROADMAP.md", "INNOVATION_MAP.md"}:
         errors.append({"unexpected_root_documents": sorted(mutable_root)})
-    return {"status": "FAIL" if errors else "PASS", "documents": len(actual),
-            "active_relative_links_checked": checked_links,
-            "preserved_references": len(migration["protected"]),
-            "verbatim_snapshots": len(migration["snapshots"]),
-            "moves": len(migration["moves"]), "errors": errors}
+    return {
+        "status": "FAIL" if errors else "PASS",
+        "documents": len(actual),
+        "active_relative_links_checked": checked_links,
+        "preserved_references": len(migration["protected"]),
+        "verbatim_snapshots": len(migration["snapshots"])
+        - sum(item["snapshot"] in redactions for item in migration["snapshots"]),
+        "privacy_redactions": len(redactions),
+        "moves": len(migration["moves"]),
+        "errors": errors,
+    }
 
 
 def main() -> int:

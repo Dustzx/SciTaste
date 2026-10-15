@@ -223,7 +223,7 @@ confirmation uses every official `_002` task. Each population contains one task
 per domain and ten independent task units, and the two are never pooled.
 `Math_000` received one Taste-compilation-only development call
 before its multi-object-tracking identity was recognized. No autonomous agent
-or GPU execution followed, and RRMOT was not touched. That partial output is
+or GPU execution followed, and Excluded study was not touched. That partial output is
 quarantined, is inadmissible for method development, confirmation, benchmark
 membership, and paper claims, and must not be resumed or retried.
 
@@ -255,7 +255,7 @@ research trajectory. That attempt is immutable infrastructure-failure evidence.
 `formal-v2` preserves the population, conditions, endpoint, judge, and thresholds,
 but declares Bailian `qwen3.8-max-2026-09-02` as the research model and binds the
 provider-independent PDF-chunking repair. Its exact task hashes, runtime-source
-hashes, package hashes, resource ceilings, claim rule, and RRMOT isolation are in
+hashes, package hashes, resource ceilings, claim rule, and Excluded study isolation are in
 `configs/evaluation/formal/researchclawbench_scitaste_system_formal_v2.yaml`.
 
 The V2 research trajectories remain admissible, but its Zhipu judge returned
@@ -342,7 +342,7 @@ idea and the preferred post-closure, idea-to-paper completeness test for
 SciTaste—not an alias, component, or current benchmark task. It activates only
 after `scitaste project lifecycle status` reports
 `top_venue_evidence_loop_complete=true` for `scitaste-self-development`; a
-completed system experiment alone cannot unlock it. RRMOT remains outside the
+completed system experiment alone cannot unlock it. Excluded study remains outside the
 execution scope and must not be modified by either study. Any candidate task whose
 description concerns multi-object tracking or the reserved perceptual research
 direction is deterministically excluded before a future confirmation split is
@@ -529,7 +529,7 @@ with its authors' recommended model and settings. It is labelled as a sensitivit
 analysis and is never pooled with matched-backbone estimates.
 
 The local checkpoint
-`/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct` is a small-model robustness
+`/local/weights/Qwen3-VL-2B-Instruct` is a small-model robustness
 and availability condition, not a substitute for the frontier matched-backbone
 comparison. The eight RTX 3090 GPUs may execute registered task workloads after
 approval; provider inference and experimental GPU use remain separately

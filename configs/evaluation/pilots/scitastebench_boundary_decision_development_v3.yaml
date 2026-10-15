@@ -24,7 +24,7 @@ selector_backend:
 decision_backend:
   locator: configs/backends/deepseek_v41flash_scitastebench_natural_v2.yaml
   sha256: 92eb85d296094263aa04582e42e6e96eb75c3cbaff44612f8a117e9d5436b627
-embedding_model: /media/good/dxhismyson/weights/Qwen3-Embedding-0.6B
+embedding_model: /local/weights/Qwen3-Embedding-0.6B
 maximum_broad_candidates: 6
 selector_shard_size: 3
 context_token_budget: 256

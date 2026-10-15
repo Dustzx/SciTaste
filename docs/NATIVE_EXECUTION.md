@@ -182,7 +182,7 @@ The local Qwen3-VL-2B acceptance uses profile schema `1.1` and three required
 environment variables so host-specific paths do not enter the committed config:
 
 ```bash
-export SCITASTE_QWEN3VL2B_MODEL_PATH=/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+export SCITASTE_QWEN3VL2B_MODEL_PATH=/local/weights/Qwen3-VL-2B-Instruct
 export SCITASTE_NATIVE_PYTHON_BASE="$(python -c 'import sys; print(sys.base_prefix)')"
 export SCITASTE_NATIVE_PYTHON_PACKAGES="$(python -c 'import site; print(site.getsitepackages()[0])')"
 ```

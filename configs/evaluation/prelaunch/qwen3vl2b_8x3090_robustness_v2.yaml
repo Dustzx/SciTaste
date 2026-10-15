@@ -83,7 +83,7 @@ lanes:
       device_name: NVIDIA GeForce RTX 3090
       minimum_memory_mb_per_device: 24000
       checkpoint_id: qwen3-vl-2b-instruct
-      checkpoint_source_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+      checkpoint_source_path: /local/weights/Qwen3-VL-2B-Instruct
       checkpoint_sha256: 8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1
       checkpoint_bytes: 4266653057
       license_identifier: Apache-2.0

@@ -33,7 +33,7 @@ cd workspace
 ../.venv/bin/python scripts/sync_venues.py --refresh
 ```
 
-这是显式的手动网络更新，不调用模型；期刊目录版本独立维护。31 个 benchmark、229 条文献成绩、48 个公开方法和20个研究假设属于资料快照，文献成绩不是本项目复现实测。维护见 [RESEARCH_REGISTRY](docs/RESEARCH_REGISTRY.md)。
+这是显式的手动网络更新，不调用模型；期刊目录版本独立维护。31 个 benchmark、229 条文献成绩、48 个公开方法属于资料快照，文献成绩不是本项目复现实测。维护见 [RESEARCH_REGISTRY](docs/RESEARCH_REGISTRY.md)。
 
 ## 本地研究记录
 
@@ -41,7 +41,7 @@ cd workspace
 
 原生后端自动解析仓库父目录的 `src/scitaste`；也支持本机此前 `backend/scitaste` 布局，或显式设置 `SCITASTE_SOURCE_ROOT`。旧 origin/API 字段保留兼容，不作为新的品牌。
 
-本地项目中的实验脚本是可复用实现，需要用户自己的数据、冻结协议、来源与资源授权才能运行；默认启动仅提供网页和元数据接口。运行不会自动恢复历史队列。
+课题自有的实验实现、冻结合同和运行记录留在本地；公开平台只提供通用网页、元数据和来源记录接入，不恢复历史队列。
 
 ## 验证
 
@@ -50,15 +50,15 @@ cd workspace
 .venv/bin/python workspace/scripts/check_workspace.py
 ```
 
-`check_program.py` 另用 Playwright 验证真实浏览器的投稿筛选、收藏、多轮时间与移动端。其他 `check_*` 是作者已有本地部署的验收工具，其中部分需要本地历史记录。原生测试中的少数私有研究合同检查在配置缺失时明确跳过；私有合同在本地存在时仍按原断言运行。
+`check_program.py` 另用 Playwright 验证真实浏览器的投稿筛选、收藏、多轮时间与移动端。原生测试中的少数私有研究合同检查在配置缺失时明确跳过；私有合同在本地存在时仍按原断言运行。
 
 ## 可选项目资料与执行器
 
-本次同步包含分支投稿路线、Route Task2 与 history 控制臂的实现，以及结果的只读聚合展示。公开仓库没有预置项目结果；空安装显示暂无项目。UI 刷新与课题创建不会付费调用。
+分支路线与实验结果从本地记录只读接入。公开仓库不附带维护者课题的实现或结果；空安装显示暂无项目。UI 刷新与课题创建不会付费调用。
 
-可选环境变量 `SCITASTE_RESEARCH_PROFILES_ROOT`、`SCITASTE_RESEARCH_INTRODUCTIONS_ROOT` 指向用户自行审阅的本地资料目录；`SCITASTE_SHARED_RACE_PATH` 可接入本地共享赛马汇总。缺失资料直接省略，不构造实验记录。配置格式与执行边界见 [公开工作台合同](docs/PUBLIC_WORKSPACE.md)。资料导出只包含已配置的叙述和摘要，公开版不打包数据图像。
+可选环境变量 `SCITASTE_RESEARCH_PROFILES_ROOT`、`SCITASTE_RESEARCH_INTRODUCTIONS_ROOT` 指向用户自行审阅的本地资料目录；`SCITASTE_SHARED_RACE_PATH` 可接入本地共享赛马汇总。缺失资料直接省略，不构造实验记录。配置格式与执行边界见 [公开工作台合同](docs/PUBLIC_WORKSPACE.md)。项目身份由本地档案中的 project_id/report_id 显式绑定，不内置维护者课题列表。资料导出只包含已配置的叙述和摘要，公开版不打包数据图像。
 
-独立实验脚本不属于默认网页依赖。需要使用时可显式安装 `.[workspace-experiments]`；调用者还必须自行准备源码许可证、固定上游版本、独立输入/图像清单、密封标签、来源合同及资源准入。作者本机的这些文件均未同步，因此这里提供实现，未声称开箱复现原论文分数。`DASHSCOPE_API_KEY` 只从调用者环境读取，不搜索任何账户文件。
+课题执行器、模型/数据选择、协议、资源与费用授权由各自本地项目维护，不随平台发布。
 
 ## 核心技能
 

@@ -4,9 +4,9 @@ Board revision: `2026-09-09.17`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
-| Main | Bounded native mainline closure | implementation complete; repository acceptance in progress | `main` | `/home/good/zfx/papers/SciTaste` | external Phase 9 gates |
-| 2 | Durable project-owned Tool Intelligence loop v3 | audited and integrated; main-workflow trigger integrated | `feat/tool-intelligence-v3` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | independent review and broader tasks |
-| 3 | Generation as Content UX evaluation v5 | audited and integrated; human study pending | `feat/generative-ui-ux-evaluation-v5` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | powered counterbalanced evaluation |
+| Main | Bounded native mainline closure | implementation complete; repository acceptance in progress | `main` | `/local/zfx/papers/SciTaste` | external Phase 9 gates |
+| 2 | Durable project-owned Tool Intelligence loop v3 | audited and integrated; main-workflow trigger integrated | `feat/tool-intelligence-v3` | `/local/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | independent review and broader tasks |
+| 3 | Generation as Content UX evaluation v5 | audited and integrated; human study pending | `feat/generative-ui-ux-evaluation-v5` | `/local/zfx/papers/SciTaste-worktrees/generative-ui` | powered counterbalanced evaluation |
 
 ## Scheduling policy
 

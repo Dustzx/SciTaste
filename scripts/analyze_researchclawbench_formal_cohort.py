@@ -198,7 +198,7 @@ def _markdown(result: dict[str, Any]) -> str:
             f"- Protocol SHA-256: `{result['protocol_sha256']}`",
             f"- Benchmark commit: `{result['benchmark_commit']}`",
             f"- Population rule: {result['population_selection_rule']}",
-            "- `perceptual-visual-relexing` was not executed in this study and RRMOT was "
+            "- `perceptual-visual-relexing` was not executed in this study and Excluded study was "
             "outside the experiment scope.",
             "",
         ]
@@ -340,7 +340,7 @@ def main() -> int:
         "tasks": tasks,
         "analysis": analysis,
         "deferred_validation_project_executed": False,
-        "rrmot_touched": False,
+        "excluded_project_touched": False,
     }
     result_path = output_root / "RESULT.json"
     report_path = output_root / "REPORT.md"

@@ -4,7 +4,7 @@ resource:
   resource_id: qwen3-vl-2b-local-47f9c0e0
   model_id: Qwen/Qwen3-VL-2B-Instruct
   model_revision: local-tree-47f9c0e0
-  local_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  local_path: /local/weights/Qwen3-VL-2B-Instruct
   checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
   checkpoint_bytes: 4266653057
   format: Hugging Face safetensors

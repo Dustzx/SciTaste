@@ -54,7 +54,7 @@ PyTorch, and the later 2026-09-25 observation found all eight GPUs at 100%
 utilization with 36.4 GB storage free at that historical snapshot.
 
 The dedicated remote environment is now installed at
-`/home/ubuntu/scitaste-runs/mlrc-meta-dev-20260925/venv`: Python 3.12.3,
+`/local/scitaste-runs/mlrc-meta-dev-20260925/venv`: Python 3.12.3,
 torch 2.5.1+cu124 and torchvision 0.20.1+cu124. Both the frozen bundle and
 112,321 data files were transferred and verified; the local environment receipt
 is `outputs/resources/REMOTE_MLRC_META_ENVIRONMENT_20260925.json`. No local

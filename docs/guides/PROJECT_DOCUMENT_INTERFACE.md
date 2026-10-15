@@ -2,7 +2,7 @@
 
 Every newly created project receives `docs/project/INDEX.json` and five phase
 directories: `idea`, `experiments`, `writing`, `review`, `resources`. Existing projects
-can adopt the same interface without moving legacy evidence. RRMOT CVPR is populated
+can adopt the same interface without moving legacy evidence. Excluded study CVPR is populated
 from its imported records; older projects are not silently rewritten.
 
 Each phase has exactly two managed working documents:

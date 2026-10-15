@@ -55,7 +55,7 @@ the current development focus is Idea Research & Discovery.
 
 | Workspace | What it provides |
 |---|---|
-| **Discovery** | Benchmark and method browsing, literature-reported scores, research hypotheses, search, and shortlists. Literature scores are kept distinct from local measurements. |
+| **Discovery** | Benchmark and method browsing, literature-reported scores, search, and shortlists. Literature scores are kept distinct from local measurements. |
 | **Project progress** | Source-bound project briefs, motivation, related-work distinctions, method explanations, and evidence summaries when local project records are connected. |
 | **Branch comparison** | Compare recorded branches, blockers, evidence, and publication routes alongside the shared experience pool. |
 | **Submission planning** | A/B conferences from a pinned CCF-DDL snapshot and A/B journals from a CCF directory mirror, with filters, favorites, and timezone-aware conference deadlines. Unknown journal dates remain unknown. |
@@ -93,8 +93,8 @@ submission directory, native desktop, and both skills are reusable. Project prog
 branch results, and shared experience start empty. Connect your own records with
 `SCITASTE_REPORT_ROOT` and the optional project-source settings in the
 [workspace guide](workspace/README.md) and [data contract](workspace/docs/PUBLIC_WORKSPACE.md).
-Project adapters currently use defined project identifiers; arbitrary report schemas
-need an adapter. Public report exports contain configured narratives and summaries;
+Project identities are read from your locally configured profiles; the public
+repository contains no preloaded private project list. Public report exports contain configured narratives and summaries;
 the author's local screenshot/PPT image-pack pipeline is not included in this release.
 
 The screenshots above show the public version. Start it locally using the

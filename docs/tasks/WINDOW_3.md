@@ -178,7 +178,7 @@ Follow-up verification: configurable browser probes passed for progress,
 run comparison, and paper review; browser completion observations were 753.5,
 500.0, and 557.3 ms respectively; `node --check` passed; focused Generative UI
 and CLI tests passed (`237 passed`); full Ruff and repository tests passed
-through `PYTHON=/home/good/zfx/papers/SciTaste/.venv/bin/python PYTHONPATH=src
+through `PYTHON=/local/zfx/papers/SciTaste/.venv/bin/python PYTHONPATH=src
 make check` (`859 passed`); and `git diff --check` passed before commit. These
 remain agent-led engineering observations, not human-study results.
 
@@ -249,7 +249,7 @@ from the old r3 feature tip.
 
 ## Current workspace
 
-- worktree: `/home/good/zfx/papers/SciTaste-worktrees/generative-ui`
+- worktree: `/local/zfx/papers/SciTaste-worktrees/generative-ui`
 - branch: `feat/generative-ui-i18n-v4`
 - base: current `main` containing `cd21d0f`
 - do not edit generated `outputs/` or `third_party/`
@@ -321,10 +321,10 @@ continue from the already-integrated feature-branch tip.
 
 ## Workspace
 
-- worktree: `/home/good/zfx/papers/SciTaste-worktrees/generative-ui`
+- worktree: `/local/zfx/papers/SciTaste-worktrees/generative-ui`
 - branch: `feat/generative-ui-intent-planner-v3`
 - base: current `main` containing this assignment token
-- do not implement product changes in `/home/good/zfx/papers/SciTaste`
+- do not implement product changes in `/local/zfx/papers/SciTaste`
 
 Window 3 proceeds through every work package without waiting for approval
 between commits. Main remains responsible for final review, merge, roadmap and

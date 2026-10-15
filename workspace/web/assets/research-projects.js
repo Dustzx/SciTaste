@@ -22,9 +22,9 @@ window.ResearchProjects = (() => {
     if (compact) return `<div class="rp-export-compact" data-export-project="${e(reportId)}"><span>PPT资料</span><div class="actions">${buttons}</div></div>`;
     return panel(all?'导出全部进展 · 制作PPT':'导出课题进展 · 制作PPT',`<p>上传至ChatGPT制作PPT：导出已配置的审阅叙述与项目摘要，不含数据图像、原始响应或凭据。Markdown便于整理讲稿，ZIP包含叙述和摘要JSON。</p><div class="actions" data-export-project="${e(reportId)}">${buttons}</div>`,'rp-export-panel');
   }
-  const liveRace = p => ['attn-opd','revise-opd'].includes(p.project_id) && p.shared_race?.current ? p.shared_race : null;
+  const liveRace = p => p.shared_race?.current ? p.shared_race : null;
   function projectStatus(p) {
-    const armId = {'attn-opd':'attention-support','revise-opd':'reviewed-revision'}[p.project_id];
+    const armId = p.race_arm_id;
     const arm = liveRace(p) && array(p.shared_race.arms).find(a=>a.id===armId);
     return arm?.state ? `${text(arm.name || arm.label || arm.id)} · ${stateLabels[arm.state] || arm.state}` : p.status_label || '研究证据待完善';
   }
@@ -154,7 +154,7 @@ window.ResearchProjects = (() => {
     const r=p.shared_race;
     if (!r) return '';
     const branches=array(r.arms || r.branches), controls=array(r.controls || r.shared_controls), nextActions=array(r.next_actions);
-    return panel('OPD共享赛马与经验',`<p>${e(text(r.summary || r.objective || r.description || '在同一协议下比较机制，保留跨实现扩展入口。'))}</p>${r.status?badge(stateLabels[r.status] || text(r.status)):''}${r.resource?rows([['共享远端入口',r.resource.endpoint || '待核实'],['访问身份',r.resource.identity_verified?'已核实':'尚未核实'],['可用资源窗口',r.resource.window_verified?'已核实':'尚未核实']]):''}${r.current?note('当前状态',r.current):''}${r.protocol?note('共同协议',r.protocol):''}${branches.length?`<div class="rp-race-arms">${branches.map(b=>`<article><h3>${e(text(b.title || b.name || b.label || b.id || b.branch_id))}</h3>${b.state?badge(stateLabels[b.state] || b.state):''}<p>${e(text(b.summary || b.mechanism || b.hypothesis || b.next_gate || b.status))}</p>${b.stop_condition?note('停止条件',b.stop_condition,true):''}</article>`).join('')}</div>`:''}${list(controls)}${nextActions.length?list(nextActions):''}<div class="actions"><a class="button" href="${link('attn-opd')}">attnOPD →</a><a class="button" href="${link('revise-opd')}">reviseOPD →</a><a class="button" href="#/experience">共享经验池 →</a></div>${sources(p,r.source_keys)}`,'rp-shared-race');
+    return panel('共享赛马与经验',`<p>${e(text(r.summary || r.objective || r.description || '在同一协议下比较机制，保留跨实现扩展入口。'))}</p>${r.status?badge(stateLabels[r.status] || text(r.status)):''}${r.resource?rows([['共享远端入口',r.resource.endpoint || '待核实'],['访问身份',r.resource.identity_verified?'已核实':'尚未核实'],['可用资源窗口',r.resource.window_verified?'已核实':'尚未核实']]):''}${r.current?note('当前状态',r.current):''}${r.protocol?note('共同协议',r.protocol):''}${branches.length?`<div class="rp-race-arms">${branches.map(b=>`<article><h3>${e(text(b.title || b.name || b.label || b.id || b.branch_id))}</h3>${b.state?badge(stateLabels[b.state] || b.state):''}<p>${e(text(b.summary || b.mechanism || b.hypothesis || b.next_gate || b.status))}</p>${b.stop_condition?note('停止条件',b.stop_condition,true):''}</article>`).join('')}</div>`:''}${list(controls)}${nextActions.length?list(nextActions):''}<div class="actions"><a class="button" href="#/experience">共享经验池 →</a></div>${sources(p,r.source_keys)}`,'rp-shared-race');
   }
   function progress(p) {
     return (liveRace(p)?panel('当前实验进展',raceSnapshot(p),'rp-live-panel'):'')

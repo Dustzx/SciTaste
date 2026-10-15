@@ -6,7 +6,7 @@ observation:
   model_id: Qwen/Qwen3.5-9B
   upstream_revision: c202236235762e1c871ad0ccb60c8ee5ba337b9a
   host_resource_id: gpu-host-3090-2
-  path: /media/sdb/wwh/models/Qwen3.5-9B
+  path: /local/models/Qwen3.5-9B
   prior_state: incomplete-three-of-four-weight-shards-no-index-or-tokenizer
   resulting_state: verified-static-complete-no-load
   checkpoint_hash_scheme: SCITASTE_REMOTE_CHECKPOINT_V1

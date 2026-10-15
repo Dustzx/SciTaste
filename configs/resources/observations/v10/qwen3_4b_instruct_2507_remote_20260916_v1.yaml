@@ -6,7 +6,7 @@ observation:
   model_id: Qwen/Qwen3-4B-Instruct-2507
   upstream_revision: cdbee75f17c01a7cc42f958dc650907174af0554
   host_resource_id: gpu-host-3090-2
-  path: /media/sdb/wwh/models/Qwen3-4B-Instruct-2507
+  path: /local/models/Qwen3-4B-Instruct-2507
   prior_state: absent
   resulting_state: verified-static-complete-no-load
   checkpoint_hash_scheme: SCITASTE_REMOTE_CHECKPOINT_V1

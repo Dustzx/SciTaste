@@ -6,7 +6,7 @@ observation:
   model_id: OpenMOSS-Team/SciThinker-4B
   upstream_revision: ddd5752d9bfebc858570ec9e6db94cb460a8d985
   host_resource_id: gpu-host-3090-2
-  path: /media/sdb/wwh/models/SciThinker-4B
+  path: /local/models/SciThinker-4B
   prior_state: absent
   resulting_state: verified-static-complete-no-load
   checkpoint_hash_scheme: SCITASTE_REMOTE_CHECKPOINT_V1

@@ -512,5 +512,43 @@
       "resolved": "configs/benchmark/scientific_design_v1.json",
       "original_target": "../../configs/benchmark/scientific_design_v1.json"
     }
+  ],
+  "privacy_redactions": [
+    {
+      "path": "docs/ICLR_2027_EVALUATION_PLAN.md",
+      "original_sha256": "a220109511f0bf6f1f5e506abb316ae2078609980f0824ceb577fff837f728a4",
+      "public_sha256": "d6be321261ce132fd17fd411d65e3f4b9a5820903fdb736c9817ddb3a587c60e",
+      "reason": "owner-required privacy redaction"
+    },
+    {
+      "path": "docs/NATIVE_EXECUTION.md",
+      "original_sha256": "4ccda55f9039c00bca56a3b64533a7ee5d061997e4d071b6ba27923a1cf0d3a4",
+      "public_sha256": "82466cf5ebd7645e6b535b02fcdf5c2097f90e3a51a87bd0822471b5ba17e883",
+      "reason": "owner-required privacy redaction"
+    },
+    {
+      "path": "docs/archive/snapshots/ARCHITECTURE.pre-20261012.md",
+      "original_sha256": "1eb3a999699f96d43145f88e389ef2b0377db39da30b2410c99ed463b95e4667",
+      "public_sha256": "73f3645eeb5c1b3a026451cc47f38c5497a321742a17773439a24cbaf02a9e32",
+      "reason": "owner-required privacy redaction"
+    },
+    {
+      "path": "docs/archive/snapshots/ROADMAP.pre-20261012.md",
+      "original_sha256": "0eb293a8aeb30b9f69b27fe1e7e1169644a519596256d8e827c25e30ae15d6d3",
+      "public_sha256": "f3c4df1fb98777086d4412b5f1a554dac5ecbb8f7a491d007eed3f06b3bc0b53",
+      "reason": "owner-required privacy redaction"
+    },
+    {
+      "path": "docs/archive/planning/MAINLINE_DELIVERY_HISTORY.md",
+      "original_sha256": "7e29b26fe6de37c95f83e1ded87ad944ee51ca0700ddc0987739ad32d45d8122",
+      "public_sha256": "c77b26af2f6bf019d20a4c356ecf15472c55e0a8281bcfa9eb7f55f946ed5cdd",
+      "reason": "owner-required privacy redaction"
+    },
+    {
+      "path": "docs/archive/planning/MAINLINE_DELIVERY_PLAN.md",
+      "original_sha256": "c57b004b2c10f8fd6e472588816f548ff0c3ae86c831ee45f3bcaaf73043f711",
+      "public_sha256": "8ea7d5f161893408483791405269efe05f4d8c297c43ed2ef04cea1961326378",
+      "reason": "owner-required privacy redaction"
+    }
   ]
 }

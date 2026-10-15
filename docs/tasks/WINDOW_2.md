@@ -23,7 +23,7 @@ on `main` as `00b006b`; do not continue from the old feature head.
 
 ## Workspace
 
-- worktree: `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3`
+- worktree: `/local/zfx/papers/SciTaste-worktrees/tool-intelligence-v3`
 - branch: `feat/tool-intelligence-v3`
 - base: `859e86540b8ccdb8ea778eae8a552bb7239c4240`
 

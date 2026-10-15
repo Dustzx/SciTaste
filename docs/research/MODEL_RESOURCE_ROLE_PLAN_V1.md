@@ -28,7 +28,7 @@ downloaded when the scientific design or conformance result requires them.
 Existing files become a cost or reproducibility preference only after scientific
 equivalence is established.
 
-`/media/sdb/wwh/models` is not visible from the local host at this observation.
+`/local/models` is not visible from the local host at this observation.
 It is therefore registered only as a pending synchronization source with the
 older tracked inventory retained as provenance. No remote connection, transfer,
 download, model load, GPU job, API call, or new weight hash was performed.

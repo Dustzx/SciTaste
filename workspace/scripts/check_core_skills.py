@@ -27,7 +27,7 @@ def main():
     check(len(skill["documents"]) == 4, "entrypoint, metadata and two references bundled")
     check(
         all(
-            "/home/good" not in d["content"] and "/media/good" not in d["content"]
+            "/local" not in d["content"] and "/media/example" not in d["content"]
             for d in skill["documents"]
         ),
         "no author machine paths in portable skill",

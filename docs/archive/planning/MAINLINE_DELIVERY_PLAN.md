@@ -194,7 +194,7 @@ Raw/RAG、通用记忆和 Native 无 Taste 始终归入消融。外部系统若�
 结论时追加少量必要配对种子。会话模型先完成开发；正式队列固定可验证模型
 配置和调用来源，不混合会话与 GLM/DeepSeek，不调用 Qwen API。
 
-GPU 实验仅走远端 4090-2 的项目隔离目录；不操作本机 GPU、旧远端分配或 RRMOT。
+GPU 实验仅走远端 4090-2 的项目隔离目录；不操作本机 GPU、旧远端分配或 Excluded study。
 模型/数据由科学问题决定，现有权重仅为资源候选。这里的工时只是规划估计，
 不是实验墙钟或 GPU 使用授权；启动后按实际整任务吞吐量调整排期。
 
@@ -212,7 +212,7 @@ GPU 实验仅走远端 4090-2 的项目隔离目录；不操作本机 GPU、旧�
 
 所有项目可使用同一模型/API；没有配置的项目返回 `configured=false`，不伪造
 期限、结果或计划。新项目默认预留 `docs/project/SUBMISSION_PLAN.md`。
-本轮不替其它项目决定题目/期限，也不修改 RRMOT 研究内容。
+本轮不替其它项目决定题目/期限，也不修改 Excluded study 研究内容。
 
 ```bash
 .venv/bin/scitaste project submission-plan status --project-id scitaste-self-development

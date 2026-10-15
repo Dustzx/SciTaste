@@ -6211,7 +6211,7 @@ judge identities, runtime-source hashes, and prior owner authorization without
 launching new work. Its result path rehashes every project-owned arm receipt,
 official score, and conditional Taste overlay; replays the paired bootstrap and
 exact sign-flip analysis; checks the detailed integrity audit; and rejects any
-indication that the deferred `perceptual-visual-relexing` project ran or RRMOT
+indication that the deferred `perceptual-visual-relexing` project ran or Excluded study
 was touched.
 
 Scientific completeness and a positive effect remain distinct. A complete null

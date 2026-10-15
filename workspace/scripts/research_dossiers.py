@@ -6,12 +6,7 @@ import progress_board
 import research_introductions
 
 ROOT = Path(__file__).resolve().parents[1]
-from local_research import PROFILES, SHARED_RACE as RACE
-MAPPING = {'revise-opd': 'reviseOPD', 'attn-opd': 'attnOPD',
-           'jev-verifier': 'jevVerifier', 'scitaste-self-development': 'SciTaste',
-           'fastresearch-cvpr2027': 'FastResearch',
-           'image-centric-active-vision': 'Image_centric', 'oc-sod': 'OC-SOD',
-           'rrmot-cvpr2027': 'RRMOT', 'voa': 'VOA'}
+from local_research import PROFILES, SHARED_RACE as RACE, project_mapping
 
 
 
@@ -58,7 +53,7 @@ def snapshot():
     reports = {p['id']: p for p in progress['projects']}
     projects = []
     indexed = progress_board.sources()
-    for project_id, report_id in MAPPING.items():
+    for project_id, report_id in project_mapping().items():
         path = PROFILES/(project_id+'.json')
         if not path.is_file() or report_id not in reports:
             continue
@@ -84,13 +79,14 @@ def snapshot():
             native_available=(ROOT/'outputs/projects'/project_id/'PROJECT.json').is_file(),
             projection=progress_board.stamp(path),
             evidence_policy='来源研究的只读审阅投影；历史实验不登记为新原生运行，页面不启动实验。')
-        if report_id in {'attnOPD', 'reviseOPD'}:
-            profile['shared_race'] = shared_race()
+        race = shared_race()
+        if project_id in race.get('project_ids', []):
+            profile['shared_race'] = race
         projects.append(profile)
     return {'schema_version': 1, 'generated_at': progress['generated_at'],
-            'projects': projects, 'voa_dedicated_workspace': '#/experiments/voa',
+            'projects': projects,
             'verification_policy': progress['verification_policy']}
 
 
 def signature_paths():
-    return [PROFILES/(project+'.json') for project in MAPPING]+[RACE]+research_introductions.signature_paths()
+    return [PROFILES/(project+'.json') for project in project_mapping()]+[RACE]+research_introductions.signature_paths()

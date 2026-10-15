@@ -180,7 +180,7 @@ def test_external_formal_result_enters_project_lifecycle(
                 "ties": 0,
             },
             "deferred_validation_project_executed": False,
-            "rrmot_touched": False,
+            "excluded_project_touched": False,
         },
     )
     audit_raw = _write_json(

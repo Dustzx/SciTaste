@@ -22,3 +22,11 @@ workspace/reports/
 workspace/cache/
 workspace/.env*
 workspace/web/assets/projects/
+private/
+report/
+reports/
+workspace/data/research_profiles/
+workspace/data/research_introductions/
+workspace/web/assets/research-introductions/
+workspace/platform/
+*.zip

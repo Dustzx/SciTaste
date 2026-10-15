@@ -547,7 +547,7 @@ execution profile schema `1.1` binds the complete Python base, package, and mode
 trees, derives read-only `/runtime/<id>` and `/models/<id>` mounts, selects only
 the admitted interpreter/import/library paths, and rehashes every external tree
 after the child process. The checkpoint is
-`/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct`; its admitted tree identity
+`/local/weights/Qwen3-VL-2B-Instruct`; its admitted tree identity
 is `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`.
 
 Five non-canonical attempts remain visible before the accepted v6 run. They

@@ -7,9 +7,9 @@ work session; it does not edit these files on its feature branch.
 
 Canonical paths:
 
-- board: `/home/good/zfx/papers/SciTaste/docs/tasks/BOARD.md`;
-- Window 2: `/home/good/zfx/papers/SciTaste/docs/tasks/WINDOW_2.md`;
-- Window 3: `/home/good/zfx/papers/SciTaste/docs/tasks/WINDOW_3.md`.
+- board: `/local/zfx/papers/SciTaste/docs/tasks/BOARD.md`;
+- Window 2: `/local/zfx/papers/SciTaste/docs/tasks/WINDOW_2.md`;
+- Window 3: `/local/zfx/papers/SciTaste/docs/tasks/WINDOW_3.md`.
 
 ## Dispatch threshold and autonomy window
 
@@ -65,7 +65,7 @@ The user can initialize a window with one durable instruction:
 
 ```text
 You are Window 2 (or Window 3). Before every task, read your canonical dispatch
-document under /home/good/zfx/papers/SciTaste/docs/tasks/ completely and follow
+document under /local/zfx/papers/SciTaste/docs/tasks/ completely and follow
 its assignment, worktree, ownership, acceptance, and handoff requirements.
 ```
 

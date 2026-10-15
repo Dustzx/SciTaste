@@ -958,12 +958,12 @@
 - Changed publications preserve prior summaries in one hash-addressed archive;
   project-local evidence references retain publication-time hashes.
 - Bound current summaries into the project-progress model and research-plan panel,
-  including RRMOT's actual imported work. No scientific execution authority inferred.
+  including Excluded study's actual imported work. No scientific execution authority inferred.
 - One bounded create/publish/archive/UI-projection check passed; no full-suite run.
 
-## 2026-09-28 — RRMOT CVPR project import
+## 2026-09-28 — Excluded study CVPR project import
 
-- Registered the existing RRMOT CVPR workspace as its own project with an imported
+- Registered the existing Excluded study CVPR workspace as its own project with an imported
   paper bundle, revision documents and nine experiment-record navigation entries.
 - Original working files and remote jobs remain untouched; imported observations
   are snapshots, not live monitoring or new SciTaste scientific evidence. Global
@@ -3274,7 +3274,7 @@ semantic versioning.
 - Kept `perceptual-visual-relexing` outside the SciTaste method and current
   benchmark. It is the first preferred independent idea-to-paper completeness
   validation only after `scitaste-self-development` reports
-  `top_venue_evidence_loop_complete=true`; RRMOT remains isolated.
+  `top_venue_evidence_loop_complete=true`; Excluded study remains isolated.
 - Quarantined the `Math_000` Taste-compilation probe after identifying its
   multi-object-tracking overlap with that reserved validation direction. No
   autonomous agent or GPU run occurred; the partial response is retained as
@@ -3283,7 +3283,7 @@ semantic versioning.
   now the selected 20-cell project evaluation; the lifecycle remains explicitly
   blocked at `external-formal-result-unregistered` until all result bytes arrive.
   Result admission independently replays paired statistics and verifies exact
-  arm, score, overlay, audit, deferred-project, and RRMOT boundaries.
+  arm, score, overlay, audit, deferred-project, and Excluded study boundaries.
 - Added a compact conditional Taste compiler that turns source evidence into
   trigger/blocker-bound actions, explicit support/failure branches, and native
   abstention instead of an unconditional plan. Its development packet is 6,468

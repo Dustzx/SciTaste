@@ -4,13 +4,13 @@
 
 本机网页为 [FastResearch 工作台](http://127.0.0.1:8765)，直接读取上述审阅库和发现队列；资料变更后自动同步，无需重启。网页部署管理见 [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md)。
 
-研究总览的 [Top 5 候选](registry/TOP_CANDIDATES.md) 同样由主数据生成。`research_candidates` 保存恰好五个组合及 1–5 的唯一顺序，引用已存在的 benchmark、method、idea 和 result ID；成绩显示始终读取原记录。`research_candidate_ranking` 保存排序依据、限制和负证据；组合优先级与单个公开方法的 P0/P1 分开。新证据、失败试验或资源变化时，用审核补丁替换完整五项数组并更新审阅日期，禁止仅改网页或生成文档。排序是研究判断，不能等同于已验证的 headroom。
+研究假设、选题优先级和赛马计划仅保留在本地项目记录，不随公开文献快照分发。
 
 优先 training-free；进一步判断当前型号下的 headroom、基线可复现性、显存及调用成本。**存储大小仅作标签，不参与排序或淘汰。** `methods.training_free_class` 区分无新增训练、需要训练、混合主表/推理消融及未知；`reproducibility` 记录官方仓库核查状态、commit、许可与范围；`resources` 记录显存/存储及来源口径。官方示例不能当作峰值，API 客户端 0 GiB 不等于模型服务端不使用显存。
 
 每条成绩引用 `model_profile_id`，由 `model_profiles` 保留文献基座准确命名、旧日期/历史基座/版本未知状态和核实来源。仓库创建日不冒充发布日，当前仓库 SHA 不冒充论文使用 checkpoint。`runtime_model_catalog` 是当日官方文档型号参考，不代表账户已调用成功；滚动别名在实际执行时需记录返回型号。由脚本生成 [模型与资源说明](registry/MODEL_RESOURCES.md)。新字段与排序审阅补丁见 `reports/research_product_constraints_patch_20261009.json`。
 
-当前库有31个benchmark、229条成绩、48个公开方法、20个研究假设。20个任务已有录用成绩锚点（含Findings或其他会议）；11个任务仍缺录用成绩，列在观察区。有录用锚点也不代表模型、预算和评分条件全部齐全。成绩记录是模型、任务、指标、方法设置的组合，一篇论文可以贡献多条，不能将229条写成229篇论文。
+当前库有31个benchmark、229条成绩、48个公开方法；不附带维护者的研究假设。20个任务已有录用成绩锚点（含Findings或其他会议）；11个任务仍缺录用成绩，列在观察区。有录用锚点也不代表模型、预算和评分条件全部齐全。成绩记录是模型、任务、指标、方法设置的组合，一篇论文可以贡献多条，不能将229条写成229篇论文。
 
 ## 每次开始选题
 
@@ -21,7 +21,7 @@
 本轮 [维护验收](../reports/research_registry_validation_20261009.json) 的 28 项检查通过，涵盖数据引用/协议、录用证据缺失拦截、派生统计、关键口径、文档链接、CSV 和浏览器筛选。这是维护工具验收，不是文献成绩复现。
 
 ```bash
-cd /home/good/zfx/papers/FastResearch
+cd /local/zfx/papers/FastResearch
 python scripts/research_registry.py refresh --as-of 2026-10-09 --days 7
 python scripts/research_registry.py validate
 python scripts/research_registry.py render

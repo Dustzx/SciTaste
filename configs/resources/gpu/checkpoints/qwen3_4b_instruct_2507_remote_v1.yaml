@@ -4,7 +4,7 @@ resource:
   resource_id: qwen3-4b-instruct-2507-remote-c573dd87
   model_id: Qwen/Qwen3-4B-Instruct-2507
   model_revision: cdbee75f17c01a7cc42f958dc650907174af0554
-  local_path: /media/sdb/wwh/models/Qwen3-4B-Instruct-2507
+  local_path: /local/models/Qwen3-4B-Instruct-2507
   storage_scope: gpu_host
   storage_gpu_resource_id: gpu-host-3090-2
   checkpoint_sha256: c573dd87197b6283e480c3f5f6b8eefc59d61a3012afba878f4902a321bb4743

@@ -48,9 +48,7 @@ def state():
     progress_paths = [progress_board.REPORT / p for p in ['STATUS_BOARD.json', 'EXPERIENCE_POOL.json', 'sources.json']]
     progress_paths += list(progress_board.sources().values())
     progress_paths += research_dossiers.signature_paths()
-    study = ROOT / 'outputs/projects/fastresearch-cvpr2027/research'
-    progress_paths += [study/'API_LEDGER.json', *study.glob('runs/*/STATUS.json'), *study.glob('runs/*/PREDICTIONS.json')]
-    progress_paths += [p for run in progress_board.study_runs() for p in [run/'STATUS.json', run/'PREDICTIONS.json']]
+    progress_paths += [progress_board.REPORT / name for name in ['PORTFOLIO.json', 'BUDGET.json']]
     progress_signature = tuple((str(p), p.stat().st_mtime_ns, p.stat().st_size) if p.exists() else (str(p), None) for p in progress_paths)
     venue_signature = (venue_catalog.CATALOGUE.stat().st_mtime_ns, venue_catalog.CATALOGUE.stat().st_size) if venue_catalog.CATALOGUE.exists() else None
     signature = (tuple((p.stat().st_mtime_ns, p.stat().st_size) if p.exists() else None for p in FILES), document_signature, progress_signature, venue_signature)

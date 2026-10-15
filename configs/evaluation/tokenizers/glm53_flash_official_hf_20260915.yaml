@@ -8,7 +8,7 @@ source:
   resolved_on: 2026-09-15
   source_url: https://huggingface.co/zai-org/GLM-5.3-Flash/tree/eb9eb208eb0d988989d07a6a12d0fdeb5f52574a
 local_snapshot:
-  path: /media/good/dxhismyson/weights/GLM-5.3-Flash-tokenizer
+  path: /local/weights/GLM-5.3-Flash-tokenizer
   payload_bytes: 20298569
   files:
     - path: tokenizer.json

@@ -9,8 +9,8 @@ window.FastResearchLab = (() => {
   const names = {title:'标题',status:'状态',reported_status:'登记状态',observed_state:'证据状态',run_id:'实验 ID',run_ref_id:'运行证据',model_name:'模型',model:'模型',provider:'模型来源',condition:'方法条件',evidence_scope:'证据范围',seed:'种子',stage:'阶段',stage_number:'阶段',stage_id:'阶段 ID',name:'名称',label:'名称',reason:'原因',reason_code:'状态原因',reason_codes:'状态原因',warnings:'核查提示',metric:'指标',value:'数值',baseline:'基线',candidate:'候选',baseline_value:'基线成绩',candidate_value:'候选成绩',comparable:'可比',resource_id:'资源 ID',metrics_state:'指标可用性',metrics_reason_code:'指标说明',role:'角色',availability:'可用性',paper_id:'论文 ID',state:'证据状态',source_locator:'来源记录',model_id:'模型型号',current:'当前选择',summary:'摘要',research_direction:'研究方向',counts:'记录计数',budget:'预算',resources:'资源',target_venue:'目标会议',next_gate:'下一门槛',publication_ready:'可投稿判定',completed:'已完成',total:'总计'};
   const stateNames = {planning:'规划中',planned:'协议已登记',active:'进行中',complete:'已完成',completed:'已完成',blocked:'阻塞',failed:'失败',draft:'草案',unavailable:'不可用',available:'可用',not_started:'未开始',unknown:'待核实',generated:'视图已整理',no_matching_evidence:'缺少匹配证据',clarification_required:'需要明确对象','protocol-only':'协议记录','no-registered-comparable-metrics':'未登记可比指标',protocol_only:'协议记录',none:'无',false:'否',true:'是'};
   const route = (project='', values={}) => '#/experiments' + (project ? '/' + encodeURIComponent(project) : '') + (Object.keys(values).length ? '?' + new URLSearchParams(values) : '');
-  const promotedProjects = ['voa','rrmot-cvpr2027'];
-  const reportId = project => window.ResearchProjects.projects().find(p=>p.project_id===project)?.report_id || ({voa:'VOA','rrmot-cvpr2027':'RRMOT','fastresearch-cvpr2027':'FastResearch'}[project]);
+  let promotedProjects = [];
+  const reportId = project => window.ResearchProjects.projects().find(p=>p.project_id===project)?.report_id;
   function exportCard(html, p) {
     const report=reportId(p.project_id);
     return report?html.replace(/<\/article>\s*$/,`<div class="actions"><a class="button button-small" href="#/experiments/${encodeURIComponent(p.project_id)}?origin=fastresearch&view=project-introduction">项目简介 · 图解 →</a></div>`+window.ResearchProjects.exportControls(report,true)+'</article>'):html;
@@ -89,8 +89,9 @@ window.FastResearchLab = (() => {
     else failures.push(responses[1].reason.message);
     if (responses[2].status==='fulfilled') for (const p of responses[2].value.projects) merged.set(p.project_id,{...(merged.get(p.project_id) || {}),...p,origin:'fastresearch',native_available:true});
     else failures.push('原生课题：'+responses[2].reason.message);
-    if (responses[0].status==='rejected') failures.push('VOA档案：'+responses[0].reason.message);
+    if (responses[0].status==='rejected') failures.push('项目档案：'+responses[0].reason.message);
     projects=[...merged.values()];
+    promotedProjects=projects.filter(p=>p.promoted===true).map(p=>p.project_id);
     const priority=id=>promotedProjects.includes(id)?promotedProjects.indexOf(id):-1;
     projects.sort((a,b)=>(priority(a.project_id)<0?promotedProjects.length:priority(a.project_id))-(priority(b.project_id)<0?promotedProjects.length:priority(b.project_id)));
     const profileIds=new Set(window.ResearchProjects.projects().map(p=>p.project_id));
@@ -107,14 +108,6 @@ window.FastResearchLab = (() => {
   }
 
   async function projectPage(project, p, epoch) {
-    if (project==='fastresearch-cvpr2027' && p.get('dossier')!=='reviewed' && (p.get('origin') || 'fastresearch')==='fastresearch' && window.TrainingFreeEvidence?.supports(p.get('view'))) {
-      current=null;
-      return window.TrainingFreeEvidence.render(p);
-    }
-    if (project==='voa' && (p.get('origin') || 'fastresearch')==='fastresearch') {
-      current=null;
-      return window.ProjectEvidence.render(p);
-    }
     const origin=p.get('origin') || 'fastresearch', pane=p.get('view') || 'project-progress';
     if (origin==='fastresearch') {
       try {

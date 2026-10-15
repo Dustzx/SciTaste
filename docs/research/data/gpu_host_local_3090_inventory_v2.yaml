@@ -14,7 +14,7 @@ devices:
     driver_version: 535.183.01
 root_storage:
   filesystem: /dev/sda
-  mount: /media/good/dxhismyson
+  mount: /local
   total_bytes: 3936820731904
   used_bytes: 3580791713792
   available_bytes: 155972890624
@@ -28,7 +28,7 @@ runtime:
   bubblewrap_path: /usr/bin/bwrap
 checkpoint:
   checkpoint_id: qwen3-vl-2b-instruct-local-47f9c0e0
-  destination_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  destination_path: /local/weights/Qwen3-VL-2B-Instruct
   regular_file_count: 12
   regular_file_bytes: 4266648961
   observed_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
